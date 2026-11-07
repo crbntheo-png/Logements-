@@ -25,7 +25,10 @@
   --paper: #ffffff; --paper-ink: #151515;
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --font-body: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --radius: 10px;
+  --radius: 16px;
+  --sun: #ffc94a; --sky: #e6f3ef; --coral: #ff8a65;
+  --hero-1: #1f6f61; --hero-2: #2f9a83;
+  --shadow: 0 1px 2px rgba(20, 40, 35, .06), 0 6px 18px rgba(20, 40, 35, .07);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -33,6 +36,7 @@
     --bg: #111614; --surface: #19201e; --surface-2: #212a27; --ink: #e5ebe8; --muted: #9ba8a4; --line: #2d3734;
     --accent: #63b5a5; --accent-ink: #062019; --accent-soft: #1d3833;
     --ok: #74cf98; --ok-soft: #1b3326; --warn: #f0b660; --warn-soft: #3a2c14; --bad: #f28b82; --bad-soft: #3d1f1c;
+    --sun: #f5c04a; --sky: #1a2b27; --coral: #ff9f80; --hero-1: #1c5a4f; --hero-2: #23806d; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
     color-scheme: dark;
   }
 }
@@ -40,9 +44,11 @@
   --bg: #111614; --surface: #19201e; --surface-2: #212a27; --ink: #e5ebe8; --muted: #9ba8a4; --line: #2d3734;
   --accent: #63b5a5; --accent-ink: #062019; --accent-soft: #1d3833;
   --ok: #74cf98; --ok-soft: #1b3326; --warn: #f0b660; --warn-soft: #3a2c14; --bad: #f28b82; --bad-soft: #3d1f1c;
+  --sun: #f5c04a; --sky: #1a2b27; --coral: #ff9f80; --hero-1: #1c5a4f; --hero-2: #23806d; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font-body); }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
@@ -142,7 +148,7 @@ tfoot td { font-weight: 700; background: var(--surface-2); }
 details > summary { list-style-position: inside; }
 .hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--accent); color: var(--accent-ink); border-radius: 16px; padding-block: 20px; padding-inline: 20px; }
 .hero h1 { font-size: 1.7rem; }
-.hero-k { margin: 0 0 4px; text-transform: capitalize; opacity: .8; font-weight: 600; }
+.hero-k { margin: 0 0 4px; opacity: .8; font-weight: 600; }
 .dots { display: flex; gap: 6px; flex-wrap: wrap; }
 .dots i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; opacity: .55; }
 .dots i.ok { background: currentColor; opacity: 1; }
@@ -204,6 +210,60 @@ fieldset legend { font-weight: 700; font-size: .85rem; padding: 0 6px; }
 .emailbox { width: min(840px, 100%); margin-top: 12px; background: var(--surface); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .emailbox textarea { min-height: 120px; }
 
+/* ===== Habillage "appli" ===== */
+body { background: radial-gradient(1200px 400px at 50% -200px, var(--sky), transparent 70%), var(--bg); background-attachment: fixed; }
+.card, .kpi, .table-wrap, .todo li, .tile, .task { box-shadow: var(--shadow); border-color: transparent; }
+.card, .kpi, .tile, .todo li { border-radius: var(--radius); }
+.tile { border-left-width: 0; position: relative; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease; }
+.tile::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 6px; background: var(--line); }
+.tile.ok::before { background: var(--ok); } .tile.warn::before { background: var(--sun); } .tile.bad::before { background: var(--bad); }
+.tile:hover { transform: translateY(-2px); }
+button, .btn { border-radius: 999px; padding: 8px 16px; }
+button.small { padding: 5px 12px; }
+.tile .row button { padding-block: 11px; font-size: .95rem; }
+.greet { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.greet h1 { font-size: 1.9rem; }
+.greet p { margin: 2px 0 0; color: var(--muted); }
+.hero { background: linear-gradient(135deg, var(--hero-1), var(--hero-2)); color: #fff; position: relative; overflow: hidden; padding-block: 22px; padding-inline: 22px; border-radius: 22px; box-shadow: var(--shadow); align-items: center; }
+.hero .hero-k { color: #fff; opacity: .85; }
+.hero h1 { color: #fff; }
+.hero .sub { margin: 4px 0 0; opacity: .9; font-weight: 600; }
+.hero { flex-wrap: nowrap; }
+.hero > div:first-child { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.ring { z-index: 1; }
+.hero .skyline { position: absolute; right: -10px; bottom: -6px; width: 230px; opacity: .16; pointer-events: none; }
+.ring { position: relative; width: 104px; height: 104px; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 1.5rem; color: #fff; }
+.ring .trk { stroke: rgba(255,255,255,.22); } .ring .val { stroke: var(--sun); transition: stroke-dashoffset .8s ease; }
+.hero .dots i { border-color: #fff; } .hero .dots i.ok { background: var(--sun); border-color: var(--sun); } .hero .dots i.bad { background: var(--coral); border-color: var(--coral); }
+.todo li { padding: 14px 16px; }
+.todo li.urgent { background: var(--bad-soft); }
+.todo .ico { width: 42px; height: 42px; border-radius: 12px; background: var(--sky); display: inline-flex; align-items: center; justify-content: center; font-size: 1.3rem; flex: none; }
+.todo li.urgent .ico { background: var(--surface); }
+.empty.party { font-size: 1.1rem; padding: 28px; background: var(--surface); border: 0; box-shadow: var(--shadow); }
+.empty.party span { display: block; font-size: 2.6rem; margin-bottom: 6px; }
+.avatar { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--sky); }
+.house { font-size: 1.1rem; }
+.bien { border-top: 0; }
+.bien .emoji { width: 52px; height: 52px; border-radius: 16px; background: var(--sky); display: inline-flex; align-items: center; justify-content: center; font-size: 1.7rem; flex: none; }
+.bien .top { align-items: center; }
+.bien .top > div:nth-child(2) { flex: 1; min-width: 0; }
+/* Barre d'onglets en bas sur téléphone, comme une vraie appli */
+#bottomnav { display: none; }
+@media (max-width: 700px) {
+  nav.tabs { display: none; }
+  main { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+  #bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); box-shadow: 0 -4px 20px rgba(0,0,0,.08); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+  #bottomnav a { display: flex; flex-direction: column; align-items: center; gap: 2px; text-decoration: none; color: var(--muted); font-size: .7rem; font-weight: 700; padding: 6px 0; border-radius: 14px; position: relative; }
+  #bottomnav a span { font-size: 1.35rem; line-height: 1.1; filter: grayscale(.6); }
+  #bottomnav a.on { color: var(--accent); background: var(--accent-soft); }
+  #bottomnav a.on span { filter: none; }
+  #bottomnav .badge { position: absolute; top: 2px; right: 18%; background: var(--bad); color: #fff; border-radius: 99px; font-size: .65rem; padding: 0 5px; }
+  .greet h1 { font-size: 1.5rem; }
+  .ring { width: 88px; height: 88px; }
+}
+@media (prefers-reduced-motion: reduce) { .tile, .ring .val { transition: none; } .tile:hover { transform: none; } }
 @media print {
   @page { margin: 14mm; }
   body { background: #fff; }
@@ -223,6 +283,7 @@ fieldset legend { font-weight: 700; font-size: .85rem; padding: 0 6px; }
     <nav class="tabs" id="nav"></nav>
   </div>
 </header>
+<nav id="bottomnav" aria-label="Navigation"></nav>
 <main id="app"></main>
 <div id="overlay" class="overlay" hidden></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -634,10 +695,11 @@ function docTeom(taxeId, bailId) {
     email: { objet: `Taxe d'ordures ménagères ${t.annee}`, corps: `Bonjour,\n\nVous trouverez ci-joint le calcul de votre part de la taxe d'ordures ménagères ${t.annee} : ${eur(p.montant)} (${p.jours} jours dans le logement).\n\nMerci et bonne journée,\n${S.sci.gerant || ""}` },
     onSent: () => { p.demandeLe = iso(TODAY); }, sentLabel: "Déjà demandée autrement" });
 }
-function teomPaye(taxeId, bailId) { const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId); p.payeLe = iso(TODAY); save(); render(); toast(`${eur(p.montant)} reçus`); }
+function teomPaye(taxeId, bailId) { confettis(); const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId); p.payeLe = iso(TODAY); save(); render(); toast(`${eur(p.montant)} reçus`); }
 
 /* ================= Navigation ================= */
 const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["compta", "Compta"], ["reglages", "Réglages"]];
+const ICONES = { locataires: "🏠", afaire: "✅", biens: "🏘️", compta: "💶", reglages: "⚙️" };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", render);
@@ -648,6 +710,7 @@ function render() {
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires");
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
   document.getElementById("nav").innerHTML = PAGES.map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}">${l}${k === "afaire" && urg ? `<span class="badge">${urg}</span>` : ""}</a>`).join("");
+  document.getElementById("bottomnav").innerHTML = PAGES.map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}><span aria-hidden="true">${ICONES[k]}</span>${l}${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
   document.getElementById("brandName").textContent = S.sci.nom || "Gestion SCI";
   document.getElementById("brandSub").textContent = MODE === "partage" ? "en ligne, partagé" : "sur cet appareil";
   const vide = !S.biens.length && !S.baux.length;
@@ -710,7 +773,7 @@ function carteLocataire(b) {
     else { etat = "✅ Payé"; cls = "ok"; act = peutEnvoyer() && b.email ? `<button class="primary" onclick="envoyerQuittance('${b.id}','${CUR}')">Envoyer la quittance</button>` : `<button onclick="quittance('${b.id}','${CUR}')">Quittance</button>`; }
   } else { etat = `⏳ Attendu le ${fds(e.dueDate)}`; cls = "warn"; act = `<button class="primary" onclick="encaisser('${b.id}','${CUR}')">A payé</button>`; }
   return `<article class="tile ${cls}">
-    <a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span><b>${esc(b.nom)}</b><small>${esc(bienLabel(bi))} · ${eur(l.hc + l.ch)}</small></span><span class="chev" aria-hidden="true">›</span></a>
+    <a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span><b>${esc(b.nom)}</b><small><span class="house" aria-hidden="true">${bi && /maison/i.test(bi.type) ? "🏡" : "🏢"}</span> ${esc(bienLabel(bi))} · ${eur(l.hc + l.ch)}</small></span><span class="chev" aria-hidden="true">›</span></a>
     <div class="tile-state">${etat}</div>
     ${act ? `<div class="row">${act}</div>` : ""}
   </article>`;
@@ -720,13 +783,19 @@ function pageAccueil(T) {
   const vides = S.biens.filter(bi => !bailActifDuBien(bi.id) && !S.baux.some(b => b.bienId === bi.id && P(b.dateEntree) > TODAY));
   const mois = S.baux.map(b => echeance(b, CUR)).filter(Boolean), recus = mois.filter(e => e.statut === "paye").length;
   const items = aFaireCourt(T), vis = items.slice(0, 5);
-  return `<section class="hero">
-    <div><p class="hero-k">${fm(CUR)}</p><h1>${recus} loyer${recus > 1 ? "s" : ""} reçu${recus > 1 ? "s" : ""} sur ${mois.length}</h1></div>
-    <div class="dots" aria-hidden="true">${mois.map(e => `<i class="${e.statut === "paye" ? "ok" : e.statut === "retard" ? "bad" : ""}"></i>`).join("")}</div>
+  const attendu = mois.reduce((t, e) => t + e.du, 0), encaisse = mois.reduce((t, e) => t + Math.min(e.paye, e.du), 0);
+  const pct = attendu ? encaisse / attendu : 0, C = 2 * Math.PI * 42;
+  const h = TODAY.getHours(), salut = h < 12 ? "Bonjour" : h < 18 ? "Salut" : "Bonsoir";
+  return `<div class="greet"><div><h1>${salut} 👋</h1><p>${fd(TODAY)}${items.length ? ` · ${items.length} chose${items.length > 1 ? "s" : ""} à faire` : " · tout roule"}</p></div></div>
+  <section class="hero">
+    <div><p class="hero-k">Loyers de ${fm(CUR)}</p><h1>${recus} sur ${mois.length} reçu${recus > 1 ? "s" : ""}</h1><p class="sub">${eur(encaisse)} encaissés sur ${eur(attendu)}</p>
+      <div class="dots" aria-hidden="true" style="margin-top:12px">${mois.map(e => `<i class="${e.statut === "paye" ? "ok" : e.statut === "retard" ? "bad" : ""}"></i>`).join("")}</div></div>
+    <div class="ring" role="img" aria-label="${Math.round(pct * 100)} % des loyers reçus"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" fill="none" stroke-width="10"/><circle class="val" cx="50" cy="50" r="42" fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg><b>${Math.round(pct * 100)}%</b></div>
+    <svg class="skyline" viewBox="0 0 230 90" aria-hidden="true"><path fill="#fff" d="M0 90V52h22V30h26v22h10V18l20-14 20 14v72h8V40h30v50h6V24l18-12 18 12v66h10V46h26v44z"/></svg>
   </section>
   <section><h2 class="sec">À faire ${items.length ? `<span class="pill ${items.some(i => i.prio === "urgent") ? "bad" : "warn"}">${items.length}</span>` : ""}</h2>
     ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</li>`).join("")}</ul>
-      ${items.length > 5 ? `<p><a href="#afaire">Voir les ${items.length - 5} autres</a></p>` : ""}` : `<div class="empty">🎉 Rien à faire, tout est en ordre.</div>`}
+      ${items.length > 5 ? `<p><a href="#afaire">Voir les ${items.length - 5} autres</a></p>` : ""}` : `<div class="empty party"><span>🎉</span>Rien à faire, tout est en ordre.</div>`}
   </section>
   <section><div class="head"><h2 class="sec">Locataires</h2><button class="small" onclick="editBail()">+ Ajouter</button></div>
     <div class="tiles">${actifs.map(carteLocataire).join("")}
@@ -743,7 +812,7 @@ function pageBiens() {
   return `<div class="head"><div><h1>Biens</h1><p>Tes logements et qui les occupe.</p></div><button class="primary" onclick="editBien()">+ Ajouter un bien</button></div>
   ${S.biens.length ? `<div class="grid">${S.biens.map(bi => {
     const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null;
-    return `<article class="card bien"><div class="top"><div><h3>${esc(bi.nom)}</h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
+    return `<article class="card bien"><div class="top"><span class="emoji" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span><div><h3>${esc(bi.nom)}</h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
       ${b ? `<span class="pill ok">Loué</span>` : `<span class="pill warn">Vide</span>`}</div>
       <dl>${b ? `<dt>Locataire</dt><dd><a href="#bail-${b.id}">${esc(b.nom)}</a></dd><dt>Loyer HC</dt><dd>${eur(l.hc)}</dd><dt>Charges</dt><dd>${eur(l.ch)}</dd><dt>Depuis</dt><dd>${fds(b.dateEntree)}</dd>` : `<dt>Locataire</dt><dd>—</dd>`}
       <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd></dl>
@@ -958,6 +1027,7 @@ function depotRendu(id) { const b = bail(id); modal("Dépôt de garantie rendu",
 
 async function encaisser(bailId, m) {
   const b = bail(bailId), e = echeance(b, m); if (!e || e.reste <= 0) return;
+  confettis();
   S.paiements.push({ id: uid(), bailId, mois: m, montant: e.reste, date: iso(TODAY), mode: "virement" }); save(); render();
   if (S.sci.autoQuittance !== false && b.email && peutEnvoyer()) {
     toast(`${eur(e.reste)} reçus · envoi de la quittance à ${b.email}…`);
@@ -1270,9 +1340,17 @@ function exportCSV(y) {
   rows.sort((a, b) => a[0] < b[0] ? -1 : 1);
   download(`compta-${slug(S.sci.nom || "sci")}-${y}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\n"), "text/csv");
 }
+function confettis() {
+  try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (e) {}
+  const c = document.createElement("canvas"), W = innerWidth, H = innerHeight; c.width = W; c.height = H;
+  c.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:70"; document.body.appendChild(c);
+  const x = c.getContext("2d"), cols = ["#ffc94a", "#2f9a83", "#ff8a65", "#5868b8", "#74cf98"];
+  const ps = Array.from({ length: 90 }, () => ({ x: W / 2 + (Math.random() - .5) * 60, y: H * .55, vx: (Math.random() - .5) * 12, vy: -Math.random() * 14 - 6, r: Math.random() * 6 + 4, a: Math.random() * 6, c: cols[Math.floor(Math.random() * cols.length)] }));
+  let t = 0; (function f() { x.clearRect(0, 0, W, H); ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .45; p.a += .2; x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c; x.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); x.restore(); }); if (++t < 90) requestAnimationFrame(f); else c.remove(); })();
+}
 function toast(msg) {
   let t = document.getElementById("toast");
-  if (!t) { t = document.createElement("div"); t.id = "toast"; t.setAttribute("role", "status"); t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100% - 32px)"; document.body.appendChild(t); }
+  if (!t) { t = document.createElement("div"); t.id = "toast"; t.setAttribute("role", "status"); t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(" + (innerWidth <= 700 ? 92 : 20) + "px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100% - 32px)"; document.body.appendChild(t); }
   t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 2600);
 }
 
