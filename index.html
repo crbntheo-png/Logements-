@@ -325,6 +325,94 @@ details.anciens .todo { margin-top: 8px; }
 }
 #fSci > .full.row:last-child { position: sticky; bottom: 0; background: var(--surface); padding-block: 12px; border-top: 1px solid var(--line); z-index: 2; }
 @media (max-width: 700px) { #fSci > .full.row:last-child { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+/* ===== Nouveautés : point du mois, recherche, ajout rapide, échéancier, graphique, historique ===== */
+#app.entre { animation: entre .28s ease both; }
+@keyframes entre { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.search-btn { margin-left: auto; display: inline-flex; gap: 8px; align-items: center; background: var(--surface-2); border: 0; color: var(--muted); padding: 7px 12px; border-radius: 999px; font-weight: 500; }
+.search-btn kbd { font: 600 .72rem var(--font-body); background: var(--surface); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+@media (max-width: 700px) { .search-btn { margin-left: auto; padding: 8px; background: transparent; font-size: 1.2rem; } .search-btn .sb-t, .search-btn kbd { display: none; } .gear { margin-left: 0; } }
+#fab { position: fixed; right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg, var(--hero-2), var(--hero-1)); color: #fff; font-size: 2rem; font-weight: 300; justify-content: center; padding: 0; border: 0; box-shadow: 0 8px 22px rgba(31, 95, 86, .45); z-index: 25; transition: transform .15s ease; }
+#fab:hover { transform: scale(1.06); }
+#fab.cache { transform: translateY(140px); }
+@media (max-width: 700px) { #fab { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); } }
+.grille-add { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.grille-add button { flex-direction: column; gap: 6px; padding: 16px 6px; border-radius: 16px; white-space: normal; text-align: center; background: var(--bg); border-color: transparent; font-size: .85rem; }
+.grille-add button span { font-size: 1.8rem; }
+.hero-cta { position: absolute; right: 22px; bottom: 18px; z-index: 2; background: var(--sun); color: #3b2a00; border: 0; font-weight: 700; padding: 10px 16px; box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+.hero { padding-bottom: 70px; }
+.hero .ring { align-self: flex-start; }
+@media (min-width: 701px) { .hero { padding-bottom: 22px; } .hero-cta { position: static; align-self: center; order: 3; } .hero .ring { order: 2; align-self: center; } }
+#focus { position: fixed; inset: 0; z-index: 40; }
+.pt-wrap { position: absolute; inset: 0; background: linear-gradient(160deg, var(--hero-1), #0f3b34); color: #fff; display: flex; flex-direction: column; padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); overflow-y: auto; }
+.pt-top { display: flex; align-items: center; gap: 12px; max-width: 560px; width: 100%; margin: 0 auto; }
+.pt-top button { color: #fff; font-size: 1.1rem; }
+.pt-prog { flex: 1; height: 8px; background: rgba(255,255,255,.18); border-radius: 99px; overflow: hidden; }
+.pt-prog i { display: block; height: 100%; background: var(--sun); border-radius: 99px; transition: width .35s ease; }
+.pt-cpt { font-weight: 700; font-variant-numeric: tabular-nums; opacity: .85; }
+.pt-card { margin: auto; width: 100%; max-width: 560px; background: var(--surface); color: var(--ink); border-radius: 26px; padding: 28px 24px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.35); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pt-card.in { animation: carte .32s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes carte { from { opacity: 0; transform: translateX(40px) scale(.97); } to { opacity: 1; transform: none; } }
+.pt-card h2 { font-size: 1.5rem; }
+.pt-av .avatar { width: 64px; height: 64px; font-size: 1.4rem; }
+.pt-big { font-size: 3rem; line-height: 1; }
+.pt-k { margin: 0; color: var(--muted); font-weight: 600; font-size: .9rem; }
+.pt-montant { margin: 0; font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.pt-d { margin: 0; color: var(--muted); max-width: 42ch; }
+.pt-acts { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 10px; }
+button.big { justify-content: center; padding: 14px 18px; font-size: 1rem; }
+.pt-fin { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pt-fin .pt-big { font-size: 4rem; }
+@media (prefers-reduced-motion: reduce) { #app.entre, .pt-card.in { animation: none; } }
+.sr-wrap { position: absolute; inset: 0; background: rgba(10, 15, 13, .55); display: flex; justify-content: center; align-items: flex-start; padding: calc(10vh + env(safe-area-inset-top, 0px)) 12px 12px; }
+.sr-box { width: min(640px, 100%); background: var(--surface); border-radius: 20px; box-shadow: 0 24px 60px rgba(0,0,0,.35); overflow: hidden; display: flex; flex-direction: column; max-height: 75vh; }
+.sr-in { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 1.2rem; }
+.sr-in input { border: 0; background: transparent; font-size: 1.1rem; padding: 6px 0; }
+.sr-in input:focus { outline: none; }
+.sr-res { list-style: none; margin: 0; padding: 6px; overflow-y: auto; }
+.sr-res li { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; cursor: pointer; }
+.sr-res li.on, .sr-res li:hover { background: var(--accent-soft); }
+.sr-res li span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.sr-res li b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-res small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-res .avatar { width: 36px; height: 36px; font-size: .8rem; box-shadow: none; }
+.sr-i { width: 36px; height: 36px; border-radius: 10px; background: var(--sky); display: inline-flex; align-items: center; justify-content: center; font-size: 1.15rem; flex: none; }
+.sr-res li.vide { color: var(--muted); cursor: default; justify-content: center; }
+@media (max-width: 560px) { .sr-wrap { padding: 0; align-items: stretch; } .sr-box { border-radius: 0; max-height: none; height: 100%; padding-top: env(safe-area-inset-top, 0px); } }
+.cal { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x mandatory; }
+.cal-i { scroll-snap-align: start; flex: none; width: 150px; background: var(--surface); border-radius: 16px; padding: 12px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden; }
+.cal-i::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: var(--accent); }
+.cal-i.warn::after { background: var(--sun); } .cal-i.ok::after { background: var(--ok); }
+.cal-d { display: flex; align-items: baseline; gap: 4px; color: var(--muted); font-weight: 600; font-size: .8rem; text-transform: uppercase; }
+.cal-d b { font-family: var(--font-display); font-size: 1.6rem; color: var(--ink); }
+.cal-ico { font-size: 1.2rem; }
+.cal-t { font-weight: 700; font-size: .9rem; line-height: 1.25; }
+.cal-s { color: var(--muted); font-size: .82rem; font-variant-numeric: tabular-nums; }
+.chart .head { align-items: flex-start; }
+.chart h2 { margin: 0; }
+.leg { display: flex; gap: 14px; font-size: .82rem; color: var(--muted); font-weight: 600; }
+.leg span { display: inline-flex; align-items: center; gap: 6px; }
+.leg i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sw-recu { background: var(--accent); } .sw-du { background: var(--accent-soft); }
+.bars { display: grid; grid-template-columns: auto 1fr; gap: 8px; margin-top: 14px; }
+.bars-y { display: flex; flex-direction: column; justify-content: space-between; font-size: .7rem; color: var(--muted); font-weight: 600; text-align: right; height: 150px; font-variant-numeric: tabular-nums; }
+.bars-plot { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; background: linear-gradient(var(--line), var(--line)) 0 0 / 100% 1px no-repeat, linear-gradient(var(--line), var(--line)) 0 75px / 100% 1px no-repeat, linear-gradient(var(--line), var(--line)) 0 149px / 100% 1px no-repeat; }
+.colb { display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; outline: none; }
+.bar-zone { position: relative; width: 100%; max-width: 30px; height: 150px; }
+.bar-zone i { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 4px 4px 0 0; }
+.b-du { background: var(--accent-soft); }
+.b-recu { background: var(--accent); transition: filter .15s; }
+.colb span { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: capitalize; }
+.colb:hover .b-recu, .colb:focus .b-recu { filter: brightness(1.15); }
+.colb:hover::after, .colb:focus::after { content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); font-size: .75rem; font-weight: 600; padding: 6px 9px; border-radius: 8px; white-space: nowrap; z-index: 3; pointer-events: none; }
+.colb:first-child:hover::after, .colb:first-child:focus::after { left: 0; transform: none; }
+.colb:last-child:hover::after, .colb:last-child:focus::after { left: auto; right: 0; transform: none; }
+.contacts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.contacts .chip { text-decoration: none; color: var(--ink); font-size: .88rem; padding: 7px 12px; box-shadow: var(--shadow); border-color: transparent; }
+ol.histo { list-style: none; margin: 10px 0 0; padding: 0 0 0 6px; display: flex; flex-direction: column; gap: 0; border-left: 2px solid var(--line); }
+ol.histo li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0 8px 0; margin-left: -18px; }
+.h-ico { width: 32px; height: 32px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 3px var(--surface), var(--shadow); display: inline-flex; align-items: center; justify-content: center; flex: none; font-size: .95rem; }
+ol.histo li span:last-child { display: flex; flex-direction: column; font-weight: 600; font-size: .92rem; }
+ol.histo small { color: var(--muted); font-weight: 500; }
 @media print {
   @page { margin: 14mm; }
   body { background: #fff; }
@@ -340,12 +428,14 @@ details.anciens .todo { margin-top: 8px; }
 <body>
 <header class="top">
   <div class="top-inner">
-    <div class="brand"><span id="brandName">Gestion SCI</span><small id="brandSub"></small></div><a class="gear" href="#reglages" aria-label="Réglages">⚙️</a>
+    <div class="brand"><span id="brandName">Gestion SCI</span><small id="brandSub"></small></div><button class="search-btn" onclick="ouvrirRecherche()" aria-label="Rechercher"><span aria-hidden="true">🔎</span><span class="sb-t">Rechercher…</span><kbd>/</kbd></button><a class="gear" href="#reglages" aria-label="Réglages">⚙️</a>
     <nav class="tabs" id="nav"></nav>
   </div>
 </header>
 <nav id="bottomnav" aria-label="Navigation"></nav>
 <main id="app"></main>
+<div id="focus" hidden></div>
+<button id="fab" onclick="ajoutRapide()" aria-label="Ajouter">+</button>
 <div id="overlay" class="overlay" hidden></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 <div id="pdfstage" aria-hidden="true" style="position:absolute;left:-10000px;top:0;width:840px"></div>
@@ -760,6 +850,174 @@ function docTeom(taxeId, bailId) {
 }
 function teomPaye(taxeId, bailId) { confettis(); const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId); p.payeLe = iso(TODAY); save(); render(); toast(`${eur(p.montant)} reçus`); }
 
+/* ================= ⚡ Le point du mois : une question à la fois ================= */
+const nomCourt = n => String(n || "").replace(/\s*\(.*?\)/g, "").trim();
+let POINT = null;
+function etapesPoint() {
+  const st = [], ech = toutesEcheances().filter(e => e.statut !== "paye" && e.dueDate <= addDays(TODAY, 3));
+  ech.sort((a, b) => a.dueDate - b.dueDate).forEach(e => st.push({ type: "loyer", id: "l" + e.b.id + e.m, bailId: e.b.id, m: e.m }));
+  if (toutesEcheances().some(e => e.statut === "paye" && e.du > 0 && !e.quittance)) st.push({ type: "quittances", id: "q" });
+  S.baux.forEach(b => { const rv = revInfo(b); if (rv && rv.statut === "pret") st.push({ type: "revision", id: "r" + b.id, bailId: b.id }); });
+  (S.taxes || []).forEach(tx => tx.parts.filter(p => !p.payeLe && p.montant > 0 && bail(p.bailId)).forEach(p => st.push({ type: "teom", id: "t" + tx.id + p.bailId, taxeId: tx.id, bailId: p.bailId })));
+  taches().filter(t => t.prio !== "info" && /^(ass-|dep-|fisc-|rap-|edl-|fin-|dpe)/.test(t.key)).forEach(t => st.push({ type: "tache", id: "k" + t.key, key: t.key }));
+  return st;
+}
+function lancerPoint() { POINT = { etapes: etapesPoint(), i: 0, faites: 0 }; afficherPoint(); }
+function fermerPoint() { POINT = null; const el = document.getElementById("focus"); el.hidden = true; el.innerHTML = ""; render(); }
+function pointSuivant(fait) { if (!POINT) return; if (fait) POINT.faites++; POINT.i++; afficherPoint(true); }
+function etapeEncoreUtile(s) {
+  if (s.type === "loyer") { const e = echeance(bail(s.bailId), s.m); if (e && e.relances.some(r => r.date === iso(TODAY)) && !s.relanceVue) { s.relanceVue = true; POINT.faites++; return false; } return e && e.statut !== "paye" && !s.relanceVue; }
+  if (s.type === "quittances") return toutesEcheances().some(e => e.statut === "paye" && e.du > 0 && !e.quittance);
+  if (s.type === "revision") { const rv = revInfo(bail(s.bailId)); return rv && rv.statut === "pret"; }
+  if (s.type === "teom") { const t = S.taxes.find(x => x.id === s.taxeId), p = t && t.parts.find(x => x.bailId === s.bailId); return p && !p.payeLe; }
+  if (s.type === "tache") return taches().some(t => t.key === s.key);
+  return false;
+}
+function afficherPoint(anime) {
+  const el = document.getElementById("focus"); if (!POINT) return;
+  while (POINT.i < POINT.etapes.length && !etapeEncoreUtile(POINT.etapes[POINT.i])) POINT.i++;
+  const n = POINT.etapes.length, i = POINT.i, pct = n ? Math.round(i / n * 100) : 100;
+  let carte;
+  if (i >= n) {
+    carte = `<div class="pt-fin"><span class="pt-big">🎉</span><h2>C'est tout bon !</h2><p>${POINT.faites ? `${POINT.faites} chose${POINT.faites > 1 ? "s" : ""} réglée${POINT.faites > 1 ? "s" : ""} en quelques secondes.` : "Tout était déjà à jour."}</p><button class="primary big" onclick="fermerPoint()">Revenir à l'accueil</button></div>`;
+    if (POINT.faites) setTimeout(confettis, 150);
+  } else carte = cartePoint(POINT.etapes[i]);
+  el.innerHTML = `<div class="pt-wrap" role="dialog" aria-modal="true" aria-label="Le point du mois">
+    <div class="pt-top"><button class="ghost" onclick="fermerPoint()" aria-label="Fermer">✕</button><div class="pt-prog" aria-hidden="true"><i style="width:${pct}%"></i></div><span class="pt-cpt">${Math.min(i + 1, n)}/${n || 0}</span></div>
+    <div class="pt-card ${anime ? "in" : ""}">${carte}</div></div>`;
+  el.hidden = false;
+}
+function cartePoint(s) {
+  const btn = (txt, f, cls = "") => `<button class="${cls} big" onclick="${f}">${txt}</button>`;
+  const passer = btn("Plus tard", "pointSuivant(false)", "ghost");
+  if (s.type === "loyer") {
+    const b = bail(s.bailId), e = echeance(b, s.m), bi = bien(b.bienId);
+    return `<div class="pt-av">${avatar(b.nom)}</div><p class="pt-k">${esc(bienLabel(bi))} · loyer de ${fm(s.m)}</p>
+      <h2>${esc(nomCourt(b.nom))} a payé ?</h2><p class="pt-montant">${eur(e.reste)}</p>
+      <p class="pt-d">${e.statut === "retard" ? `🔴 En retard de ${e.retardJ} jour${e.retardJ > 1 ? "s" : ""}${e.relances.length ? ` · ${e.relances.length} relance(s) déjà envoyée(s)` : ""}` : `À payer le ${fd(e.dueDate)}`}</p>
+      <div class="pt-acts">${btn(`✓ Oui, c'est reçu`, `pointLoyer('${b.id}','${s.m}')`, "primary")}${btn("Montant différent", `saisirPaiement('${b.id}','${s.m}')`)}
+      ${e.statut === "retard" ? btn("✉️ Non, le relancer", `relance('${b.id}','${s.m}')`, "danger") : ""}${passer}</div>`;
+  }
+  if (s.type === "quittances") {
+    const l = toutesEcheances().filter(e => e.statut === "paye" && e.du > 0 && !e.quittance), avecMail = l.filter(e => e.b.email);
+    return `<span class="pt-big">📄</span><h2>${l.length} quittance${l.length > 1 ? "s" : ""} à envoyer</h2>
+      <p class="pt-d">${[...new Set(l.map(e => nomCourt(e.b.nom)))].join(", ")}${avecMail.length < l.length ? `<br>${l.length - avecMail.length} sans e-mail : à ajouter dans la fiche du locataire.` : ""}</p>
+      <div class="pt-acts">${peutEnvoyer() && avecMail.length ? btn(`Envoyer ${avecMail.length > 1 ? "les " + avecMail.length : "la quittance"}`, "pointQuittances()", "primary") : btn("Voir les loyers", "fermerPoint();go('loyers')", "primary")}${passer}</div>`;
+  }
+  if (s.type === "revision") {
+    const b = bail(s.bailId), rv = revInfo(b);
+    return `<div class="pt-av">${avatar(b.nom)}</div><p class="pt-k">Révision annuelle · indice IRL ${qLabel(rv.newKey)}</p><h2>Augmenter le loyer de ${esc(nomCourt(b.nom))} ?</h2>
+      <p class="pt-montant">${eur(rv.ancien)} → ${eur(rv.nouveau)}</p><p class="pt-d">+${eur(rv.nouveau - rv.ancien)} par mois, soit +${eur((rv.nouveau - rv.ancien) * 12)} par an.</p>
+      <div class="pt-acts">${btn("📈 Oui, appliquer", `revision('${b.id}')`, "primary")}${btn("Non, pas cette année", `marquerFait('${rv.key}');pointSuivant(true)`)}${passer}</div>`;
+  }
+  if (s.type === "teom") {
+    const t = S.taxes.find(x => x.id === s.taxeId), p = t.parts.find(x => x.bailId === s.bailId), b = bail(s.bailId);
+    return `<span class="pt-big">🗑️</span><p class="pt-k">Taxe d'ordures ménagères ${t.annee}</p><h2>${esc(nomCourt(b.nom))} te doit</h2><p class="pt-montant">${eur(p.montant)}</p><p class="pt-d">${p.jours} jours dans le logement${p.demandeLe ? ` · demandé le ${fds(p.demandeLe)}` : ""}</p>
+      <div class="pt-acts">${p.demandeLe ? "" : btn("✉️ Lui demander", `docTeom('${t.id}','${b.id}')`, "primary")}${btn("✓ Il a payé", `teomPaye('${t.id}','${b.id}');pointSuivant(true)`, p.demandeLe ? "primary" : "")}${passer}</div>`;
+  }
+  const t = taches().find(x => x.key === s.key);
+  return `<span class="pt-big">${t.prio === "urgent" ? "⚠️" : "📌"}</span><h2>${t.t}</h2><p class="pt-d">${t.d}</p>
+    <div class="pt-acts">${(t.acts || []).map(([l, f], k) => btn(l, f, k ? "" : "primary")).join("")}${t.done ? btn("✓ C'est fait", `marquerFait('${t.key}');pointSuivant(true)`) : ""}${passer}</div>`;
+}
+async function pointLoyer(b, m) { await encaisser(b, m); pointSuivant(true); }
+async function pointQuittances() { await envoyerToutesQuittances(); pointSuivant(true); }
+
+/* ================= 🔎 Recherche universelle ================= */
+function ouvrirRecherche() {
+  const el = document.getElementById("focus");
+  el.innerHTML = `<div class="sr-wrap" role="dialog" aria-modal="true" aria-label="Rechercher" onclick="if(event.target===this)fermerRecherche()"><div class="sr-box">
+    <div class="sr-in"><span aria-hidden="true">🔎</span><input id="srq" type="text" enterkeyhint="search" placeholder="Un locataire, un bien, un document, une action…" autocomplete="off" oninput="majRecherche()" onkeydown="clavierRecherche(event)"><button class="ghost" onclick="fermerRecherche()" aria-label="Fermer">✕</button></div>
+    <ul id="srres" class="sr-res" role="listbox"></ul></div></div>`;
+  el.hidden = false; majRecherche(); setTimeout(() => document.getElementById("srq").focus(), 30);
+  if (MCP && DOCS.etat === "vide") indexerDrive();
+}
+function fermerRecherche() { const el = document.getElementById("focus"); el.hidden = true; el.innerHTML = ""; }
+let SR = [], SRi = 0;
+const ACTIONS = [
+  ["⚡", "Faire le point du mois", "lancerPoint()"], ["💶", "Un loyer est arrivé", "ajoutRapide('loyer')"], ["🏦", "Importer le relevé bancaire", "importerReleve()"],
+  ["🧾", "Ajouter une dépense", "editDepense()"], ["👤", "Nouveau locataire", "editBail()"], ["🏠", "Nouveau bien", "editBien()"], ["⏰", "Nouveau rappel", "editRappel()"],
+  ["🗑️", "Saisir une taxe foncière", "taxeFonciere()"], ["📊", "Export pour le comptable", `exportCSV(${TODAY.getFullYear()})`], ["📄", "Bilan de l'année", `docBilanOpen(${TODAY.getFullYear()})`],
+  ["📅", "Tous les loyers du mois", "go('loyers')"], ["⚙️", "Réglages de la SCI", "go('reglages')"], ["📁", "Documents du Drive", "go('docs')"]
+];
+function majRecherche() {
+  const q = sansAccent((document.getElementById("srq") || {}).value || ""), mots = q.split(/\s+/).filter(Boolean), ok = t => mots.every(m => sansAccent(t).includes(m));
+  const r = [];
+  S.baux.forEach(b => { const bi = bien(b.bienId); if (!mots.length ? isActive(b) : ok(b.nom + " " + (b.email || "") + " " + bienLabel(bi))) r.push({ ico: avatar(b.nom), t: esc(b.nom), s: `${esc(bienLabel(bi))} · ${isActive(b) ? eur(loyerAt(b, CUR).hc + loyerAt(b, CUR).ch) + "/mois" : "ancien locataire"}`, f: `go('bail-${b.id}')` }); });
+  if (mots.length) S.biens.forEach(bi => { if (ok(bi.nom + " " + adresseBien(bi))) r.push({ ico: `<span class="sr-i">${/maison/i.test(bi.type || "") ? "🏡" : "🏢"}</span>`, t: esc(bi.nom), s: esc(adresseBien(bi)), f: "go('biens')" }); });
+  ACTIONS.forEach(([i, t, f]) => { if (!mots.length || ok(t)) r.push({ ico: `<span class="sr-i">${i}</span>`, t, s: "Action", f }); });
+  if (mots.length && DOCS.etat === "pret") chercherDocs(q, "").slice(0, 8).forEach(d => r.push({ ico: `<span class="sr-i">${iconeFichier(d)}</span>`, t: esc(d.titre), s: "Drive · " + esc(d.chemin.join(" › ") || "Racine"), f: `window.open('${esc(d.lien)}','_blank')`, lien: d.lien }));
+  SR = r.slice(0, 30); SRi = 0;
+  document.getElementById("srres").innerHTML = SR.length ? SR.map((x, k) => `<li role="option" class="${k === 0 ? "on" : ""}" onclick="choisirRecherche(${k})">${x.ico}<span><b>${x.t}</b><small>${x.s}</small></span></li>`).join("") : `<li class="vide">Rien trouvé${DOCS.etat === "chargement" ? " · lecture du Drive en cours…" : ""}</li>`;
+}
+function choisirRecherche(k) { const x = SR[k]; if (!x) return; fermerRecherche(); if (x.lien) { window.open(x.lien, "_blank", "noopener"); return; } new Function(x.f)(); }
+function clavierRecherche(ev) {
+  if (ev.key === "Escape") return fermerRecherche();
+  if (ev.key === "Enter") { ev.preventDefault(); return choisirRecherche(SRi); }
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") { ev.preventDefault(); SRi = (SRi + (ev.key === "ArrowDown" ? 1 : -1) + SR.length) % SR.length; [...document.querySelectorAll("#srres li")].forEach((li, k) => li.classList.toggle("on", k === SRi)); }
+}
+document.addEventListener("keydown", e => {
+  if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) { e.preventDefault(); ouvrirRecherche(); }
+  if (e.key === "Escape" && !document.getElementById("focus").hidden && document.getElementById("overlay").hidden) { if (POINT) fermerPoint(); else fermerRecherche(); }
+});
+
+let dernierY = 0;
+addEventListener("scroll", () => { const y = scrollY, f = document.getElementById("fab"); if (f) f.classList.toggle("cache", y > dernierY + 4 && y > 120); if (Math.abs(y - dernierY) > 4) dernierY = y; }, { passive: true });
+/* ================= ➕ Ajout rapide ================= */
+function ajoutRapide(quoi) {
+  if (quoi === "loyer") {
+    const l = toutesEcheances(addM(CUR, 1)).filter(e => e.statut !== "paye").sort((a, b) => a.dueDate - b.dueDate);
+    modal("💶 Quel loyer est arrivé ?", l.length ? `<div class="full"><ul class="todo">${l.map(e => `<li>${avatar(e.b.nom)}<span class="tx">${esc(e.b.nom)}<small>${fm(e.m)} · ${eur(e.reste)}${e.statut === "retard" ? " · en retard" : ""}</small></span><button type="button" class="small primary" onclick="closeOverlay();encaisser('${e.b.id}','${e.m}')">Reçu</button></li>`).join("")}</ul></div>` : `<p class="full note">Aucun loyer en attente. 🎉</p>`, () => true, { ok: "Fermer", lecture: true });
+    return;
+  }
+  const items = [["💶", "Un loyer est arrivé", "ajoutRapide('loyer')"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["👤", "Un locataire", "editBail()"], ["🏠", "Un bien", "editBien()"], ["⏰", "Un rappel", "editRappel()"]];
+  modal("Ajouter", `<div class="full grille-add">${items.map(([i, t, f]) => `<button type="button" onclick="${f}"><span>${i}</span>${t}</button>`).join("")}</div>`, () => true, { ok: "Fermer", lecture: true });
+}
+
+/* ================= 📅 Échéancier des 30 prochains jours ================= */
+function echeancier() {
+  const fin = addDays(TODAY, 30), ev = [];
+  S.baux.forEach(b => { [CUR, addM(CUR, 1)].forEach(m => { const e = echeance(b, m); if (e && e.statut !== "paye" && e.dueDate >= TODAY && e.dueDate <= fin) ev.push({ d: e.dueDate, ico: "💶", t: nomCourt(b.nom), s: eur(e.reste), cls: "ok" }); }); });
+  S.baux.forEach(b => { const rv = revInfo(b); if (rv && rv.anniv >= TODAY && rv.anniv <= fin) ev.push({ d: rv.anniv, ico: "📈", t: "Révision " + nomCourt(b.nom), s: rv.nouveau ? eur(rv.nouveau) : "", cls: "acc" }); if (b.dateSortie && P(b.dateSortie) >= TODAY && P(b.dateSortie) <= fin) ev.push({ d: P(b.dateSortie), ico: "🔑", t: "Départ " + nomCourt(b.nom), s: "", cls: "warn" }); if (P(b.dateEntree) >= TODAY && P(b.dateEntree) <= fin) ev.push({ d: P(b.dateEntree), ico: "🎉", t: "Arrivée " + nomCourt(b.nom), s: "", cls: "ok" }); if (b.assuranceFin && P(b.assuranceFin) >= TODAY && P(b.assuranceFin) <= fin) ev.push({ d: P(b.assuranceFin), ico: "🛡️", t: "Assurance " + nomCourt(b.nom), s: "expire", cls: "warn" }); });
+  S.rappels.filter(r => !r.fait && P(r.date) >= TODAY && P(r.date) <= fin).forEach(r => ev.push({ d: P(r.date), ico: "⏰", t: r.titre, s: "", cls: "acc" }));
+  const y = TODAY.getFullYear();
+  [[new Date(y, 9, 15), "🏛️", "Taxe foncière"], [new Date(y, 11, 15), "🏛️", "CFE"], [new Date(y, 4, 20), "🏛️", "Déclaration 2072"], [new Date(y, 5, 30), "🤝", "AG annuelle"]].forEach(([d, i, t]) => { if (d >= TODAY && d <= fin) ev.push({ d, ico: i, t, s: "", cls: "warn" }); });
+  ev.sort((a, b) => a.d - b.d);
+  if (!ev.length) return "";
+  return `<section><h2 class="sec">📅 Les 30 prochains jours</h2><div class="cal" role="list">${ev.slice(0, 20).map(e => `<div class="cal-i ${e.cls}" role="listitem"><span class="cal-d"><b>${e.d.getDate()}</b>${e.d.toLocaleDateString("fr-FR", { month: "short" }).replace(".", "")}</span><span class="cal-ico" aria-hidden="true">${e.ico}</span><span class="cal-t">${esc(e.t)}</span>${e.s ? `<span class="cal-s">${esc(e.s)}</span>` : ""}</div>`).join("")}</div></section>`;
+}
+
+/* ================= 📊 Graphique : loyers des 12 derniers mois ================= */
+function graphiqueLoyers() {
+  const mois = []; for (let k = 11; k >= 0; k--) mois.push(addM(CUR, -k));
+  const data = mois.map(m => { const es = S.baux.map(b => echeance(b, m)).filter(Boolean); return { m, du: es.reduce((s, e) => s + e.du, 0), recu: es.reduce((s, e) => s + Math.min(e.paye, e.du), 0) }; });
+  if (!data.some(d => d.du)) return "";
+  while (data.length > 6 && !data[0].du) data.shift();
+  const max = Math.max(...data.map(d => d.du)), p10 = Math.pow(10, Math.floor(Math.log10(max))), haut = Math.ceil(max / p10) * p10;
+  const tot = data.reduce((s, d) => s + d.recu, 0), totDu = data.reduce((s, d) => s + d.du, 0);
+  const k = v => v >= 1000 ? (Math.round(v / 100) / 10).toString().replace(".", ",") + " k€" : Math.round(v) + " €";
+  return `<section class="card chart"><div class="head"><div><h2>Loyers encaissés · ${data.length} mois</h2><p class="note">${eur(tot)} reçus sur ${eur(totDu)} attendus (${totDu ? Math.round(tot / totDu * 100) : 0} %)</p></div>
+    <div class="leg" aria-hidden="true"><span><i class="sw-recu"></i>Reçu</span><span><i class="sw-du"></i>Attendu</span></div></div>
+    <div class="bars" role="img" aria-label="Loyers reçus et attendus par mois">
+      <div class="bars-y" aria-hidden="true"><span>${k(haut)}</span><span>${k(haut / 2)}</span><span>0</span></div>
+      <div class="bars-plot">${data.map(d => `<div class="colb" tabindex="0" data-tip="${fm(d.m)} : ${eur(d.recu)} / ${eur(d.du)}"><div class="bar-zone"><i class="b-du" style="height:${d.du / haut * 100}%"></i><i class="b-recu" style="height:${d.recu / haut * 100}%"></i></div><span>${new Date(+d.m.slice(0, 4), +d.m.slice(5) - 1, 1).toLocaleDateString("fr-FR", { month: "narrow" })}</span></div>`).join("")}</div>
+    </div></section>`;
+}
+const rendement = bi => { const b = bailActifDuBien(bi.id); if (!b || !(+bi.prixAchat > 0)) return null; const l = loyerAt(b, CUR); return { brut: l.hc * 12 / +bi.prixAchat * 100, annuel: l.hc * 12 }; };
+
+/* ================= 🕓 Historique d'un locataire ================= */
+function historique(b) {
+  const ev = [{ d: b.dateEntree, ico: "🎉", t: "Arrivée dans le logement" }];
+  S.paiements.filter(p => p.bailId === b.id).forEach(p => ev.push({ d: p.date, ico: "💶", t: `${eur(p.montant)} reçus · loyer de ${fm(p.mois)}` }));
+  Object.entries(S.quittances).filter(([k]) => k.startsWith(b.id + "|")).forEach(([k, d]) => ev.push({ d, ico: "📄", t: `Quittance de ${fm(k.split("|")[1])} envoyée` }));
+  S.relances.filter(r => r.bailId === b.id).forEach(r => ev.push({ d: r.date, ico: "✉️", t: `${NIVEAUX[r.niveau].court} · loyer de ${fm(r.mois)}` }));
+  (b.revisions || []).forEach(r => ev.push({ d: r.date, ico: "📈", t: `Loyer révisé : ${eur(r.ancien)} → ${eur(r.loyerHC)}` }));
+  (S.taxes || []).forEach(tx => tx.parts.filter(p => p.bailId === b.id).forEach(p => { if (p.demandeLe) ev.push({ d: p.demandeLe, ico: "🗑️", t: `Ordures ménagères ${tx.annee} demandées (${eur(p.montant)})` }); if (p.payeLe) ev.push({ d: p.payeLe, ico: "✅", t: `Ordures ménagères ${tx.annee} payées` }); }));
+  if (b.dateSortie && P(b.dateSortie) <= TODAY) ev.push({ d: b.dateSortie, ico: "🔑", t: "Départ du logement" });
+  if (b.depotRestitue) ev.push({ d: b.depotRestitue, ico: "↩️", t: `Dépôt de garantie rendu${+b.depotRetenu ? ` (${eur(b.depotRetenu)} retenus)` : ""}` });
+  ev.sort((a, c) => String(c.d).localeCompare(String(a.d)));
+  return `<section class="card"><h2>🕓 Historique</h2><ol class="histo">${ev.slice(0, 40).map(e => `<li><span class="h-ico" aria-hidden="true">${e.ico}</span><span>${esc(e.t)}<small>${fd(e.d)}</small></span></li>`).join("")}</ol></section>`;
+}
+
 /* ================= Navigation ================= */
 const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["docs", "Docs"], ["compta", "Compta"], ["reglages", "Réglages"]];
 const ICONES = { locataires: "🏠", afaire: "✅", biens: "🏘️", docs: "📁", compta: "💶", reglages: "⚙️" };
@@ -788,6 +1046,9 @@ function render() {
   app.innerHTML = banner + html;
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { el.setSelectionRange(selS, selE); } catch (e) {} } }
   document.title = S.sci.nom || "Gestion SCI";
+  app.classList.remove("entre"); void app.offsetWidth; if (render.page !== location.hash) app.classList.add("entre"); render.page = location.hash;
+  document.getElementById("fab").hidden = vide && page === "locataires";
+  if (POINT) afficherPoint();
 }
 
 /* ================= Pages ================= */
@@ -859,12 +1120,14 @@ function pageAccueil(T) {
     <div><p class="hero-k">Loyers de ${fm(CUR)}</p><h1>${heroVide ? "Aucun loyer attendu" : `${recus} sur ${mois.length} reçu${recus > 1 ? "s" : ""}`}</h1><p class="sub">${heroVide ? "Ajoute un locataire pour suivre ses loyers." : recus === mois.length ? `Tout est encaissé : ${eur(encaisse)} 🎉` : `${eur(encaisse)} encaissés sur ${eur(attendu)}`}</p>
       <div class="dots" aria-hidden="true" style="margin-top:12px">${mois.map(e => `<i class="${e.statut === "paye" ? "ok" : e.statut === "retard" ? "bad" : ""}"></i>`).join("")}</div></div>
     <div class="ring" role="img" aria-label="${Math.round(pct * 100)} % des loyers reçus"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" fill="none" stroke-width="10"/><circle class="val" cx="50" cy="50" r="42" fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg><b>${Math.round(pct * 100)}%</b></div>
+    <button class="hero-cta" onclick="lancerPoint()">⚡ Faire le point</button>
     <svg class="skyline" viewBox="0 0 230 90" aria-hidden="true"><path fill="#fff" d="M0 90V52h22V30h26v22h10V18l20-14 20 14v72h8V40h30v50h6V24l18-12 18 12v66h10V46h26v44z"/></svg>
   </section>
   <section><h2 class="sec">À faire ${items.length ? `<span class="pill ${items.some(i => i.prio === "urgent") ? "bad" : "warn"}">${items.length}</span>` : ""}</h2>
     ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</li>`).join("")}</ul>
       ${items.length > 5 ? `<p><a href="#afaire">${items.length - 5 > 1 ? `Voir les ${items.length - 5} autres` : "Voir l'autre"} →</a></p>` : ""}` : `<div class="empty party"><span>🎉</span>Rien à faire, tout est en ordre.</div>`}
   </section>
+  ${echeancier()}
   <div class="quick"><button onclick="importerReleve()"><span>🏦</span>Importer le relevé</button><button onclick="go('docs')"><span>📁</span>Documents</button><button onclick="editDepense()"><span>🧾</span>Ajouter une dépense</button></div>
   <section><div class="head"><h2 class="sec">Locataires</h2><button class="small" onclick="editBail()">+ Ajouter</button></div>
     <div class="tiles">${actifs.map(carteLocataire).join("")}
@@ -885,7 +1148,8 @@ function pageBiens() {
     return `<article class="card bien"><div class="top"><span class="emoji" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span><div><h3>${esc(bi.nom)}</h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
       ${b ? `<span class="pill ok">Loué</span>` : `<span class="pill warn">Vide</span>`}</div>
       <dl>${b ? `<dt>Locataire</dt><dd><a href="#bail-${b.id}">${esc(b.nom)}</a></dd><dt>Loyer HC</dt><dd>${eur(l.hc)}</dd><dt>Charges</dt><dd>${eur(l.ch)}</dd><dt>Depuis</dt><dd>${fds(b.dateEntree)}</dd>` : `<dt>Locataire</dt><dd>—</dd>`}
-      <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd></dl>
+      <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd>
+      ${(() => { const r = rendement(bi); return r ? `<dt>Rentabilité brute</dt><dd><span class="pill acc">${r.brut.toFixed(1).replace(".", ",")} %</span></dd>` : bi.prixAchat ? "" : `<dt>Rentabilité</dt><dd><button class="small ghost" onclick="editBien('${bi.id}')">Ajouter le prix</button></dd>`; })()}</dl>
       <div class="row"><button class="small" onclick="editBien('${bi.id}')">Modifier</button><button class="small" onclick="taxeFonciere('${bi.id}')">Taxe foncière</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
   }).join("")}</div>` : `<div class="empty">Aucun bien. Ajoute ton premier logement.</div>`}`;
 }
@@ -894,7 +1158,8 @@ function pageBail(id) {
   const b = bail(id); if (!b) return `<div class="empty">Locataire introuvable. <a href="#locataires">Retour</a></div>`;
   const bi = bien(b.bienId), l = loyerAt(b, CUR), ech = echeancesBail(b, addM(CUR, 1)).reverse(), du = dureeBail(b);
   const dette = ech.filter(e => e.statut === "retard").reduce((s, e) => s + e.reste, 0);
-  return `<div class="head"><div><p><a href="#locataires">← Accueil</a></p><h1>${avatar(b.nom)} ${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div>
+  return `<div class="head"><div><p><a href="#locataires">← Accueil</a></p><h1>${avatar(b.nom)} ${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p>
+  <div class="contacts">${b.tel ? `<a class="chip" href="tel:${esc(b.tel.replace(/\s/g, ""))}">📞 ${esc(b.tel)}</a>` : ""}${b.email ? `<button class="chip" onclick="copierTexte('${esc(b.email)}')">✉️ ${esc(b.email)}</button>` : `<button class="chip" onclick="editBail('${b.id}')">✉️ Ajouter l'e-mail</button>`}</div></div>
   <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button><button onclick="docBailOpen('${b.id}')">Générer le bail</button><button onclick="revision('${b.id}')">Réviser le loyer</button><button onclick="finBail('${b.id}')">Départ du locataire</button></div></div>
   <div class="kpis">
     <div class="kpi"><span>Loyer actuel</span><b>${eur(l.hc + l.ch)}</b><small>${eur(l.hc)} + ${eur(l.ch)} de charges</small></div>
@@ -917,8 +1182,8 @@ function pageBail(id) {
       <dt>Garant</dt><dd>${esc(b.garantNom || "—")}</dd><dt>Assurance jusqu'au</dt><dd>${b.assuranceFin ? fds(b.assuranceFin) : "—"}</dd>
     </dl>${b.notes ? `<p class="note">${nl2br(b.notes)}</p>` : ""}</div>
     ${(b.revisions || []).length ? `<h3 style="margin-top:14px">Révisions de loyer</h3><ul class="note">${b.revisions.map((r, i) => `<li>${fm(r.depuis)} : ${eur(r.loyerHC)} HC (IRL ${esc(r.trimestre)} ${esc(r.irlNouveau)}) <button class="small ghost" onclick="docRevisionOpen('${b.id}',${i})">Courrier</button></li>`).join("")}</ul>` : ""}
-    ${S.relances.filter(r => r.bailId === b.id).length ? `<h3 style="margin-top:14px">Relances envoyées</h3><ul class="note">${S.relances.filter(r => r.bailId === b.id).map(r => `<li>${fds(r.date)} · ${NIVEAUX[r.niveau].court} · loyer ${fm(r.mois)}</li>`).join("")}</ul>` : ""}
-  </section></div>`;
+  </section>
+  ${historique(b)}</div>`;
 }
 function actionsEcheance(e) {
   const a = [], mail = peutEnvoyer() && e.b.email;
@@ -966,6 +1231,7 @@ function pageCompta() {
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
   <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button><button class="small" onclick="importerReleve()">🏦 Importer le relevé</button><button class="small" onclick="exportCSV(${y})">📊 Export comptable</button><button class="small" onclick="docBilanOpen(${y})">📄 Bilan PDF</button></div>
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>hors charges</small></div><div class="kpi"><span>Charges encaissées</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
+  ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
   <section><h2 style="margin-bottom:10px">Par bien</h2><div class="table-wrap"><table class="rt"><thead><tr><th>Bien</th><th class="num">Loyers</th><th class="num">Charges reçues</th><th class="num">Dépenses</th><th class="num">Résultat</th></tr></thead><tbody>
   ${lignes.map(l => `<tr><td class="rt-head"><b>${esc(l.nom)}</b></td><td class="num" data-l="Loyers">${eur(l.loyers)}</td><td class="num" data-l="Charges reçues">${eur(l.charges)}</td><td class="num" data-l="Dépenses">${eur(l.dep)}</td><td class="num" data-l="Résultat"><b>${eur(l.res)}</b></td></tr>`).join("")}
   </tbody><tfoot><tr><td class="rt-head">Total</td><td class="num" data-l="Loyers">${eur(tot.loyers)}</td><td class="num" data-l="Charges reçues">${eur(tot.charges)}</td><td class="num" data-l="Dépenses">${eur(tot.dep)}</td><td class="num" data-l="Résultat">${eur(tot.res)}</td></tr></tfoot></table></div></section>
@@ -1058,6 +1324,7 @@ function editBien(id) {
     ${sel("Loué", "meuble", b.meuble || "vide", [["vide", "Vide (non meublé)"], ["meuble", "Meublé"]])}${fld("Année de construction", "annee", b.annee, "number")}
     ${sel("Classe DPE", "dpe", b.dpe || "", [["", "—"], ...["A", "B", "C", "D", "E", "F", "G"].map(x => [x, x])])}${fld("DPE valable jusqu'au", "dpeValidite", b.dpeValidite, "date")}
     ${fld("Échéance assurance PNO", "pnoEcheance", b.pnoEcheance, "date")}${fld("Loyer indicatif HC (€)", "loyerRef", b.loyerRef, "number")}
+    ${fld("Prix d'achat, frais compris (€) — pour la rentabilité", "prixAchat", b.prixAchat, "number", "full")}
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
     ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}`,
     d => { if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); },
@@ -1206,6 +1473,7 @@ function showDoc(html, o = {}) {
     else { ev.target.disabled = false; ev.target.textContent = "Envoyer par e-mail"; }
   };
 }
+function copierTexte(t) { try { navigator.clipboard.writeText(t).then(() => toast("Copié : " + t), () => toast(t)); } catch (e) { toast(t); } }
 function copier() { const t = document.getElementById("mailtxt"); const done = () => toast("Texte copié"); try { navigator.clipboard.writeText(t.value).then(done, () => { t.select(); document.execCommand("copy"); done(); }); } catch (e) { t.select(); document.execCommand("copy"); done(); } }
 const slug = s => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
 
