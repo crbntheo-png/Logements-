@@ -140,6 +140,32 @@ tfoot td { font-weight: 700; background: var(--surface-2); }
 .grid.locs { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 @media (max-width: 420px) { .grid.locs { grid-template-columns: minmax(0, 1fr); } }
 details > summary { list-style-position: inside; }
+.hero { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--accent); color: var(--accent-ink); border-radius: 16px; padding-block: 20px; padding-inline: 20px; }
+.hero h1 { font-size: 1.7rem; }
+.hero-k { margin: 0 0 4px; text-transform: capitalize; opacity: .8; font-weight: 600; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dots i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; opacity: .55; }
+.dots i.ok { background: currentColor; opacity: 1; }
+.dots i.bad { background: var(--bad); border-color: var(--bad); opacity: 1; }
+h2.sec { font-size: 1.15rem; display: flex; gap: 8px; align-items: center; margin: 0 0 10px; }
+.todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.todo li { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.todo li.urgent { border-color: var(--bad); background: var(--bad-soft); }
+.todo .ico { font-size: 1.3rem; line-height: 1; }
+.todo .tx { flex: 1; min-width: 0; font-weight: 600; }
+.todo .tx small { display: block; font-weight: 500; color: var(--muted); }
+.tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; border-left-width: 5px; }
+.tile.ok { border-left-color: var(--ok); } .tile.warn { border-left-color: var(--warn); } .tile.bad { border-left-color: var(--bad); } .tile.info { border-left-color: var(--line); }
+.tile-head { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
+.tile-head span:nth-child(2) { flex: 1; min-width: 0; }
+.tile-head b { display: block; } .tile-head small { color: var(--muted); }
+.chev { font-size: 1.6rem; color: var(--muted); }
+.tile-state { font-weight: 700; font-size: 1.05rem; }
+.tile.bad .tile-state { color: var(--bad); }
+.tile .row button { flex: 1; justify-content: center; padding-block: 10px; }
+.avatar { width: 42px; height: 42px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; flex: none; font-family: var(--font-display); }
+@media (max-width: 420px) { .tiles { grid-template-columns: minmax(0, 1fr); } .hero h1 { font-size: 1.4rem; } }
 /* Fenêtres */
 .overlay { position: fixed; inset: 0; background: rgba(10, 15, 13, .55); z-index: 50; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: max(24px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)); }
 .modal { background: var(--surface); border-radius: 14px; width: min(720px, 100%); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -198,7 +224,7 @@ fieldset legend { font-weight: 700; font-size: .85rem; padding: 0 6px; }
   </div>
 </header>
 <main id="app"></main>
-<div id="overlay" hidden></div>
+<div id="overlay" class="overlay" hidden></div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 <div id="pdfstage" aria-hidden="true" style="position:absolute;left:-10000px;top:0;width:840px"></div>
 
@@ -210,7 +236,7 @@ const KEY = "gestion-sci-v1";
 const blank = () => ({
   version: 1, demo: false,
   sci: { nom: "", siege: "", siren: "", gerant: "", ville: "", regime: "IR", familiale: false, iban: "", telephone: "", email: "", associes: [] },
-  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}
+  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: []
 });
 const uid = () => Math.random().toString(36).slice(2, 10);
 function loadLocal() {
@@ -221,7 +247,7 @@ let S = blank();
 
 /* Stockage : en ligne et partagé entre associés quand c'est possible (db),
    sinon dans ce navigateur. Chaque bien, bail, paiement… est un document. */
-const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels"];
+const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes"];
 const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport"];
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
@@ -541,10 +567,15 @@ function taches() {
   const fisc = [
     ["ag", "Assemblée générale : approuver les comptes " + (y - 1), new Date(y, 5, 30), new Date(y, 4, 1), "Obligatoire chaque année dans les 6 mois après la clôture. Rédiger le procès-verbal et le garder dans le registre."],
     ["2072", S.sci.regime === "IS" ? "Déclaration de résultats IS (2065) " + (y - 1) : "Déclaration 2072-S de la SCI pour " + (y - 1), new Date(y, 4, 20), new Date(y, 3, 10), S.sci.regime === "IS" ? "Liasse fiscale à déposer en ligne (souvent via l'expert-comptable)." : "À déposer en ligne sur impots.gouv (espace professionnel). Chaque associé reporte ensuite sa part sur sa 2044 / déclaration de revenus."],
-    ["tf", "Taxe foncière " + y, new Date(y, 9, 15), new Date(y, 8, 1), "À payer par la SCI pour chaque bien. La taxe d'ordures ménagères est récupérable sur les locataires."],
+    ["tf", "Taxe foncière " + y, new Date(y, 9, 15), new Date(y, 8, 1), "À payer par la SCI. Saisis-la pour chaque bien : l'appli calcule ce que chaque locataire doit pour les ordures ménagères."],
     ["cfe", "CFE " + y + " (si la SCI y est soumise)", new Date(y, 11, 15), new Date(y, 10, 15), "Location vide : en général non concernée sauf recettes ≥ 100 000 €. Location meublée : concernée."]
   ];
-  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: [] }); });
+  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (k === "tf" && S.biens.length && S.biens.every(bi => taxeDe(bi.id, y))) return; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: k === "tf" ? [["Saisir", "taxeFonciere()", "primary"]] : [] }); });
+  // 10b. Part d'ordures ménagères à récupérer auprès des locataires
+  (S.taxes || []).forEach(tx => tx.parts.filter(p => !p.payeLe && p.montant > 0).forEach(p => { const b = bail(p.bailId); if (!b) return;
+    add({ bailId: b.id, key: "teom-" + tx.id + p.bailId, prio: p.demandeLe ? "info" : "soon", date: TODAY, t: `Ordures ménagères ${tx.annee} : ${esc(b.nom)} doit ${eur(p.montant)}`,
+      d: `${p.jours} jours dans le logement en ${tx.annee}` + (p.demandeLe ? ` · demandé le ${fds(p.demandeLe)}` : " · pas encore demandé"),
+      acts: [[p.demandeLe ? "A payé" : "Demander", p.demandeLe ? `teomPaye('${tx.id}','${b.id}')` : `docTeom('${tx.id}','${b.id}')`, "primary"]].concat(p.demandeLe ? [] : [["A payé", `teomPaye('${tx.id}','${b.id}')`]]) }); }));
   // 11. Rappels perso
   S.rappels.filter(r => !r.fait).forEach(r => { const d = P(r.date); if (daysBetween(TODAY, d) <= 30) add({ key: "rap-" + r.id, prio: d < TODAY ? "urgent" : daysBetween(TODAY, d) <= 7 ? "soon" : "info", date: d, t: esc(r.titre), d: `Rappel du ${fd(d)}` + (r.bienId ? " · " + esc(bienLabel(bien(r.bienId))) : ""), acts: [["C'est fait", `rappelFait('${r.id}')`, "primary"]] }); });
   const order = { urgent: 0, soon: 1, info: 2 };
@@ -552,8 +583,61 @@ function taches() {
 }
 function addMonthsDate(d, n) { const r = new Date(d.getFullYear(), d.getMonth() + n, d.getDate()); if (r.getDate() !== d.getDate()) r.setDate(0); return r; }
 
+/* ================= Taxe foncière : part "ordures ménagères" au prorata du temps passé ================= */
+const taxeDe = (bienId, an) => (S.taxes || []).find(t => t.bienId === bienId && +t.annee === +an);
+function partsTeom(bienId, an, teom) {
+  const d0 = new Date(an, 0, 1), d1 = new Date(an, 11, 31), nbJ = daysBetween(d0, d1) + 1;
+  const parts = S.baux.filter(b => b.bienId === bienId).map(b => {
+    const a = P(b.dateEntree) > d0 ? P(b.dateEntree) : d0, z = b.dateSortie && P(b.dateSortie) < d1 ? P(b.dateSortie) : d1;
+    const jours = daysBetween(a, z) + 1;
+    return jours > 0 ? { bailId: b.id, nom: b.nom, du: iso(a), au: iso(z), jours, montant: r2(teom * jours / nbJ) } : null;
+  }).filter(Boolean).sort((x, y) => x.du.localeCompare(y.du));
+  const occ = parts.reduce((s, p) => s + p.jours, 0);
+  return { parts, nbJ, vide: Math.max(0, nbJ - occ), partSci: r2(teom - parts.reduce((s, p) => s + p.montant, 0)) };
+}
+function taxeFonciere(bienId, an) {
+  an = an || TODAY.getFullYear();
+  if (!bienId) {
+    if (!S.biens.length) { toast("Ajoute d'abord un bien."); return; }
+    modal(`Taxes foncières ${an}`, `<p class="full note">Choisis le bien. Il te faut l'avis de taxe foncière (papier ou espace impots.gouv).</p>
+      <div class="full tasks">${S.biens.map(bi => { const t = taxeDe(bi.id, an); return `<div class="task ${t ? "" : "info"}"><div><div class="t">${esc(bi.nom)}</div><div class="d">${t ? `Saisie : ${eur(t.total)} dont ${eur(t.teom)} d'ordures ménagères` : "Pas encore saisie"}</div></div><div class="acts"><button type="button" class="small ${t ? "" : "primary"}" onclick="taxeFonciere('${bi.id}',${an})">${t ? "Voir" : "Saisir"}</button></div></div>`; }).join("")}</div>`, () => true, { ok: "Fermer" });
+    return;
+  }
+  const bi = bien(bienId), t0 = taxeDe(bienId, an) || {};
+  modal(`Taxe foncière ${an} — ${esc(bi.nom)}`, `
+    <p class="full note">La SCI paie la taxe foncière. Mais la <b>taxe d'ordures ménagères</b> (une ligne de l'avis, souvent "TEOM") se récupère auprès des locataires, au prorata des jours passés dans le logement. L'appli fait le calcul.</p>
+    ${fld("Total de l'avis (€)", "total", t0.total, "number", "", "required")}${fld("Dont ordures ménagères (€)", "teom", t0.teom, "number", "", "required")}
+    <div class="full" id="teomCalc"></div>`,
+    d => {
+      const c = partsTeom(bienId, an, +d.teom), old = taxeDe(bienId, an);
+      const parts = c.parts.map(p => { const o = old && old.parts.find(x => x.bailId === p.bailId); return o ? { ...p, demandeLe: o.demandeLe, payeLe: o.payeLe } : p; });
+      S.taxes = S.taxes || [];
+      const id = old ? old.id : uid();
+      S.taxes = S.taxes.filter(t => t.id !== id).concat([{ id, bienId, annee: an, total: +d.total, teom: +d.teom, parts, partSci: c.partSci }]);
+      const dep = S.depenses.find(x => x.taxeId === id);
+      if (dep) dep.montant = +d.total; else S.depenses.push({ id: uid(), taxeId: id, date: iso(new Date(an, 9, 15)), bienId, categorie: "Taxe foncière", libelle: "Taxe foncière " + an, montant: +d.total, recuperable: false });
+      setTimeout(() => toast("Enregistré · les parts apparaissent sur la carte de chaque locataire"), 50);
+    },
+    { del: taxeDe(bienId, an) ? () => { const t = taxeDe(bienId, an); S.taxes = S.taxes.filter(x => x !== t); S.depenses = S.depenses.filter(x => x.taxeId !== t.id); } : null, delMsg: "Supprimer cette taxe foncière ?",
+      after: f => { const c = () => { const v = +f.teom.value; const r = partsTeom(bienId, an, v || 0);
+        document.getElementById("teomCalc").innerHTML = v > 0 ? `<div class="table-wrap"><table><thead><tr><th>Qui</th><th>Période</th><th class="num">Jours</th><th class="num">À payer</th></tr></thead><tbody>${r.parts.map(p => `<tr><td>${esc(p.nom)}</td><td>${fds(p.du)} → ${fds(p.au)}</td><td class="num">${p.jours}</td><td class="num"><b>${eur(p.montant)}</b></td></tr>`).join("")}${r.vide ? `<tr><td>La SCI (logement vide)</td><td></td><td class="num">${r.vide}</td><td class="num">${eur(r.partSci)}</td></tr>` : ""}</tbody></table></div>` : `<p class="note">Saisis le montant des ordures ménagères pour voir qui doit combien.</p>`; };
+        f.addEventListener("input", c); c(); } });
+}
+function docTeom(taxeId, bailId) {
+  const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId), b = bail(bailId), bi = bien(t.bienId);
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : Taxe d'enlèvement des ordures ménagères ${t.annee}</b></p>
+  <p>Madame, Monsieur,</p><p>La taxe d'enlèvement des ordures ménagères fait partie des charges récupérables auprès du locataire (décret n° 87-713 du 26 août 1987). Pour le logement situé ${esc(adresseBien(bi))}, elle s'élève à ${eur(t.teom)} pour l'année ${t.annee}.</p>
+  <p>Vous avez occupé le logement du ${fd(p.du)} au ${fd(p.au)}, soit ${p.jours} jours sur ${daysBetween(new Date(t.annee, 0, 1), new Date(t.annee, 11, 31)) + 1}. Votre part est donc de :</p>
+  <table><tbody><tr><td>Taxe d'ordures ménagères ${t.annee}</td><td class="right">${eur(t.teom)}</td></tr><tr><td>Calcul</td><td class="right">${eur(t.teom)} × ${p.jours} / ${daysBetween(new Date(t.annee, 0, 1), new Date(t.annee, 11, 31)) + 1} jours</td></tr><tr><td><b>À régler</b></td><td class="right"><b>${eur(p.montant)}</b></td></tr></tbody></table>
+  <p>Merci de nous régler cette somme${S.sci.iban ? " par virement sur le compte " + esc(S.sci.iban) : ""}. L'avis de taxe foncière est à votre disposition sur simple demande.</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`;
+  showDoc(html, { titre: "Ordures ménagères " + t.annee, fichier: `TEOM-${t.annee}-${slug(b.nom)}`, to: b.email,
+    email: { objet: `Taxe d'ordures ménagères ${t.annee}`, corps: `Bonjour,\n\nVous trouverez ci-joint le calcul de votre part de la taxe d'ordures ménagères ${t.annee} : ${eur(p.montant)} (${p.jours} jours dans le logement).\n\nMerci et bonne journée,\n${S.sci.gerant || ""}` },
+    onSent: () => { p.demandeLe = iso(TODAY); }, sentLabel: "Déjà demandée autrement" });
+}
+function teomPaye(taxeId, bailId) { const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId); p.payeLe = iso(TODAY); save(); render(); toast(`${eur(p.montant)} reçus`); }
+
 /* ================= Navigation ================= */
-const PAGES = [["locataires", "Locataires"], ["afaire", "À faire"], ["biens", "Biens"], ["compta", "Compta"], ["reglages", "Réglages"]];
+const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["compta", "Compta"], ["reglages", "Réglages"]];
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", render);
@@ -567,7 +651,7 @@ function render() {
   document.getElementById("brandName").textContent = S.sci.nom || "Gestion SCI";
   document.getElementById("brandSub").textContent = MODE === "partage" ? "en ligne, partagé" : "sur cet appareil";
   const vide = !S.biens.length && !S.baux.length;
-  const banner = S.demo ? `<div class="banner"><span><b>Données d'exemple.</b> Tout est inventé pour montrer l'appli. Quand tu es prêt, efface-les et mets tes vrais biens.</span><button class="primary" onclick="viderDemo()">Effacer l'exemple et commencer</button></div>` : "";
+  const banner = S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "";
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h === "loyers") html = pageLoyers();
@@ -592,43 +676,62 @@ function pageBienvenue() {
   </section>
   <p class="note">Tu veux d'abord voir à quoi ça ressemble ? <button class="small" onclick="chargerDemo()">Charger un exemple</button></p>`;
 }
-function tacheCourte(t, nom) {
-  const a = (t.acts || [])[0];
-  const titre = nom ? t.t.split(" de " + nom).join("").split(" à " + nom).join("").split(nom).join("").replace(/^\s*:\s*/, "").replace(/\s*:\s*—/, " —").replace(/\s*:\s*$/, "").replace(/\(\s*\)/, "") : t.t;
-  return `<li><span class="pill ${t.prio === "urgent" ? "bad" : t.prio === "soon" ? "warn" : "info"}">${t.prio === "urgent" ? "Urgent" : t.prio === "soon" ? "Bientôt" : "À venir"}</span> ${titre.charAt(0).toUpperCase() + titre.slice(1)}${a ? ` <button class="small ${a[2] || ""}" onclick="${a[1]}">${a[0]}</button>` : ""}</li>`;
+const COULEURS = ["#2f7d6b", "#b5603a", "#5868b8", "#a2447a", "#7a8a2e", "#3a86a8", "#9a6a1e"];
+const avatar = nom => { const ini = String(nom).replace(/\(.*?\)/g, "").trim().split(/\s+/).map(x => x[0]).join("").slice(0, 2).toUpperCase(); let h = 0; for (const c of nom) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `<span class="avatar" style="background:${COULEURS[h % COULEURS.length]}" aria-hidden="true">${esc(ini)}</span>`; };
+const prenom = nom => esc(String(nom).replace(/\(.*?\)/g, "").trim().split(/\s+/)[0]);
+/* Les choses à faire, regroupées et résumées en une ligne chacune */
+function aFaireCourt(T) {
+  const out = [], vus = new Set(), prend = f => T.filter(t => !vus.has(t) && f(t)).map(t => (vus.add(t), t));
+  // les impayés sont déjà sur la carte de chaque locataire : on ne les répète pas ici
+  prend(t => t.key.startsWith("imp-") || t.key.startsWith("proc-") || t.key.startsWith("vac-"));
+  const q = prend(t => t.key.startsWith("q-"));
+  if (q.length) out.push({ ico: "📄", prio: "soon", t: q.length > 1 ? `${q.length} quittances à envoyer` : q[0].t.replace("Quittance à envoyer : ", "Quittance à envoyer à "), btn: peutEnvoyer() ? [q.length > 1 ? "Tout envoyer" : "Envoyer", q.length > 1 ? "envoyerToutesQuittances()" : q[0].acts[0][1]] : ["Voir", "go('loyers')"] });
+  prend(t => t.key.startsWith("rev-") && t.acts.length).forEach(t => { const b = bail(t.bailId), rv = revInfo(b); out.push({ ico: "📈", prio: "soon", t: `Augmenter le loyer de ${prenom(b.nom)}`, s: `${eur(rv.ancien)} → ${eur(rv.nouveau)}`, btn: ["Appliquer", `revision('${b.id}')`] }); });
+  prend(t => t.key.startsWith("teom-")).forEach(t => { const b = bail(t.bailId); out.push({ ico: "🗑️", prio: "soon", t: `Ordures ménagères : ${prenom(b.nom)} doit`, s: t.t.split(" doit ")[1], btn: t.acts[0] }); });
+  const ass = prend(t => t.key.startsWith("ass-") && t.prio !== "info");
+  if (ass.length) out.push({ ico: "🛡️", prio: "soon", t: `Demander l'attestation d'assurance à ${ass.map(t => prenom(bail(t.bailId).nom)).join(", ")}`, btn: ["Voir", "go('afaire')"] });
+  const reg = prend(t => t.key.startsWith("regul-") && t.prio !== "info");
+  if (reg.length) out.push({ ico: "🧾", prio: "soon", t: `Régulariser les charges (${reg.length} locataire${reg.length > 1 ? "s" : ""})`, btn: ["Voir", "go('afaire')"] });
+  prend(t => t.key.startsWith("dep-")).forEach(t => out.push({ ico: "🔑", prio: t.prio, t: `Rendre le dépôt de garantie à ${prenom(bail(t.bailId).nom)}`, btn: t.acts[0] }));
+  T.filter(t => !vus.has(t) && t.prio !== "info" && !t.key.startsWith("av-") && !t.key.startsWith("vac-")).forEach(t => out.push({ ico: t.prio === "urgent" ? "⚠️" : "📌", prio: t.prio, t: t.t, btn: t.acts && t.acts[0] }));
+  const o = { urgent: 0, soon: 1, info: 2 };
+  return out.sort((a, b) => o[a.prio] - o[b.prio]);
 }
-function carteLocataire(b, T) {
+function carteLocataire(b) {
   const bi = bien(b.bienId), e = echeance(b, CUR), l = loyerAt(b, CUR);
-  const retards = echeancesBail(b).filter(x => x.statut === "retard" && x.m !== CUR);
-  const futur = P(b.dateEntree) > TODAY;
-  let ligne = "", acts = "";
-  if (futur) ligne = `Arrive le <b>${fd(b.dateEntree)}</b>`;
-  else if (e) {
-    if (e.statut === "paye") ligne = `Loyer de ${fm(CUR).split(" ")[0]} payé${e.lastPay ? " le " + fds(e.lastPay) : ""} · ` + (e.quittance ? `quittance envoyée le ${fds(e.quittance)} ✓` : `<b>quittance pas encore envoyée</b>`);
-    else ligne = `Loyer de ${fm(CUR).split(" ")[0]} : <b>${eur(e.reste)}</b> ${e.statut === "retard" ? `<span class="pill bad">en retard de ${e.retardJ} j</span>` : `à payer le ${fds(e.dueDate)}`}`;
-    acts = actionsEcheance(e);
-  }
-  const mesT = T.filter(t => t.bailId === b.id && !t.key.startsWith("av-") && !(e && (t.key === "imp-" + b.id + CUR || t.key === "q-" + b.id + CUR)));
-  return `<article class="card loc">
-    <div class="loc-top"><div><h3><a href="#bail-${b.id}">${esc(b.nom)}</a></h3><div class="meta">${esc(bienLabel(bi))} · ${eur(l.hc + l.ch)} / mois${b.email ? "" : ` · <span class="pill warn">pas d'e-mail</span>`}</div></div>
-    ${retards.length ? `<span class="pill bad">${retards.length} mois impayé(s)</span>` : e && e.statut === "paye" ? `<span class="pill ok">À jour</span>` : ""}</div>
-    <p class="loc-line">${ligne}</p>
-    ${acts ? `<div class="row">${acts}</div>` : ""}
-    ${mesT.length ? `<ul class="loc-tasks">${mesT.map(t => tacheCourte(t, esc(b.nom))).join("")}</ul>` : ""}
+  const retards = echeancesBail(b).filter(x => x.statut === "retard");
+  let etat, cls, act = "";
+  if (P(b.dateEntree) > TODAY) { etat = `🗓️ Arrive le ${fds(b.dateEntree)}`; cls = "info"; }
+  else if (retards.length) { const tot = retards.reduce((s, x) => s + x.reste, 0), maxJ = Math.max(...retards.map(x => x.retardJ)); const leger = retards.length === 1 && maxJ <= 5;
+    etat = leger ? `⏳ Pas encore payé (${maxJ} j de retard)` : `🔴 Doit ${eur(tot)}` + (retards.length > 1 ? ` (${retards.length} loyers)` : ` · ${maxJ} j de retard`); cls = leger ? "warn" : "bad"; act = `<button class="primary" onclick="encaisser('${b.id}','${retards[0].m}')">A payé</button><button class="danger" onclick="relance('${b.id}','${retards[0].m}')">Relancer</button>`; }
+  else if (!e) { etat = "—"; cls = "info"; }
+  else if (e.statut === "paye") {
+    if (e.quittance || !(e.du > 0)) { etat = "✅ Payé, quittance envoyée"; cls = "ok"; }
+    else { etat = "✅ Payé"; cls = "ok"; act = peutEnvoyer() && b.email ? `<button class="primary" onclick="envoyerQuittance('${b.id}','${CUR}')">Envoyer la quittance</button>` : `<button onclick="quittance('${b.id}','${CUR}')">Quittance</button>`; }
+  } else { etat = `⏳ Attendu le ${fds(e.dueDate)}`; cls = "warn"; act = `<button class="primary" onclick="encaisser('${b.id}','${CUR}')">A payé</button>`; }
+  return `<article class="tile ${cls}">
+    <a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span><b>${esc(b.nom)}</b><small>${esc(bienLabel(bi))} · ${eur(l.hc + l.ch)}</small></span><span class="chev" aria-hidden="true">›</span></a>
+    <div class="tile-state">${etat}</div>
+    ${act ? `<div class="row">${act}</div>` : ""}
   </article>`;
 }
 function pageAccueil(T) {
   const actifs = S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).sort((a, b) => a.nom.localeCompare(b.nom));
-  const anciens = S.baux.filter(b => b.dateSortie && P(b.dateSortie) < TODAY);
   const vides = S.biens.filter(bi => !bailActifDuBien(bi.id) && !S.baux.some(b => b.bienId === bi.id && P(b.dateEntree) > TODAY));
-  const aEnvoyer = toutesEcheances().filter(e => e.statut === "paye" && e.du > 0 && !e.quittance && e.b.email);
-  const autres = T.filter(t => !t.bailId && t.prio !== "info");
-  return `<div class="head"><div><h1>Mes locataires</h1><p>${fd(TODAY)} · appuie sur "A payé" quand un loyer arrive : la quittance part toute seule.</p></div>
-  <div class="row">${aEnvoyer.length && peutEnvoyer() ? `<button class="primary" onclick="envoyerToutesQuittances()">Envoyer les ${aEnvoyer.length} quittance(s) en attente</button>` : ""}<button onclick="go('loyers')">Tous les loyers du mois</button><button class="primary" onclick="editBail()">+ Locataire</button></div></div>
-  ${autres.length ? `<div class="banner" style="background:var(--surface)"><span><b>${autres.length} chose(s) à faire pour la SCI</b> (${autres.slice(0, 2).map(t => t.t).join(", ")}${autres.length > 2 ? "…" : ""})</span><button onclick="go('afaire')">Voir</button></div>` : ""}
-  <div class="grid locs">${actifs.map(b => carteLocataire(b, T)).join("")}
-  ${vides.map(bi => `<article class="card loc vide"><div class="loc-top"><div><h3>${esc(bi.nom)}</h3><div class="meta">${esc(adresseBien(bi))}</div></div><span class="pill warn">Vide</span></div><p class="loc-line">Pas de locataire en ce moment.</p><div class="row"><button class="small primary" onclick="editBail(null,'${bi.id}')">+ Ajouter un locataire</button></div></article>`).join("")}</div>
-  ${anciens.length ? `<details><summary class="group-title" style="cursor:pointer">Anciens locataires (${anciens.length})</summary><ul class="note">${anciens.map(b => `<li><a href="#bail-${b.id}">${esc(b.nom)}</a> · ${esc(bienLabel(bien(b.bienId)))} · parti le ${fds(b.dateSortie)}</li>`).join("")}</ul></details>` : ""}`;
+  const mois = S.baux.map(b => echeance(b, CUR)).filter(Boolean), recus = mois.filter(e => e.statut === "paye").length;
+  const items = aFaireCourt(T), vis = items.slice(0, 5);
+  return `<section class="hero">
+    <div><p class="hero-k">${fm(CUR)}</p><h1>${recus} loyer${recus > 1 ? "s" : ""} reçu${recus > 1 ? "s" : ""} sur ${mois.length}</h1></div>
+    <div class="dots" aria-hidden="true">${mois.map(e => `<i class="${e.statut === "paye" ? "ok" : e.statut === "retard" ? "bad" : ""}"></i>`).join("")}</div>
+  </section>
+  <section><h2 class="sec">À faire ${items.length ? `<span class="pill ${items.some(i => i.prio === "urgent") ? "bad" : "warn"}">${items.length}</span>` : ""}</h2>
+    ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</li>`).join("")}</ul>
+      ${items.length > 5 ? `<p><a href="#afaire">Voir les ${items.length - 5} autres</a></p>` : ""}` : `<div class="empty">🎉 Rien à faire, tout est en ordre.</div>`}
+  </section>
+  <section><div class="head"><h2 class="sec">Locataires</h2><button class="small" onclick="editBail()">+ Ajouter</button></div>
+    <div class="tiles">${actifs.map(carteLocataire).join("")}
+    ${vides.map(bi => `<article class="tile info"><div class="tile-head">${avatar("? ?")}<span><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button></div></article>`).join("")}</div>
+  </section>`;
 }
 function pageAFaire(T) {
   const groups = [["urgent", "Urgent"], ["soon", "À faire bientôt"], ["info", "À surveiller"]];
@@ -644,7 +747,7 @@ function pageBiens() {
       ${b ? `<span class="pill ok">Loué</span>` : `<span class="pill warn">Vide</span>`}</div>
       <dl>${b ? `<dt>Locataire</dt><dd><a href="#bail-${b.id}">${esc(b.nom)}</a></dd><dt>Loyer HC</dt><dd>${eur(l.hc)}</dd><dt>Charges</dt><dd>${eur(l.ch)}</dd><dt>Depuis</dt><dd>${fds(b.dateEntree)}</dd>` : `<dt>Locataire</dt><dd>—</dd>`}
       <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd></dl>
-      <div class="row"><button class="small" onclick="editBien('${bi.id}')">Modifier</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
+      <div class="row"><button class="small" onclick="editBien('${bi.id}')">Modifier</button><button class="small" onclick="taxeFonciere('${bi.id}')">Taxe foncière</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
   }).join("")}</div>` : `<div class="empty">Aucun bien. Ajoute ton premier logement.</div>`}`;
 }
 
@@ -660,6 +763,7 @@ function pageBail(id) {
     <div class="kpi"><span>Dépôt de garantie</span><b>${eur(b.depot)}</b><small>${b.depotRestitue ? "rendu le " + fds(b.depotRestitue) : "encaissé"}</small></div>
     <div class="kpi"><span>Bail</span><b>${du.txt}</b><small>depuis le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""}</small></div>
   </div>
+  ${(() => { const T = taches().filter(t => t.bailId === b.id); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
   <div class="two">
   <section><h2 style="margin-bottom:10px">Loyers mois par mois</h2>
   ${ech.length ? `<div class="table-wrap"><table><thead><tr><th>Mois</th><th class="num">Dû</th><th class="num">Payé</th><th>Statut</th><th></th></tr></thead><tbody>${ech.map(e => `<tr><td>${fm(e.m)}${e.prorata ? `<div class="sub">prorata ${e.to - e.from + 1}/${e.days} j</div>` : ""}</td><td class="num">${eur(e.du)}</td><td class="num">${eur(e.paye)}</td><td>${pillStatut(e)}${e.quittance ? ` <span class="pill acc">Quittance envoyée</span>` : ""}</td><td><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Pas encore d'échéance.</div>`}
@@ -707,6 +811,7 @@ function recettes(year) {
     const k = b.bienId; by[k] = by[k] || { loyers: 0, charges: 0 };
     by[k].charges += p.montant * part; by[k].loyers += p.montant * (1 - part);
   });
+  (S.taxes || []).forEach(tx => tx.parts.filter(p => p.payeLe && p.payeLe.startsWith(String(year))).forEach(p => { by[tx.bienId] = by[tx.bienId] || { loyers: 0, charges: 0 }; by[tx.bienId].charges += p.montant; }));
   return by;
 }
 function pageCompta() {
@@ -1212,6 +1317,7 @@ function demo() {
     { id: uid(), date: iso(new Date(TODAY.getFullYear(), 6, 1)), bienId: bs[0].id, categorie: "Charges de copropriété", libelle: "Appel de fonds syndic T3", montant: 310, recuperable: true }
   ];
   d.faits["fisc-tf-" + TODAY.getFullYear()] = iso(TODAY);
+  { const an = TODAY.getFullYear(), c = partsTeom(bs[2].id, an, 240); const tid = uid(); d.taxes = [{ id: tid, bienId: bs[2].id, annee: an, total: 1380, teom: 240, parts: c.parts, partSci: c.partSci }]; d.depenses.push({ id: uid(), taxeId: tid, date: iso(new Date(an, 9, 15)), bienId: bs[2].id, categorie: "Taxe foncière", libelle: "Taxe foncière " + an, montant: 1380, recuperable: false }); }
   d.rappels = [{ id: uid(), titre: "Faire passer le ramoneur – Maison Gonds", date: iso(addDays(TODAY, 10)), bienId: bs[2].id, fait: false }];
   return d;
 }
