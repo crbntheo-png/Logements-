@@ -76,6 +76,8 @@ main { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; min-width: 0; }
 .card > h2 { margin-bottom: 10px; }
 .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.stack > section.card { max-width: 640px; }
 .two { display: grid; gap: 20px; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
 @media (max-width: 860px) { .two { grid-template-columns: minmax(0, 1fr); } }
 
@@ -169,6 +171,7 @@ h2.sec { font-size: 1.15rem; display: flex; gap: 8px; align-items: center; margi
 .chev { font-size: 1.6rem; color: var(--muted); }
 .tile-state { font-weight: 700; font-size: 1.05rem; }
 .tile.bad .tile-state { color: var(--bad); }
+.tile .row { margin-top: auto; }
 .tile .row button { flex: 1; justify-content: center; padding-block: 10px; }
 .avatar { width: 42px; height: 42px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; flex: none; font-family: var(--font-display); }
 @media (max-width: 420px) { .tiles { grid-template-columns: minmax(0, 1fr); } .hero h1 { font-size: 1.4rem; } }
@@ -279,6 +282,49 @@ button.small { padding: 5px 12px; }
   .ring { width: 88px; height: 88px; }
 }
 @media (prefers-reduced-motion: reduce) { .tile, .ring .val { transition: none; } .tile:hover { transform: none; } }
+/* ===== Finitions ===== */
+input, select, textarea { font-size: 16px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 600; z-index: 80; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.25); text-align: center; }
+@media (max-width: 700px) { .toast { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); } }
+.loader { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 60px 0; color: var(--muted); font-weight: 600; }
+.spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: tourne .8s linear infinite; }
+@keyframes tourne { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 3s; } }
+.avatar.vide { background: var(--sky); font-size: 1.2rem; }
+h1 .avatar { vertical-align: middle; margin-right: 6px; }
+details.anciens { margin-top: 14px; }
+details.anciens summary { cursor: pointer; color: var(--muted); font-weight: 700; padding: 8px 0; }
+details.anciens .todo { margin-top: 8px; }
+.seg { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+.seg b { min-width: 120px; text-align: center; font-family: var(--font-display); }
+.seg button { border: 0; padding: 6px 12px; font-size: 1.1rem; }
+.modal { max-height: calc(100dvh - 48px); overflow-y: auto; }
+.modal .mh { position: sticky; top: -20px; background: var(--surface); padding-top: 4px; z-index: 2; }
+.modal form.f > .full.row:last-child { position: sticky; bottom: -20px; background: var(--surface); padding-block: 12px; margin-bottom: -8px; border-top: 1px solid var(--line); z-index: 2; }
+@media (max-width: 560px) {
+  .overlay { align-items: flex-end; padding: 0; }
+  .modal { width: 100%; border-radius: 20px 20px 0 0; max-height: 92dvh; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+  .docwrap { padding: 12px 8px; }
+  .docbar { position: sticky; top: 0; z-index: 3; background: rgba(10,15,13,.88); padding: 8px; border-radius: 14px; gap: 6px; }
+  .docbar .pill { display: none; }
+  .docbar button { padding: 7px 11px; font-size: .82rem; }
+}
+/* Tableaux de loyers en cartes sur téléphone */
+@media (max-width: 700px) {
+  .table-wrap:has(table.rt) { background: transparent; box-shadow: none; overflow: visible; }
+  table.rt thead { display: none; }
+  table.rt, table.rt tbody, table.rt tfoot { display: block; }
+  table.rt tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; background: var(--surface); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  table.rt td { border: 0; padding: 0; text-align: left !important; }
+  table.rt td[data-l]::before { content: attr(data-l); display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+  table.rt .rt-head, table.rt .rt-acts { grid-column: 1 / -1; }
+  table.rt .rt-acts .row { justify-content: flex-start !important; }
+  table.rt tfoot tr { background: var(--surface-2); }
+  table.rt tfoot td:first-child { grid-column: 1 / -1; }
+  table.rt .rt-vide { display: none; }
+}
+#fSci > .full.row:last-child { position: sticky; bottom: 0; background: var(--surface); padding-block: 12px; border-top: 1px solid var(--line); z-index: 2; }
+@media (max-width: 700px) { #fSci > .full.row:last-child { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
 @media print {
   @page { margin: 14mm; }
   body { background: #fff; }
@@ -312,7 +358,7 @@ const KEY = "gestion-sci-v1";
 const blank = () => ({
   version: 1, demo: false,
   sci: { nom: "", siege: "", siren: "", gerant: "", ville: "", regime: "IR", familiale: false, iban: "", telephone: "", email: "", associes: [] },
-  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: []
+  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: [], banqueVus: {}
 });
 const uid = () => Math.random().toString(36).slice(2, 10);
 function loadLocal() {
@@ -324,7 +370,7 @@ let S = blank();
 /* Stockage : en ligne et partagé entre associés quand c'est possible (db),
    sinon dans ce navigateur. Chaque bien, bail, paiement… est un document. */
 const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes"];
-const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport"];
+const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport", "banqueVus"];
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
 function save() {
@@ -574,7 +620,7 @@ function taches() {
     if (rv && rv.statut === "pret")
       add({ bailId: b.id, key: rv.key, prio: rv.anniv <= TODAY ? "soon" : "info", date: rv.anniv, done: true,
         t: `Augmenter le loyer de ${esc(b.nom)} : ${eur(rv.ancien)} → ${eur(rv.nouveau)}`,
-        d: `Révision annuelle au ${fd(rv.anniv)}, selon l'indice IRL ${qLabel(rv.newKey)} (${fmtIrl(rv.newVal)}) comparé à ${qLabel(rv.oldKey)} (${fmtIrl(rv.oldVal)}). Soit ${rv.nouveau >= rv.ancien ? "+" : ""}${eur(rv.nouveau - rv.ancien)} par mois. Sans effet rétroactif au-delà d'un an.`,
+        d: `Date anniversaire du bail : ${fd(rv.anniv)}. Indice IRL ${qLabel(rv.newKey)} (${fmtIrl(rv.newVal)}) comparé à ${qLabel(rv.oldKey)} (${fmtIrl(rv.oldVal)}), soit ${rv.nouveau >= rv.ancien ? "+" : ""}${eur(rv.nouveau - rv.ancien)} par mois. ${rv.anniv < TODAY ? "Pas de rattrapage possible : la hausse s'applique à partir du prochain loyer." : "À appliquer à partir de cette date."} Possible jusqu'au ${fd(addYears(rv.anniv, 1))}.`,
         acts: [["Appliquer", `revision('${b.id}')`, "primary"]] });
     if (rv && rv.statut === "attente")
       add({ bailId: b.id, key: rv.key, prio: "info", date: rv.anniv, done: true, t: `Révision du loyer de ${esc(b.nom)} au ${fd(rv.anniv)}`,
@@ -609,7 +655,9 @@ function taches() {
       const du = dureeBail(b); let ech2 = addMonthsDate(entree, du.mois);
       while (ech2 < TODAY) ech2 = addMonthsDate(ech2, du.mois);
       const preavis = b.typeBail === "vide" ? 6 : 3; const lim = addMonthsDate(ech2, -preavis); const k = "fin-" + b.id + iso(ech2);
-      if (b.typeBail !== "mobilite" && daysBetween(TODAY, lim) <= 45 && !fait(k))
+      if (b.typeBail === "etudiant" && daysBetween(TODAY, ech2) <= 60 && !fait(k))
+        add({ bailId: b.id, key: k, prio: "soon", date: ech2, done: true, t: `Fin du bail étudiant de ${esc(b.nom)} le ${fd(ech2)}`, d: "Le bail étudiant de 9 mois se termine sans reconduction. Prévoir l'état des lieux de sortie ou un nouveau bail.", acts: [] });
+      else if (b.typeBail !== "mobilite" && b.typeBail !== "etudiant" && daysBetween(TODAY, lim) <= 45 && !fait(k))
         add({ bailId: b.id, key: k, prio: TODAY > lim ? "info" : "soon", date: lim, done: true, t: `Fin de période du bail de ${esc(b.nom)} le ${fd(ech2)}`,
           d: `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: [] });
     }
@@ -676,7 +724,7 @@ function taxeFonciere(bienId, an) {
   if (!bienId) {
     if (!S.biens.length) { toast("Ajoute d'abord un bien."); return; }
     modal(`Taxes foncières ${an}`, `<p class="full note">Choisis le bien. Il te faut l'avis de taxe foncière (papier ou espace impots.gouv).</p>
-      <div class="full tasks">${S.biens.map(bi => { const t = taxeDe(bi.id, an); return `<div class="task ${t ? "" : "info"}"><div><div class="t">${esc(bi.nom)}</div><div class="d">${t ? `Saisie : ${eur(t.total)} dont ${eur(t.teom)} d'ordures ménagères` : "Pas encore saisie"}</div></div><div class="acts"><button type="button" class="small ${t ? "" : "primary"}" onclick="taxeFonciere('${bi.id}',${an})">${t ? "Voir" : "Saisir"}</button></div></div>`; }).join("")}</div>`, () => true, { ok: "Fermer" });
+      <div class="full tasks">${S.biens.map(bi => { const t = taxeDe(bi.id, an); return `<div class="task ${t ? "" : "info"}"><div><div class="t">${esc(bi.nom)}</div><div class="d">${t ? `Saisie : ${eur(t.total)} dont ${eur(t.teom)} d'ordures ménagères` : "Pas encore saisie"}</div></div><div class="acts"><button type="button" class="small ${t ? "" : "primary"}" onclick="taxeFonciere('${bi.id}',${an})">${t ? "Voir" : "Saisir"}</button></div></div>`; }).join("")}</div>`, () => true, { ok: "Fermer", lecture: true });
     return;
   }
   const bi = bien(bienId), t0 = taxeDe(bienId, an) || {};
@@ -718,17 +766,17 @@ const ICONES = { locataires: "🏠", afaire: "✅", biens: "🏘️", docs: "�
 const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
-window.addEventListener("hashchange", render);
+window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); });
 function render() {
   const app = document.getElementById("app");
-  if (MODE === "chargement") { app.innerHTML = `<div class="empty">Chargement de vos données…</div>`; return; }
+  if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
   const h = (location.hash || "#locataires").slice(1);
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires");
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
   document.getElementById("nav").innerHTML = PAGES.map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}">${l}${k === "afaire" && urg ? `<span class="badge">${urg}</span>` : ""}</a>`).join("");
   document.getElementById("bottomnav").innerHTML = PAGES.filter(p => p[0] !== "reglages").map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}><span aria-hidden="true">${ICONES[k]}</span>${l}${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
   document.getElementById("brandName").textContent = S.sci.nom || "Gestion SCI";
-  document.getElementById("brandSub").textContent = MODE === "partage" ? "en ligne, partagé" : "sur cet appareil";
+  document.getElementById("brandSub").textContent = MODE === "partage" ? "● synchronisé" : "sur cet appareil";
   const vide = !S.biens.length && !S.baux.length;
   const banner = S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "";
   let html;
@@ -736,7 +784,9 @@ function render() {
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
+  const actif = document.activeElement, focusId = actif && actif.id && app.contains(actif) ? actif.id : null, selS = focusId && actif.selectionStart, selE = focusId && actif.selectionEnd;
   app.innerHTML = banner + html;
+  if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { el.setSelectionRange(selS, selE); } catch (e) {} } }
   document.title = S.sci.nom || "Gestion SCI";
 }
 
@@ -766,7 +816,7 @@ function aFaireCourt(T) {
   const q = prend(t => t.key.startsWith("q-"));
   if (q.length) out.push({ ico: "📄", prio: "soon", t: q.length > 1 ? `${q.length} quittances à envoyer` : q[0].t.replace("Quittance à envoyer : ", "Quittance à envoyer à "), btn: peutEnvoyer() ? [q.length > 1 ? "Tout envoyer" : "Envoyer", q.length > 1 ? "envoyerToutesQuittances()" : q[0].acts[0][1]] : ["Voir", "go('loyers')"] });
   prend(t => t.key.startsWith("rev-") && t.acts.length).forEach(t => { const b = bail(t.bailId), rv = revInfo(b); out.push({ ico: "📈", prio: "soon", t: `Augmenter le loyer de ${prenom(b.nom)}`, s: `${eur(rv.ancien)} → ${eur(rv.nouveau)}`, btn: ["Appliquer", `revision('${b.id}')`] }); });
-  prend(t => t.key.startsWith("teom-")).forEach(t => { const b = bail(t.bailId); out.push({ ico: "🗑️", prio: "soon", t: `Ordures ménagères : ${prenom(b.nom)} doit`, s: t.t.split(" doit ")[1], btn: t.acts[0] }); });
+  prend(t => t.key.startsWith("teom-")).forEach(t => { const b = bail(t.bailId); out.push({ ico: "🗑️", prio: "soon", t: `Ordures ménagères à récupérer : ${esc(b.nom.replace(/\s*\(.*?\)/g, ""))}`, s: t.t.split(" doit ")[1], btn: t.acts[0] }); });
   const ass = prend(t => t.key.startsWith("ass-") && t.prio !== "info");
   if (ass.length) out.push({ ico: "🛡️", prio: "soon", t: `Demander l'attestation d'assurance à ${ass.map(t => prenom(bail(t.bailId).nom)).join(", ")}`, btn: ["Voir", "go('afaire')"] });
   const reg = prend(t => t.key.startsWith("regul-") && t.prio !== "info");
@@ -797,26 +847,29 @@ function carteLocataire(b) {
 function pageAccueil(T) {
   const actifs = S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).sort((a, b) => a.nom.localeCompare(b.nom));
   const vides = S.biens.filter(bi => !bailActifDuBien(bi.id) && !S.baux.some(b => b.bienId === bi.id && P(b.dateEntree) > TODAY));
+  const anciens = S.baux.filter(b => b.dateSortie && P(b.dateSortie) < TODAY).sort((a, b) => b.dateSortie.localeCompare(a.dateSortie));
   const mois = S.baux.map(b => echeance(b, CUR)).filter(Boolean), recus = mois.filter(e => e.statut === "paye").length;
   const items = aFaireCourt(T), vis = items.slice(0, 5);
   const attendu = mois.reduce((t, e) => t + e.du, 0), encaisse = mois.reduce((t, e) => t + Math.min(e.paye, e.du), 0);
   const pct = attendu ? encaisse / attendu : 0, C = 2 * Math.PI * 42;
   const h = TODAY.getHours(), salut = h < 12 ? "Bonjour" : h < 18 ? "Salut" : "Bonsoir";
+  const heroVide = !mois.length;
   return `<div class="greet"><div><h1>${salut} 👋</h1><p>${fd(TODAY)}${items.length ? ` · ${items.length} chose${items.length > 1 ? "s" : ""} à faire` : " · tout roule"}</p></div></div>
   <section class="hero">
-    <div><p class="hero-k">Loyers de ${fm(CUR)}</p><h1>${recus} sur ${mois.length} reçu${recus > 1 ? "s" : ""}</h1><p class="sub">${eur(encaisse)} encaissés sur ${eur(attendu)}</p>
+    <div><p class="hero-k">Loyers de ${fm(CUR)}</p><h1>${heroVide ? "Aucun loyer attendu" : `${recus} sur ${mois.length} reçu${recus > 1 ? "s" : ""}`}</h1><p class="sub">${heroVide ? "Ajoute un locataire pour suivre ses loyers." : recus === mois.length ? `Tout est encaissé : ${eur(encaisse)} 🎉` : `${eur(encaisse)} encaissés sur ${eur(attendu)}`}</p>
       <div class="dots" aria-hidden="true" style="margin-top:12px">${mois.map(e => `<i class="${e.statut === "paye" ? "ok" : e.statut === "retard" ? "bad" : ""}"></i>`).join("")}</div></div>
     <div class="ring" role="img" aria-label="${Math.round(pct * 100)} % des loyers reçus"><svg viewBox="0 0 100 100"><circle class="trk" cx="50" cy="50" r="42" fill="none" stroke-width="10"/><circle class="val" cx="50" cy="50" r="42" fill="none" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg><b>${Math.round(pct * 100)}%</b></div>
     <svg class="skyline" viewBox="0 0 230 90" aria-hidden="true"><path fill="#fff" d="M0 90V52h22V30h26v22h10V18l20-14 20 14v72h8V40h30v50h6V24l18-12 18 12v66h10V46h26v44z"/></svg>
   </section>
   <section><h2 class="sec">À faire ${items.length ? `<span class="pill ${items.some(i => i.prio === "urgent") ? "bad" : "warn"}">${items.length}</span>` : ""}</h2>
     ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</li>`).join("")}</ul>
-      ${items.length > 5 ? `<p><a href="#afaire">Voir les ${items.length - 5} autres</a></p>` : ""}` : `<div class="empty party"><span>🎉</span>Rien à faire, tout est en ordre.</div>`}
+      ${items.length > 5 ? `<p><a href="#afaire">${items.length - 5 > 1 ? `Voir les ${items.length - 5} autres` : "Voir l'autre"} →</a></p>` : ""}` : `<div class="empty party"><span>🎉</span>Rien à faire, tout est en ordre.</div>`}
   </section>
   <div class="quick"><button onclick="importerReleve()"><span>🏦</span>Importer le relevé</button><button onclick="go('docs')"><span>📁</span>Documents</button><button onclick="editDepense()"><span>🧾</span>Ajouter une dépense</button></div>
   <section><div class="head"><h2 class="sec">Locataires</h2><button class="small" onclick="editBail()">+ Ajouter</button></div>
     <div class="tiles">${actifs.map(carteLocataire).join("")}
-    ${vides.map(bi => `<article class="tile info"><div class="tile-head">${avatar("? ?")}<span><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button></div></article>`).join("")}</div>
+    ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button></div></article>`).join("")}</div>
+    ${anciens.length ? `<details class="anciens"><summary>Anciens locataires (${anciens.length})</summary><ul class="todo">${anciens.map(b => `<li><span class="ico" aria-hidden="true">👋</span><span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${esc(bienLabel(bien(b.bienId)))} · parti le ${fds(b.dateSortie)}</small></span></li>`).join("")}</ul></details>` : ""}
   </section>`;
 }
 function pageAFaire(T) {
@@ -841,7 +894,7 @@ function pageBail(id) {
   const b = bail(id); if (!b) return `<div class="empty">Locataire introuvable. <a href="#locataires">Retour</a></div>`;
   const bi = bien(b.bienId), l = loyerAt(b, CUR), ech = echeancesBail(b, addM(CUR, 1)).reverse(), du = dureeBail(b);
   const dette = ech.filter(e => e.statut === "retard").reduce((s, e) => s + e.reste, 0);
-  return `<div class="head"><div><p><a href="#locataires">← Locataires</a></p><h1>${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div>
+  return `<div class="head"><div><p><a href="#locataires">← Accueil</a></p><h1>${avatar(b.nom)} ${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div>
   <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button><button onclick="docBailOpen('${b.id}')">Générer le bail</button><button onclick="revision('${b.id}')">Réviser le loyer</button><button onclick="finBail('${b.id}')">Départ du locataire</button></div></div>
   <div class="kpis">
     <div class="kpi"><span>Loyer actuel</span><b>${eur(l.hc + l.ch)}</b><small>${eur(l.hc)} + ${eur(l.ch)} de charges</small></div>
@@ -849,10 +902,10 @@ function pageBail(id) {
     <div class="kpi"><span>Dépôt de garantie</span><b>${eur(b.depot)}</b><small>${b.depotRestitue ? "rendu le " + fds(b.depotRestitue) : "encaissé"}</small></div>
     <div class="kpi"><span>Bail</span><b>${du.txt}</b><small>depuis le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""}</small></div>
   </div>
-  ${(() => { const T = taches().filter(t => t.bailId === b.id); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
-  <div class="two">
+  ${(() => { const T = taches().filter(t => t.bailId === b.id).map(t => ({ ...t, acts: (t.acts || []).filter(a => !/go\('bail-/.test(a[1])) })); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
+  <div class="stack">
   <section><h2 style="margin-bottom:10px">Loyers mois par mois</h2>
-  ${ech.length ? `<div class="table-wrap"><table><thead><tr><th>Mois</th><th class="num">Dû</th><th class="num">Payé</th><th>Statut</th><th></th></tr></thead><tbody>${ech.map(e => `<tr><td>${fm(e.m)}${e.prorata ? `<div class="sub">prorata ${e.to - e.from + 1}/${e.days} j</div>` : ""}</td><td class="num">${eur(e.du)}</td><td class="num">${eur(e.paye)}</td><td>${pillStatut(e)}${e.quittance ? ` <span class="pill acc">Quittance envoyée</span>` : ""}</td><td><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Pas encore d'échéance.</div>`}
+  ${ech.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Mois</th><th class="num">Dû</th><th class="num">Payé</th><th>Statut</th><th></th></tr></thead><tbody>${ech.map(e => `<tr><td class="rt-head" style="text-transform:capitalize"><b>${fm(e.m)}</b>${e.prorata ? `<div class="sub">prorata ${e.to - e.from + 1}/${e.days} j</div>` : ""}</td><td class="num" data-l="Dû">${eur(e.du)}</td><td class="num" data-l="Payé">${eur(e.paye)}</td><td data-l="Statut">${pillStatut(e)}${e.quittance ? ` <span class="pill acc">Quittance envoyée</span>` : ""}</td><td class="rt-acts"><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Pas encore d'échéance.</div>`}
   </section>
   <section class="card"><h2>Fiche</h2>
     <div class="bien"><dl>
@@ -860,7 +913,7 @@ function pageBail(id) {
       ${b.colocataires ? `<dt>Colocataires</dt><dd>${esc(b.colocataires)}</dd>` : ""}
       <dt>Type</dt><dd>${esc(TYPES_BAIL[b.typeBail] || "")}</dd><dt>Paiement le</dt><dd>${esc(b.jourPaiement || 1)} du mois</dd>
       <dt>Charges</dt><dd>${b.chargesMode === "forfait" ? "forfait" : "provision + régul. annuelle"}</dd>
-      <dt>Indice IRL</dt><dd>${esc(b.irlTrimestre || "—")} ${b.irlValeur ? "= " + esc(b.irlValeur) : ""}</dd>
+      <dt>Indice IRL</dt><dd>${esc(b.irlTrimestre || "—")} ${b.irlValeur ? "= " + fmtIrl(b.irlValeur) : ""}</dd>
       <dt>Garant</dt><dd>${esc(b.garantNom || "—")}</dd><dt>Assurance jusqu'au</dt><dd>${b.assuranceFin ? fds(b.assuranceFin) : "—"}</dd>
     </dl>${b.notes ? `<p class="note">${nl2br(b.notes)}</p>` : ""}</div>
     ${(b.revisions || []).length ? `<h3 style="margin-top:14px">Révisions de loyer</h3><ul class="note">${b.revisions.map((r, i) => `<li>${fm(r.depuis)} : ${eur(r.loyerHC)} HC (IRL ${esc(r.trimestre)} ${esc(r.irlNouveau)}) <button class="small ghost" onclick="docRevisionOpen('${b.id}',${i})">Courrier</button></li>`).join("")}</ul>` : ""}
@@ -881,11 +934,11 @@ function actionsEcheance(e) {
 function pageLoyers() {
   const m = view.loyersMois, rows = S.baux.map(b => echeance(b, m)).filter(Boolean).sort((a, b) => a.dueDate - b.dueDate);
   const tot = rows.reduce((s, e) => s + e.du, 0), paye = rows.reduce((s, e) => s + e.paye, 0);
-  return `<div class="head"><div><h1>Loyers</h1><p>Cochez les loyers reçus : la quittance se prépare toute seule.</p></div>
-  <div class="row"><button onclick="view.loyersMois=addM(view.loyersMois,-1);render()" aria-label="Mois précédent">←</button><b style="min-width:150px;text-align:center;text-transform:capitalize">${fm(m)}</b><button onclick="view.loyersMois=addM(view.loyersMois,1);render()" aria-label="Mois suivant">→</button>${m !== CUR ? `<button class="ghost" onclick="view.loyersMois=CUR;render()">Aujourd'hui</button>` : ""}</div></div>
-  ${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Locataire</th><th>À payer le</th><th class="num">Loyer HC</th><th class="num">Charges</th><th class="num">Total dû</th><th class="num">Reçu</th><th>Statut</th><th></th></tr></thead><tbody>
-  ${rows.map(e => `<tr><td><a href="#bail-${e.b.id}"><b>${esc(e.b.nom)}</b></a><div class="sub">${esc(bienLabel(bien(e.b.bienId)))}</div></td><td>${fds(e.dueDate)}</td><td class="num">${eur(e.hc)}</td><td class="num">${eur(e.ch)}</td><td class="num"><b>${eur(e.du)}</b>${e.prorata ? `<div class="sub">prorata</div>` : ""}</td><td class="num">${eur(e.paye)}${e.lastPay ? `<div class="sub">le ${fds(e.lastPay)}</div>` : ""}</td><td>${pillStatut(e)}${e.quittance ? `<div class="sub">quittance envoyée</div>` : ""}</td><td><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}
-  </tbody><tfoot><tr><td colspan="4">Total</td><td class="num">${eur(tot)}</td><td class="num">${eur(paye)}</td><td colspan="2"></td></tr></tfoot></table></div>` : `<div class="empty">Aucun loyer ce mois-ci.</div>`}
+  return `<div class="head"><div><p><a href="#locataires">← Accueil</a></p><h1>Loyers</h1><p>Appuie sur "A payé" quand un loyer arrive : la quittance part toute seule.</p></div>
+  <div class="row"><div class="seg" role="group" aria-label="Mois"><button onclick="view.loyersMois=addM(view.loyersMois,-1);render()" aria-label="Mois précédent">‹</button><b style="text-transform:capitalize">${fm(m)}</b><button onclick="view.loyersMois=addM(view.loyersMois,1);render()" aria-label="Mois suivant">›</button></div>${m !== CUR ? `<button class="small ghost" onclick="view.loyersMois=CUR;render()">Ce mois-ci</button>` : ""}</div></div>
+  ${rows.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Locataire</th><th>À payer le</th><th class="num">Loyer HC</th><th class="num">Charges</th><th class="num">Total dû</th><th class="num">Reçu</th><th>Statut</th><th></th></tr></thead><tbody>
+  ${rows.map(e => `<tr><td class="rt-head"><a href="#bail-${e.b.id}"><b>${esc(e.b.nom)}</b></a><div class="sub">${esc(bienLabel(bien(e.b.bienId)))}</div></td><td data-l="À payer le">${fds(e.dueDate)}</td><td class="num" data-l="Loyer HC">${eur(e.hc)}</td><td class="num" data-l="Charges">${eur(e.ch)}</td><td class="num" data-l="Total dû"><b>${eur(e.du)}</b>${e.prorata ? `<div class="sub">prorata</div>` : ""}</td><td class="num" data-l="Reçu">${eur(e.paye)}${e.lastPay ? `<div class="sub">le ${fds(e.lastPay)}</div>` : ""}</td><td data-l="Statut">${pillStatut(e)}${e.quittance ? `<div class="sub">quittance envoyée</div>` : ""}</td><td class="rt-acts"><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}
+  </tbody><tfoot><tr><td colspan="4">Total</td><td class="num" data-l="Total dû">${eur(tot)}</td><td class="num" data-l="Reçu">${eur(paye)}</td><td colspan="2" class="rt-vide"></td></tr></tfoot></table></div>` : `<div class="empty">Aucun loyer ce mois-ci.</div>`}
   <p class="note">"A payé" = le locataire a payé le total aujourd'hui (la quittance part toute seule si son e-mail est renseigné). "Autre montant…" = paiement partiel ou à une autre date. ↺ annule le dernier paiement saisi.</p>`;
 }
 
@@ -910,13 +963,14 @@ function pageCompta() {
   const parts = S.sci.associes.reduce((s, a) => s + (+a.parts || 0), 0);
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
-  <div class="row"><button onclick="view.comptaAnnee--;render()">← ${y - 1}</button><button onclick="view.comptaAnnee++;render()">${y + 1} →</button><button onclick="importerReleve()">🏦 Importer le relevé</button><button onclick="editDepense()" class="primary">+ Dépense</button><button onclick="exportCSV(${y})">Export pour le comptable</button><button onclick="docBilanOpen(${y})">Bilan imprimable</button></div></div>
+  <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
+  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button><button class="small" onclick="importerReleve()">🏦 Importer le relevé</button><button class="small" onclick="exportCSV(${y})">📊 Export comptable</button><button class="small" onclick="docBilanOpen(${y})">📄 Bilan PDF</button></div>
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>hors charges</small></div><div class="kpi"><span>Charges encaissées</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
-  <section><h2 style="margin-bottom:10px">Par bien</h2><div class="table-wrap"><table><thead><tr><th>Bien</th><th class="num">Loyers</th><th class="num">Charges reçues</th><th class="num">Dépenses</th><th class="num">Résultat</th></tr></thead><tbody>
-  ${lignes.map(l => `<tr><td>${esc(l.nom)}</td><td class="num">${eur(l.loyers)}</td><td class="num">${eur(l.charges)}</td><td class="num">${eur(l.dep)}</td><td class="num"><b>${eur(l.res)}</b></td></tr>`).join("")}
-  </tbody><tfoot><tr><td>Total</td><td class="num">${eur(tot.loyers)}</td><td class="num">${eur(tot.charges)}</td><td class="num">${eur(tot.dep)}</td><td class="num">${eur(tot.res)}</td></tr></tfoot></table></div></section>
+  <section><h2 style="margin-bottom:10px">Par bien</h2><div class="table-wrap"><table class="rt"><thead><tr><th>Bien</th><th class="num">Loyers</th><th class="num">Charges reçues</th><th class="num">Dépenses</th><th class="num">Résultat</th></tr></thead><tbody>
+  ${lignes.map(l => `<tr><td class="rt-head"><b>${esc(l.nom)}</b></td><td class="num" data-l="Loyers">${eur(l.loyers)}</td><td class="num" data-l="Charges reçues">${eur(l.charges)}</td><td class="num" data-l="Dépenses">${eur(l.dep)}</td><td class="num" data-l="Résultat"><b>${eur(l.res)}</b></td></tr>`).join("")}
+  </tbody><tfoot><tr><td class="rt-head">Total</td><td class="num" data-l="Loyers">${eur(tot.loyers)}</td><td class="num" data-l="Charges reçues">${eur(tot.charges)}</td><td class="num" data-l="Dépenses">${eur(tot.dep)}</td><td class="num" data-l="Résultat">${eur(tot.res)}</td></tr></tfoot></table></div></section>
   <div class="two"><section><h2 style="margin-bottom:10px">Dépenses ${y} (${deps.length})</h2>
-  ${deps.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Quoi</th><th>Bien</th><th class="num">Montant</th><th></th></tr></thead><tbody>${deps.map(d => `<tr><td>${fds(d.date)}</td><td>${esc(d.libelle || d.categorie)}<div class="sub">${esc(d.categorie)}${d.recuperable ? " · récupérable sur le locataire" : ""}</div></td><td>${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}</td><td class="num">${eur(d.montant)}</td><td><button class="small ghost" onclick="editDepense('${d.id}')">Modifier</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Aucune dépense saisie pour ${y}.</div>`}
+  ${deps.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Date</th><th>Quoi</th><th>Bien</th><th class="num">Montant</th><th></th></tr></thead><tbody>${deps.map(d => `<tr><td data-l="Date">${fds(d.date)}</td><td class="rt-head">${esc(d.libelle || d.categorie)}<div class="sub">${esc(d.categorie)}${d.recuperable ? " · récupérable sur le locataire" : ""}</div></td><td data-l="Bien">${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}</td><td class="num" data-l="Montant"><b>${eur(d.montant)}</b></td><td class="rt-acts"><button class="small ghost" onclick="editDepense('${d.id}')">Modifier</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Aucune dépense saisie pour ${y}.</div>`}
   </section><section class="card"><h2>Part de chaque associé</h2>
   ${parts ? `<div class="table-wrap" style="border:0"><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)}<div class="sub">${a.parts} parts · ${Math.round(a.parts / parts * 1000) / 10} %</div></td><td class="num"><b>${eur(tot.res * a.parts / parts)}</b></td></tr>`).join("")}</tbody></table></div><p class="note">${S.sci.regime === "IR" ? "SCI à l'impôt sur le revenu : chaque associé déclare sa part du résultat (revenus fonciers). Le calcul fiscal exact (2072) peut différer : amortissements, travaux d'amélioration, etc." : "SCI à l'IS : l'impôt est payé par la SCI. Les associés ne sont imposés que sur les dividendes distribués."}</p>` : `<p class="note">Renseignez les associés et leurs parts dans <a href="#reglages">Réglages</a>.</p>`}
   ${Object.keys(parCat).length ? `<h3 style="margin-top:12px">Par catégorie</h3><div class="table-wrap" style="border:0"><table><tbody>${Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${eur(v)}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -933,9 +987,9 @@ function pageReglages() {
     ${fld("Gérant (signe les documents)", "gerant", s.gerant)}${fld("Ville de signature (\"Fait à…\")", "ville", s.ville)}
     ${fld("Téléphone", "telephone", s.telephone)}${fld("E-mail de la SCI (reçoit une copie de chaque envoi)", "email", s.email, "email")}
     ${fld("IBAN pour les loyers", "iban", s.iban, "text", "full")}
-    ${sel("Quittances", "autoQuittance", s.autoQuittance === false ? "0" : "1", [["1", "Envoyées toutes seules quand je marque un loyer payé"], ["0", "Je les envoie moi-même"]], "full")}
-    ${sel("Régime fiscal", "regime", s.regime, [["IR", "Impôt sur le revenu (cas le plus courant)"], ["IS", "Impôt sur les sociétés"]])}
-    ${sel("SCI familiale ?", "familiale", s.familiale ? "1" : "0", [["0", "Non (entre amis) → bail vide de 6 ans"], ["1", "Oui (parents jusqu'au 4e degré) → bail vide de 3 ans"]])}
+    ${sel("Quittances", "autoQuittance", s.autoQuittance === false ? "0" : "1", [["1", "Envoyées toutes seules au paiement"], ["0", "Envoyées par moi"]], "full")}
+    ${sel("Régime fiscal", "regime", s.regime, [["IR", "Impôt sur le revenu (IR)"], ["IS", "Impôt sur les sociétés (IS)"]])}
+    ${sel("SCI familiale ?", "familiale", s.familiale ? "1" : "0", [["0", "Non, entre amis (bail 6 ans)"], ["1", "Oui, en famille (bail 3 ans)"]])}
     <fieldset><legend>Associés</legend>
       <label class="fl full" style="grid-column:1/-1">Un associé par ligne : Nom ; nombre de parts ; e-mail
       <textarea name="associes" rows="3">${esc(s.associes.map(a => [a.nom, a.parts, a.email].filter(x => x !== undefined && x !== "").join(" ; ")).join("\n"))}</textarea></label>
@@ -946,14 +1000,14 @@ function pageReglages() {
     </fieldset>
     <fieldset><legend>Google Drive</legend>
       ${fld("Lien du dossier Drive de la SCI", "drive", s.driveId ? "https://drive.google.com/drive/folders/" + s.driveId : "https://drive.google.com/drive/folders/" + DRIVE_DEFAUT, "url", "full")}
-      ${sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui, dans « Documents générés par l'appli »"], ["0", "Non"]], "full")}
+      ${sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui (dossier « Documents générés par l'appli »)"], ["0", "Non"]], "full")}
     </fieldset>
     <div class="full row"><button class="primary">Enregistrer</button></div>
   </form></section>
   <section class="card"><h2>Indice des loyers (IRL)</h2>
     <p class="note">Les révisions de loyer se calculent toutes seules avec ces indices officiels de l'INSEE. Dernier connu : <b>${qLabel(irlCles().slice(-1)[0])} = ${fmtIrl(irlVal(irlCles().slice(-1)[0]))}</b>. Prochain : <b>${qLabel(irlProchain().k)}</b>, publié vers le ${fd(irlProchain().pub)}. Quand il sort, ajoute-le ici (valeur sur <a href="https://www.service-public.gouv.fr/particuliers/vosdroits/F13723" target="_blank" rel="noopener">service-public.gouv.fr</a>).</p>
     <div class="table-wrap" style="border:0"><table><tbody>${irlCles().slice(-6).reverse().map(k => `<tr><td>${qLabel(k)}</td><td class="num">${fmtIrl(irlVal(k))}</td><td class="sub">publié vers le ${fds(qPub(k))}</td></tr>`).join("")}</tbody></table></div>
-    <form class="row" onsubmit="event.preventDefault();ajouterIrl(this)"><input name="t" id="irl_t" placeholder="T4 2026" style="max-width:120px" value="${qLabel(irlProchain().k)}"><input name="v" id="irl_v" type="number" step="0.01" placeholder="Valeur" style="max-width:120px" required><button>Ajouter l'indice</button></form>
+    <form class="row" onsubmit="event.preventDefault();ajouterIrl(this)"><input name="t" id="irl_t" aria-label="Trimestre" placeholder="T4 2026" style="max-width:120px" value="${qLabel(irlProchain().k)}"><input name="v" id="irl_v" type="number" inputmode="decimal" step="0.01" aria-label="Valeur de l'indice" placeholder="Valeur" style="max-width:120px" required><button>Ajouter l'indice</button></form>
   </section>
   <section class="card"><h2>Partage avec les associés et sauvegarde</h2>
     ${MODE === "partage" ? `<p class="note"><b>Les données sont enregistrées en ligne.</b> Pour que tes associés voient et modifient la même chose : bouton <b>Partager</b> en haut de cette page, puis invite-les avec leur e-mail en tant qu'<b>Éditeur</b>. Chacun envoie les quittances depuis son propre Gmail.</p>` : `<p class="note">Les données sont enregistrées dans ce navigateur, sur cet appareil. Pour ne rien perdre : télécharge une sauvegarde régulièrement et rouvre-la sur un autre appareil avec "Ouvrir une sauvegarde".</p>`}
@@ -964,12 +1018,12 @@ function pageReglages() {
     ${S.rappels.length ? `<div class="table-wrap" style="border:0"><table><tbody>${S.rappels.map(r => `<tr><td>${fds(r.date)}</td><td>${esc(r.titre)}</td><td>${r.fait ? `<span class="pill ok">Fait</span>` : `<span class="pill info">À faire</span>`}</td><td><button class="small ghost" onclick="supprRappel('${r.id}')">Supprimer</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note">Aucun rappel.</p>`}
     <div class="row"><button onclick="editRappel()">+ Rappel</button></div>
   </section>
-  <section class="card"><h2>Zone sensible</h2><div class="row"><button onclick="chargerDemo()">Recharger l'exemple</button><button class="danger" onclick="confirmer('Tout effacer ? Toutes les données de cet appareil seront supprimées. Pensez à télécharger une sauvegarde avant.', ()=>{S=blank();save();render();})">Tout effacer</button></div></section>`;
+  <section class="card"><h2>Zone sensible</h2><div class="row"><button onclick="chargerDemo()">Recharger l'exemple</button><button class="danger" onclick="toutEffacer()">Tout effacer</button></div></section>`;
 }
 
 /* ================= Formulaires ================= */
 function fld(label, name, value, type = "text", cls = "", extra = "") {
-  return `<label class="fl ${cls}">${label}<input id="f_${name}" name="${name}" type="${type}" value="${esc(value ?? "")}" ${type === "number" ? 'step="0.01"' : ""} ${extra}></label>`;
+  return `<label class="fl ${cls}">${label}<input id="f_${name}" name="${name}" type="${type}" value="${esc(value ?? "")}" ${type === "number" ? 'step="0.01" inputmode="decimal"' : ""} ${extra}></label>`;
 }
 function sel(label, name, value, opts, cls = "", extra = "") {
   return `<label class="fl ${cls}">${label}<select id="f_${name}" name="${name}" ${extra}>${opts.map(([v, l]) => `<option value="${esc(v)}" ${String(v) === String(value ?? "") ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
@@ -978,13 +1032,13 @@ function area(label, name, value, cls = "full") { return `<label class="fl ${cls
 function modal(title, body, onSubmit, opts = {}) {
   const o = document.getElementById("overlay");
   o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><h2>${title}</h2><button class="ghost" onclick="closeOverlay()" aria-label="Fermer">✕</button></div>
-  <form class="f" id="mform">${body}<div class="full row" style="justify-content:space-between"><div class="row">${opts.del ? `<button type="button" class="danger" id="mdel">Supprimer</button>` : ""}</div><div class="row"><button type="button" onclick="closeOverlay()">Annuler</button><button class="primary">${opts.ok || "Enregistrer"}</button></div></div></form></div>`;
+  <form class="f" id="mform">${body}<div class="full row" style="justify-content:space-between"><div class="row">${opts.del ? `<button type="button" class="danger" id="mdel">Supprimer</button>` : ""}</div><div class="row">${opts.lecture ? "" : `<button type="button" onclick="closeOverlay()">Annuler</button>`}<button class="primary">${opts.ok || "Enregistrer"}</button></div></div></form></div>`;
   o.hidden = false;
   const f = document.getElementById("mform");
   f.addEventListener("submit", ev => { ev.preventDefault(); const d = Object.fromEntries(new FormData(f).entries()); f.querySelectorAll("input[type=checkbox]").forEach(c => d[c.name] = c.checked); if (onSubmit(d, f) !== false) { closeOverlay(); save(); render(); } });
   if (opts.del) document.getElementById("mdel").onclick = () => confirmer(opts.delMsg || "Supprimer ?", () => { opts.del(); save(); render(); });
   if (opts.after) opts.after(f);
-  const first = f.querySelector("input,select,textarea"); if (first) first.focus();
+  const first = f.querySelector("input:not([type=checkbox]),select,textarea"); if (first && matchMedia("(pointer: fine)").matches) first.focus();
 }
 function closeOverlay() { const o = document.getElementById("overlay"); o.hidden = true; o.innerHTML = ""; if (pendingRender) { pendingRender = false; } render(); }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !document.getElementById("overlay").hidden) closeOverlay(); });
@@ -997,7 +1051,7 @@ function confirmer(msg, yes) {
 function editBien(id) {
   const b = id ? bien(id) : {};
   modal(id ? "Modifier le bien" : "Nouveau bien", `
-    ${fld("Nom court (ex : Appart Gonds 1)", "nom", b.nom, "text", "", "required")}
+    ${fld("Nom court (ex : Appart Agon 1)", "nom", b.nom, "text", "", "required")}
     ${sel("Type", "type", b.type || "Appartement", ["Appartement", "Maison", "Studio", "Local", "Parking / garage"].map(x => [x, x]))}
     ${fld("Adresse", "adresse", b.adresse, "text", "full")}${fld("Code postal", "cp", b.cp)}${fld("Ville", "ville", b.ville)}
     ${fld("Surface habitable (m²)", "surface", b.surface, "number")}${fld("Nombre de pièces", "pieces", b.pieces, "number")}
@@ -1007,7 +1061,7 @@ function editBien(id) {
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
     ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}`,
     d => { if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); },
-    id ? { del: () => { S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ? Les locataires liés resteront mais sans bien." } : {});
+    id ? { del: () => { if (S.baux.some(x => x.bienId === id)) { toast("Ce bien a des locataires (actuels ou anciens) : il ne peut pas être supprimé."); return; } S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ?" } : {});
 }
 
 function editBail(id, bienId) {
@@ -1055,7 +1109,6 @@ async function encaisser(bailId, m) {
   confettis();
   S.paiements.push({ id: uid(), bailId, mois: m, montant: e.reste, date: iso(TODAY), mode: "virement" }); save(); render();
   if (S.sci.autoQuittance !== false && b.email && peutEnvoyer()) {
-    toast(`${eur(e.reste)} reçus · envoi de la quittance à ${b.email}…`);
     await envoyerQuittance(bailId, m, false);
   } else toast(`${eur(e.reste)} reçus` + (b.email ? " · quittance prête" : " · ajoute l'e-mail du locataire pour envoyer la quittance"));
 }
@@ -1064,7 +1117,7 @@ function saisirPaiement(bailId, m) {
   modal(`Paiement — ${esc(e.b.nom)}, ${fm(m)}`, `<p class="full note">Dû : ${eur(e.du)} · déjà reçu : ${eur(e.paye)} · reste : <b>${eur(e.reste)}</b></p>
     ${fld("Montant reçu (€)", "montant", e.reste, "number", "", "required")}${fld("Reçu le", "date", iso(TODAY), "date", "", "required")}
     ${sel("Moyen", "mode", "virement", [["virement", "Virement"], ["prelevement", "Prélèvement"], ["cheque", "Chèque"], ["especes", "Espèces"], ["caf", "CAF / APL versée au bailleur"]])}`,
-    d => { S.paiements.push({ id: uid(), bailId, mois: m, montant: +d.montant, date: d.date, mode: d.mode }); });
+    d => { if (!(+d.montant > 0)) { toast("Le montant doit être supérieur à 0."); return false; } S.paiements.push({ id: uid(), bailId, mois: m, montant: r2(+d.montant), date: d.date, mode: d.mode }); toast(`${eur(d.montant)} enregistrés`); });
 }
 function annulerPaiement(bailId, m) { const p = S.paiements.filter(x => x.bailId === bailId && x.mois === m).pop(); if (!p) return; confirmer(`Annuler le paiement de ${eur(p.montant)} du ${fds(p.date)} ?`, () => { S.paiements = S.paiements.filter(x => x !== p); delete S.quittances[bailId + "|" + m]; save(); render(); }); }
 
@@ -1075,7 +1128,7 @@ function editDepense(id) {
     ${sel("Catégorie", "categorie", d0.categorie, CATS.map(c => [c, c]))}${sel("Bien concerné", "bienId", d0.bienId || "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
     ${fld("Détail (ex : plombier fuite cuisine)", "libelle", d0.libelle, "text", "full")}
     <label class="fl chk full"><input type="checkbox" name="recuperable" ${d0.recuperable ? "checked" : ""}> Charge récupérable sur le locataire (à inclure dans la régularisation)</label>`,
-    d => { d.montant = +d.montant; if (id) Object.assign(d0, d); else S.depenses.push({ id: uid(), ...d }); },
+    d => { d.montant = r2(+d.montant); if (!(d.montant > 0)) { toast("Le montant doit être supérieur à 0."); return false; } if (id) Object.assign(d0, d); else S.depenses.push({ id: uid(), ...d }); toast(id ? "Dépense modifiée" : "Dépense ajoutée"); },
     id ? { del: () => { S.depenses = S.depenses.filter(x => x.id !== id); } } : {});
 }
 function editRappel() { modal("Nouveau rappel", `${fld("Quoi ?", "titre", "", "text", "full", "required")}${fld("Quand ?", "date", iso(addDays(TODAY, 7)), "date", "", "required")}${sel("Bien", "bienId", "", [["", "—"], ...S.biens.map(b => [b.id, b.nom])])}`, d => { S.rappels.push({ id: uid(), ...d, fait: false }); }); }
@@ -1097,24 +1150,27 @@ function saveSci(f) {
 function revision(id) {
   const b = bail(id), rv = revInfo(b), l = loyerAt(b, CUR);
   const ok = rv && rv.statut === "pret";
-  const dateEffet = rv ? iso(rv.anniv) : iso(TODAY);
+  const dateEffet = iso(rv && rv.anniv > TODAY ? rv.anniv : TODAY);
   modal(`Révision du loyer — ${esc(b.nom)}`, `
     <p class="full note">${ok ? `Tout est calculé avec l'indice officiel de l'INSEE. Vérifie et appuie sur "Appliquer".` : `Indique les deux indices IRL (même trimestre, à un an d'écart).`} Nouveau loyer = loyer actuel × nouvel indice ÷ ancien indice.</p>
     ${fld("Loyer hors charges actuel (€)", "ancien", ok ? rv.ancien : l.hc, "number")}${fld("Charges (inchangées) (€)", "charges", ok ? rv.charges : l.ch, "number")}
     ${fld("Ancien trimestre", "trimestreAncien", ok ? qLabel(rv.oldKey) : b.irlTrimestre)}${fld("Ancien indice", "irlAncien", ok ? rv.oldVal : b.irlValeur, "number", "", "required")}
     ${fld("Nouveau trimestre", "trimestre", ok ? qLabel(rv.newKey) : "")}${fld("Nouvel indice", "irlNouveau", ok ? rv.newVal : "", "number", "", "required")}
-    ${fld("Nouveau loyer à partir du", "date", dateEffet, "date", "", "required")}
+    ${fld("Date de la révision", "date", dateEffet, "date", "", `required min="${iso(TODAY)}"`)}
     <div class="calc" id="calc"></div>`,
     d => {
       const nv = r2(+d.ancien * +d.irlNouveau / +d.irlAncien); if (!isFinite(nv) || nv <= 0) return false;
       b.revisions = b.revisions || [];
-      b.revisions.push({ depuis: mk(P(d.date)), date: d.date, loyerHC: nv, charges: +d.charges, ancien: +d.ancien, irlAncien: +d.irlAncien, irlNouveau: +d.irlNouveau, trimestre: d.trimestre, trimestreAncien: d.trimestreAncien });
+      if (P(d.date) < TODAY) { toast("La révision ne peut pas être rétroactive : choisis aujourd'hui ou une date future."); return false; }
+      b.revisions.push({ depuis: moisEffet(d.date), date: d.date, loyerHC: nv, charges: +d.charges, ancien: +d.ancien, irlAncien: +d.irlAncien, irlNouveau: +d.irlNouveau, trimestre: d.trimestre, trimestreAncien: d.trimestreAncien });
       b.irlTrimestre = d.trimestre; b.irlValeur = +d.irlNouveau;
       setTimeout(() => docRevisionOpen(b.id, b.revisions.length - 1), 50);
     },
-    { ok: "Appliquer", after: f => { const c = () => { const nv = +f.ancien.value * +f.irlNouveau.value / +f.irlAncien.value; document.getElementById("calc").innerHTML = isFinite(nv) && nv > 0 ? `Nouveau loyer hors charges : <b>${eur(nv)}</b> (${nv >= +f.ancien.value ? "+" : ""}${eur(nv - +f.ancien.value)} par mois)` : "Saisis le nouvel indice."; }; f.addEventListener("input", c); c(); } });
+    { ok: "Appliquer", after: f => { const c = () => { const nv = +f.ancien.value * +f.irlNouveau.value / +f.irlAncien.value; document.getElementById("calc").innerHTML = isFinite(nv) && nv > 0 ? `Nouveau loyer hors charges : <b>${eur(nv)}</b> (${nv >= +f.ancien.value ? "+" : ""}${eur(nv - +f.ancien.value)} par mois), appliqué à partir du loyer de <b>${f.date.value ? fm(moisEffet(f.date.value)) : "…"}</b>.` : "Saisis le nouvel indice."; }; f.addEventListener("input", c); c(); } });
 }
 
+/* La révision s'applique au premier loyer qui suit la date de la demande (pas de rattrapage) */
+const moisEffet = dateIso => { const d = P(dateIso); return d.getDate() === 1 ? mk(d) : addM(mk(d), 1); };
 /* ================= Documents ================= */
 const NIVEAUX = [
   { court: "Relance amiable", titre: "Rappel de loyer impayé" },
@@ -1258,7 +1314,7 @@ async function envoyerMail({ to, objet, corps, html, fichier }) {
 const DRIVE_DEFAUT = "1Bcx1xiH7q1C88nPE-zxgOYV0uw108-vW";
 const driveRacine = () => S.sci.driveId || DRIVE_DEFAUT;
 const idDrive = s => { const m = /(?:folders\/|id=)([A-Za-z0-9_-]{10,})/.exec(s || ""); return m ? m[1] : /^[A-Za-z0-9_-]{10,}$/.test((s || "").trim()) ? s.trim() : ""; };
-let DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+let DOCS = { etat: "vide", fichiers: [], dossiers: {} }, RACINES = [""];
 async function drive(tool, input) {
   const r = await MCP.callTool("Google Drive", tool, input);
   let p = r && r.payload !== undefined ? r.payload : r;
@@ -1305,13 +1361,13 @@ function ligneDoc(f) {
 function pageDocs() {
   if (!MCP) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") setTimeout(indexerDrive, 0);
-  const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort();
+  const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort(); RACINES = ["", ...racines];
   const q = view.docQ || "", r = view.docRacine || "", res = chercherDocs(q, r), lim = view.docLim || 40;
   const lien = `https://drive.google.com/drive/folders/${driveRacine()}`;
   return `<div class="head"><div><h1>Documents</h1><p>Le Drive de la SCI, rangé et cherchable. <a href="${lien}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a></p></div>
     <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
   <form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="🔎 Chercher : bail, Kbis, taxe, nom d'un locataire…" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>
-  <div class="chips">${["", ...racines].map(x => `<button class="chip ${x === r ? "on" : ""}" onclick="view.docRacine='${esc(x).replace(/'/g, "\\'")}';render()">${x ? esc(x) : "Tout"}</button>`).join("")}</div>
+  <div class="chips" role="group" aria-label="Filtrer par dossier">${["", ...racines].map((x, i) => `<button class="chip ${x === r ? "on" : ""}" aria-pressed="${x === r}" onclick="view.docRacine=RACINES[${i}];render()">${x ? esc(x) : "Tout"}</button>`).join("")}</div>
   ${DOCS.etat === "chargement" ? `<p class="note">⏳ Lecture du Drive… ${DOCS.n || 0} documents trouvés</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : ""}
   <div id="docres">${listeDocs(res, lim)}</div>`;
 }
@@ -1490,7 +1546,7 @@ function documentsPour(bailId) {
     <li><span class="ico">🔔</span><span class="tx">Avis d'échéance du mois</span><button type="button" class="small" onclick="avis('${b.id}','${CUR}')">Ouvrir</button></li>
     ${payes.map(e => `<li><span class="ico">📄</span><span class="tx">Quittance ${fm(e.m)}${e.quittance ? `<small>envoyée le ${fds(e.quittance)}</small>` : ""}</span><button type="button" class="small" onclick="quittance('${b.id}','${e.m}')">Ouvrir</button></li>`).join("")}
   </ul>
-  ${MCP ? `<h3 style="margin:14px 0 8px">Dans le Drive</h3>${DOCS.etat !== "pret" ? `<p class="note">Lecture du Drive en cours… <button type="button" class="small" onclick="go('docs')">Voir l'onglet Docs</button></p>` : drv.length ? `<ul class="todo">${drv.map(ligneDoc).join("")}</ul>` : `<p class="note">Aucun fichier du Drive ne porte son nom.</p>`}` : ""}</div>`, () => true, { ok: "Fermer" });
+  ${MCP ? `<h3 style="margin:14px 0 8px">Dans le Drive</h3>${DOCS.etat !== "pret" ? `<p class="note">Lecture du Drive en cours… <button type="button" class="small" onclick="go('docs')">Voir l'onglet Docs</button></p>` : drv.length ? `<ul class="todo">${drv.map(ligneDoc).join("")}</ul>` : `<p class="note">Aucun fichier du Drive ne porte son nom.</p>`}` : ""}</div>`, () => true, { ok: "Fermer", lecture: true });
   if (MCP && DOCS.etat === "vide") indexerDrive();
 }
 
@@ -1510,18 +1566,25 @@ function docQuittance(bailId, m) {
     onSent: total ? () => { S.quittances[b.id + "|" + m] = iso(TODAY); } : null, sentLabel: "Déjà envoyée autrement" } };
 }
 function quittance(bailId, m) { const d = docQuittance(bailId, m); showDoc(d.html, d.o); }
+const ENVOIS = new Set();
 async function envoyerQuittance(bailId, m, silencieux) {
-  const b = bail(bailId), d = docQuittance(bailId, m);
+  const b = bail(bailId), d = docQuittance(bailId, m), cle = bailId + "|" + m;
   if (!b.email) { if (!silencieux) quittance(bailId, m); return false; }
+  if (ENVOIS.has(cle) || S.quittances[cle]) return !!S.quittances[cle];
+  ENVOIS.add(cle); if (!silencieux) toast(`Envoi de la quittance à ${b.email}…`);
   const ok = await envoyerMail({ to: b.email, objet: d.o.email.objet, corps: d.o.email.corps, html: d.html, fichier: d.o.fichier });
-  if (ok) { S.quittances[b.id + "|" + m] = iso(TODAY); save(); render(); if (!silencieux) toast(`Quittance envoyée à ${b.email}`); }
+  ENVOIS.delete(cle);
+  if (ok) { S.quittances[cle] = iso(TODAY); save(); render(); if (!silencieux) toast(`✓ Quittance envoyée à ${b.email}`); }
   return ok;
 }
+let ENVOI_LOT = false;
 async function envoyerToutesQuittances() {
+  if (ENVOI_LOT) return; ENVOI_LOT = true;
   const liste = toutesEcheances().filter(e => e.statut === "paye" && e.du > 0 && !e.quittance && e.b.email);
   let n = 0; toast(`Envoi de ${liste.length} quittance(s)…`);
   for (const e of liste) { if (await envoyerQuittance(e.b.id, e.m, true)) n++; else break; }
-  toast(`${n} quittance(s) envoyée(s)` + (n < liste.length ? `, ${liste.length - n} non envoyée(s)` : ""));
+  ENVOI_LOT = false;
+  toast(n === liste.length ? `✓ ${n} quittance${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""}` : `${n} envoyée(s), ${liste.length - n} non envoyée(s)`);
 }
 function avis(bailId, m) {
   const b = bail(bailId), e = echeance(b, m), bi = bien(b.bienId);
@@ -1548,11 +1611,11 @@ function relance(bailId, m) {
 }
 function docRevisionOpen(id, i) {
   const b = bail(id), r = b.revisions[i], bi = bien(b.bienId);
-  showDoc(`<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA(P(r.date) < TODAY ? TODAY : TODAY)}<p><b>Objet : Révision annuelle du loyer</b></p>
+  showDoc(`<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA(P(r.date))}<p><b>Objet : Révision annuelle du loyer</b></p>
   <p>Madame, Monsieur,</p><p>Conformément à la clause de révision prévue à votre bail pour le logement situé ${esc(adresseBien(bi))}, et à l'article 17-1 de la loi du 6 juillet 1989, votre loyer est révisé selon la variation de l'indice de référence des loyers (IRL) publié par l'INSEE.</p>
   <table><tbody><tr><td>Loyer hors charges actuel</td><td class="right">${eur(r.ancien)}</td></tr><tr><td>Indice de référence (${esc(r.trimestreAncien || "")})</td><td class="right">${esc(r.irlAncien)}</td></tr><tr><td>Nouvel indice (${esc(r.trimestre)})</td><td class="right">${esc(r.irlNouveau)}</td></tr><tr><td>Calcul</td><td class="right">${eur(r.ancien)} × ${esc(r.irlNouveau)} ÷ ${esc(r.irlAncien)}</td></tr><tr><td><b>Nouveau loyer hors charges</b></td><td class="right"><b>${eur(r.loyerHC)}</b></td></tr><tr><td>Charges (inchangées)</td><td class="right">${eur(r.charges)}</td></tr><tr><td><b>Nouveau total mensuel</b></td><td class="right"><b>${eur(r.loyerHC + r.charges)}</b></td></tr></tbody></table>
-  <p>Ce nouveau loyer s'applique à compter du <b>${fd(r.date)}</b>.</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`,
-    { titre: "Révision du loyer", fichier: `Revision-loyer-${slug(b.nom)}-${r.depuis}`, to: b.email, email: { objet: "Révision annuelle de votre loyer", corps: `Bonjour,\n\nComme prévu dans votre bail, votre loyer est révisé selon l'indice IRL. À partir du ${fds(r.date)}, il passe à ${eur(r.loyerHC)} hors charges, soit ${eur(r.loyerHC + r.charges)} charges comprises. Le détail est dans le courrier joint.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+  <p>Ce nouveau loyer s'applique à compter de l'échéance du <b>${fd(r.depuis + "-01")}</b> (loyer de ${fm(r.depuis)}).</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`,
+    { titre: "Révision du loyer", fichier: `Revision-loyer-${slug(b.nom)}-${r.depuis}`, to: b.email, email: { objet: "Révision annuelle de votre loyer", corps: `Bonjour,\n\nComme prévu dans votre bail, votre loyer est révisé selon l'indice IRL. À partir du loyer de ${fm(r.depuis)}, il passe à ${eur(r.loyerHC)} hors charges, soit ${eur(r.loyerHC + r.charges)} charges comprises. Le détail est dans le courrier joint.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
 }
 function docBailOpen(id) {
   const b = bail(id), bi = bien(b.bienId) || {}, s = S.sci, du = dureeBail(b), l = loyerAt(b, mk(P(b.dateEntree)));
@@ -1625,6 +1688,7 @@ function exportCSV(y) {
   const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`, n = v => String(r2(v)).replace(".", ",");
   const rows = [["Date", "Sens", "Bien", "Catégorie", "Libellé", "Locataire", "Montant"]];
   S.paiements.filter(p => (p.date || "").startsWith(String(y))).forEach(p => { const b = bail(p.bailId); rows.push([p.date, "Recette", b ? bienLabel(bien(b.bienId)) : "", "Loyer et charges", "Loyer " + p.mois + " (" + p.mode + ")", b ? b.nom : "", n(p.montant)]); });
+  (S.taxes || []).forEach(tx => tx.parts.filter(p => p.payeLe && p.payeLe.startsWith(String(y))).forEach(p => { const b = bail(p.bailId); rows.push([p.payeLe, "Recette", bienLabel(bien(tx.bienId)), "Ordures ménagères refacturées", "TEOM " + tx.annee, b ? b.nom : "", n(p.montant)]); }));
   S.depenses.filter(d => (d.date || "").startsWith(String(y))).forEach(d => rows.push([d.date, "Dépense", d.bienId ? bienLabel(bien(d.bienId)) : "SCI", d.categorie, d.libelle, "", n(-d.montant)]));
   rows.sort((a, b) => a[0] < b[0] ? -1 : 1);
   download(`compta-${slug(S.sci.nom || "sci")}-${y}.csv`, "﻿" + rows.map(r => r.map(q).join(";")).join("\n"), "text/csv");
@@ -1639,8 +1703,8 @@ function confettis() {
 }
 function toast(msg) {
   let t = document.getElementById("toast");
-  if (!t) { t = document.createElement("div"); t.id = "toast"; t.setAttribute("role", "status"); t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(" + (innerWidth <= 700 ? 92 : 20) + "px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;max-width:calc(100% - 32px)"; document.body.appendChild(t); }
-  t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 2600);
+  if (!t) { t = document.createElement("div"); t.id = "toast"; t.setAttribute("role", "status"); t.className = "toast"; document.body.appendChild(t); }
+  t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, Math.max(2600, msg.length * 60));
 }
 
 /* ================= Exemple ================= */
@@ -1649,9 +1713,9 @@ function demo() {
   d.sci = { nom: "SCI Exemple", siege: "12 rue des Lilas, 95250 Beauchamp", siren: "000 000 000", gerant: "Théo Exemple", ville: "Beauchamp", regime: "IR", familiale: false, iban: "FR76 0000 0000 0000 0000 0000 000", telephone: "06 00 00 00 00", email: "", associes: [{ nom: "Associé 1", parts: 34 }, { nom: "Associé 2", parts: 33 }, { nom: "Associé 3", parts: 33 }] };
   let bs_i = 0;
   const bs = [
-    ["Appart Gonds 1", "Appartement", "3 rue de la Charente", "17100", "Les Gonds", 42, 2, "vide", "D", 560],
-    ["Appart Gonds 2", "Appartement", "3 rue de la Charente", "17100", "Les Gonds", 28, 1, "meuble", "E", 450],
-    ["Maison Gonds", "Maison", "8 chemin des Vignes", "17100", "Les Gonds", 95, 4, "vide", "F", 890],
+    ["Appart Agon 1", "Appartement", "3 rue de la Mer", "50230", "Agon-Coutainville", 42, 2, "vide", "D", 560],
+    ["Appart Agon 2", "Appartement", "3 rue de la Mer", "50230", "Agon-Coutainville", 28, 1, "meuble", "E", 450],
+    ["Maison Agon", "Maison", "8 chemin des Dunes", "50230", "Agon-Coutainville", 95, 4, "vide", "F", 890],
     ["Appart Beauchamp", "Appartement", "21 avenue de la Gare", "95250", "Beauchamp", 55, 3, "vide", "C", 980],
     ["Maison Beauchamp", "Maison", "5 allée des Tilleuls", "95250", "Beauchamp", 110, 5, "vide", "D", 1450]
   ].map(([nom, type, adresse, cp, ville, surface, pieces, meuble, dpe, loyerRef]) => ({ id: uid(), nom, type, adresse, cp, ville, surface, pieces, meuble, dpe, loyerRef, annee: 1985, equipements: type === "Maison" ? "Jardin, garage, cuisine équipée" : "Cave, cuisine équipée", pnoEcheance: iso(addDays(TODAY, 20 + 47 * (bs_i++))) }));
@@ -1685,9 +1749,10 @@ function demo() {
   ];
   d.faits["fisc-tf-" + TODAY.getFullYear()] = iso(TODAY);
   { const an = TODAY.getFullYear(), c = partsTeom(bs[2].id, an, 240); const tid = uid(); d.taxes = [{ id: tid, bienId: bs[2].id, annee: an, total: 1380, teom: 240, parts: c.parts, partSci: c.partSci }]; d.depenses.push({ id: uid(), taxeId: tid, date: iso(new Date(an, 9, 15)), bienId: bs[2].id, categorie: "Taxe foncière", libelle: "Taxe foncière " + an, montant: 1380, recuperable: false }); }
-  d.rappels = [{ id: uid(), titre: "Faire passer le ramoneur – Maison Gonds", date: iso(addDays(TODAY, 10)), bienId: bs[2].id, fait: false }];
+  d.rappels = [{ id: uid(), titre: "Faire passer le ramoneur – Maison Agon", date: iso(addDays(TODAY, 10)), bienId: bs[2].id, fait: false }];
   return d;
 }
+function toutEffacer() { confirmer(MODE === "partage" ? "Tout effacer ? Les données seront supprimées pour toi et pour tes associés. Télécharge une sauvegarde avant." : "Tout effacer ? Les données de cet appareil seront supprimées. Télécharge une sauvegarde avant.", () => { S = blank(); save(); go("locataires"); render(); toast("Tout a été effacé"); }); }
 function viderDemo() { confirmer("Effacer les données d'exemple et partir de zéro ?", () => { S = blank(); save(); go("reglages"); render(); toast("C'est à vous : commencez par la SCI, puis vos biens"); }); }
 function chargerDemo() { confirmer("Remplacer vos données par l'exemple ? Téléchargez une sauvegarde avant si besoin.", () => { S = demo(); save(); go("locataires"); render(); }); }
 
