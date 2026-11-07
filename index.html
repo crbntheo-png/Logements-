@@ -172,6 +172,21 @@ h2.sec { font-size: 1.15rem; display: flex; gap: 8px; align-items: center; margi
 .tile .row button { flex: 1; justify-content: center; padding-block: 10px; }
 .avatar { width: 42px; height: 42px; border-radius: 50%; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; flex: none; font-family: var(--font-display); }
 @media (max-width: 420px) { .tiles { grid-template-columns: minmax(0, 1fr); } .hero h1 { font-size: 1.4rem; } }
+.gear { display: none; margin-left: auto; text-decoration: none; font-size: 1.3rem; }
+@media (max-width: 700px) { .gear { display: inline-block; } }
+.quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.quick button { flex-direction: column; gap: 4px; border-radius: 16px; padding: 14px 8px; background: var(--surface); box-shadow: var(--shadow); border-color: transparent; white-space: normal; text-align: center; font-size: .85rem; }
+.quick button span { font-size: 1.6rem; }
+.search input { font-size: 1.05rem; padding: 14px 16px; border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); border-color: transparent; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.chip { border-radius: 999px; background: var(--surface); white-space: nowrap; }
+.chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.todo.docs .tx a { color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.todo.docs .tx a:hover { text-decoration: underline; }
+ul.rel { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 8px; }
+ul.rel li { background: var(--bg); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+ul.rel small { color: var(--muted); overflow-wrap: anywhere; }
+ul.rel .row select { flex: 1; min-width: 140px; }
 /* Fenêtres */
 .overlay { position: fixed; inset: 0; background: rgba(10, 15, 13, .55); z-index: 50; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: max(24px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 24px max(12px, env(safe-area-inset-left, 0px)); }
 .modal { background: var(--surface); border-radius: 14px; width: min(720px, 100%); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
@@ -279,7 +294,7 @@ button.small { padding: 5px 12px; }
 <body>
 <header class="top">
   <div class="top-inner">
-    <div class="brand"><span id="brandName">Gestion SCI</span><small id="brandSub"></small></div>
+    <div class="brand"><span id="brandName">Gestion SCI</span><small id="brandSub"></small></div><a class="gear" href="#reglages" aria-label="Réglages">⚙️</a>
     <nav class="tabs" id="nav"></nav>
   </div>
 </header>
@@ -698,8 +713,9 @@ function docTeom(taxeId, bailId) {
 function teomPaye(taxeId, bailId) { confettis(); const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId); p.payeLe = iso(TODAY); save(); render(); toast(`${eur(p.montant)} reçus`); }
 
 /* ================= Navigation ================= */
-const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["compta", "Compta"], ["reglages", "Réglages"]];
-const ICONES = { locataires: "🏠", afaire: "✅", biens: "🏘️", compta: "💶", reglages: "⚙️" };
+const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["docs", "Docs"], ["compta", "Compta"], ["reglages", "Réglages"]];
+const ICONES = { locataires: "🏠", afaire: "✅", biens: "🏘️", docs: "📁", compta: "💶", reglages: "⚙️" };
+const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", render);
@@ -710,7 +726,7 @@ function render() {
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires");
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
   document.getElementById("nav").innerHTML = PAGES.map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}">${l}${k === "afaire" && urg ? `<span class="badge">${urg}</span>` : ""}</a>`).join("");
-  document.getElementById("bottomnav").innerHTML = PAGES.map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}><span aria-hidden="true">${ICONES[k]}</span>${l}${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
+  document.getElementById("bottomnav").innerHTML = PAGES.filter(p => p[0] !== "reglages").map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}><span aria-hidden="true">${ICONES[k]}</span>${l}${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
   document.getElementById("brandName").textContent = S.sci.nom || "Gestion SCI";
   document.getElementById("brandSub").textContent = MODE === "partage" ? "en ligne, partagé" : "sur cet appareil";
   const vide = !S.biens.length && !S.baux.length;
@@ -719,7 +735,7 @@ function render() {
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
-  else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, compta: pageCompta, reglages: pageReglages })[page](T);
+  else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
   app.innerHTML = banner + html;
   document.title = S.sci.nom || "Gestion SCI";
 }
@@ -797,6 +813,7 @@ function pageAccueil(T) {
     ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</li>`).join("")}</ul>
       ${items.length > 5 ? `<p><a href="#afaire">Voir les ${items.length - 5} autres</a></p>` : ""}` : `<div class="empty party"><span>🎉</span>Rien à faire, tout est en ordre.</div>`}
   </section>
+  <div class="quick"><button onclick="importerReleve()"><span>🏦</span>Importer le relevé</button><button onclick="go('docs')"><span>📁</span>Documents</button><button onclick="editDepense()"><span>🧾</span>Ajouter une dépense</button></div>
   <section><div class="head"><h2 class="sec">Locataires</h2><button class="small" onclick="editBail()">+ Ajouter</button></div>
     <div class="tiles">${actifs.map(carteLocataire).join("")}
     ${vides.map(bi => `<article class="tile info"><div class="tile-head">${avatar("? ?")}<span><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button></div></article>`).join("")}</div>
@@ -825,7 +842,7 @@ function pageBail(id) {
   const bi = bien(b.bienId), l = loyerAt(b, CUR), ech = echeancesBail(b, addM(CUR, 1)).reverse(), du = dureeBail(b);
   const dette = ech.filter(e => e.statut === "retard").reduce((s, e) => s + e.reste, 0);
   return `<div class="head"><div><p><a href="#locataires">← Locataires</a></p><h1>${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div>
-  <div class="row"><button onclick="editBail('${b.id}')">Modifier</button><button onclick="docBailOpen('${b.id}')">Générer le bail</button><button onclick="revision('${b.id}')">Réviser le loyer</button><button onclick="finBail('${b.id}')">Départ du locataire</button></div></div>
+  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button><button onclick="docBailOpen('${b.id}')">Générer le bail</button><button onclick="revision('${b.id}')">Réviser le loyer</button><button onclick="finBail('${b.id}')">Départ du locataire</button></div></div>
   <div class="kpis">
     <div class="kpi"><span>Loyer actuel</span><b>${eur(l.hc + l.ch)}</b><small>${eur(l.hc)} + ${eur(l.ch)} de charges</small></div>
     <div class="kpi ${dette ? "bad" : ""}"><span>Doit</span><b>${eur(dette)}</b><small>${dette ? "loyers en retard" : "rien, tout est payé"}</small></div>
@@ -893,7 +910,7 @@ function pageCompta() {
   const parts = S.sci.associes.reduce((s, a) => s + (+a.parts || 0), 0);
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
-  <div class="row"><button onclick="view.comptaAnnee--;render()">← ${y - 1}</button><button onclick="view.comptaAnnee++;render()">${y + 1} →</button><button onclick="editDepense()" class="primary">+ Dépense</button><button onclick="exportCSV(${y})">Export pour le comptable</button><button onclick="docBilanOpen(${y})">Bilan imprimable</button></div></div>
+  <div class="row"><button onclick="view.comptaAnnee--;render()">← ${y - 1}</button><button onclick="view.comptaAnnee++;render()">${y + 1} →</button><button onclick="importerReleve()">🏦 Importer le relevé</button><button onclick="editDepense()" class="primary">+ Dépense</button><button onclick="exportCSV(${y})">Export pour le comptable</button><button onclick="docBilanOpen(${y})">Bilan imprimable</button></div></div>
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>hors charges</small></div><div class="kpi"><span>Charges encaissées</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   <section><h2 style="margin-bottom:10px">Par bien</h2><div class="table-wrap"><table><thead><tr><th>Bien</th><th class="num">Loyers</th><th class="num">Charges reçues</th><th class="num">Dépenses</th><th class="num">Résultat</th></tr></thead><tbody>
   ${lignes.map(l => `<tr><td>${esc(l.nom)}</td><td class="num">${eur(l.loyers)}</td><td class="num">${eur(l.charges)}</td><td class="num">${eur(l.dep)}</td><td class="num"><b>${eur(l.res)}</b></td></tr>`).join("")}
@@ -920,8 +937,16 @@ function pageReglages() {
     ${sel("Régime fiscal", "regime", s.regime, [["IR", "Impôt sur le revenu (cas le plus courant)"], ["IS", "Impôt sur les sociétés"]])}
     ${sel("SCI familiale ?", "familiale", s.familiale ? "1" : "0", [["0", "Non (entre amis) → bail vide de 6 ans"], ["1", "Oui (parents jusqu'au 4e degré) → bail vide de 3 ans"]])}
     <fieldset><legend>Associés</legend>
-      <label class="fl full" style="grid-column:1/-1">Un associé par ligne, sous la forme : Nom ; nombre de parts
-      <textarea name="associes" rows="3">${esc(s.associes.map(a => a.nom + " ; " + a.parts).join("\n"))}</textarea></label>
+      <label class="fl full" style="grid-column:1/-1">Un associé par ligne : Nom ; nombre de parts ; e-mail
+      <textarea name="associes" rows="3">${esc(s.associes.map(a => [a.nom, a.parts, a.email].filter(x => x !== undefined && x !== "").join(" ; ")).join("\n"))}</textarea></label>
+    </fieldset>
+    <fieldset><legend>Carnet d'adresses</legend>
+      <label class="fl full" style="grid-column:1/-1">Comptable, syndic, notaire, assureur, artisans… Un par ligne : Nom ; rôle ; e-mail
+      <textarea name="contacts" rows="4" placeholder="Cabinet Dupont ; Comptable ; compta@exemple.fr">${esc((s.contacts || []).map(c => [c.nom, c.role, c.email].join(" ; ")).join("\n"))}</textarea></label>
+    </fieldset>
+    <fieldset><legend>Google Drive</legend>
+      ${fld("Lien du dossier Drive de la SCI", "drive", s.driveId ? "https://drive.google.com/drive/folders/" + s.driveId : "https://drive.google.com/drive/folders/" + DRIVE_DEFAUT, "url", "full")}
+      ${sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui, dans « Documents générés par l'appli »"], ["0", "Non"]], "full")}
     </fieldset>
     <div class="full row"><button class="primary">Enregistrer</button></div>
   </form></section>
@@ -1062,7 +1087,10 @@ function saveSci(f) {
   const d = Object.fromEntries(new FormData(f).entries());
   d.familiale = d.familiale === "1";
   d.autoQuittance = d.autoQuittance !== "0";
-  d.associes = d.associes.split("\n").map(l => l.split(/[;,]/)).filter(x => x[0].trim()).map(([n, p]) => ({ nom: n.trim(), parts: +(p || 0) }));
+  d.associes = d.associes.split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, p, e]) => ({ nom: n.trim(), parts: +(p || 0), email: (e || "").trim() }));
+  d.contacts = (d.contacts || "").split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, r, e]) => ({ nom: n.trim(), role: (r || "").trim(), email: (e || "").trim() }));
+  const nouveauDrive = idDrive(d.drive); delete d.drive; if (nouveauDrive && nouveauDrive !== (S.sci.driveId || DRIVE_DEFAUT)) { d.driveGenId = ""; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; } d.driveId = nouveauDrive || S.sci.driveId || "";
+  d.archiveDrive = d.archiveDrive !== "0";
   Object.assign(S.sci, d); save(); render(); toast("Enregistré");
 }
 
@@ -1190,19 +1218,280 @@ async function telechargerPdf() {
   else doc.save(name);
 }
 /* Envoi par Gmail (le compte Gmail de la personne qui utilise l'appli) */
-async function envoyerMail({ to, objet, corps, html, fichier }) {
+function erreurConnecteur(e, nom) {
+  const c = e && e.code;
+  return c === "server_not_connected" || c === "needs_reauth" ? `Connecte ${nom} : claude.ai > Paramètres > Connecteurs > ${nom}.` :
+    c === "not_in_manifest" || c === "approval_required" || c === "cancelled" ? `Il faut autoriser ${nom} pour cette appli.` :
+    `${nom} ne répond pas (${e && e.message || c || "erreur"}).`;
+}
+const b64Octets = b64 => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
+let FILEARGS = null;
+async function envoyerMailBrut({ to, objet, corps, pieces = [] }) {
   if (!MCP) { toast("L'envoi d'e-mails n'est pas disponible ici."); return false; }
-  let pdf; try { pdf = fairePdf(html); } catch (e) { toast(e.message); return false; }
-  const input = { to: [to], subject: objet, body: corps, attachments: [{ content: pdf.output("datauristring").split(",")[1], filename: fichier + ".pdf", mimeType: "application/pdf" }] };
-  if (S.sci.email && S.sci.email !== to) input.bcc = [S.sci.email];
-  try { await MCP.callTool("Gmail", GMAIL_TOOL, input); return true; }
-  catch (e) {
-    const c = e && e.code;
-    toast(c === "server_not_connected" || c === "needs_reauth" ? "Connecte Gmail : claude.ai > Paramètres > Connecteurs > Gmail." :
-      c === "not_in_manifest" || c === "approval_required" || c === "cancelled" ? "Envoi annulé : il faut autoriser Gmail pour cette appli." :
-      "L'e-mail n'est pas parti (" + (e && e.message || c || "erreur") + ").");
-    return false;
+  const dests = (Array.isArray(to) ? to : [to]).filter(Boolean);
+  if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; }
+  const input = { to: dests, subject: objet, body: corps, attachments: [] };
+  let grosFichier = false;
+  for (const p of pieces) {
+    if (p.b64.length > 900000) {
+      if (FILEARGS === null) { try { FILEARGS = !!(await MCP.listTools()).fileArgs; } catch (e) { FILEARGS = false; } }
+      if (!FILEARGS) { grosFichier = true; continue; }
+      if (input.attachments.some(a => typeof a.content === "object")) { grosFichier = true; continue; }
+      input.attachments.push({ content: { $file: { data: b64Octets(p.b64), name: p.nom, type: p.type } }, filename: p.nom, mimeType: p.type });
+    } else input.attachments.push({ content: p.b64, filename: p.nom, mimeType: p.type });
   }
+  if (grosFichier) { const liens = pieces.filter(p => p.lien && p.b64.length > 900000).map(p => p.nom + " : " + p.lien).join("\n"); input.body += liens ? "\n\nDocument trop lourd pour être joint, le voici sur le Drive :\n" + liens : ""; }
+  if (!input.attachments.length) delete input.attachments;
+  if (S.sci.email && !dests.includes(S.sci.email)) input.bcc = [S.sci.email];
+  try { await MCP.callTool("Gmail", GMAIL_TOOL, input); return true; }
+  catch (e) { toast(erreurConnecteur(e, "Gmail")); return false; }
+}
+async function envoyerMail({ to, objet, corps, html, fichier }) {
+  let pdf; try { pdf = fairePdf(html); } catch (e) { toast(e.message); return false; }
+  const b64 = pdf.output("datauristring").split(",")[1];
+  const ok = await envoyerMailBrut({ to, objet, corps, pieces: [{ nom: fichier + ".pdf", b64, type: "application/pdf" }] });
+  if (ok) archiver(b64, fichier);
+  return ok;
+}
+
+/* ================= Google Drive de la SCI ================= */
+const DRIVE_DEFAUT = "1Bcx1xiH7q1C88nPE-zxgOYV0uw108-vW";
+const driveRacine = () => S.sci.driveId || DRIVE_DEFAUT;
+const idDrive = s => { const m = /(?:folders\/|id=)([A-Za-z0-9_-]{10,})/.exec(s || ""); return m ? m[1] : /^[A-Za-z0-9_-]{10,}$/.test((s || "").trim()) ? s.trim() : ""; };
+let DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+async function drive(tool, input) {
+  const r = await MCP.callTool("Google Drive", tool, input);
+  let p = r && r.payload !== undefined ? r.payload : r;
+  if (typeof p === "string") { try { p = JSON.parse(p); } catch (e) {} }
+  return p || {};
+}
+async function indexerDrive() {
+  if (!MCP) return;
+  DOCS = { etat: "chargement", fichiers: [], dossiers: {}, n: 0 }; if (pageCourante() === "docs") render();
+  const vus = new Set(), file = [{ id: driveRacine(), chemin: [] }];
+  try {
+    while (file.length && Object.keys(DOCS.dossiers).length < 300) {
+      const lot = file.splice(0, 4);
+      await Promise.all(lot.map(async f => {
+        let token = undefined, tours = 0;
+        do {
+          const p = await drive("search_files", { query: `parentId = '${f.id}' and trashed = false`, excludeContentSnippets: true, pageSize: 100, ...(token ? { pageToken: token } : {}) });
+          const fs = p.files || [];
+          fs.forEach(x => {
+            if (vus.has(x.id)) return; vus.add(x.id);
+            if (x.mimeType === "application/vnd.google-apps.folder") { DOCS.dossiers[x.id] = { titre: x.title, chemin: f.chemin.concat(x.title), lien: x.viewUrl }; file.push({ id: x.id, chemin: f.chemin.concat(x.title) }); }
+            else DOCS.fichiers.push({ id: x.id, titre: x.title, type: x.mimeType, lien: x.viewUrl, modif: x.modifiedTime, taille: +x.fileSize || 0, chemin: f.chemin, parent: x.parentId });
+          });
+          token = fs.length ? p.nextPageToken : undefined;
+        } while (token && ++tours < 20);
+      }));
+      DOCS.n = DOCS.fichiers.length; if (pageCourante() === "docs") render();
+    }
+    DOCS.etat = "pret"; DOCS.date = new Date();
+  } catch (e) { DOCS.etat = "erreur"; DOCS.err = erreurConnecteur(e, "Google Drive"); }
+  render();
+}
+const sansAccent = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function chercherDocs(q, racine) {
+  const mots = sansAccent(q).split(/\s+/).filter(Boolean);
+  return DOCS.fichiers.filter(f => (!racine || f.chemin[0] === racine) && mots.every(m => sansAccent(f.titre + " " + f.chemin.join(" ")).includes(m)))
+    .sort((a, b) => String(b.modif).localeCompare(String(a.modif)));
+}
+const iconeFichier = f => /pdf/.test(f.type) ? "📕" : /image/.test(f.type) ? "🖼️" : /spreadsheet|excel|csv/.test(f.type) ? "📊" : /zip/.test(f.type) ? "🗜️" : /document|word/.test(f.type) ? "📝" : "📄";
+const tailleTxt = n => !n ? "" : n > 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1e3)) + " Ko";
+function ligneDoc(f) {
+  return `<li><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><a href="${esc(f.lien)}" target="_blank" rel="noopener">${esc(f.titre)}</a><small>${esc(f.chemin.join(" › ") || "Racine")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}${f.taille ? " · " + tailleTxt(f.taille) : ""}</small></span><button class="small" onclick="envoyerFichier('${f.id}')">Envoyer</button></li>`;
+}
+function pageDocs() {
+  if (!MCP) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
+  if (DOCS.etat === "vide") setTimeout(indexerDrive, 0);
+  const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort();
+  const q = view.docQ || "", r = view.docRacine || "", res = chercherDocs(q, r), lim = view.docLim || 40;
+  const lien = `https://drive.google.com/drive/folders/${driveRacine()}`;
+  return `<div class="head"><div><h1>Documents</h1><p>Le Drive de la SCI, rangé et cherchable. <a href="${lien}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a></p></div>
+    <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
+  <form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="🔎 Chercher : bail, Kbis, taxe, nom d'un locataire…" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>
+  <div class="chips">${["", ...racines].map(x => `<button class="chip ${x === r ? "on" : ""}" onclick="view.docRacine='${esc(x).replace(/'/g, "\\'")}';render()">${x ? esc(x) : "Tout"}</button>`).join("")}</div>
+  ${DOCS.etat === "chargement" ? `<p class="note">⏳ Lecture du Drive… ${DOCS.n || 0} documents trouvés</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : ""}
+  <div id="docres">${listeDocs(res, lim)}</div>`;
+}
+function listeDocs(res, lim) {
+  if (!res.length) return DOCS.etat === "pret" ? `<div class="empty">Aucun document trouvé.</div>` : "";
+  return `<p class="note">${res.length} document${res.length > 1 ? "s" : ""}</p><ul class="todo docs">${res.slice(0, lim).map(ligneDoc).join("")}</ul>${res.length > lim ? `<p><button onclick="view.docLim=${lim + 60};rafraichirDocs()">Voir plus</button></p>` : ""}`;
+}
+function rafraichirDocs() { const el = document.getElementById("docres"); if (el) el.innerHTML = listeDocs(chercherDocs(view.docQ || "", view.docRacine || ""), view.docLim || 40); }
+
+/* Destinataires possibles : locataires, associés, contacts */
+function destinataires() {
+  const l = [];
+  S.baux.filter(b => b.email).forEach(b => l.push({ nom: b.nom, role: isActive(b) ? "Locataire" : "Ancien locataire", email: b.email }));
+  (S.sci.associes || []).filter(a => a.email).forEach(a => l.push({ nom: a.nom, role: "Associé", email: a.email }));
+  (S.sci.contacts || []).filter(c => c.email).forEach(c => l.push({ nom: c.nom, role: c.role || "Contact", email: c.email }));
+  return l;
+}
+function choixDestinataires(sel) {
+  const d = destinataires();
+  return `<fieldset><legend>À qui ?</legend>${d.length ? d.map((x, i) => `<label class="fl chk"><input type="checkbox" name="dest${i}" value="${esc(x.email)}" ${sel && sel.includes(x.email) ? "checked" : ""}> ${esc(x.nom)} <span class="pill info">${esc(x.role)}</span></label>`).join("") : `<p class="note full">Ajoute des e-mails aux locataires, associés ou contacts (Réglages) pour les retrouver ici.</p>`}
+    ${fld("Autre adresse", "autre", "", "email", "full")}</fieldset>`;
+}
+const lireDestinataires = d => Object.keys(d).filter(k => /^dest\d+$/.test(k) && d[k]).map(k => document.querySelector(`#mform [name="${k}"]`).value).concat(d.autre ? [d.autre] : []);
+function envoyerFichier(id) {
+  const f = DOCS.fichiers.find(x => x.id === id); if (!f) return;
+  modal(`Envoyer « ${esc(f.titre)} »`, `${choixDestinataires()}
+    ${fld("Objet", "objet", f.titre, "text", "full")}
+    ${area("Message", "corps", `Bonjour,\n\nVous trouverez ci-joint : ${f.titre}.\n\nBonne journée,\n${S.sci.gerant || ""}\n${S.sci.nom || ""}`)}`,
+    (d, form) => {
+      const to = lireDestinataires(d); if (!to.length) { toast("Choisis au moins un destinataire."); return false; }
+      const btn = form.querySelector("button.primary"); btn.disabled = true; btn.textContent = "Envoi…";
+      (async () => {
+        try {
+          const c = await drive("download_file_content", { fileId: f.id, exportMimeType: "application/pdf" });
+          const nom = /\.[a-z0-9]{2,4}$/i.test(f.titre) ? f.titre : f.titre + (/pdf/.test(c.mimeType || f.type) || /google-apps/.test(f.type) ? ".pdf" : "");
+          const ok = await envoyerMailBrut({ to, objet: d.objet, corps: d.corps, pieces: [{ nom, b64: c.content, type: /google-apps/.test(f.type) ? "application/pdf" : (c.mimeType || f.type), lien: f.lien }] });
+          if (ok) { closeOverlay(); toast("Envoyé à " + to.join(", ")); } else { btn.disabled = false; btn.textContent = "Envoyer"; }
+        } catch (e) { toast(erreurConnecteur(e, "Google Drive")); btn.disabled = false; btn.textContent = "Envoyer"; }
+      })();
+      return false;
+    }, { ok: "Envoyer" });
+}
+/* Range chaque PDF généré dans le Drive, dossier "Documents générés par l'appli" */
+async function dossierAppli() {
+  if (S.sci.driveGenId) return S.sci.driveGenId;
+  const p = await drive("search_files", { query: `parentId = '${driveRacine()}' and title = 'Documents générés par l\\'appli' and trashed = false`, excludeContentSnippets: true, pageSize: 5 });
+  let id = (p.files || [])[0] && p.files[0].id;
+  if (!id) { const c = await drive("create_file", { title: "Documents générés par l'appli", contentMimeType: "application/vnd.google-apps.folder", parentId: driveRacine() }); id = c.id; }
+  if (id) { S.sci.driveGenId = id; save(); }
+  return id;
+}
+async function archiver(b64, nom) {
+  if (!MCP || S.sci.archiveDrive === false) return;
+  try {
+    const dossier = await dossierAppli(); if (!dossier) return;
+    const f = await drive("create_file", { title: nom + ".pdf", parentId: dossier, base64Content: b64, contentMimeType: "application/pdf", disableConversionToGoogleType: true });
+    if (f && f.id && DOCS.etat === "pret") DOCS.fichiers.push({ id: f.id, titre: f.title, type: "application/pdf", lien: f.viewUrl, modif: new Date().toISOString(), taille: 0, chemin: ["Documents générés par l'appli"] });
+  } catch (e) { /* l'envoi a marché, le rangement Drive est un bonus */ }
+}
+
+/* ================= Relevé bancaire : coller ou importer, l'appli reconnaît les loyers ================= */
+function nombreFr(s) {
+  if (s == null) return NaN; let t = String(s).replace(/[€\s  ]/g, "").replace(/^\((.*)\)$/, "-$1");
+  if (!/\d/.test(t)) return NaN;
+  if (/,\d{1,2}$/.test(t)) t = t.replace(/\./g, "").replace(",", "."); else t = t.replace(/,/g, "");
+  return parseFloat(t);
+}
+function dateFr(s) {
+  let m = /(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/.exec(s || ""); if (m) { let y = +m[3]; if (y < 100) y += 2000; return iso(new Date(y, +m[2] - 1, +m[1])); }
+  m = /(\d{4})-(\d{2})-(\d{2})/.exec(s || ""); return m ? m[0] : null;
+}
+function lireReleve(txt) {
+  const lignes = String(txt).split(/\r?\n/).map(l => l.trim()).filter(Boolean); if (!lignes.length) return [];
+  const sep = [";", "\t", ","].map(c => [c, lignes.slice(0, 8).reduce((n, l) => n + l.split(c).length - 1, 0)]).sort((a, b) => b[1] - a[1])[0];
+  const n8 = lignes.slice(0, 8).length, csv = sep[0] === "," ? sep[1] >= 2 * n8 && !/\d,\d{2}\b/.test(lignes.slice(0, 8).join(" ").replace(/"[^"]*"/g, "")) : sep[1] >= n8;
+  const decoupe = l => csv ? l.split(sep[0]).map(c => c.replace(/^"|"$/g, "").trim()) : [l];
+  let cols = null; const out = [];
+  lignes.forEach(l => {
+    const c = decoupe(l), low = c.map(sansAccent);
+    if (!cols && csv && low.some(x => /date/.test(x)) && low.some(x => /montant|debit|credit/.test(x))) {
+      cols = { date: low.findIndex(x => /date/.test(x)), lib: low.findIndex(x => /libell|label|description|operation|detail/.test(x)), montant: low.findIndex(x => /montant|amount/.test(x)), debit: low.findIndex(x => /debit/.test(x)), credit: low.findIndex(x => /credit/.test(x)) };
+      return;
+    }
+    let date, lib, montant;
+    if (cols) {
+      date = dateFr(c[cols.date]); lib = cols.lib >= 0 ? c[cols.lib] : c.filter((x, i) => i !== cols.date && isNaN(nombreFr(x))).join(" ");
+      if (cols.montant >= 0) montant = nombreFr(c[cols.montant]);
+      else { const cr = nombreFr(c[cols.credit]), db = nombreFr(c[cols.debit]); montant = (isNaN(cr) ? 0 : Math.abs(cr)) - (isNaN(db) ? 0 : Math.abs(db)); }
+    } else {
+      const brut = c.join(" "); date = dateFr(brut);
+      const nums = brut.replace(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/g, " ").match(/[-+]?\s?\d{1,3}(?:[ .  ]\d{3})*(?:,\d{2})|[-+]?\d+\.\d{2}/g);
+      if (!nums) return; montant = nombreFr(nums[nums.length - 1].replace(/\s/g, ""));
+      if (!/[-+]/.test(nums[nums.length - 1]) && /(prlv|prelevement|carte|cb |retrait|frais|cotis|echeance|vir(ement)? (sepa )?(emis|vers)|paiement)/i.test(sansAccent(brut))) montant = -Math.abs(montant);
+      lib = brut.replace(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/g, "").replace(nums[nums.length - 1], "").replace(/\s+/g, " ").trim();
+    }
+    if (date && !isNaN(montant) && montant !== 0) out.push({ date, lib: lib || "", montant: r2(montant), cle: date + "|" + r2(montant) + "|" + sansAccent(lib).slice(0, 40) });
+  });
+  return out;
+}
+const CAT_MOTS = [[/taxe fonc|dgfip|impot|tresor public/, "Taxe foncière"], [/syndic|copro|foncia|nexity|citya|oralia/, "Charges de copropriété"], [/pret|echeance|credit immo|emprunt/, "Intérêts d'emprunt"], [/assur|axa|maif|macif|mma|allianz|generali|groupama|matmut/, "Assurance propriétaire (PNO)"], [/frais|cotisation|commission|tenue de compte|agios/, "Frais bancaires"], [/edf|engie|totalenergies|veolia|saur|eau /, "Eau / électricité / gaz"], [/expert|comptab|notaire|avocat|huissier|commissaire/, "Honoraires (comptable, notaire, avocat…)"], [/diagnost/, "Diagnostics"], [/leroy|castorama|brico|plomb|electric|artisan|travaux|peinture/, "Travaux d'entretien / réparation"]];
+function rapprocher(ops) {
+  const vus = S.banqueVus || {}, dues = toutesEcheances(addM(CUR, 1)).filter(e => e.statut !== "paye" && e.reste > 0);
+  const pris = new Set();
+  return ops.filter(o => !vus[o.cle]).map(o => {
+    const L = sansAccent(o.lib);
+    if (o.montant > 0) {
+      const cands = dues.filter(e => !pris.has(e.b.id + e.m)).map(e => {
+        const noms = sansAccent(e.b.nom.replace(/\(.*?\)/g, "")).split(/[\s-]+/).filter(x => x.length > 2);
+        let s = 0; if (Math.abs(e.reste - o.montant) < 0.01) s += 3; else if (Math.abs(e.du - o.montant) < 0.01) s += 2;
+        if (noms.some(n => L.includes(n))) s += 3;
+        return { e, s };
+      }).filter(x => x.s >= 3).sort((a, b) => b.s - a.s || a.e.m.localeCompare(b.e.m));
+      const best = cands[0];
+      if (best && (cands.length === 1 || best.s > cands[1].s || best.s >= 5)) { pris.add(best.e.b.id + best.e.m); return { ...o, type: "loyer", bailId: best.e.b.id, mois: best.e.m, ok: true }; }
+      return { ...o, type: "entree", ok: false };
+    }
+    const cat = (CAT_MOTS.find(([re]) => re.test(L)) || [0, "Autre"])[1];
+    const bi = S.biens.find(b => [b.nom, b.ville].filter(Boolean).some(x => sansAccent(x).split(/\s+/).some(w => w.length > 3 && L.includes(w))));
+    return { ...o, type: "depense", categorie: cat, bienId: bi ? bi.id : "", ok: cat !== "Autre" };
+  });
+}
+let RELEVE = [];
+function importerReleve() {
+  modal("🏦 Importer le relevé bancaire", `
+    <p class="full note">Pas besoin de connecter la banque. Dans l'appli de ta banque : <b>Comptes › Télécharger / Exporter › format CSV</b>, puis choisis le fichier ici. Ou copie les lignes du relevé et colle-les dans la case.</p>
+    <label class="fl full">Fichier du relevé (CSV ou texte)<input type="file" id="relfile" accept=".csv,.txt,text/csv,text/plain"></label>
+    ${area("…ou colle les lignes ici", "txt", "")}`,
+    d => {
+      const lance = txt => { RELEVE = rapprocher(lireReleve(txt)); if (!RELEVE.length) { toast("Aucune opération nouvelle trouvée dans ce relevé."); return; } setTimeout(revueReleve, 30); };
+      const f = document.getElementById("relfile").files[0];
+      if (f) { const r = new FileReader(); r.onload = () => lance(r.result); r.readAsText(f, /iso|latin/i.test(f.type) ? "ISO-8859-1" : "UTF-8"); }
+      else if (d.txt.trim()) lance(d.txt); else { toast("Choisis un fichier ou colle des lignes."); return false; }
+    }, { ok: "Analyser" });
+}
+function revueReleve() {
+  const loyers = RELEVE.map((o, i) => [o, i]).filter(([o]) => o.type === "loyer"), deps = RELEVE.map((o, i) => [o, i]).filter(([o]) => o.type === "depense"), autres = RELEVE.map((o, i) => [o, i]).filter(([o]) => o.type === "entree");
+  const optLoyer = (o, i) => `<select name="m${i}" aria-label="Associer à">${[["", "— ne pas compter —"], ...toutesEcheances(addM(CUR, 1)).filter(e => e.statut !== "paye").map(e => [e.b.id + "|" + e.m, `${e.b.nom} · ${fm(e.m)} · reste ${eur(e.reste)}`])].map(([v, l]) => `<option value="${esc(v)}" ${v === (o.bailId ? o.bailId + "|" + o.mois : "") ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
+  modal("Ce que l'appli a trouvé", `
+    <div class="full"><h3>💶 Loyers reconnus (${loyers.length})</h3>${loyers.length ? `<ul class="rel">${loyers.map(([o, i]) => `<li><b>${eur(o.montant)}</b> le ${fds(o.date)}<small>${esc(o.lib)}</small>${optLoyer(o, i)}</li>`).join("")}</ul>` : `<p class="note">Aucun loyer reconnu.</p>`}</div>
+    ${autres.length ? `<div class="full"><h3>❓ Autres entrées d'argent (${autres.length})</h3><p class="note">Pas reconnues automatiquement : choisis le loyer si c'en est un.</p><ul class="rel">${autres.map(([o, i]) => `<li><b>${eur(o.montant)}</b> le ${fds(o.date)}<small>${esc(o.lib)}</small>${optLoyer(o, i)}</li>`).join("")}</ul></div>` : ""}
+    <div class="full"><h3>🧾 Dépenses (${deps.length})</h3>${deps.length ? `<ul class="rel">${deps.map(([o, i]) => `<li><label class="fl chk"><input type="checkbox" name="d${i}" ${o.ok ? "checked" : ""}> <b>${eur(-o.montant)}</b> le ${fds(o.date)}</label><small>${esc(o.lib)}</small><span class="row"><select name="c${i}" aria-label="Catégorie">${CATS.map(c => `<option ${c === o.categorie ? "selected" : ""}>${esc(c)}</option>`).join("")}</select><select name="b${i}" aria-label="Bien">${[["", "SCI"], ...S.biens.map(b => [b.id, b.nom])].map(([v, l]) => `<option value="${v}" ${v === o.bienId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></span></li>`).join("")}</ul>` : `<p class="note">Aucune dépense.</p>`}</div>
+    <p class="full note">Les opérations validées ne seront plus proposées au prochain import.</p>`,
+    d => {
+      let nl = 0, nd = 0; const aEnvoyer = [];
+      S.banqueVus = Object.assign({}, S.banqueVus);
+      RELEVE.forEach((o, i) => {
+        if (d["m" + i]) { const [bailId, mois] = d["m" + i].split("|"); S.paiements.push({ id: uid(), bailId, mois, montant: o.montant, date: o.date, mode: "virement", banque: o.lib }); nl++; aEnvoyer.push([bailId, mois]); S.banqueVus[o.cle] = 1; }
+        else if (o.type === "depense" && d["d" + i]) { S.depenses.push({ id: uid(), date: o.date, bienId: d["b" + i] || "", categorie: d["c" + i], libelle: o.lib.slice(0, 80), montant: -o.montant, recuperable: false, banque: true }); nd++; S.banqueVus[o.cle] = 1; }
+      });
+      setTimeout(async () => {
+        if (nl) confettis();
+        toast(`${nl} loyer(s) et ${nd} dépense(s) enregistrés`);
+        if (S.sci.autoQuittance !== false && peutEnvoyer()) for (const [b, m] of aEnvoyer) { const e = echeance(bail(b), m); if (e && e.statut === "paye" && !e.quittance && bail(b).email) await envoyerQuittance(b, m, true); }
+      }, 60);
+    }, { ok: "Valider" });
+}
+
+/* Attestation de loyer à jour (souvent demandée par la CAF, une banque, un nouveau bailleur) */
+function docAttestation(bailId) {
+  const b = bail(bailId), bi = bien(b.bienId), l = loyerAt(b, CUR), retard = echeancesBail(b).filter(e => e.statut === "retard");
+  const html = `<div class="two-col">${enTeteBailleur()}<div></div></div><h1>Attestation de loyer</h1>
+  <p style="margin-top:18px">Je soussigné(e) ${esc(S.sci.gerant || "……")}, gérant de la ${esc(S.sci.nom || "SCI ……")}, propriétaire bailleur, atteste que <b>${esc(b.nom)}</b>${b.colocataires ? " et " + esc(b.colocataires) : ""} ${b.dateSortie && P(b.dateSortie) < TODAY ? `a occupé` : `occupe`} le logement situé ${esc(adresseBien(bi))} en qualité de locataire depuis le ${fd(b.dateEntree)}${b.dateSortie && P(b.dateSortie) < TODAY ? ` et jusqu'au ${fd(b.dateSortie)}` : ""}.</p>
+  <table><tbody><tr><td>Loyer mensuel hors charges</td><td class="right">${eur(l.hc)}</td></tr><tr><td>Charges mensuelles</td><td class="right">${eur(l.ch)}</td></tr><tr><td><b>Total mensuel</b></td><td class="right"><b>${eur(l.hc + l.ch)}</b></td></tr></tbody></table>
+  <p>${retard.length ? `À ce jour, il reste dû la somme de ${eur(retard.reduce((s, e) => s + e.reste, 0))}.` : "À ce jour, le locataire est à jour du paiement de ses loyers et charges."}</p>
+  <p>Attestation établie pour servir et valoir ce que de droit.</p>${faitA()}${signature()}`;
+  showDoc(html, { titre: "Attestation de loyer", fichier: `Attestation-loyer-${slug(b.nom)}`, to: b.email, email: { objet: "Attestation de loyer", corps: `Bonjour,\n\nVoici l'attestation de loyer demandée.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+}
+/* Envoyer un document à un locataire : choisir parmi ce que l'appli sait produire et ce qu'il y a dans le Drive */
+function documentsPour(bailId) {
+  const b = bail(bailId), mots = sansAccent(b.nom.replace(/\(.*?\)/g, "")).split(/[\s-]+/).filter(x => x.length > 2);
+  const drv = DOCS.etat === "pret" ? DOCS.fichiers.filter(f => mots.some(m => sansAccent(f.titre).includes(m))).slice(0, 12) : [];
+  const payes = echeancesBail(b).filter(e => e.statut === "paye" && e.du > 0).slice(-6).reverse();
+  modal(`Documents pour ${esc(b.nom)}`, `<div class="full"><ul class="todo">
+    <li><span class="ico">🏠</span><span class="tx">Bail</span><button type="button" class="small" onclick="docBailOpen('${b.id}')">Ouvrir</button></li>
+    <li><span class="ico">✅</span><span class="tx">Attestation de loyer à jour</span><button type="button" class="small" onclick="docAttestation('${b.id}')">Ouvrir</button></li>
+    <li><span class="ico">🔔</span><span class="tx">Avis d'échéance du mois</span><button type="button" class="small" onclick="avis('${b.id}','${CUR}')">Ouvrir</button></li>
+    ${payes.map(e => `<li><span class="ico">📄</span><span class="tx">Quittance ${fm(e.m)}${e.quittance ? `<small>envoyée le ${fds(e.quittance)}</small>` : ""}</span><button type="button" class="small" onclick="quittance('${b.id}','${e.m}')">Ouvrir</button></li>`).join("")}
+  </ul>
+  ${MCP ? `<h3 style="margin:14px 0 8px">Dans le Drive</h3>${DOCS.etat !== "pret" ? `<p class="note">Lecture du Drive en cours… <button type="button" class="small" onclick="go('docs')">Voir l'onglet Docs</button></p>` : drv.length ? `<ul class="todo">${drv.map(ligneDoc).join("")}</ul>` : `<p class="note">Aucun fichier du Drive ne porte son nom.</p>`}` : ""}</div>`, () => true, { ok: "Fermer" });
+  if (MCP && DOCS.etat === "vide") indexerDrive();
 }
 
 function docQuittance(bailId, m) {
