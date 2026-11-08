@@ -1571,6 +1571,10 @@ function pageReglages() {
     ${sel("Quittances", "autoQuittance", s.autoQuittance === false ? "0" : "1", [["1", "Envoyées toutes seules au paiement"], ["0", "Envoyées par moi"]], "full")}
     ${sel("Régime fiscal", "regime", s.regime, [["IR", "Impôt sur le revenu (IR)"], ["IS", "Impôt sur les sociétés (IS)"]])}
     ${sel("SCI familiale ?", "familiale", s.familiale ? "1" : "0", [["0", "Non, entre amis (bail 6 ans)"], ["1", "Oui, en famille (bail 3 ans)"]])}
+    <fieldset><legend>Bail</legend>
+      <label class="fl full" style="grid-column:1/-1">Clauses particulières ajoutées à tous les baux
+      <textarea name="clausesBail" rows="3" placeholder="Ex : le locataire assure l'entretien régulier des parties communes avec les autres locataires.">${esc(s.clausesBail || "")}</textarea></label>
+    </fieldset>
     <fieldset><legend>Associés</legend>
       <label class="fl full" style="grid-column:1/-1">Un associé par ligne : Nom ; nombre de parts ; e-mail
       <textarea name="associes" rows="3">${esc(s.associes.map(a => [a.nom, a.parts, a.email].filter(x => x !== undefined && x !== "").join(" ; ")).join("\n"))}</textarea></label>
@@ -1629,6 +1633,7 @@ function confirmer(msg, yes) {
   o.hidden = false; document.getElementById("cyes").onclick = () => { closeOverlay(); yes(); };
 }
 
+const ENERGIES = [["Individuel électrique", "Individuel électrique"], ["Individuel gaz", "Individuel gaz"], ["Individuel fioul", "Individuel fioul"], ["Individuel bois / granulés", "Individuel bois / granulés"], ["Pompe à chaleur", "Pompe à chaleur"], ["Collectif", "Collectif"]];
 function editBien(id) {
   const b = id ? bien(id) : {};
   modal(id ? "Modifier le bien" : "Nouveau bien", `
@@ -1640,6 +1645,8 @@ function editBien(id) {
     ${sel("Classe DPE", "dpe", b.dpe || "", [["", "—"], ...["A", "B", "C", "D", "E", "F", "G"].map(x => [x, x])])}${fld("DPE valable jusqu'au", "dpeValidite", b.dpeValidite, "date")}
     ${fld("Échéance assurance PNO", "pnoEcheance", b.pnoEcheance, "date")}${fld("Loyer indicatif HC (€)", "loyerRef", b.loyerRef, "number")}
     ${fld("Prix d'achat, frais compris (€) — pour la rentabilité", "prixAchat", b.prixAchat, "number", "full")}
+    ${sel("Chauffage", "chauffage", b.chauffage || "", [["", "—"], ...ENERGIES])}${sel("Eau chaude", "eauChaude", b.eauChaude || "", [["", "—"], ...ENERGIES])}
+    ${sel("Immeuble", "regimeImm", b.regimeImm || (b.type === "Maison" ? "mono" : ""), [["", "—"], ["copro", "En copropriété"], ["mono", "Monopropriété (un seul propriétaire)"]])}
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
     ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}`,
     d => { if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); },
@@ -1669,7 +1676,8 @@ function editBail(id, bienId) {
     <fieldset><legend>Garanties</legend>
     ${fld("Garant (nom)", "garantNom", b.garantNom)}${fld("Garant (téléphone / e-mail)", "garantContact", b.garantContact)}
     ${fld("Assurance habitation valable jusqu'au", "assuranceFin", b.assuranceFin, "date")}${fld("État des lieux d'entrée fait le", "edlEntree", b.edlEntree, "date")}</fieldset>
-    ${area("Notes", "notes", b.notes)}`,
+    ${area("Clauses particulières pour ce bail (reprises dans le bail)", "clauses", b.clauses)}
+    ${area("Notes (pour vous, jamais dans le bail)", "notes", b.notes)}`,
     d => {
       d.revisable = !!d.revisable; d.irlValeur = irlVal(qKey(d.irlTrimestre)) || b.irlValeur || "";
       if (id) Object.assign(b, d); else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); setTimeout(() => go("bail-" + nb.id)); }
@@ -2215,6 +2223,7 @@ function docRevisionOpen(id, i) {
   <p>Ce nouveau loyer s'applique à compter de l'échéance du <b>${fd(r.depuis + "-01")}</b> (loyer de ${fm(r.depuis)}).</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`,
     { titre: "Révision du loyer", fichier: `Revision-loyer-${slug(b.nom)}-${r.depuis}`, to: b.email, email: { objet: "Révision annuelle de votre loyer", corps: `Bonjour,\n\nComme prévu dans votre bail, votre loyer est révisé selon l'indice IRL. À partir du loyer de ${fm(r.depuis)}, il passe à ${eur(r.loyerHC)} hors charges, soit ${eur(r.loyerHC + r.charges)} charges comprises. Le détail est dans le courrier joint.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
 }
+const MOBILIER = ["Literie avec couette ou couverture", "Occultation des fenêtres des chambres (volets, rideaux)", "Plaques de cuisson", "Four ou four à micro-ondes", "Réfrigérateur avec compartiment congélation (≤ -6 °C)", "Vaisselle (pour prendre les repas)", "Ustensiles de cuisine", "Table et sièges", "Étagères de rangement", "Luminaires", "Matériel d'entretien ménager"];
 function docBailOpen(id) {
   const b = bail(id), bi = bien(b.bienId) || {}, s = S.sci, du = dureeBail(b), l = loyerAt(b, mk(P(b.dateEntree)));
   const meuble = b.typeBail === "meuble" || b.typeBail === "etudiant", mob = b.typeBail === "mobilite";
@@ -2225,10 +2234,10 @@ function docBailOpen(id) {
   <p><b>Le(s) locataire(s) :</b> ${esc(b.nom)}${b.colocataires ? ", " + esc(b.colocataires) : ""}${b.adressePrec ? ", demeurant actuellement " + esc(b.adressePrec) : ""}${b.email ? " – " + esc(b.email) : ""}.</p>
   <h2>II. Objet du contrat</h2>
   <p><b>Adresse du logement :</b> ${esc(adresseBien(bi))}</p>
-  <p><b>Type d'habitat :</b> ${esc(bi.type || "")} · <b>Régime juridique de l'immeuble :</b> ${bi.type === "Maison" ? "monopropriété" : "copropriété / monopropriété (à préciser)"} · <b>Période de construction :</b> ${esc(bi.annee || "……")}</p>
+  <p><b>Type d'habitat :</b> ${esc(bi.type || "")} · <b>Régime juridique de l'immeuble :</b> ${bi.regimeImm === "copro" ? "copropriété" : bi.regimeImm === "mono" || bi.type === "Maison" ? "monopropriété" : "copropriété / monopropriété (à préciser)"} · <b>Période de construction :</b> ${esc(bi.annee || "……")}</p>
   <p><b>Surface habitable :</b> ${esc(bi.surface || "……")} m² · <b>Nombre de pièces principales :</b> ${esc(bi.pieces || "……")}</p>
   <p><b>Équipements, annexes et parties communes :</b> ${nl2br(bi.equipements || "……")}</p>
-  <p><b>Modalité de production de chauffage et d'eau chaude :</b> ……… (individuel / collectif)</p>
+  <p><b>Chauffage :</b> ${esc(bi.chauffage || "……… (individuel / collectif)")} · <b>Eau chaude sanitaire :</b> ${esc(bi.eauChaude || "……… (individuel / collectif)")}</p>
   <p><b>Destination des locaux :</b> usage d'habitation exclusivement${mob ? " (bail mobilité : le locataire justifie être en formation professionnelle, études supérieures, contrat d'apprentissage, stage, service civique, mutation ou mission temporaire : ………)" : ""}.</p>
   <p><b>Performance énergétique :</b> classe ${esc(bi.dpe || "……")} (DPE annexé).</p>
   <h2>III. Date de prise d'effet et durée du contrat</h2>
@@ -2251,8 +2260,9 @@ function docBailOpen(id) {
   <p>Le locataire s'engage notamment à : payer le loyer et les charges aux termes convenus ; user paisiblement des locaux ; répondre des dégradations survenues pendant la durée du contrat ; prendre à sa charge l'entretien courant et les menues réparations (décret n° 87-712) ; ne pas transformer les lieux sans accord écrit du bailleur ; ${meuble || mob ? "" : "s'assurer contre les risques locatifs et en justifier chaque année à la demande du bailleur ; "}ne pas sous-louer sans accord écrit du bailleur.</p>
   <h2>${b.colocataires ? "IX" : "VIII"}. Honoraires de location</h2><p>Le bail est conclu directement entre les parties, sans intermédiaire : aucun honoraire n'est dû.</p>
   <h2>${b.colocataires ? "X" : "IX"}. Annexes</h2><ul>${annexes.map(a => `<li>${a}</li>`).join("")}</ul>
-  ${b.notes ? `<h2>Conditions particulières</h2><p>${nl2br(b.notes)}</p>` : ""}
-  <p style="margin-top:20px">Fait à ${esc(s.ville || "……")}, le ……………, en autant d'exemplaires originaux que de parties.</p>
+  ${s.clausesBail || b.clauses ? `<h2>Conditions particulières</h2>${s.clausesBail ? `<p>${nl2br(s.clausesBail)}</p>` : ""}${b.clauses ? `<p>${nl2br(b.clauses)}</p>` : ""}` : ""}
+  ${meuble || mob ? `<h2>Annexe : inventaire et état du mobilier</h2><p class="small">Mobilier minimum d'un logement meublé (décret n° 2015-981 du 31 juillet 2015). À compléter et signer à l'entrée.</p><table><thead><tr><th>Élément</th><th class="right">Nombre</th><th class="right">État à l'entrée</th></tr></thead><tbody>${MOBILIER.map(x => `<tr><td>${x}</td><td class="right"> </td><td class="right"> </td></tr>`).join("")}</tbody></table>` : ""}
+  <p style="margin-top:20px">Fait à ${esc(s.ville || "……")}, le ${fd(P(b.dateEntree) > TODAY ? iso(TODAY) : b.dateEntree)}, en autant d'exemplaires originaux que de parties.</p>
   <div class="sign"><div><b>Le bailleur</b><br>${esc(s.nom || "")}, représentée par ${esc(s.gerant || "……")}<br><span class="small">Signature précédée de « lu et approuvé »</span></div><div><b>Le(s) locataire(s)</b><br>${esc(b.nom)}${b.colocataires ? ", " + esc(b.colocataires) : ""}<br><span class="small">Signature précédée de « lu et approuvé »</span></div></div>`;
   showDoc(html, { titre: "Bail – à relire avant signature", fichier: `Bail-${slug(b.nom)}`, to: b.email, email: { objet: "Votre bail de location", corps: `Bonjour,\n\nVous trouverez ci-joint le projet de bail pour le logement ${adresseBien(bi)}. Merci de le relire, nous le signerons ensemble le jour de l'état des lieux.\n\nBonne journée,\n${s.gerant || ""}` } });
 }
