@@ -444,6 +444,17 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 input[type=file]::file-selector-button { font: 650 .85rem var(--font); border: 0; border-radius: 9px; background: var(--accent-soft); color: var(--accent); padding: 8px 12px; margin-right: 10px; cursor: pointer; }
 input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
+/* Connexion, espaces, installation */
+body.sans-nav header.top nav, body.sans-nav #bottomnav, body.sans-nav .top-acts { visibility: hidden; }
+.auth { min-height: calc(100vh - var(--head-h) - 80px); display: grid; place-items: center; }
+.auth-card { width: min(420px, 100%); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
+.auth-card form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+.auth-card p { color: var(--muted); }
+.logo.big { width: 56px; height: 56px; border-radius: 16px; margin: 0 auto; }
+.logo.big .ic { width: 28px; height: 28px; }
+input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-weight: 800; height: 58px; font-variant-numeric: tabular-nums; }
+.banner.install { background: var(--accent-soft); }
+.empty.party .btn { margin-top: 6px; }
 @media print {
   @page { margin: 14mm; }
   body.printing > *:not(#overlay) { display: none !important; }
@@ -556,19 +567,22 @@ const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== unde
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
   if (MODE !== "partage") return;
-  const push = (path, val) => {
+  const changes = [];
+  COLLS.forEach(c => {
+    const seen = new Set();
+    (S[c] || []).forEach(it => { const p = c + "/" + it.id, j = JSON.stringify(it); seen.add(p); if (synced[p] !== j) { synced[p] = j; changes.push([p, JSON.parse(j)]); } });
+    Object.keys(synced).filter(p => p.startsWith(c + "/") && !seen.has(p)).forEach(p => { delete synced[p]; changes.push([p, null]); });
+  });
+  const mj = JSON.stringify(metaObj());
+  if (synced["meta/main"] !== mj) { synced["meta/main"] = mj; changes.push(["meta/main", JSON.parse(mj)]); }
+  if (!changes.length) return;
+  if (SB) return ecrireSupabase(changes);
+  changes.forEach(([path, val]) => {
     writeQueue = writeQueue.then(() => val === null ? DB.doc(path).delete() : DB.doc(path).set(val)).catch(err => {
       if (err && err.code === "invalid_argument") toast("Tu n'as pas le droit de modifier ces données (demande l'accès Éditeur).");
       else toast("Enregistrement en ligne impossible pour l'instant.");
     });
-  };
-  COLLS.forEach(c => {
-    const seen = new Set();
-    (S[c] || []).forEach(it => { const p = c + "/" + it.id, j = JSON.stringify(it); seen.add(p); if (synced[p] !== j) { synced[p] = j; push(p, JSON.parse(j)); } });
-    Object.keys(synced).filter(p => p.startsWith(c + "/") && !seen.has(p)).forEach(p => { delete synced[p]; push(p, null); });
   });
-  const mj = JSON.stringify(metaObj());
-  if (synced["meta/main"] !== mj) { synced["meta/main"] = mj; push("meta/main", JSON.parse(mj)); }
 }
 function remoteChanged() {
   const a = document.activeElement, saisie = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && document.getElementById("app").contains(a);
@@ -577,6 +591,7 @@ function remoteChanged() {
 }
 document.addEventListener("focusout", () => setTimeout(() => { const a = document.activeElement; if (pendingRender && document.getElementById("overlay").hidden && document.getElementById("focus").hidden && !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { pendingRender = false; render(); } }, 250));
 async function boot() {
+  if (window.APP_SUPABASE && window.supabase) return bootSupabase();
   let db = null;
   try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch (e) { db = null; }
   if (!db) { MODE = "local"; S = loadLocal() || blank(); render(); initExtras(); return; }
@@ -600,6 +615,190 @@ async function boot() {
   initExtras();
 }
 
+/* ================= Version installable : comptes, espaces, données en ligne (Supabase) ================= */
+let SB = null, SB_USER = null, ESPACE = null, ESPACES = [], SB_CANAL = null, CONNEXION = { etape: "email", email: "" };
+async function bootSupabase() {
+  const c = window.APP_SUPABASE;
+  SB = window.supabase.createClient(c.url, c.cle, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "gestion-sci-auth" } });
+  SB.auth.onAuthStateChange((ev, session) => { if (ev === "SIGNED_OUT") { SB_USER = null; ESPACE = null; MODE = "connexion"; render(); } });
+  let session = null;
+  try { session = (await SB.auth.getSession()).data.session; } catch (e) {}
+  if (!session) { MODE = "connexion"; render(); return; }
+  await apresConnexion(session.user);
+}
+async function apresConnexion(user) {
+  SB_USER = user; MODE = "chargement"; render();
+  try { await SB.rpc("accepter_invitations"); } catch (e) {}
+  const r = await SB.from("espaces").select("id, nom, cree_le").order("cree_le");
+  if (r.error) { MODE = "connexion"; render(); toast("Impossible de charger tes espaces : " + r.error.message); return; }
+  ESPACES = r.data || [];
+  if (!ESPACES.length) { MODE = "nouvel-espace"; render(); return; }
+  let dernier = null; try { dernier = localStorage.getItem("gestion-sci-espace"); } catch (e) {}
+  await ouvrirEspace((ESPACES.find(e => e.id === dernier) || ESPACES[0]).id);
+}
+async function ouvrirEspace(id) {
+  MODE = "chargement"; render();
+  if (SB_CANAL) { try { SB.removeChannel(SB_CANAL); } catch (e) {} SB_CANAL = null; }
+  ESPACE = id; try { localStorage.setItem("gestion-sci-espace", id); } catch (e) {}
+  S = blank(); synced = {}; DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+  const lignes = [];
+  for (let de = 0; ; de += 1000) {
+    const r = await SB.from("docs").select("coll, doc_id, data").eq("espace_id", id).range(de, de + 999);
+    if (r.error) { toast("Chargement impossible : " + r.error.message); break; }
+    lignes.push(...r.data); if (r.data.length < 1000) break;
+  }
+  lignes.forEach(l => appliquerLigne(l));
+  const esp = ESPACES.find(e => e.id === id);
+  if (esp && !S.sci.nom) S.sci.nom = esp.nom;
+  SB_CANAL = SB.channel("docs-" + id)
+    .on("postgres_changes", { event: "*", schema: "public", table: "docs", filter: "espace_id=eq." + id }, p => {
+      if (ESPACE !== id) return;
+      if (p.eventType === "DELETE") { const o = p.old || {}; const k = o.coll + "/" + o.doc_id; if (!(k in synced)) return; delete synced[k]; if (o.coll !== "meta") S[o.coll] = (S[o.coll] || []).filter(x => x.id !== o.doc_id); remoteChanged(); return; }
+      if (appliquerLigne(p.new)) remoteChanged();
+    }).subscribe();
+  MODE = "partage"; render();
+}
+function appliquerLigne(l) {
+  if (!l || !l.coll) return false;
+  const k = l.coll + "/" + l.doc_id, j = JSON.stringify(l.data);
+  if (synced[k] === j) return false;
+  synced[k] = j;
+  if (l.coll === "meta") { const b = blank(); META_KEYS.forEach(x => { S[x] = l.data[x] !== undefined ? l.data[x] : b[x]; }); synced[k] = JSON.stringify(metaObj()); return true; }
+  const liste = S[l.coll] || (S[l.coll] = []), i = liste.findIndex(x => x.id === l.doc_id);
+  if (i >= 0) liste[i] = l.data; else liste.push(l.data);
+  return true;
+}
+let ECRITURE = Promise.resolve();
+function ecrireSupabase(changes) {
+  const esp = ESPACE;
+  ECRITURE = ECRITURE.then(async () => {
+    const aEcrire = changes.filter(c => c[1] !== null).map(([p, v]) => { const [coll, doc_id] = p.split("/"); return { espace_id: esp, coll, doc_id, data: v, maj_le: new Date().toISOString() }; });
+    const aSuppr = changes.filter(c => c[1] === null).map(([p]) => p.split("/"));
+    const erreurs = [];
+    for (let i = 0; i < aEcrire.length; i += 200) { const r = await SB.from("docs").upsert(aEcrire.slice(i, i + 200)); if (r.error) erreurs.push(r.error); }
+    for (const [coll, doc_id] of aSuppr) { const r = await SB.from("docs").delete().match({ espace_id: esp, coll, doc_id }); if (r.error) erreurs.push(r.error); }
+    if (erreurs.length) { changes.forEach(([p]) => delete synced[p]); toast("Enregistrement impossible pour l'instant. Vérifie ta connexion internet."); }
+  }).catch(() => { changes.forEach(([p]) => delete synced[p]); toast("Enregistrement impossible pour l'instant."); });
+  return ECRITURE;
+}
+function pageConnexion() {
+  const e = CONNEXION;
+  return `<div class="auth"><div class="auth-card">
+    <span class="logo big" aria-hidden="true">🏠</span>
+    <h1>Gestion locative</h1>
+    ${e.etape === "email" ? `<p>Entre ton adresse e-mail : tu vas recevoir un code à 6 chiffres. Pas de mot de passe à retenir.</p>
+      <form onsubmit="event.preventDefault();envoyerCode(this)"><label class="fl">Adresse e-mail<input id="auth_email" name="email" type="email" autocomplete="email" inputmode="email" required value="${esc(e.email)}" placeholder="prenom@exemple.fr"></label>
+      <button class="primary big" id="auth_btn">Recevoir mon code</button></form>`
+    : `<p>Code envoyé à <b>${esc(e.email)}</b>. Il arrive en général en moins d'une minute (pense à regarder les indésirables).</p>
+      <form onsubmit="event.preventDefault();verifierCode(this)"><label class="fl">Code reçu par e-mail<input id="auth_code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="123456" class="code"></label>
+      <button class="primary big" id="auth_btn">Se connecter</button></form>
+      <button class="ghost" onclick="CONNEXION.etape='email';render()">Changer d'adresse</button>`}
+  </div></div>`;
+}
+async function envoyerCode(f) {
+  const email = f.email.value.trim().toLowerCase(), b = document.getElementById("auth_btn");
+  b.disabled = true; b.textContent = "Envoi…";
+  const r = await SB.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (r.error) { b.disabled = false; b.textContent = "Recevoir mon code"; toast(/rate|limit|seconds/i.test(r.error.message) ? "Trop de demandes. Attends une minute et réessaie." : "Envoi impossible : " + r.error.message); return; }
+  CONNEXION = { etape: "code", email }; render(); setTimeout(() => { const c = document.getElementById("auth_code"); if (c) c.focus(); }, 50);
+}
+async function verifierCode(f) {
+  const b = document.getElementById("auth_btn"); b.disabled = true; b.textContent = "Vérification…";
+  const r = await SB.auth.verifyOtp({ email: CONNEXION.email, token: f.code.value.trim(), type: "email" });
+  if (r.error || !r.data.user) { b.disabled = false; b.textContent = "Se connecter"; toast("Code incorrect ou expiré. Vérifie le dernier e-mail reçu."); return; }
+  CONNEXION = { etape: "email", email: "" };
+  await apresConnexion(r.data.user);
+}
+function pageNouvelEspace() {
+  return `<div class="auth"><div class="auth-card">
+    <span class="logo big" aria-hidden="true">🏠</span>
+    <h1>${ESPACES.length ? "Nouvel espace" : "Bienvenue"}</h1>
+    <p>Un espace regroupe tes biens, tes locataires et ta compta. Tu peux y inviter tes associés.</p>
+    <form onsubmit="event.preventDefault();creerEspace(this)"><label class="fl">Nom de l'espace<input id="esp_nom" name="nom" required maxlength="120" placeholder="Ma SCI, Mes appartements…"></label>
+    <button class="primary big" id="esp_btn">Créer mon espace</button></form>
+    ${ESPACES.length ? `<button class="ghost" onclick="ouvrirEspace(ESPACE || ESPACES[0].id)">Annuler</button>` : `<p class="note">Un associé t'a invité ? Demande-lui de t'ajouter avec l'adresse <b>${esc(SB_USER && SB_USER.email || "")}</b>, puis <a href="#" onclick="event.preventDefault();apresConnexion(SB_USER)">actualise</a>.</p>`}
+    <button class="ghost" onclick="SB.auth.signOut()">Se déconnecter</button>
+  </div></div>`;
+}
+async function creerEspace(f) {
+  const b = document.getElementById("esp_btn"); b.disabled = true;
+  const r = await SB.rpc("creer_espace", { nom: f.nom.value.trim() });
+  if (r.error) { b.disabled = false; toast("Création impossible : " + r.error.message); return; }
+  ESPACES.push({ id: r.data, nom: f.nom.value.trim() });
+  await ouvrirEspace(r.data);
+  S.sci.nom = f.nom.value.trim(); save(); render();
+  toast("Espace créé. Commence par tes biens.");
+}
+function choisirEspace() {
+  modal("Mes espaces", `<div class="full"><ul class="todo">${ESPACES.map(e => `<li>${avatar(e.nom)}<span class="tx">${esc(e.nom)}${e.id === ESPACE ? "<small>Ouvert en ce moment</small>" : ""}</span>${e.id === ESPACE ? `<span class="pill ok">✓</span>` : `<button type="button" class="small primary" onclick="closeOverlay();ouvrirEspace('${e.id}')">Ouvrir</button>`}</li>`).join("")}</ul></div>
+    <div class="full row"><button type="button" onclick="closeOverlay();MODE='nouvel-espace';render()">➕ Nouvel espace</button><button type="button" class="ghost" onclick="closeOverlay();SB.auth.signOut()">Se déconnecter</button></div>
+    <p class="full note">Connecté avec ${esc(SB_USER && SB_USER.email || "")}</p>`, () => true, { ok: "Fermer", lecture: true });
+}
+/* Membres de l'espace (dans Réglages) */
+let MEMBRES = null;
+async function chargerMembres() {
+  const [m, i] = await Promise.all([SB.from("membres").select("user_id, email, role").eq("espace_id", ESPACE), SB.from("invitations").select("id, email").eq("espace_id", ESPACE)]);
+  MEMBRES = { membres: m.data || [], invitations: i.data || [] };
+  const el = document.getElementById("membres"); if (el) el.innerHTML = listeMembres();
+}
+function listeMembres() {
+  if (!MEMBRES) return `<p class="note">Chargement…</p>`;
+  const moi = SB_USER && SB_USER.id, proprio = MEMBRES.membres.some(x => x.user_id === moi && x.role === "proprietaire");
+  return `<ul class="todo">${MEMBRES.membres.map(x => `<li>${avatar(x.email || "?")}<span class="tx">${esc(x.email || "")}${x.user_id === moi ? " (toi)" : ""}<small>${x.role === "proprietaire" ? "Propriétaire de l'espace" : "Membre"}</small></span>${proprio && x.user_id !== moi ? `<button class="small ghost" onclick="retirerMembre('${x.user_id}')">Retirer</button>` : ""}</li>`).join("")}
+    ${MEMBRES.invitations.map(x => `<li><span class="avatar vide" aria-hidden="true">✉</span><span class="tx">${esc(x.email)}<small>Invité · rejoindra l'espace à sa première connexion</small></span><button class="small ghost" onclick="annulerInvitation('${x.id}')">Annuler</button></li>`).join("")}</ul>`;
+}
+async function inviter(f) {
+  const email = f.email.value.trim().toLowerCase(); if (!email) return;
+  const r = await SB.from("invitations").insert({ espace_id: ESPACE, email });
+  if (r.error) { toast(/duplicate|unique/i.test(r.error.message) ? "Cette personne est déjà invitée." : "Invitation impossible : " + r.error.message); return; }
+  f.reset(); toast("Invitation enregistrée. Envoie-lui le lien de l'appli : elle se connecte avec " + email + ".");
+  chargerMembres();
+}
+async function retirerMembre(uid) { confirmer("Retirer cette personne de l'espace ? Elle ne verra plus rien.", async () => { const r = await SB.from("membres").delete().match({ espace_id: ESPACE, user_id: uid }); if (r.error) toast(r.error.message); chargerMembres(); }); }
+async function annulerInvitation(id) { await SB.from("invitations").delete().eq("id", id); chargerMembres(); }
+function sectionMembres() {
+  setTimeout(chargerMembres, 0);
+  return `<section class="card"><h2>👤 Membres de l'espace</h2>
+    <p class="note">Chaque membre voit et modifie tout cet espace, sur son propre téléphone. Pour inviter quelqu'un : entre son e-mail, puis envoie-lui le lien de l'appli.</p>
+    <div id="membres">${listeMembres()}</div>
+    <form class="row" style="margin-top:12px" onsubmit="event.preventDefault();inviter(this)"><input name="email" id="inv_email" type="email" required placeholder="email@exemple.fr" aria-label="E-mail de la personne à inviter" style="flex:1;min-width:200px"><button class="primary">Inviter</button></form>
+    <div class="row" style="margin-top:12px"><button class="small" onclick="partagerLien()">📤 Partager le lien de l'appli</button><button class="small ghost" onclick="choisirEspace()">Mes espaces</button></div>
+  </section>`;
+}
+function partagerLien() {
+  const url = location.origin + location.pathname;
+  if (navigator.share) navigator.share({ title: "Appli de gestion locative", text: "Installe l'appli et connecte-toi avec ton e-mail :", url }).catch(() => {});
+  else copierTexte(url);
+}
+/* Envoi d'un e-mail par le serveur (Brevo), avec suivi du résultat */
+async function envoyerViaServeur({ to, objet, corps, pieces }) {
+  const p = pieces[0];
+  const r = await SB.rpc("envoyer_mail", { espace: ESPACE, a: to, objet, texte: corps, nom_fichier: p ? p.nom : null, pdf_base64: p ? p.b64 : null, repondre_a: S.sci.email || null });
+  if (r.error) { toast(/configur/i.test(r.error.message) ? "L'envoi d'e-mails n'est pas encore activé." : "L'e-mail n'est pas parti : " + r.error.message); return false; }
+  for (let k = 0; k < 16; k++) {
+    await new Promise(res => setTimeout(res, 600));
+    const s = await SB.rpc("statut_envoi", { requete: r.data });
+    if (s.data && s.data.etat === "ok") return true;
+    if (s.data && s.data.etat === "erreur") { toast("L'e-mail a été refusé (" + (s.data.detail || s.data.code) + ")."); return false; }
+  }
+  return true;
+}
+/* Proposer l'installation sur l'écran d'accueil */
+let INSTALL = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); INSTALL = e; if (MODE !== "chargement") render(); });
+const estInstallee = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const estIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+function bandeauInstall() {
+  if (!SB || estInstallee()) return "";
+  let cache = false; try { cache = localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) {}
+  if (cache) return "";
+  if (INSTALL) return `<div class="banner install"><span>📲 Installe l'appli sur ton téléphone pour l'ouvrir d'un geste.</span><span class="row"><button class="small primary" onclick="installer()">Installer</button><button class="small ghost" onclick="masquerInstall()">Plus tard</button></span></div>`;
+  if (estIOS()) return `<div class="banner install"><span>📲 Pour installer l'appli : touche <b>Partager</b> en bas de Safari, puis <b>Sur l'écran d'accueil</b>.</span><button class="small ghost" onclick="masquerInstall()">OK</button></div>`;
+  return "";
+}
+async function installer() { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) {} INSTALL = null; render(); }
+function masquerInstall() { try { localStorage.setItem("gestion-sci-install-ok", "1"); } catch (e) {} render(); }
+
 /* Envoi d'e-mails (Gmail) et téléchargement de PDF, quand la page y a accès */
 let MCP = null, DL = null, GMAIL_TOOL = "send_message";
 async function initExtras() {
@@ -607,7 +806,8 @@ async function initExtras() {
   try { DL = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch (e) { DL = null; }
   if (MODE !== "chargement") render();
 }
-const peutEnvoyer = () => !!MCP;
+const peutEnvoyer = () => !!MCP || !!(SB && ESPACE);
+
 
 /* ================= Outils dates & montants ================= */
 const pad = n => String(n).padStart(2, "0");
@@ -1117,7 +1317,10 @@ function go(h) { location.hash = h; }
 window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); });
 function render() {
   const app = document.getElementById("app");
+  document.body.classList.toggle("sans-nav", MODE === "connexion" || MODE === "nouvel-espace" || MODE === "chargement");
   if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
+  if (MODE === "connexion") { app.innerHTML = pageConnexion(); return; }
+  if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires");
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
@@ -1126,10 +1329,12 @@ function render() {
   if (nav.innerHTML !== navHtml) nav.innerHTML = navHtml;
   if (bn.innerHTML !== navHtml) bn.innerHTML = navHtml;
   document.getElementById("brandName").textContent = S.sci.nom || "Gestion SCI";
-  const sub = MODE === "partage" ? '<i aria-hidden="true"></i>Synchronisé' : "Sur cet appareil";
+  const sub = MODE === "partage" ? (SB ? `<i aria-hidden="true"></i>${ESPACES.length > 1 ? "Changer d'espace ▾" : "Synchronisé"}` : '<i aria-hidden="true"></i>Synchronisé') : "Sur cet appareil";
+  document.querySelector(".brand").setAttribute("href", SB ? "#" : "#locataires");
+  document.querySelector(".brand").onclick = SB ? (ev => { ev.preventDefault(); choisirEspace(); }) : null;
   if (document.getElementById("brandSub").innerHTML !== sub) document.getElementById("brandSub").innerHTML = sub;
   const vide = !S.biens.length && !S.baux.length;
-  const banner = S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "";
+  const banner = bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h === "loyers") html = pageLoyers();
@@ -1343,6 +1548,7 @@ function pageCompta() {
 function pageReglages() {
   const s = S.sci;
   return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div></div>
+  ${SB ? sectionMembres() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
     ${fld("Nom de la SCI", "nom", s.nom)}${fld("N° SIREN", "siren", s.siren)}
@@ -1372,8 +1578,8 @@ function pageReglages() {
     <div class="table-wrap" style="border:0"><table><tbody>${irlCles().slice(-6).reverse().map(k => `<tr><td>${qLabel(k)}</td><td class="num">${fmtIrl(irlVal(k))}</td><td class="sub">publié vers le ${fds(qPub(k))}</td></tr>`).join("")}</tbody></table></div>
     <form class="row" onsubmit="event.preventDefault();ajouterIrl(this)"><input name="t" id="irl_t" aria-label="Trimestre" placeholder="T4 2026" style="max-width:120px" value="${qLabel(irlProchain().k)}"><input name="v" id="irl_v" type="number" inputmode="decimal" step="0.01" aria-label="Valeur de l'indice" placeholder="Valeur" style="max-width:120px" required><button>Ajouter l'indice</button></form>
   </section>
-  <section class="card"><h2>Partage avec les associés et sauvegarde</h2>
-    ${MODE === "partage" ? `<p class="note"><b>Les données sont enregistrées en ligne.</b> Pour que tes associés voient et modifient la même chose : bouton <b>Partager</b> en haut de cette page, puis invite-les avec leur e-mail en tant qu'<b>Éditeur</b>. Chacun envoie les quittances depuis son propre Gmail.</p>` : `<p class="note">Les données sont enregistrées dans ce navigateur, sur cet appareil. Pour ne rien perdre : télécharge une sauvegarde régulièrement et rouvre-la sur un autre appareil avec "Ouvrir une sauvegarde".</p>`}
+  <section class="card"><h2>${SB ? "Sauvegarde" : "Partage avec les associés et sauvegarde"}</h2>
+    ${SB ? `<p class="note">Tes données sont enregistrées en ligne et protégées. Tu peux aussi télécharger une copie de sécurité.</p>` : MODE === "partage" ? `<p class="note"><b>Les données sont enregistrées en ligne.</b> Pour que tes associés voient et modifient la même chose : bouton <b>Partager</b> en haut de cette page, puis invite-les avec leur e-mail en tant qu'<b>Éditeur</b>. Chacun envoie les quittances depuis son propre Gmail.</p>` : `<p class="note">Les données sont enregistrées dans ce navigateur, sur cet appareil. Pour ne rien perdre : télécharge une sauvegarde régulièrement et rouvre-la sur un autre appareil avec "Ouvrir une sauvegarde".</p>`}
     <div class="row"><button class="primary" onclick="exportJSON()">Télécharger une sauvegarde</button><button onclick="document.getElementById('importFile').click()">Ouvrir une sauvegarde</button></div>
     <p class="note">Dernière sauvegarde téléchargée : ${S.lastExport ? fd(S.lastExport.slice(0, 10)) : "jamais"}</p>
   </section>
@@ -1648,6 +1854,7 @@ function erreurConnecteur(e, nom) {
 const b64Octets = b64 => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
 let FILEARGS = null;
 async function envoyerMailBrut({ to, objet, corps, pieces = [] }) {
+  if (!MCP && SB && ESPACE) { const dests = (Array.isArray(to) ? to : [to]).filter(Boolean); if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; } return envoyerViaServeur({ to: dests, objet, corps, pieces }); }
   if (!MCP) { toast("L'envoi d'e-mails n'est pas disponible ici."); return false; }
   const dests = (Array.isArray(to) ? to : [to]).filter(Boolean);
   if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; }
@@ -1724,6 +1931,8 @@ function ligneDoc(f) {
   return `<li><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><a href="${esc(f.lien)}" target="_blank" rel="noopener">${esc(f.titre)}</a><small>${esc(f.chemin.join(" › ") || "Racine")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}${f.taille ? " · " + tailleTxt(f.taille) : ""}</small></span><button class="small" onclick="envoyerFichier('${f.id}')">Envoyer</button></li>`;
 }
 function pageDocs() {
+  if (!MCP && SB) return `<div class="head"><div><h1>Documents</h1><p>Tes documents restent rangés dans ton Google Drive.</p></div></div>
+    <div class="empty party">📁 <span>Ouvre le dossier Drive de ${esc(S.sci.nom || "ta SCI")}</span><a class="btn primary" href="https://drive.google.com/drive/folders/${esc(driveRacine())}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a><span class="note">Le lien se règle dans Réglages, rubrique Google Drive.</span></div>`;
   if (!MCP) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") setTimeout(indexerDrive, 0);
   const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort(); RACINES = ["", ...racines];
