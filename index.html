@@ -528,7 +528,7 @@ new MutationObserver(ms => { ms.forEach(m => m.addedNodes.forEach(n => { if (n.n
   .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
 function verrou() { const o = document.getElementById("overlay"), f = document.getElementById("focus"); if (o && f) document.body.classList.toggle("verrou", !o.hidden || !f.hidden); }
 /* Avatars aux couleurs douces, stables pour une même personne */
-const avatar = nom => { const ini = String(nom).replace(/\(.*?\)/g, "").trim().split(/\s+/).map(x => x[0]).join("").slice(0, 2).toUpperCase(); let h = 0; for (const c of String(nom)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `<span class="avatar av${h % 8}" aria-hidden="true">${esc(ini)}</span>`; };
+const avatar = nom => { const ini = String(nom).replace(/\(.*?\)/g, "").trim().split(/[\s–—-]+/).filter(x => /\p{L}/u.test(x)).map(x => x.match(/\p{L}/u)[0]).join("").slice(0, 2).toUpperCase(); let h = 0; for (const c of String(nom)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `<span class="avatar av${h % 8}" aria-hidden="true">${esc(ini)}</span>`; };
 /* Une erreur imprévue ne doit jamais laisser l'écran figé */
 addEventListener("error", e => { if (/Script error/.test(e.message || "")) return; console.error(e.error || e.message); try { toast("Un souci est survenu. Réessaie, et dis-moi si ça recommence."); } catch (x) {} });
 addEventListener("unhandledrejection", e => { console.error(e.reason); try { toast("Un souci est survenu. Réessaie, et dis-moi si ça recommence."); } catch (x) {} });
