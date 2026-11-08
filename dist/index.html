@@ -884,7 +884,7 @@ const bailActifDuBien = id => S.baux.find(b => b.bienId === id && isActive(b));
 const TYPES_BAIL = { vide: "Location vide (loi du 6 juillet 1989)", meuble: "Location meublée", etudiant: "Location meublée étudiant (9 mois)", mobilite: "Bail mobilité" };
 
 function dureeBail(b) {
-  if (b.typeBail === "vide") return S.sci.familiale ? { mois: 36, txt: "3 ans" } : { mois: 72, txt: "6 ans" };
+  if (b.typeBail === "vide") return S.sci.familiale || estPerso() ? { mois: 36, txt: "3 ans" } : { mois: 72, txt: "6 ans" };
   if (b.typeBail === "meuble") return { mois: 12, txt: "1 an" };
   if (b.typeBail === "etudiant") return { mois: 9, txt: "9 mois" };
   return { mois: +b.dureeMobilite || 10, txt: (+b.dureeMobilite || 10) + " mois" };
@@ -1371,11 +1371,11 @@ function pageBienvenue() {
   const st = (ok, ico, t, d, btn) => `<div class="task ${ok ? "" : "info"}"><span class="ico" aria-hidden="true">${ok ? "✅" : ico}</span><div><div class="t">${t}</div><div class="d">${d}</div></div><div class="acts">${ok ? `<span class="pill ok">Fait</span>` : btn}</div></div>`;
   return `<div class="greet"><h1>Bienvenue</h1><p>Trois étapes, et l'appli s'occupe du reste : loyers, quittances, relances, révisions.</p></div>
   <section class="tasks">
-    ${st(!!S.sci.nom, "🏛", "1. Les infos de la SCI", "Nom, adresse, gérant, associés. Elles apparaissent sur les quittances et les baux.", `<button class="small primary" onclick="go('reglages')">Remplir</button>`)}
+    ${st(!!(S.sci.nom && S.sci.gerant && S.sci.siege), "🏛", estPerso() ? "1. Tes infos" : "1. Les infos de la SCI", "Nom, adresse, gérant, associés. Elles apparaissent sur les quittances et les baux.", `<button class="small primary" onclick="go('reglages')">Remplir</button>`)}
     ${st(S.biens.length > 0, "🏢", "2. Tes biens", "Un par logement : adresse, surface, meublé ou vide, DPE.", `<button class="small primary" onclick="editBien()">Ajouter un bien</button>`)}
     ${st(S.baux.length > 0, "👤", "3. Tes locataires", "Nom, e-mail, date d'entrée, loyer. L'e-mail sert à envoyer les quittances.", `<button class="small primary" onclick="editBail()">Ajouter un locataire</button>`)}
   </section>
-  <div class="banner" style="background:var(--surface);box-shadow:var(--sh-1)"><span>✨ Envie de voir à quoi ça ressemble d'abord ?</span><button class="small" onclick="chargerDemo()">Charger un exemple</button></div>`;
+  ${SB ? "" : `<div class="banner" style="background:var(--surface);box-shadow:var(--sh-1)"><span>✨ Envie de voir à quoi ça ressemble d'abord ?</span><button class="small" onclick="chargerDemo()">Charger un exemple</button></div>`}`;
 }
 const prenom = nom => esc(String(nom).replace(/\(.*?\)/g, "").trim().split(/\s+/)[0]);
 function carteLocataire(b) {
@@ -1563,9 +1563,10 @@ function pageReglages() {
   ${SB ? sectionMembres() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
-    ${fld("Nom de la SCI", "nom", s.nom)}${fld("N° SIREN", "siren", s.siren)}
-    ${fld("Adresse du siège", "siege", s.siege, "text", "full")}
-    ${fld("Gérant (signe les documents)", "gerant", s.gerant)}${fld("Ville de signature (\"Fait à…\")", "ville", s.ville)}
+    ${sel("Tu loues", "forme", s.forme || "sci", [["sci", "Avec une SCI"], ["perso", "En nom propre (particulier)"]], "full")}
+    ${fld("Nom de la SCI (ou ton nom)", "nom", s.nom)}${fld("N° SIREN", "siren", s.siren)}
+    ${fld("Adresse du siège (ou ton adresse)", "siege", s.siege, "text", "full")}
+    ${fld("Gérant ou propriétaire (signe les documents)", "gerant", s.gerant)}${fld("Ville de signature (\"Fait à…\")", "ville", s.ville)}
     ${fld("Téléphone", "telephone", s.telephone)}${fld("E-mail de la SCI (reçoit une copie de chaque envoi)", "email", s.email, "email")}
     ${fld("IBAN pour les loyers", "iban", s.iban, "text", "full")}
     ${sel("Quittances", "autoQuittance", s.autoQuittance === false ? "0" : "1", [["1", "Envoyées toutes seules au paiement"], ["0", "Envoyées par moi"]], "full")}
@@ -1584,7 +1585,7 @@ function pageReglages() {
       <textarea name="contacts" rows="4" placeholder="Cabinet Dupont ; Comptable ; compta@exemple.fr">${esc((s.contacts || []).map(c => [c.nom, c.role, c.email].join(" ; ")).join("\n"))}</textarea></label>
     </fieldset>
     <fieldset><legend>Google Drive</legend>
-      ${fld("Lien du dossier Drive de la SCI", "drive", s.driveId ? "https://drive.google.com/drive/folders/" + s.driveId : "https://drive.google.com/drive/folders/" + DRIVE_DEFAUT, "url", "full")}
+      ${fld("Lien du dossier Drive de la SCI", "drive", driveRacine() ? "https://drive.google.com/drive/folders/" + driveRacine() : "", "url", "full")}
       ${sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui (dossier « Documents générés par l'appli »)"], ["0", "Non"]], "full")}
     </fieldset>
     <div class="full row"><button class="primary">Enregistrer</button></div>
@@ -1732,7 +1733,7 @@ function saveSci(f) {
   d.autoQuittance = d.autoQuittance !== "0";
   d.associes = d.associes.split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, p, e]) => ({ nom: n.trim(), parts: +(p || 0), email: (e || "").trim() }));
   d.contacts = (d.contacts || "").split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, r, e]) => ({ nom: n.trim(), role: (r || "").trim(), email: (e || "").trim() }));
-  const nouveauDrive = idDrive(d.drive); delete d.drive; if (nouveauDrive && nouveauDrive !== (S.sci.driveId || DRIVE_DEFAUT)) { d.driveGenId = ""; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; } d.driveId = nouveauDrive || S.sci.driveId || "";
+  const nouveauDrive = idDrive(d.drive); delete d.drive; if (nouveauDrive && nouveauDrive !== driveRacine()) { d.driveGenId = ""; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; } d.driveId = nouveauDrive || S.sci.driveId || "";
   d.archiveDrive = d.archiveDrive !== "0";
   Object.assign(S.sci, d); save(); render(); toast("Enregistré");
 }
@@ -1767,13 +1768,15 @@ const NIVEAUX = [
   { court: "2e relance", titre: "Deuxième relance – loyer impayé" },
   { court: "Mise en demeure", titre: "Mise en demeure de payer" }
 ];
+const estPerso = () => S.sci.forme === "perso";
+const quiSigne = () => estPerso() ? `${esc(S.sci.gerant || "……")}, propriétaire bailleur` : `${esc(S.sci.gerant || "……")}, gérant de la ${esc(S.sci.nom || "SCI ……")}, bailleur`;
 function enTeteBailleur() {
   const s = S.sci;
-  return `<div><b>${esc(s.nom || "SCI ……")}</b><br>${esc(s.siege || "")}${s.siren ? "<br>SIREN " + esc(s.siren) : ""}${s.telephone ? "<br>" + esc(s.telephone) : ""}${s.email ? "<br>" + esc(s.email) : ""}</div>`;
+  return `<div><b>${esc(estPerso() ? (s.gerant || s.nom || "……") : (s.nom || "SCI ……"))}</b><br>${esc(s.siege || "")}${s.siren ? "<br>SIREN " + esc(s.siren) : ""}${s.telephone ? "<br>" + esc(s.telephone) : ""}${s.email ? "<br>" + esc(s.email) : ""}</div>`;
 }
 function enTeteLocataire(b) { const bi = bien(b.bienId); return `<div class="right"><b>${esc(b.nom)}</b>${b.colocataires ? "<br>" + esc(b.colocataires) : ""}<br>${esc(bi ? bi.adresse : "")}<br>${esc(bi ? [bi.cp, bi.ville].join(" ") : "")}</div>`; }
 const faitA = (d = TODAY) => `<p class="right">Fait à ${esc(S.sci.ville || "……")}, le ${fd(d)}</p>`;
-const signature = () => `<p class="right" style="margin-top:28px">Pour la ${esc(S.sci.nom || "SCI")},<br>${esc(S.sci.gerant || "le gérant")}, gérant<br><br><br>Signature</p>`;
+const signature = () => estPerso() ? `<p class="right" style="margin-top:28px">${esc(S.sci.gerant || "Le bailleur")}<br><br><br>Signature</p>` : `<p class="right" style="margin-top:28px">Pour la ${esc(S.sci.nom || "SCI")},<br>${esc(S.sci.gerant || "le gérant")}, gérant<br><br><br>Signature</p>`;
 const periode = e => `du ${fd(new Date(+e.m.slice(0, 4), +e.m.slice(5) - 1, e.from))} au ${fd(new Date(+e.m.slice(0, 4), +e.m.slice(5) - 1, e.to))}`;
 const lignesMontants = e => `<table><tbody><tr><td>Loyer hors charges</td><td class="right">${eur(e.hc)}</td></tr><tr><td>${e.b.chargesMode === "forfait" ? "Forfait de charges" : "Provision pour charges"}</td><td class="right">${eur(e.ch)}</td></tr><tr><td><b>Total</b></td><td class="right"><b>${eur(e.du)}</b></td></tr></tbody></table>`;
 
@@ -1914,7 +1917,7 @@ async function envoyerMail({ to, objet, corps, html, fichier }) {
 
 /* ================= Google Drive de la SCI ================= */
 const DRIVE_DEFAUT = "1Bcx1xiH7q1C88nPE-zxgOYV0uw108-vW";
-const driveRacine = () => S.sci.driveId || DRIVE_DEFAUT;
+const driveRacine = () => S.sci.driveId || (SB ? "" : DRIVE_DEFAUT);
 const idDrive = s => { const m = /(?:folders\/|id=)([A-Za-z0-9_-]{10,})/.exec(s || ""); return m ? m[1] : /^[A-Za-z0-9_-]{10,}$/.test((s || "").trim()) ? s.trim() : ""; };
 let DOCS = { etat: "vide", fichiers: [], dossiers: {} }, RACINES = [""];
 async function drive(tool, input) {
@@ -1962,7 +1965,7 @@ function ligneDoc(f) {
 }
 function pageDocs() {
   if (!MCP && SB) return `<div class="head"><div><h1>Documents</h1><p>Tes documents restent rangés dans ton Google Drive.</p></div></div>
-    <div class="empty party">📁 <span>Ouvre le dossier Drive de ${esc(S.sci.nom || "ta SCI")}</span><a class="btn primary" href="https://drive.google.com/drive/folders/${esc(driveRacine())}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a><span class="note">Le lien se règle dans Réglages, rubrique Google Drive.</span></div>`;
+    ${driveRacine() ? `<div class="empty party">📁 <span>Ouvre le dossier Drive de ${esc(S.sci.nom || "ta SCI")}</span><a class="btn primary" href="https://drive.google.com/drive/folders/${esc(driveRacine())}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a><span class="note">Le lien se règle dans Réglages, rubrique Google Drive.</span></div>` : `<div class="empty party">📁 <span>Range tes documents dans un dossier Google Drive, puis colle son lien ici pour l'ouvrir d'un geste.</span><button class="primary" onclick="go('reglages')">Ajouter le lien du Drive</button></div>`}`;
   if (!MCP) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") setTimeout(indexerDrive, 0);
   const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort(); RACINES = ["", ...racines];
@@ -2133,7 +2136,7 @@ function revueReleve() {
 function docAttestation(bailId) {
   const b = bail(bailId), bi = bien(b.bienId), l = loyerAt(b, CUR), retard = echeancesBail(b).filter(e => e.statut === "retard");
   const html = `<div class="two-col">${enTeteBailleur()}<div></div></div><h1>Attestation de loyer</h1>
-  <p style="margin-top:18px">Je soussigné(e) ${esc(S.sci.gerant || "……")}, gérant de la ${esc(S.sci.nom || "SCI ……")}, propriétaire bailleur, atteste que <b>${esc(b.nom)}</b>${b.colocataires ? " et " + esc(b.colocataires) : ""} ${b.dateSortie && P(b.dateSortie) < TODAY ? `a occupé` : `occupe`} le logement situé ${esc(adresseBien(bi))} en qualité de locataire depuis le ${fd(b.dateEntree)}${b.dateSortie && P(b.dateSortie) < TODAY ? ` et jusqu'au ${fd(b.dateSortie)}` : ""}.</p>
+  <p style="margin-top:18px">Je soussigné(e) ${quiSigne()}, atteste que <b>${esc(b.nom)}</b>${b.colocataires ? " et " + esc(b.colocataires) : ""} ${b.dateSortie && P(b.dateSortie) < TODAY ? `a occupé` : `occupe`} le logement situé ${esc(adresseBien(bi))} en qualité de locataire depuis le ${fd(b.dateEntree)}${b.dateSortie && P(b.dateSortie) < TODAY ? ` et jusqu'au ${fd(b.dateSortie)}` : ""}.</p>
   <table><tbody><tr><td>Loyer mensuel hors charges</td><td class="right">${eur(l.hc)}</td></tr><tr><td>Charges mensuelles</td><td class="right">${eur(l.ch)}</td></tr><tr><td><b>Total mensuel</b></td><td class="right"><b>${eur(l.hc + l.ch)}</b></td></tr></tbody></table>
   <p>${retard.length ? `À ce jour, il reste dû la somme de ${eur(retard.reduce((s, e) => s + e.reste, 0))}.` : "À ce jour, le locataire est à jour du paiement de ses loyers et charges."}</p>
   <p>Attestation établie pour servir et valoir ce que de droit.</p>${faitA()}${signature()}`;
@@ -2161,7 +2164,7 @@ function docQuittance(bailId, m) {
   const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>
   <h1>${total ? "Quittance de loyer" : "Reçu de paiement partiel"}</h1><p class="center">Période ${periode(e)}</p>
   <p style="margin-top:18px">Adresse du logement loué : <b>${esc(adresseBien(bi))}</b></p>
-  <p>Je soussigné(e) ${esc(S.sci.gerant || "……")}, gérant de la ${esc(S.sci.nom || "SCI ……")}, bailleur, déclare avoir reçu de <b>${esc(b.nom)}</b>${b.colocataires ? " et " + esc(b.colocataires) : ""} la somme de <b>${eur(montant)}</b> (${enLettres(montant)})${total ? `, au titre du paiement du loyer et des charges pour la période ${periode(e)}, et lui en donne quittance, sous réserve de tous mes droits.` : `, à valoir sur le loyer et les charges de la période ${periode(e)}. Ce reçu ne vaut pas quittance : il reste dû ${eur(e.reste)}.`}</p>
+  <p>Je soussigné(e) ${quiSigne()}, déclare avoir reçu de <b>${esc(b.nom)}</b>${b.colocataires ? " et " + esc(b.colocataires) : ""} la somme de <b>${eur(montant)}</b> (${enLettres(montant)})${total ? `, au titre du paiement du loyer et des charges pour la période ${periode(e)}, et lui en donne quittance, sous réserve de tous mes droits.` : `, à valoir sur le loyer et les charges de la période ${periode(e)}. Ce reçu ne vaut pas quittance : il reste dû ${eur(e.reste)}.`}</p>
   <h2>Détail</h2>${lignesMontants(e)}
   <p>Date du paiement : ${e.lastPay ? fd(e.lastPay) : "—"}</p>
   ${faitA(e.lastPay ? P(e.lastPay) : TODAY)}${signature()}
@@ -2230,7 +2233,7 @@ function docBailOpen(id) {
   const annexes = ["Dossier de diagnostic technique : diagnostic de performance énergétique (DPE)" + (bi.dpe ? " – classe " + esc(bi.dpe) : ""), "État des risques et pollutions (ERP), datant de moins de 6 mois", (+bi.annee && +bi.annee < 1949) ? "Constat de risque d'exposition au plomb (CREP)" : null, "Diagnostics électricité et gaz si les installations ont plus de 15 ans", "Diagnostic bruit si le logement est en zone d'exposition au bruit d'un aéroport", "Notice d'information relative aux droits et obligations des locataires et des bailleurs (arrêté du 29 mai 2015)", "État des lieux d'entrée", meuble || mob ? "Inventaire et état détaillé du mobilier" : null, "Extraits du règlement de copropriété (destination de l'immeuble, jouissance et usage des parties privatives et communes, quote-part)", b.garantNom ? "Acte de cautionnement solidaire" : null].filter(Boolean);
   const html = `<h1>Contrat de location</h1><p class="center">${esc(TYPES_BAIL[b.typeBail])}${mob ? " (articles 25-12 et suivants de la loi n° 89-462 du 6 juillet 1989 – loi ÉLAN)" : meuble ? " – titre Ier bis de la loi n° 89-462 du 6 juillet 1989" : " – titre Ier de la loi n° 89-462 du 6 juillet 1989"}<br>Logement constituant la résidence principale du locataire</p>
   <h2>I. Désignation des parties</h2>
-  <p><b>Le bailleur :</b> ${esc(s.nom || "SCI ……")}, société civile immobilière${s.siren ? ", SIREN " + esc(s.siren) : ""}, dont le siège est situé ${esc(s.siege || "……")}, représentée par ${esc(s.gerant || "……")}, son gérant. ${s.familiale ? "Société civile constituée exclusivement entre parents et alliés jusqu'au quatrième degré inclus." : "Personne morale."}</p>
+  ${estPerso() ? `<p><b>Le bailleur :</b> ${esc(s.gerant || "……")}, personne physique, demeurant ${esc(s.siege || "……")}${s.email ? " – " + esc(s.email) : ""}.</p>` : `<p><b>Le bailleur :</b> ${esc(s.nom || "SCI ……")}, société civile immobilière${s.siren ? ", SIREN " + esc(s.siren) : ""}, dont le siège est situé ${esc(s.siege || "……")}, représentée par ${esc(s.gerant || "……")}, son gérant. ${s.familiale ? "Société civile constituée exclusivement entre parents et alliés jusqu'au quatrième degré inclus." : "Personne morale."}</p>`}
   <p><b>Le(s) locataire(s) :</b> ${esc(b.nom)}${b.colocataires ? ", " + esc(b.colocataires) : ""}${b.adressePrec ? ", demeurant actuellement " + esc(b.adressePrec) : ""}${b.email ? " – " + esc(b.email) : ""}.</p>
   <h2>II. Objet du contrat</h2>
   <p><b>Adresse du logement :</b> ${esc(adresseBien(bi))}</p>
@@ -2263,7 +2266,7 @@ function docBailOpen(id) {
   ${s.clausesBail || b.clauses ? `<h2>Conditions particulières</h2>${s.clausesBail ? `<p>${nl2br(s.clausesBail)}</p>` : ""}${b.clauses ? `<p>${nl2br(b.clauses)}</p>` : ""}` : ""}
   ${meuble || mob ? `<h2>Annexe : inventaire et état du mobilier</h2><p class="small">Mobilier minimum d'un logement meublé (décret n° 2015-981 du 31 juillet 2015). À compléter et signer à l'entrée.</p><table><thead><tr><th>Élément</th><th class="right">Nombre</th><th class="right">État à l'entrée</th></tr></thead><tbody>${MOBILIER.map(x => `<tr><td>${x}</td><td class="right"> </td><td class="right"> </td></tr>`).join("")}</tbody></table>` : ""}
   <p style="margin-top:20px">Fait à ${esc(s.ville || "……")}, le ${fd(P(b.dateEntree) > TODAY ? iso(TODAY) : b.dateEntree)}, en autant d'exemplaires originaux que de parties.</p>
-  <div class="sign"><div><b>Le bailleur</b><br>${esc(s.nom || "")}, représentée par ${esc(s.gerant || "……")}<br><span class="small">Signature précédée de « lu et approuvé »</span></div><div><b>Le(s) locataire(s)</b><br>${esc(b.nom)}${b.colocataires ? ", " + esc(b.colocataires) : ""}<br><span class="small">Signature précédée de « lu et approuvé »</span></div></div>`;
+  <div class="sign"><div><b>Le bailleur</b><br>${estPerso() ? esc(s.gerant || "……") : `${esc(s.nom || "")}, représentée par ${esc(s.gerant || "……")}`}<br><span class="small">Signature précédée de « lu et approuvé »</span></div><div><b>Le(s) locataire(s)</b><br>${esc(b.nom)}${b.colocataires ? ", " + esc(b.colocataires) : ""}<br><span class="small">Signature précédée de « lu et approuvé »</span></div></div>`;
   showDoc(html, { titre: "Bail – à relire avant signature", fichier: `Bail-${slug(b.nom)}`, to: b.email, email: { objet: "Votre bail de location", corps: `Bonjour,\n\nVous trouverez ci-joint le projet de bail pour le logement ${adresseBien(bi)}. Merci de le relire, nous le signerons ensemble le jour de l'état des lieux.\n\nBonne journée,\n${s.gerant || ""}` } });
 }
 function docBilanOpen(y) {
