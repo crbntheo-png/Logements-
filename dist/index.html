@@ -495,6 +495,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 "use strict";
 /* ================= Icônes (dessinées, un seul style) ================= */
 const IC = {
+  share: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/>',
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/>',
   tasks: '<path d="m3.5 7 2 2 3.5-4"/><path d="m3.5 17 2 2 3.5-4"/><path d="M13 7h8M13 17h8"/>',
   building: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 21v-4h6v4M8.5 7.5h.01M12 7.5h.01M15.5 7.5h.01M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>',
@@ -651,7 +652,7 @@ async function ouvrirEspace(id) {
   MODE = "chargement"; render();
   if (SB_CANAL) { try { SB.removeChannel(SB_CANAL); } catch (e) {} SB_CANAL = null; }
   ESPACE = id; try { localStorage.setItem("gestion-sci-espace", id); } catch (e) {}
-  S = blank(); synced = {}; DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+  S = blank(); synced = {}; MEMBRES = null; DOCS = { etat: "vide", fichiers: [], dossiers: {} };
   const lignes = [];
   for (let de = 0; ; de += 1000) {
     const r = await SB.from("docs").select("coll, doc_id, data").eq("espace_id", id).range(de, de + 999);
@@ -1384,7 +1385,7 @@ function carteLocataire(b) {
   if (P(b.dateEntree) > TODAY) { etat = `Arrive le ${fd(b.dateEntree)}`; cls = "info"; dot = "info"; }
   else if (retards.length) {
     const tot = retards.reduce((s, x) => s + x.reste, 0), maxJ = Math.max(...retards.map(x => x.retardJ)), leger = retards.length === 1 && maxJ <= 5;
-    etat = leger ? `En attente · ${maxJ} j de retard` : retards.length > 1 ? `${retards.length} loyers impayés` : `Impayé · ${maxJ} j de retard`; cls = leger ? "warn" : "bad"; dot = cls; montant = eur(tot);
+    etat = leger ? `En retard de ${maxJ} j` : retards.length > 1 ? `${retards.length} loyers impayés` : `Impayé · ${maxJ} j de retard`; cls = leger ? "warn" : "bad"; dot = cls; montant = eur(tot);
     act = `<button class="primary" onclick="encaisser('${b.id}','${retards[0].m}')">✓ A payé</button><button onclick="relance('${b.id}','${retards[0].m}')">✉ Relancer</button>`;
   }
   else if (!e) { etat = "Pas de loyer ce mois-ci"; cls = "info"; dot = "info"; }
@@ -1598,7 +1599,7 @@ function pageReglages() {
     ${S.rappels.length ? `<div class="table-wrap" style="border:0"><table><tbody>${S.rappels.map(r => `<tr><td>${fds(r.date)}</td><td>${esc(r.titre)}</td><td>${r.fait ? `<span class="pill ok">Fait</span>` : `<span class="pill info">À faire</span>`}</td><td><button class="small ghost" onclick="supprRappel('${r.id}')">Supprimer</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note">Aucun rappel.</p>`}
     <div class="row"><button onclick="editRappel()">+ Rappel</button></div>
   </section>
-  <section class="card"><h2>Zone sensible</h2><div class="row"><button onclick="chargerDemo()">Recharger l'exemple</button><button class="danger" onclick="toutEffacer()">Tout effacer</button></div></section>`;
+  <section class="card"><h2>Zone sensible</h2><div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button></div></section>`;
 }
 
 /* ================= Formulaires ================= */
@@ -1774,7 +1775,7 @@ function showDoc(html, o = {}) {
   CURDOC = { html, o };
   const ov = document.getElementById("overlay"), mail = o.to && peutEnvoyer();
   ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="closeOverlay()" aria-label="Fermer">✕</button><b class="doc-t">${esc(o.titre || "")}</b></div>
-  <div class="row"><button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer</span></button>` : ""}</div></div>
+  <div class="row"><button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer</span></button>` : ""}</div></div>
   <div class="paper" id="paper">${html}</div>
   ${o.email ? `<div class="emailbox"><b>Message${o.to ? " pour " + esc(o.to) : ""}</b>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : ajoute-le dans sa fiche pour pouvoir lui envoyer directement.</span>`}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div></div>` : ""}</div>`;
   ov.hidden = false; ov.scrollTop = 0;
@@ -1854,6 +1855,16 @@ async function telechargerPdf() {
   const name = (CURDOC.o.fichier || "document") + ".pdf";
   if (DL) { try { await DL.save({ filename: name, data: doc.output("blob") }); toast("PDF enregistré"); } catch (e) { if (e && e.code !== "declined") toast("Téléchargement impossible ici."); } }
   else doc.save(name);
+}
+/* Partage du PDF par le téléphone (WhatsApp, Gmail, SMS…) */
+const peutPartager = () => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([""], "t.pdf", { type: "application/pdf" })] })); } catch (e) { return false; } };
+async function partagerPdf() {
+  if (!CURDOC) return;
+  let doc; try { doc = fairePdf(CURDOC.html); } catch (e) { toast(e.message); return; }
+  const f = new File([doc.output("blob")], (CURDOC.o.fichier || "document") + ".pdf", { type: "application/pdf" });
+  const corps = (document.getElementById("mailtxt") || {}).value || "";
+  try { await navigator.share({ files: [f], title: CURDOC.o.titre || f.name, text: corps }); }
+  catch (e) { if (e && e.name !== "AbortError") toast("Partage impossible : télécharge le PDF."); }
 }
 /* Envoi par Gmail (le compte Gmail de la personne qui utilise l'appli) */
 function erreurConnecteur(e, nom) {
@@ -2136,7 +2147,8 @@ function documentsPour(bailId) {
 }
 
 function docQuittance(bailId, m) {
-  const b = bail(bailId), e = echeance(b, m), bi = bien(b.bienId), total = e.statut === "paye";
+  const b = bail(bailId), e = b && echeance(b, m); if (!e) return null;
+  const bi = bien(b.bienId), total = e.statut === "paye";
   const montant = total ? e.du : e.paye;
   const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>
   <h1>${total ? "Quittance de loyer" : "Reçu de paiement partiel"}</h1><p class="center">Période ${periode(e)}</p>
@@ -2150,10 +2162,11 @@ function docQuittance(bailId, m) {
     email: { objet: `Quittance de loyer – ${fm(m)}`, corps: `Bonjour,\n\nVous trouverez ci-joint votre ${total ? "quittance de loyer" : "reçu"} pour ${fm(m)} (${eur(montant)}).\n\nBonne journée,\n${S.sci.gerant || ""}\n${S.sci.nom || ""}` },
     onSent: total ? () => { S.quittances[b.id + "|" + m] = iso(TODAY); } : null, sentLabel: "Déjà envoyée autrement" } };
 }
-function quittance(bailId, m) { const d = docQuittance(bailId, m); showDoc(d.html, d.o); }
+function quittance(bailId, m) { const e = bail(bailId) && echeance(bail(bailId), m); if (e && !e.paye && e.statut !== "paye") return avis(bailId, m); const d = docQuittance(bailId, m); if (!d) return toast("Pas de loyer suivi pour ce mois-là."); showDoc(d.html, d.o); }
 const ENVOIS = new Set();
 async function envoyerQuittance(bailId, m, silencieux) {
   const b = bail(bailId), d = docQuittance(bailId, m), cle = bailId + "|" + m;
+  if (!d) { if (!silencieux) toast("Pas de loyer suivi pour ce mois-là."); return false; }
   if (!b.email) { if (!silencieux) quittance(bailId, m); return false; }
   if (ENVOIS.has(cle) || S.quittances[cle]) return !!S.quittances[cle];
   ENVOIS.add(cle); if (!silencieux) toast(`Envoi de la quittance à ${b.email}…`);
@@ -2337,7 +2350,7 @@ function demo() {
   d.rappels = [{ id: uid(), titre: "Faire passer le ramoneur – Maison Agon", date: iso(addDays(TODAY, 10)), bienId: bs[2].id, fait: false }];
   return d;
 }
-function toutEffacer() { confirmer(MODE === "partage" ? "Tout effacer ? Les données seront supprimées pour toi et pour tes associés. Télécharge une sauvegarde avant." : "Tout effacer ? Les données de cet appareil seront supprimées. Télécharge une sauvegarde avant.", () => { S = blank(); save(); go("locataires"); render(); toast("Tout a été effacé"); }); }
+function toutEffacer() { confirmer(MODE === "partage" || SB ? "Tout effacer ? Les données seront supprimées pour toi et pour tes associés. Télécharge une sauvegarde avant." : "Tout effacer ? Les données de cet appareil seront supprimées. Télécharge une sauvegarde avant.", () => { S = blank(); save(); go("locataires"); render(); toast("Tout a été effacé"); }); }
 function viderDemo() { confirmer("Effacer les données d'exemple et partir de zéro ?", () => { S = blank(); save(); go("reglages"); render(); toast("C'est à vous : commencez par la SCI, puis vos biens"); }); }
 function chargerDemo() { confirmer("Remplacer vos données par l'exemple ? Téléchargez une sauvegarde avant si besoin.", () => { S = demo(); save(); go("locataires"); render(); }); }
 
