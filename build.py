@@ -107,7 +107,7 @@ self.addEventListener("fetch", e => {{
     .catch(() => caches.match(e.request).then(r => r || caches.match("./index.html"))));
 }});
 """)
-    open(os.path.join(DIST, "_headers"), "w").write("/sw.js\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/\n  Cache-Control: no-cache\n")
+    open(os.path.join(DIST, "_headers"), "w").write("/manifest.webmanifest\n  Content-Type: application/manifest+json\n/sw.js\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/\n  Cache-Control: no-cache\n")
     print("dist/ prêt :", sorted(os.listdir(DIST)))
 
 
