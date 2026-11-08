@@ -170,3 +170,34 @@ do $$ begin
   end if;
 end $$;
 alter table public.docs replica identity full;
+
+-- Codes de connexion envoyés par Brevo (crochet « Send Email » de Supabase Auth)
+create or replace function public.envoyer_code_auth(event jsonb) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare cle text; expediteur text; code text; mail text; html text;
+begin
+  select decrypted_secret into cle from vault.decrypted_secrets where name = 'brevo_api_key';
+  select decrypted_secret into expediteur from vault.decrypted_secrets where name = 'brevo_sender';
+  mail := coalesce(event #>> '{user,new_email}', event #>> '{user,email}');
+  code := coalesce(nullif(event #>> '{email_data,token}', ''), event #>> '{email_data,token_new}');
+  if cle is null or expediteur is null then
+    return jsonb_build_object('error', jsonb_build_object('http_code', 500, 'message', 'Envoi d''e-mails pas encore configuré'));
+  end if;
+  html := '<div style="font-family:Arial,sans-serif;max-width:420px;margin:auto;padding:24px;color:#0f1b2d">'
+    || '<h2 style="margin:0 0 12px">Ton code de connexion</h2>'
+    || '<p>Recopie ce code dans l''appli Gestion locative :</p>'
+    || '<p style="font-size:34px;font-weight:bold;letter-spacing:8px;background:#eef6f3;border-radius:12px;padding:16px;text-align:center;color:#0b7a64">' || code || '</p>'
+    || '<p style="color:#6b7280;font-size:13px">Il est valable 1 heure. Si tu n''as rien demandé, ignore cet e-mail.</p></div>';
+  perform net.http_post(url := 'https://api.brevo.com/v3/smtp/email',
+    body := jsonb_build_object('sender', jsonb_build_object('name', 'Gestion locative', 'email', expediteur),
+      'to', jsonb_build_array(jsonb_build_object('email', mail)),
+      'subject', code || ' est ton code de connexion',
+      'htmlContent', html,
+      'textContent', 'Ton code de connexion : ' || code || ' (valable 1 heure).'),
+    headers := jsonb_build_object('api-key', cle, 'content-type', 'application/json', 'accept', 'application/json'),
+    timeout_milliseconds := 15000);
+  return '{}'::jsonb;
+end $$;
+revoke all on function public.envoyer_code_auth(jsonb) from public, anon, authenticated;
+grant execute on function public.envoyer_code_auth(jsonb) to supabase_auth_admin;
+grant usage on schema public to supabase_auth_admin;
