@@ -467,6 +467,11 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .barre{height:10px;border-radius:99px;background:var(--line,#e5e7eb);overflow:hidden;margin:10px 0 6px}.barre i{display:block;height:100%;background:var(--accent,#0b7a64);border-radius:99px;transition:width .4s}
 .card.dette .row{margin-top:12px}
 .tuto{margin:12px 0 4px;padding-left:0;list-style:none;counter-reset:t}.tuto li{counter-increment:t;position:relative;padding:10px 0 10px 40px;border-top:1px solid var(--line);line-height:1.5}.tuto li:first-child{border-top:0}.tuto li::before{content:counter(t);position:absolute;left:0;top:9px;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:800;display:grid;place-items:center;font-size:14px}.tuto .ic{width:18px;height:18px;vertical-align:-3px}.tuto .note{display:inline-block;margin-top:4px}.tuto button{margin-top:6px}.install-tuto details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.install-tuto summary{cursor:pointer;font-weight:700}
+.banque-mini{display:flex;align-items:center;gap:14px;padding:14px 16px;text-decoration:none;color:inherit}.banque-mini .tx{flex:1;display:flex;flex-direction:column;gap:2px}.banque-mini b{font-size:20px}.banque-mini small{color:var(--muted)}.bq-ico{font-size:22px;width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center}
+.pos{color:var(--ok)}.neg{color:var(--ink-2)}
+.banque .bq-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.bq-solde{font-size:24px;white-space:nowrap}
+.ops{list-style:none;margin:10px 0;padding:0}.ops li{display:flex;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line)}.ops .op-d{color:var(--muted);font-size:13px;width:40px;flex:none;font-variant-numeric:tabular-nums}.ops .tx{flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere}.ops .tx small{display:block}.ops .lien{color:var(--ok);font-weight:700}.ops b{white-space:nowrap;font-variant-numeric:tabular-nums}
+.ops .lb{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.banque .bq-head h2{margin:0}
 </style>
 </head>
 <body>
@@ -663,7 +668,86 @@ async function ouvrirEspace(id) {
       if (appliquerLigne(p.new)) remoteChanged();
     }).subscribe();
   MODE = "partage"; render();
+  BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
 }
+/* ================= Banque (via Pennylane, lue par le serveur) ================= */
+let BANQUE = { etat: "vide", ops: [], comptes: [], lien: null };
+async function chargerBanque(actualiser) {
+  if (!SB || !ESPACE) return; const id = ESPACE;
+  try {
+    if (actualiser) await SB.rpc("banque_actualiser", { e: id });
+    const [l, c, o] = await Promise.all([SB.from("banque_liens").select("*").eq("espace_id", id).maybeSingle(), SB.from("banque_comptes").select("*").eq("espace_id", id), SB.from("banque").select("tx_id, date, montant, libelle").eq("espace_id", id).order("date", { ascending: false }).limit(400)]);
+    if (ESPACE !== id) return;
+    BANQUE = { etat: "ok", lien: l.data || null, comptes: c.data || [], ops: (o.data || []).map(x => ({ ...x, montant: +x.montant, tx_id: String(x.tx_id) })) };
+    const n = rapprocherBanque(); if (n) toast(`🏦 ${n} virement${n > 1 ? "s" : ""} de locataire reconnu${n > 1 ? "s" : ""} et enregistré${n > 1 ? "s" : ""}`);
+  } catch (e) { BANQUE.etat = "erreur"; }
+  if (MODE === "partage") render();
+}
+const normTxt = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+const MOTS_VIDES = new Set(["M", "MME", "MR", "MLLE", "ET", "DE", "DU", "LA", "LE", "LES", "VIR", "INST", "SCI", "EXEMPLE"]);
+/* Quel locataire a fait ce virement ? (nom dans le libellé, ou mots choisis dans sa fiche) */
+function bailDuVirement(op) {
+  const lib = " " + normTxt(op.libelle).replace(/[^A-Z0-9]+/g, " ") + " ";
+  if (/ (CAUTION|DEPOT|GARANTIE) /.test(lib)) return null;
+  const cands = S.baux.filter(b => {
+    if (b.motsBanque) return normTxt(b.motsBanque).split(/[,;]+/).map(x => x.trim()).filter(Boolean).some(m => lib.includes(" " + m.replace(/[^A-Z0-9]+/g, " ").trim() + " "));
+    const mots = normTxt(b.nom).replace(/[^A-Z0-9]+/g, " ").split(" ").filter(m => m.length >= 3 && !MOTS_VIDES.has(m));
+    return mots.length && mots.some(m => lib.includes(" " + m + " "));
+  });
+  return cands.length === 1 ? cands[0] : null;
+}
+/* Enregistre les virements des locataires comme paiements (sans doublon avec ce qui a été saisi à la main) */
+function rapprocherBanque() {
+  let n = 0, modif = false; const soldes = [];
+  const lies = new Set(S.paiements.filter(p => p.tx).map(p => String(p.tx)));
+  for (const op of BANQUE.ops.slice().sort((a, b) => a.date.localeCompare(b.date))) {
+    if (!(op.montant > 0) || lies.has(op.tx_id)) continue;
+    const b = bailDuVirement(op); if (!b) continue;
+    const debut = b.suiviDepuis || mk(P(b.dateEntree)); if (op.date.slice(0, 7) < debut || P(op.date) < P(b.dateEntree)) continue;
+    // déjà saisi à la main ? même montant, à 12 jours près, pas encore relié à un virement
+    const lot = {}; S.paiements.filter(p => p.bailId === b.id && !p.tx && Math.abs(daysBetween(P(p.date), P(op.date))) <= 12).forEach(p => { const k = p.lot || p.id; (lot[k] = lot[k] || []).push(p); });
+    const manuel = Object.values(lot).find(ps => Math.abs(ps.reduce((s, p) => s + +p.montant, 0) - op.montant) < 0.01);
+    if (manuel) { manuel.forEach(p => p.tx = op.tx_id); lies.add(op.tx_id); modif = true; continue; }
+    let reste = r2(op.montant);
+    for (const x of echeancesBail(b, addM(op.date.slice(0, 7), 1))) {
+      if (reste <= 0) break; if (x.reste <= 0) continue;
+      const part = r2(Math.min(reste, x.reste)); reste = r2(reste - part);
+      S.paiements.push({ id: "tx" + op.tx_id + "-" + x.m, bailId: b.id, mois: x.m, montant: part, date: op.date, mode: "virement", tx: op.tx_id, lot: "tx" + op.tx_id });
+      if (part >= x.reste - 0.009) soldes.push([b.id, x.m]);
+    }
+    lies.add(op.tx_id); n++;
+  }
+  if (n) { save(); if (S.sci.autoQuittance !== false && peutEnvoyer()) setTimeout(async () => { for (const [bid, m] of soldes) if (bail(bid).email) await envoyerQuittance(bid, m, true); }, 500); }
+  else if (modif) save();
+  return n;
+}
+const ilYa = d => { const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 2 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `le ${fds(new Date(d))}`; };
+function carteBanqueAccueil() {
+  if (!SB || !BANQUE.lien || !BANQUE.comptes.length) return "";
+  const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), m = CUR, ops = BANQUE.ops.filter(o => o.date.startsWith(m));
+  const ent = ops.filter(o => o.montant > 0).reduce((s, o) => s + o.montant, 0), sor = ops.filter(o => o.montant < 0).reduce((s, o) => s - o.montant, 0);
+  return `<a class="card banque-mini" href="#compta"><span class="bq-ico" aria-hidden="true">🏦</span><span class="tx"><small>Compte bancaire · ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0].maj_le)}</small><b>${eur(solde)}</b><small>Ce mois-ci : <span class="pos">+${eur(ent)}</span> · <span class="neg">−${eur(sor)}</span></small></span><span aria-hidden="true">›</span></a>`;
+}
+function sectionBanque() {
+  if (!SB) return "";
+  if (!BANQUE.lien) return `<section class="card"><h2>🏦 Brancher la banque (via Pennylane)</h2>
+    <p class="note">Si ta SCI utilise Pennylane, l'appli lit les opérations de ton compte toutes les heures : solde, entrées, sorties, et les virements des locataires cochent les loyers tout seuls.</p>
+    <p class="note">Pour obtenir le jeton : dans Pennylane, va dans <b>Paramètres</b>, puis <b>Connectivité</b>, puis <b>Développeurs</b>, puis <b>Générer un token API</b>, en lecture seule.</p>
+    <form class="row" onsubmit="event.preventDefault();brancherBanque(this)"><input name="jeton" required placeholder="Colle le jeton Pennylane ici" aria-label="Jeton Pennylane" autocomplete="off" style="flex:1;min-width:200px"><button class="primary" id="bq_btn">Brancher</button></form></section>`;
+  const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), ops = BANQUE.ops.slice(0, view.banqueTout ? 400 : 25);
+  const lies = new Map(S.paiements.filter(p => p.tx).map(p => [String(p.tx), p]));
+  return `<section class="card banque"><div class="bq-head"><div><h2>🏦 Compte bancaire</h2><p class="note">${BANQUE.comptes.map(c => esc(c.nom)).join(" · ")} · mis à jour ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0]?.maj_le || Date.now())}${BANQUE.lien.erreur ? ` · ⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p></div><b class="bq-solde">${eur(solde)}</b></div>
+    <ul class="ops">${ops.map(o => { const p = lies.get(o.tx_id), b = p && bail(p.bailId); return `<li><span class="op-d">${fds(o.date).slice(0, 5)}</span><span class="tx"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span>${b ? `<small class="lien">✓ Loyer ${esc(nomCourt(b.nom))}</small>` : ""}</span><b class="${o.montant > 0 ? "pos" : "neg"}">${o.montant > 0 ? "+" : "−"}${eur(Math.abs(o.montant))}</b></li>`; }).join("")}</ul>
+    <div class="row"><button class="small" onclick="actualiserBanque(this)">↻ Actualiser</button>${BANQUE.ops.length > 25 ? `<button class="small ghost" onclick="view.banqueTout=!view.banqueTout;render()">${view.banqueTout ? "Moins" : "Tout voir"}</button>` : ""}<button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div></section>`;
+}
+async function brancherBanque(f) {
+  const bt = document.getElementById("bq_btn"); bt.disabled = true; bt.textContent = "Connexion…";
+  const r = await SB.rpc("banque_brancher", { e: ESPACE, jeton: f.jeton.value });
+  if (r.error) { bt.disabled = false; bt.textContent = "Brancher"; toast(r.error.message); return; }
+  toast(`Banque branchée : ${r.data} opérations lues`); await chargerBanque(false);
+}
+async function actualiserBanque(bt) { bt.disabled = true; bt.textContent = "Mise à jour…"; await chargerBanque(true); }
+function debrancherBanque() { confirmer("Débrancher la banque ? Les opérations affichées seront effacées de l'appli (les loyers déjà enregistrés restent).", async () => { await SB.rpc("banque_debrancher", { e: ESPACE }); BANQUE = { etat: "ok", ops: [], comptes: [], lien: null }; render(); }); }
 function appliquerLigne(l) {
   if (!l || !l.coll) return false;
   const k = l.coll + "/" + l.doc_id, j = JSON.stringify(l.data);
@@ -1508,6 +1592,7 @@ function pageAccueil(T) {
       <button class="cta" onclick="lancerPoint()">⚡ Faire le point</button>
     </div>
   </section>
+  ${carteBanqueAccueil()}
   <section><div class="sec-head"><h2 class="sec">À faire ${items.length ? `<span class="count">${items.length}</span>` : ""}</h2>${items.length > 5 ? `<a class="more" href="#afaire">Tout voir ${ic("chevR", "s")}</a>` : ""}</div>
     ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</li>`).join("")}</ul>` : `<div class="empty party">🎉 Rien à faire, tout est en ordre.</div>`}
   </section>
@@ -1642,6 +1727,7 @@ function pageCompta() {
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
   <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button><button class="small" onclick="importerReleve()">🏦 Importer le relevé</button><button class="small" onclick="exportCSV(${y})">📊 Export comptable</button><button class="small" onclick="docBilanOpen(${y})">📄 Bilan PDF</button></div>
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>hors charges</small></div><div class="kpi"><span>Charges encaissées</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
+  ${y === TODAY.getFullYear() ? sectionBanque() : ""}
   ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
   <section><h2 style="margin-bottom:10px">Par bien</h2><div class="table-wrap"><table class="rt"><thead><tr><th>Bien</th><th class="num">Loyers</th><th class="num">Charges reçues</th><th class="num">Dépenses</th><th class="num">Résultat</th></tr></thead><tbody>
   ${lignes.map(l => `<tr><td class="rt-head"><b>${esc(l.nom)}</b></td><td class="num" data-l="Loyers">${eur(l.loyers)}</td><td class="num" data-l="Charges reçues">${eur(l.charges)}</td><td class="num" data-l="Dépenses">${eur(l.dep)}</td><td class="num" data-l="Résultat"><b>${eur(l.res)}</b></td></tr>`).join("")}
@@ -1774,6 +1860,7 @@ function editBail(id, bienId) {
     <fieldset><legend>Garanties</legend>
     ${fld("Garant (nom)", "garantNom", b.garantNom)}${fld("Garant (téléphone / e-mail)", "garantContact", b.garantContact)}
     ${fld("Assurance habitation valable jusqu'au", "assuranceFin", b.assuranceFin, "date")}${fld("État des lieux d'entrée fait le", "edlEntree", b.edlEntree, "date")}</fieldset>
+    ${SB ? fld("Nom sur ses virements, si différent (ex : FRAVELLE ; séparer par des virgules)", "motsBanque", b.motsBanque, "text", "full") : ""}
     ${area("Clauses particulières pour ce bail (reprises dans le bail)", "clauses", b.clauses)}
     ${area("Notes (pour vous, jamais dans le bail)", "notes", b.notes)}`,
     d => {
