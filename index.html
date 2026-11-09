@@ -446,7 +446,9 @@ input[type=file]::file-selector-button { font: 650 .85rem var(--font); border: 0
 input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 /* Connexion, espaces, installation */
 body.sans-nav header.top nav, body.sans-nav #bottomnav, body.sans-nav .top-acts { visibility: hidden; }
-.auth { min-height: calc(100vh - var(--head-h) - 80px); display: grid; place-items: center; }
+.auth { min-height: calc(100vh - var(--head-h) - 80px); display: grid; place-items: center; gap: 16px; align-content: center; }
+.auth .install-tuto { text-align: left; }
+.auth .install-tuto h2 { font-size: 18px; margin: 0 0 4px; }
 .auth-card { width: min(420px, 100%); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
 .auth-card form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
 .auth-card p { color: var(--muted); }
@@ -464,6 +466,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 }
 .barre{height:10px;border-radius:99px;background:var(--line,#e5e7eb);overflow:hidden;margin:10px 0 6px}.barre i{display:block;height:100%;background:var(--accent,#0b7a64);border-radius:99px;transition:width .4s}
 .card.dette .row{margin-top:12px}
+.tuto{margin:12px 0 4px;padding-left:0;list-style:none;counter-reset:t}.tuto li{counter-increment:t;position:relative;padding:10px 0 10px 40px;border-top:1px solid var(--line);line-height:1.5}.tuto li:first-child{border-top:0}.tuto li::before{content:counter(t);position:absolute;left:0;top:9px;width:28px;height:28px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:800;display:grid;place-items:center;font-size:14px}.tuto .ic{width:18px;height:18px;vertical-align:-3px}.tuto .note{display:inline-block;margin-top:4px}.tuto button{margin-top:6px}.install-tuto details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.install-tuto summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
@@ -696,7 +699,7 @@ function pageConnexion() {
       <form onsubmit="event.preventDefault();verifierCode(this)"><label class="fl">Code reçu par e-mail<input id="auth_code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="123456" class="code"></label>
       <button class="primary big" id="auth_btn">Se connecter</button></form>
       <button class="ghost" onclick="CONNEXION.etape='email';render()">Changer d'adresse</button>`}
-  </div></div>`;
+  </div>${!estInstallee() && (estIOS() || estAndroid()) && e.etape === "email" ? `<div class="auth-card install-tuto"><h2>📲 D'abord, installe l'appli</h2><p class="note">Fais-le avant de te connecter${estIOS() ? " : sur iPhone, l'appli installée ne garde pas la connexion faite dans Safari" : ""}.</p>${estIOS() ? tutoIphone() : tutoAndroid()}</div>` : ""}</div>`;
 }
 async function envoyerCode(f) {
   const email = f.email.value.trim().toLowerCase(), b = document.getElementById("auth_btn");
@@ -770,7 +773,7 @@ function sectionMembres() {
 }
 function partagerLien() {
   const url = location.origin + location.pathname;
-  if (navigator.share) navigator.share({ title: "Appli de gestion locative", text: "Installe l'appli et connecte-toi avec ton e-mail :", url }).catch(() => {});
+  if (navigator.share) navigator.share({ title: "Appli de gestion locative", text: "Ouvre ce lien (sur iPhone : dans Safari), suis les étapes pour installer l'appli, puis connecte-toi avec ton e-mail :", url }).catch(() => {});
   else copierTexte(url);
 }
 /* Envoi d'un e-mail par le serveur (Brevo), avec suivi du résultat */
@@ -792,12 +795,44 @@ addEventListener("beforeinstallprompt", e => { e.preventDefault(); INSTALL = e; 
 const estInstallee = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const estIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 function bandeauInstall() {
-  if (!SB || estInstallee()) return "";
+  if (!SB || estInstallee() || location.hash === "#reglages") return "";
   let cache = false; try { cache = localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) {}
   if (cache) return "";
   if (INSTALL) return `<div class="banner install"><span>📲 Installe l'appli sur ton téléphone pour l'ouvrir d'un geste.</span><span class="row"><button class="small primary" onclick="installer()">Installer</button><button class="small ghost" onclick="masquerInstall()">Plus tard</button></span></div>`;
-  if (estIOS()) return `<div class="banner install"><span>📲 Pour installer l'appli : touche <b>Partager</b> en bas de Safari, puis <b>Sur l'écran d'accueil</b>.</span><button class="small ghost" onclick="masquerInstall()">OK</button></div>`;
+  if (estIOS() || estAndroid()) return `<div class="banner install"><span>📲 Installe l'appli sur ton écran d'accueil : c'est 30 secondes.</span><span class="row"><button class="small primary" onclick="go('reglages')">Voir comment</button><button class="small ghost" onclick="masquerInstall()">Plus tard</button></span></div>`;
   return "";
+}
+/* Tuto d'installation, mot à mot */
+const icoPartage = `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>`;
+const estAndroid = () => /android/i.test(navigator.userAgent);
+const iosPasSafari = () => estIOS() && /CriOS|FxiOS|EdgiOS|OPiOS|FBAN|FBAV|Instagram|Line\/|GSA\//i.test(navigator.userAgent);
+function tutoIphone() {
+  return `<ol class="tuto">
+    ${iosPasSafari() ? `<li><b>Ouvre l'appli dans Safari</b> (la boussole bleue), pas dans Chrome, Gmail ou WhatsApp. Touche ce bouton, puis colle le lien dans la barre d'adresse de Safari : <button type="button" class="small" onclick="copierTexte(location.origin + location.pathname)">Copier le lien</button></li>` : `<li>Vérifie que tu es dans <b>Safari</b> (la boussole bleue). Si tu as ouvert le lien depuis Gmail, WhatsApp ou Chrome, copie-le et colle-le dans Safari : <button type="button" class="small" onclick="copierTexte(location.origin + location.pathname)">Copier le lien</button></li>`}
+    <li>Touche le bouton <b>Partager</b> ${icoPartage} : un carré avec une flèche vers le haut.<br><span class="note">Il est en bas au milieu de l'écran. Tu ne le vois pas ? Touche les <b>3 petits points •••</b> en bas à droite, puis <b>Partager</b>.</span></li>
+    <li>Fais glisser la liste vers le haut, puis touche <b>Sur l'écran d'accueil</b> (parfois écrit <b>Ajouter à l'écran d'accueil</b>), avec l'icône d'un carré et d'un <b>+</b>.<br><span class="note">Tu ne la vois pas ? Tout en bas, touche <b>Modifier les actions</b> et ajoute-la.</span></li>
+    <li>Laisse le nom <b>Gestion SCI</b>. Si l'option <b>Ouvrir en tant qu'app web</b> apparaît, laisse-la activée (en vert).</li>
+    <li>Touche <b>Ajouter</b> en haut à droite.</li>
+    <li>Ferme Safari. Sur ton écran d'accueil, touche la nouvelle icône verte avec la maison 🏠, puis connecte-toi avec ton e-mail.</li></ol>`;
+}
+function tutoAndroid() {
+  return `<ol class="tuto">
+    ${INSTALL ? `<li>Le plus simple : touche ce bouton, puis <b>Installer</b>. <button type="button" class="small primary" onclick="installer()">Installer l'appli</button></li><li>Sinon, fais-le à la main :</li>` : ""}
+    <li>Ouvre le lien dans <b>Chrome</b>.</li>
+    <li>Touche les <b>3 petits points ⋮</b> en haut à droite.</li>
+    <li>Touche <b>Ajouter à l'écran d'accueil</b> (ou <b>Installer l'application</b>).</li>
+    <li>Touche <b>Installer</b>, puis encore <b>Installer</b> ou <b>Ajouter</b> si on te le redemande.</li>
+    <li>Sur ton écran d'accueil, touche la nouvelle icône verte avec la maison 🏠.</li></ol>
+    <p class="note">Sur un Samsung avec l'appli <b>Internet</b> : touche les <b>3 traits ☰</b> en bas à droite, puis <b>Ajouter page à</b>, puis <b>Écran d'accueil</b>.</p>`;
+}
+function sectionInstall() {
+  if (estInstallee()) return `<section class="card"><h2>📲 Appli installée</h2><p class="note">✅ Tu utilises l'appli installée. Pour l'installer sur le téléphone d'un associé, envoie-lui le lien depuis la rubrique Membres : ce tuto s'affichera chez lui.</p></section>`;
+  const ios = estIOS(), and = estAndroid();
+  return `<section class="card install-tuto"><h2>📲 Installer l'appli sur ton téléphone</h2>
+    <p class="note">Une icône sur ton écran d'accueil, comme une vraie appli. Rien à télécharger sur l'App Store ou le Play Store.</p>
+    ${ios ? tutoIphone() : and ? tutoAndroid() : ""}
+    ${ios ? `<details><summary>Sur Android</summary>${tutoAndroid()}</details>` : and ? `<details><summary>Sur iPhone</summary>${tutoIphone()}</details>` : `<details open><summary>Sur iPhone</summary>${tutoIphone()}</details><details><summary>Sur Android</summary>${tutoAndroid()}</details><p class="note">Sur ordinateur, avec Chrome ou Edge : clique l'icône d'installation à droite de la barre d'adresse.</p>`}
+  </section>`;
 }
 async function installer() { if (!INSTALL) return; INSTALL.prompt(); try { await INSTALL.userChoice; } catch (e) {} INSTALL = null; render(); }
 function masquerInstall() { try { localStorage.setItem("gestion-sci-install-ok", "1"); } catch (e) {} render(); }
@@ -1622,7 +1657,7 @@ function pageCompta() {
 function pageReglages() {
   const s = S.sci;
   return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div></div>
-  ${SB ? sectionMembres() : ""}
+  ${SB ? sectionInstall() + sectionMembres() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
     ${sel("Tu loues", "forme", s.forme || "sci", [["sci", "Avec une SCI"], ["perso", "En nom propre (particulier)"]], "full")}
