@@ -473,6 +473,8 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
   body.printing .docbar, body.printing .emailbox { display: none !important; }
   body.printing .paper { box-shadow: none; width: 100%; padding: 0; }
 }
+.barre{height:10px;border-radius:99px;background:var(--line,#e5e7eb);overflow:hidden;margin:10px 0 6px}.barre i{display:block;height:100%;background:var(--accent,#0b7a64);border-radius:99px;transition:width .4s}
+.card.dette .row{margin-top:12px}
 </style>
 </head>
 <body>
@@ -926,6 +928,60 @@ function echeancesBail(b, upTo = CUR) {
   while (m <= upTo && guard++ < 600) { const e = echeance(b, m); if (e) out.push(e); m = addM(m, 1); }
   return out;
 }
+/* Dette d'un locataire : loyers échus non payés (le mois en cours compte dès sa date de paiement passée) */
+const detteBail = b => r2(echeancesBail(b).filter(e => e.statut === "retard").reduce((s, e) => s + e.reste, 0));
+/* Plan de remboursement : X € par mois en plus du loyer, à partir d'un mois donné */
+function planEtat(b) {
+  const pl = b.plan; if (!pl || !(+pl.mensualite > 0)) return null;
+  const j = Math.min(+b.jourPaiement || 1, 28), passe = m => new Date(+m.slice(0, 4), +m.slice(5) - 1, j) < TODAY;
+  let k = 0; for (let m = pl.debut; m <= CUR && k < 600; m = addM(m, 1)) if (passe(m)) k++;
+  const attendu = r2(Math.max(0, pl.dette - pl.mensualite * k)), dette = detteBail(b);
+  const nb = Math.ceil(pl.dette / pl.mensualite), fin = addM(pl.debut, nb - 1);
+  return { ...pl, k, nb, fin, attendu, dette, ok: dette <= attendu + 1, manque: r2(Math.max(0, dette - attendu)), fait: dette <= 0.009, pct: pl.dette ? Math.min(100, Math.round((1 - dette / pl.dette) * 100)) : 100 };
+}
+/* Il a versé une somme : on la répartit sur les loyers les plus anciens d'abord (règle légale d'imputation) */
+function verserSomme(bailId) {
+  const b = bail(bailId), dette = detteBail(b), e = echeance(b, CUR);
+  modal(`Il a versé une somme — ${esc(b.nom)}`, `<p class="full note">Doit aujourd'hui : <b>${eur(dette)}</b>${e && e.statut !== "retard" && e.reste > 0 ? ` · loyer de ${fm(CUR)} : ${eur(e.reste)}` : ""}. La somme rembourse d'abord les mois les plus anciens.</p>
+    ${fld("Montant reçu (€)", "montant", "", "number", "", "required")}${fld("Reçu le", "date", iso(TODAY), "date", "", "required")}
+    ${sel("Moyen", "mode", "virement", [["virement", "Virement"], ["cheque", "Chèque"], ["especes", "Espèces"], ["caf", "CAF / APL"]], "full")}`,
+    d => {
+      let reste = r2(+d.montant); if (!(reste > 0)) { toast("Le montant doit être supérieur à 0."); return false; }
+      const lot = uid(), payes = [];
+      for (const x of echeancesBail(b, addM(CUR, 12))) {
+        if (reste <= 0) break; if (x.reste <= 0) continue;
+        const part = r2(Math.min(reste, x.reste)); reste = r2(reste - part);
+        S.paiements.push({ id: uid(), bailId, mois: x.m, montant: part, date: d.date, mode: d.mode, lot });
+        if (part >= x.reste - 0.009) payes.push(x.m);
+      }
+      if (reste > 0) toast(`${eur(reste)} de trop : rien à rembourser au-delà de 12 mois d'avance.`);
+      else toast(`${eur(d.montant)} enregistrés` + (payes.length ? ` · ${payes.length} mois soldé${payes.length > 1 ? "s" : ""}` : ""));
+      if (S.sci.autoQuittance !== false && b.email && peutEnvoyer()) setTimeout(async () => { for (const m of payes) await envoyerQuittance(bailId, m, true); }, 300);
+    });
+}
+function editPlan(bailId) {
+  const b = bail(bailId), pl = b.plan || {}, dette = detteBail(b);
+  if (!pl.mensualite && dette <= 0) { toast(`${b.nom} ne doit rien en ce moment.`); return; }
+  modal(`Plan de remboursement — ${esc(b.nom)}`, `<p class="full note">Le locataire paie son loyer normalement, plus une somme fixe chaque mois jusqu'à rembourser sa dette. L'appli vérifie chaque mois qu'il suit le plan.</p>
+    ${fld("Dette à rembourser (€)", "dette", pl.dette || dette, "number", "", "required")}${fld("En plus du loyer, chaque mois (€)", "mensualite", pl.mensualite || 50, "number", "", "required")}
+    ${fld("Premier versement en", "debut", pl.debut || addM(CUR, 1), "month", "", "required")}`,
+    d => { const de = r2(+d.dette), me = r2(+d.mensualite); if (!(de > 0) || !(me > 0)) { toast("Indique la dette et la somme mensuelle."); return false; }
+      b.plan = { dette: de, mensualite: me, debut: d.debut, cree: pl.cree || iso(TODAY) }; toast(`Plan enregistré : ${eur(me)} par mois pendant ${Math.ceil(de / me)} mois`); },
+    pl.mensualite ? { del: () => { delete b.plan; }, delMsg: "Arrêter le suivi de ce plan ?" } : {});
+}
+function docPlan(bailId) {
+  const b = bail(bailId), p = planEtat(b); if (!p) return;
+  let r = p.dette; const lignes = [];
+  for (let i = 0, m = p.debut; i < p.nb; i++, m = addM(m, 1)) { const v = r2(Math.min(p.mensualite, r)); r = r2(r - v); lignes.push(`<tr><td style="text-transform:capitalize">${fm(m)}</td><td class="right">${eur(v)}</td><td class="right">${eur(r)}</td></tr>`); }
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div><h1>Accord de plan d'apurement</h1>
+  <p style="margin-top:18px">Entre ${quiSigne()}, et <b>${esc(b.nom)}</b>${b.colocataires ? " et " + esc(b.colocataires) : ""}, locataire du logement situé ${esc(adresseBien(bien(b.bienId)))}, il est convenu ce qui suit.</p>
+  <p>Le locataire reconnaît devoir la somme de <b>${eur(p.dette)}</b> (${enLettres(p.dette)}) au titre de loyers et charges impayés à la date du ${fd(p.cree)}.</p>
+  <p>Il s'engage à rembourser cette dette par versements mensuels de <b>${eur(p.mensualite)}</b>, <b>en plus du loyer et des charges courants</b>, à partir de ${fm(p.debut)}, selon l'échéancier ci-dessous.</p>
+  <h2>Échéancier</h2><table><thead><tr><th>Mois</th><th class="right">Versement</th><th class="right">Reste dû après</th></tr></thead><tbody>${lignes.join("")}</tbody></table>
+  <p>Si un versement ou un loyer courant n'est pas payé à sa date, et après une mise en demeure restée sans effet pendant 15 jours, la totalité de la somme restant due deviendra immédiatement exigible. Le bailleur conserve alors tous ses droits, notamment ceux prévus par la clause résolutoire du bail.</p>
+  ${faitA()}<div class="sign"><div><b>Le bailleur</b><br>${esc(estPerso() ? S.sci.gerant || "" : S.sci.nom || "")}<br><span class="small">Signature</span></div><div><b>Le locataire</b><br>${esc(b.nom)}<br><span class="small">Signature précédée de « bon pour accord »</span></div></div>`;
+  showDoc(html, { titre: "Plan d'apurement", fichier: `Plan-apurement-${slug(b.nom)}`, to: b.email, email: { objet: "Plan de remboursement de votre dette locative", corps: `Bonjour,\n\nComme convenu, voici le plan de remboursement : ${eur(p.mensualite)} par mois en plus du loyer, à partir de ${fm(p.debut)}, jusqu'à rembourser ${eur(p.dette)}. Merci de nous le retourner signé.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+}
 const toutesEcheances = (upTo = CUR) => S.baux.flatMap(b => echeancesBail(b, upTo));
 const STATUT = { paye: ["ok", "Payé"], partiel: ["warn", "Partiel"], retard: ["bad", "En retard"], avenir: ["info", "À venir"] };
 const pillStatut = e => { const [c, l] = STATUT[e.statut]; return `<span class="pill ${c}">${l}${e.statut === "retard" ? " · " + e.retardJ + " j" : ""}</span>`; };
@@ -981,7 +1037,12 @@ function taches() {
   const add = (o) => T.push(o);
   const ech = toutesEcheances();
   // 1. Impayés
-  ech.filter(e => e.statut === "retard").forEach(e => {
+  S.baux.forEach(b => { const p = planEtat(b); if (!p || p.fait) return;
+    if (p.ok) add({ bailId: b.id, key: "plan-" + b.id + CUR, prio: "info", date: TODAY, done: true, t: `Plan de remboursement suivi : ${esc(b.nom)}`, d: `Reste ${eur(p.dette)} à rembourser · ${eur(p.mensualite)} par mois en plus du loyer · fin prévue en ${fm(p.fin)}`, acts: [["Il a versé…", `verserSomme('${b.id}')`]] });
+    else add({ bailId: b.id, key: "planko-" + b.id + CUR, prio: "urgent", date: TODAY, t: `Plan de remboursement non suivi : ${esc(b.nom)}`, d: `Il devrait encore devoir ${eur(p.attendu)}, il doit ${eur(p.dette)} : il manque ${eur(p.manque)}.`, acts: [["Il a versé…", `verserSomme('${b.id}')`, "primary"], ["Relancer", `relance('${b.id}','${(echeancesBail(b).find(e => e.statut === "retard") || {}).m || CUR}')`]] });
+  });
+  const enPlan = id => { const p = planEtat(bail(id)); return p && !p.fait; };
+  ech.filter(e => e.statut === "retard" && !enPlan(e.b.id)).forEach(e => {
     const niv = e.relances.length;
     add({ bailId: e.b.id, key: "imp-" + e.b.id + e.m, prio: e.retardJ > 10 || niv ? "urgent" : "soon", date: e.dueDate,
       t: `Loyer impayé : ${esc(e.b.nom)} — ${fm(e.m)}`,
@@ -989,7 +1050,7 @@ function taches() {
       acts: [["Relancer", `relance('${e.b.id}','${e.m}')`, "primary"], ["Saisir un paiement", `saisirPaiement('${e.b.id}','${e.m}')`]] });
   });
   const impayesParBail = {};
-  ech.filter(e => e.statut === "retard").forEach(e => impayesParBail[e.b.id] = (impayesParBail[e.b.id] || 0) + 1);
+  ech.filter(e => e.statut === "retard" && !enPlan(e.b.id)).forEach(e => impayesParBail[e.b.id] = (impayesParBail[e.b.id] || 0) + 1);
   Object.entries(impayesParBail).filter(([, n]) => n >= 2).forEach(([id, n]) => {
     const b = bail(id);
     add({ bailId: id, key: "proc-" + id, prio: "urgent", date: TODAY, t: `${esc(b.nom)} : ${n} mois impayés`,
@@ -1383,6 +1444,10 @@ function carteLocataire(b) {
   const retards = echeancesBail(b).filter(x => x.statut === "retard");
   let etat, cls, act = "", montant = eur(l.hc + l.ch), dot = "";
   if (P(b.dateEntree) > TODAY) { etat = `Arrive le ${fd(b.dateEntree)}`; cls = "info"; dot = "info"; }
+  else if (planEtat(b) && !planEtat(b).fait) {
+    const p = planEtat(b); etat = p.ok ? `Plan de remboursement · reste ${eur(p.dette)}` : `Plan non suivi · manque ${eur(p.manque)}`; cls = p.ok ? "warn" : "bad"; dot = cls; montant = eur(p.dette);
+    act = `<button class="primary" onclick="verserSomme('${b.id}')">✓ Il a versé…</button>${p.ok ? "" : `<button onclick="relance('${b.id}','${(retards[0] || { m: CUR }).m}')">✉ Relancer</button>`}`;
+  }
   else if (retards.length) {
     const tot = retards.reduce((s, x) => s + x.reste, 0), maxJ = Math.max(...retards.map(x => x.retardJ)), leger = retards.length === 1 && maxJ <= 5;
     etat = leger ? `En retard de ${maxJ} j` : retards.length > 1 ? `${retards.length} loyers impayés` : `Impayé · ${maxJ} j de retard`; cls = leger ? "warn" : "bad"; dot = cls; montant = eur(tot);
@@ -1481,6 +1546,14 @@ function pageBail(id) {
     <div class="kpi"><span>Dépôt de garantie</span><b>${eur(b.depot)}</b><small>${b.depotRestitue ? "rendu le " + fds(b.depotRestitue) : "encaissé"}</small></div>
     <div class="kpi"><span>Bail</span><b>${du.txt}</b><small>depuis le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""}</small></div>
   </div>
+  ${(() => { const p = planEtat(b);
+    if (!dette && !p) return "";
+    return `<section class="card dette"><h2>💶 Dette et remboursement</h2>
+      ${p ? `<p>${p.fait ? "✅ Dette entièrement remboursée." : `Plan : <b>${eur(p.mensualite)} par mois</b> en plus du loyer, depuis ${fm(p.debut)} · fin prévue en ${fm(p.fin)}.`}</p>
+        <div class="barre" role="img" aria-label="${p.pct} % remboursé"><i style="width:${p.pct}%"></i></div>
+        <p class="note">Remboursé : <b>${eur(Math.max(0, r2(b.plan.dette - p.dette)))}</b> sur ${eur(b.plan.dette)} · reste <b>${eur(p.dette)}</b>${p.fait ? "" : p.ok ? " · ✅ il suit le plan" : ` · ⚠️ en retard sur le plan de ${eur(p.manque)}`}</p>`
+      : `<p>Il doit <b>${eur(dette)}</b>. S'il ne peut pas tout payer d'un coup, mettez en place un plan : il paie son loyer, plus une somme fixe chaque mois.</p>`}
+      <div class="row"><button class="primary" onclick="verserSomme('${b.id}')">Il a versé une somme</button><button onclick="editPlan('${b.id}')">${p ? "Modifier le plan" : "Plan de remboursement"}</button>${p ? `<button class="ghost" onclick="docPlan('${b.id}')">Accord à signer</button>` : ""}</div></section>`; })()}
   ${(() => { const T = taches().filter(t => t.bailId === b.id).map(t => { const n = esc(b.nom); let tt = t.t.split(" : " + n).join("").split(n + " : ").join("").split(" de " + n).join("").split(" à " + n).join("").split(n).join("").replace(/\s+:\s*$/, "").trim(); tt = tt.charAt(0).toUpperCase() + tt.slice(1); return { ...t, t: tt, acts: (t.acts || []).filter(a => !/go\('bail-/.test(a[1])) }; }); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
   <div class="stack">
   <section><h2 style="margin-bottom:10px">Loyers mois par mois</h2>
