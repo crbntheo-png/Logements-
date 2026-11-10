@@ -483,6 +483,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .inv{list-style:none;margin:0 0 10px;padding:0}.inv li{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.inv li:first-child{border-top:0}.inv .tx{flex:1;min-width:140px}.inv .qte{width:56px;text-align:center}.seg.etats.mini{margin-top:0;flex:none}.seg.etats.mini button{padding:6px 8px;font-size:.78rem;flex:none}
 .photo-plein{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;z-index:60}.photo-plein img{max-width:100%;max-height:80vh;border-radius:10px}
 .docs-bien h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px}.card.bien h3 a{color:inherit;text-decoration:none}
+.conf-envoi{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--warn-soft);color:var(--ink);border-radius:14px;padding:12px 14px;margin:8px 0;box-shadow:var(--sh-2)}.emailbox .fl{margin-bottom:8px}.emailbox input{width:100%}
 </style>
 </head>
 <body>
@@ -730,7 +731,7 @@ function rapprocherBanque() {
     }
     lies.add(op.tx_id); n++;
   }
-  if (n) { save(); if (S.sci.autoQuittance !== false && peutEnvoyer()) setTimeout(async () => { for (const [bid, m] of soldes) if (bail(bid).email) await envoyerQuittance(bid, m, true); }, 500); }
+  if (n) save();
   else if (modif) save();
   return n;
 }
@@ -1121,7 +1122,6 @@ function verserSomme(bailId) {
       }
       if (reste > 0) toast(`${eur(reste)} de trop : rien à rembourser au-delà de 12 mois d'avance.`);
       else toast(`${eur(d.montant)} enregistrés` + (payes.length ? ` · ${payes.length} mois soldé${payes.length > 1 ? "s" : ""}` : ""));
-      if (S.sci.autoQuittance !== false && b.email && peutEnvoyer()) setTimeout(async () => { for (const m of payes) await envoyerQuittance(bailId, m, true); }, 300);
     });
 }
 function editPlan(bailId) {
@@ -1145,7 +1145,7 @@ function docPlan(bailId) {
   <h2>Échéancier</h2><table><thead><tr><th>Mois</th><th class="right">Versement</th><th class="right">Reste dû après</th></tr></thead><tbody>${lignes.join("")}</tbody></table>
   <p>Si un versement ou un loyer courant n'est pas payé à sa date, et après une mise en demeure restée sans effet pendant 15 jours, la totalité de la somme restant due deviendra immédiatement exigible. Le bailleur conserve alors tous ses droits, notamment ceux prévus par la clause résolutoire du bail.</p>
   ${faitA()}<div class="sign"><div><b>Le bailleur</b><br>${esc(estPerso() ? S.sci.gerant || "" : S.sci.nom || "")}<br><span class="small">Signature</span></div><div><b>Le locataire</b><br>${esc(b.nom)}<br><span class="small">Signature précédée de « bon pour accord »</span></div></div>`;
-  showDoc(html, { titre: "Plan d'apurement", fichier: `Plan-apurement-${slug(b.nom)}`, to: b.email, email: { objet: "Plan de remboursement de votre dette locative", corps: `Bonjour,\n\nComme convenu, voici le plan de remboursement : ${eur(p.mensualite)} par mois en plus du loyer, à partir de ${fm(p.debut)}, jusqu'à rembourser ${eur(p.dette)}. Merci de nous le retourner signé.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+  showDoc(html, { titre: "Plan d'apurement", fichier: `Plan-apurement-${slug(b.nom)}`, to: b.email, bailId: b.id, email: { objet: "Plan de remboursement de votre dette locative", corps: `Bonjour,\n\nComme convenu, voici le plan de remboursement : ${eur(p.mensualite)} par mois en plus du loyer, à partir de ${fm(p.debut)}, jusqu'à rembourser ${eur(p.dette)}. Merci de nous le retourner signé.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
 }
 const toutesEcheances = (upTo = CUR) => S.baux.flatMap(b => echeancesBail(b, upTo));
 const STATUT = { paye: ["ok", "Payé"], partiel: ["warn", "Partiel"], retard: ["bad", "En retard"], avenir: ["info", "À venir"] };
@@ -1374,7 +1374,7 @@ function docTeom(taxeId, bailId) {
   <p>Vous avez occupé le logement du ${fd(p.du)} au ${fd(p.au)}, soit ${p.jours} jours sur ${daysBetween(new Date(t.annee, 0, 1), new Date(t.annee, 11, 31)) + 1}. Votre part est donc de :</p>
   <table><tbody><tr><td>Taxe d'ordures ménagères ${t.annee}</td><td class="right">${eur(t.teom)}</td></tr><tr><td>Calcul</td><td class="right">${eur(t.teom)} × ${p.jours} / ${daysBetween(new Date(t.annee, 0, 1), new Date(t.annee, 11, 31)) + 1} jours</td></tr><tr><td><b>À régler</b></td><td class="right"><b>${eur(p.montant)}</b></td></tr></tbody></table>
   <p>Merci de nous régler cette somme${S.sci.iban ? " par virement sur le compte " + esc(S.sci.iban) : ""}. L'avis de taxe foncière est à votre disposition sur simple demande.</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`;
-  showDoc(html, { titre: "Ordures ménagères " + t.annee, fichier: `TEOM-${t.annee}-${slug(b.nom)}`, to: b.email,
+  showDoc(html, { titre: "Ordures ménagères " + t.annee, fichier: `TEOM-${t.annee}-${slug(b.nom)}`, to: b.email, bailId: b.id,
     email: { objet: `Taxe d'ordures ménagères ${t.annee}`, corps: `Bonjour,\n\nVous trouverez ci-joint le calcul de votre part de la taxe d'ordures ménagères ${t.annee} : ${eur(p.montant)} (${p.jours} jours dans le logement).\n\nMerci et bonne journée,\n${S.sci.gerant || ""}` },
     onSent: () => { p.demandeLe = iso(TODAY); }, sentLabel: "Déjà demandée autrement" });
 }
@@ -1817,7 +1817,7 @@ function docEdl(id) {
   ${e.remarques ? `<h2>Remarques</h2><p>${nl2br(e.remarques)}</p>` : ""}
   <p class="small">${e.type === "entree" ? "Le locataire peut demander à compléter cet état des lieux dans les 10 jours suivant sa signature, et pendant le premier mois de la période de chauffe pour les éléments de chauffage." : "La comparaison avec l'état des lieux d'entrée sert à établir les éventuelles retenues sur le dépôt de garantie, hors usure normale."}</p>
   ${faitA(P(e.date) || TODAY)}<div class="sign"><div><b>Le bailleur</b><br><span class="small">Signature</span></div><div><b>Le(s) locataire(s)</b><br><span class="small">Signature précédée de « lu et approuvé »</span></div></div>`;
-  showDoc(html, { titre: `État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}`, fichier: `EDL-${e.type}-${slug(b.nom || "")}-${e.date}`, to: b.email, photos,
+  showDoc(html, { titre: `État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}`, fichier: `EDL-${e.type}-${slug(b.nom || "")}-${e.date}`, to: b.email, bailId: b.id, photos,
     email: { objet: `État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}`, corps: `Bonjour,\n\nVoici l'état des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"} du ${fd(e.date)}, avec les photos.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
 }
 /* ================= Fiche d'un bien et ses documents ================= */
@@ -2020,7 +2020,7 @@ function pageReglages() {
     ${fld("Gérant ou propriétaire (signe les documents)", "gerant", s.gerant)}${fld("Ville de signature (\"Fait à…\")", "ville", s.ville)}
     ${fld("Téléphone", "telephone", s.telephone)}${fld("E-mail de la SCI (reçoit une copie de chaque envoi)", "email", s.email, "email")}
     ${fld("IBAN pour les loyers", "iban", s.iban, "text", "full")}
-    ${sel("Quittances", "autoQuittance", s.autoQuittance === false ? "0" : "1", [["1", "Envoyées toutes seules au paiement"], ["0", "Envoyées par moi"]], "full")}
+    <p class="note full">✉️ Quittances : prêtes dès que le loyer est reçu. Rien ne part sans que tu aies vu l'aperçu et confirmé l'envoi.</p>
     ${sel("Régime fiscal", "regime", s.regime, [["IR", "Impôt sur le revenu (IR)"], ["IS", "Impôt sur les sociétés (IS)"]])}
     ${sel("SCI familiale ?", "familiale", s.familiale ? "1" : "0", [["0", "Non, entre amis (bail 6 ans)"], ["1", "Oui, en famille (bail 3 ans)"]])}
     <fieldset><legend>Bail</legend>
@@ -2155,9 +2155,7 @@ async function encaisser(bailId, m) {
   const b = bail(bailId), e = echeance(b, m); if (!e || e.reste <= 0) return;
   confettis();
   S.paiements.push({ id: uid(), bailId, mois: m, montant: e.reste, date: iso(TODAY), mode: "virement" }); save(); render();
-  if (S.sci.autoQuittance !== false && b.email && peutEnvoyer()) {
-    await envoyerQuittance(bailId, m, false);
-  } else toast(`${eur(e.reste)} reçus` + (b.email ? " · quittance prête" : " · ajoute l'e-mail du locataire pour envoyer la quittance"));
+  toast(`${eur(e.reste)} reçus · quittance prête : vérifie-la puis envoie-la`);
 }
 function saisirPaiement(bailId, m) {
   const e = echeance(bail(bailId), m);
@@ -2241,19 +2239,32 @@ const lignesMontants = e => `<table><tbody><tr><td>Loyer hors charges</td><td cl
 let CURDOC = null;
 function showDoc(html, o = {}) {
   CURDOC = { html, o };
-  const ov = document.getElementById("overlay"), mail = o.to && peutEnvoyer();
+  const ov = document.getElementById("overlay"), mail = !!o.email && peutEnvoyer();
   ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="closeOverlay()" aria-label="Fermer">✕</button><b class="doc-t">${esc(o.titre || "")}</b></div>
-  <div class="row"><button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer</span></button>` : ""}</div></div>
+  <div class="row"><button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer…</span></button>` : ""}</div></div>
   <div class="paper" id="paper">${html}</div>
-  ${o.email ? `<div class="emailbox"><b>Message${o.to ? " pour " + esc(o.to) : ""}</b>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : ajoute-le dans sa fiche pour pouvoir lui envoyer directement.</span>`}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div></div>` : ""}</div>`;
+  ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b><textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div></div>` : ""}</div>`;
   ov.hidden = false; ov.scrollTop = 0;
   if (o.onSent && document.getElementById("dsent")) document.getElementById("dsent").onclick = () => { o.onSent(); save(); closeOverlay(); toast("Enregistré comme envoyé"); };
-  if (mail) document.getElementById("dsend").onclick = async ev => {
-    const bt = ev.currentTarget; bt.disabled = true; bt.lastChild.textContent = "Envoi…";
-    const corps = (document.getElementById("mailtxt") || {}).value || (o.email ? o.email.corps : "");
-    const ok = await envoyerMail({ to: o.to, objet: o.email ? o.email.objet : o.titre, corps, html, fichier: o.fichier, photos: o.photos });
-    if (ok) { if (o.onSent) o.onSent(); save(); closeOverlay(); toast("Envoyé à " + o.to); }
-    else { bt.disabled = false; bt.lastChild.textContent = "Envoyer"; }
+  if (mail) document.getElementById("dsend").onclick = ev => {
+    const dest = (document.getElementById("maildest").value || "").trim(), objet = (document.getElementById("mailobjet").value || o.titre).trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(dest)) { toast("Indique une adresse e-mail valide."); document.getElementById("maildest").focus(); return; }
+    const corps = (document.getElementById("mailtxt") || {}).value || o.email.corps;
+    const de = GMAIL ? GMAIL.adresse : "l'adresse de l'appli";
+    const old = document.getElementById("confEnvoi"); if (old) old.remove();
+    const bar = document.createElement("div"); bar.id = "confEnvoi"; bar.className = "conf-envoi";
+    bar.innerHTML = `<span>Envoyer <b>${esc(objet)}</b> à <b>${esc(dest)}</b>, depuis ${esc(de)}, avec le PDF${o.photos && o.photos.length ? " et les photos" : ""} ?</span><span class="row"><button class="small" id="confNon">Annuler</button><button class="small primary" id="confOui">Oui, envoyer</button></span>`;
+    ov.querySelector(".docbar").after(bar); bar.scrollIntoView({ block: "nearest" });
+    document.getElementById("confNon").onclick = () => bar.remove();
+    document.getElementById("confOui").onclick = async () => {
+      bar.remove();
+      const bt = document.getElementById("dsend"); if (bt) { bt.disabled = true; bt.lastChild.textContent = "Envoi…"; }
+      const b = o.bailId && bail(o.bailId);
+      if (b && !b.email) { b.email = dest; save(); }
+      const ok = await envoyerMail({ to: dest, objet, corps, html, fichier: o.fichier, photos: o.photos });
+      if (ok) { if (o.onSent) o.onSent(); save(); closeOverlay(); render(); toast("✓ Envoyé à " + dest); }
+      else if (bt) { bt.disabled = false; bt.lastChild.textContent = "Envoyer…"; }
+    };
   };
 }
 function copierTexte(t) { try { navigator.clipboard.writeText(t).then(() => toast("Copié : " + t), () => toast(t)); } catch (e) { toast(t); } }
@@ -2598,7 +2609,6 @@ function revueReleve() {
       setTimeout(async () => {
         if (nl) confettis();
         toast(`${nl} loyer(s) et ${nd} dépense(s) enregistrés`);
-        if (S.sci.autoQuittance !== false && peutEnvoyer()) for (const [b, m] of aEnvoyer) { const e = echeance(bail(b), m); if (e && e.statut === "paye" && !e.quittance && bail(b).email) await envoyerQuittance(b, m, true); }
       }, 60);
     }, { ok: "Valider" });
 }
@@ -2611,7 +2621,7 @@ function docAttestation(bailId) {
   <table><tbody><tr><td>Loyer mensuel hors charges</td><td class="right">${eur(l.hc)}</td></tr><tr><td>Charges mensuelles</td><td class="right">${eur(l.ch)}</td></tr><tr><td><b>Total mensuel</b></td><td class="right"><b>${eur(l.hc + l.ch)}</b></td></tr></tbody></table>
   <p>${retard.length ? `À ce jour, il reste dû la somme de ${eur(retard.reduce((s, e) => s + e.reste, 0))}.` : "À ce jour, le locataire est à jour du paiement de ses loyers et charges."}</p>
   <p>Attestation établie pour servir et valoir ce que de droit.</p>${faitA()}${signature()}`;
-  showDoc(html, { titre: "Attestation de loyer", fichier: `Attestation-loyer-${slug(b.nom)}`, to: b.email, email: { objet: "Attestation de loyer", corps: `Bonjour,\n\nVoici l'attestation de loyer demandée.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+  showDoc(html, { titre: "Attestation de loyer", fichier: `Attestation-loyer-${slug(b.nom)}`, to: b.email, bailId: b.id, email: { objet: "Attestation de loyer", corps: `Bonjour,\n\nVoici l'attestation de loyer demandée.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
 }
 /* Envoyer un document à un locataire : choisir parmi ce que l'appli sait produire et ce qu'il y a dans le Drive */
 function documentsPour(bailId) {
@@ -2640,31 +2650,38 @@ function docQuittance(bailId, m) {
   <p>Date du paiement : ${e.lastPay ? fd(e.lastPay) : "—"}</p>
   ${faitA(e.lastPay ? P(e.lastPay) : TODAY)}${signature()}
   <p class="small" style="margin-top:30px">Cette quittance annule tous les reçus qui auraient pu être établis précédemment en cas de paiement partiel du montant du présent terme. Elle est à conserver pendant 3 ans par le locataire (loi n° 89-462 du 6 juillet 1989, art. 21).</p>`;
-  return { html, o: { titre: total ? "Quittance" : "Reçu partiel", fichier: `Quittance-${slug(b.nom)}-${m}`, to: b.email,
+  return { html, o: { titre: total ? "Quittance" : "Reçu partiel", fichier: `Quittance-${slug(b.nom)}-${m}`, to: b.email, bailId: b.id,
     email: { objet: `Quittance de loyer – ${fm(m)}`, corps: `Bonjour,\n\nVous trouverez ci-joint votre ${total ? "quittance de loyer" : "reçu"} pour ${fm(m)} (${eur(montant)}).\n\nBonne journée,\n${S.sci.gerant || ""}\n${S.sci.nom || ""}` },
     onSent: total ? () => { S.quittances[b.id + "|" + m] = iso(TODAY); } : null, sentLabel: "Déjà envoyée autrement" } };
 }
 function quittance(bailId, m) { const e = bail(bailId) && echeance(bail(bailId), m); if (e && !e.paye && e.statut !== "paye") return avis(bailId, m); const d = docQuittance(bailId, m); if (!d) return toast("Pas de loyer suivi pour ce mois-là."); showDoc(d.html, d.o); }
 const ENVOIS = new Set();
-async function envoyerQuittance(bailId, m, silencieux) {
-  const b = bail(bailId), d = docQuittance(bailId, m), cle = bailId + "|" + m;
-  if (!d) { if (!silencieux) toast("Pas de loyer suivi pour ce mois-là."); return false; }
-  if (!b.email) { if (!silencieux) quittance(bailId, m); return false; }
+/* Rien ne part sans validation : on ouvre l'aperçu, l'envoi se fait depuis l'aperçu */
+async function envoyerQuittance(bailId, m, silencieux) { if (!silencieux) quittance(bailId, m); return false; }
+/* Envoi après validation explicite (lot confirmé) */
+async function envoyerQuittanceValidee(bailId, m) {
+  const b = bail(bailId), d = docQuittance(bailId, m), cle = bailId + "|" + m, dest = b && b.email;
+  if (!d || !dest) return false;
   if (ENVOIS.has(cle) || S.quittances[cle]) return !!S.quittances[cle];
-  ENVOIS.add(cle); if (!silencieux) toast(`Envoi de la quittance à ${b.email}…`);
-  const ok = await envoyerMail({ to: b.email, objet: d.o.email.objet, corps: d.o.email.corps, html: d.html, fichier: d.o.fichier });
+  ENVOIS.add(cle);
+  const ok = await envoyerMail({ to: dest, objet: d.o.email.objet, corps: d.o.email.corps, html: d.html, fichier: d.o.fichier });
   ENVOIS.delete(cle);
-  if (ok) { S.quittances[cle] = iso(TODAY); save(); render(); if (!silencieux) toast(`✓ Quittance envoyée à ${b.email}`); }
+  if (ok) { S.quittances[cle] = iso(TODAY); save(); render(); }
   return ok;
 }
 let ENVOI_LOT = false;
-async function envoyerToutesQuittances() {
-  if (ENVOI_LOT) return; ENVOI_LOT = true;
-  const liste = toutesEcheances().filter(e => e.statut === "paye" && e.du > 0 && !e.quittance && e.b.email);
-  let n = 0; toast(`Envoi de ${liste.length} quittance(s)…`);
-  for (const e of liste) { if (await envoyerQuittance(e.b.id, e.m, true)) n++; else break; }
-  ENVOI_LOT = false;
-  toast(n === liste.length ? `✓ ${n} quittance${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""}` : `${n} envoyée(s), ${liste.length - n} non envoyée(s)`);
+function envoyerToutesQuittances() {
+  return new Promise(fin => {
+    const liste = toutesEcheances().filter(e => e.statut === "paye" && e.du > 0 && !e.quittance);
+    if (!liste.length) { toast("Aucune quittance à envoyer."); return fin(0); }
+    modal("Quittances à envoyer", `<p class="full note">Vérifie chaque quittance (bouton Voir), puis coche celles à envoyer. Elles partiront de ${esc(GMAIL ? GMAIL.adresse : "l'adresse de l'appli")}.</p>
+      <ul class="todo full">${liste.map((e, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="q${i}" ${e.b.email ? "checked" : "disabled"}><span class="tx">${esc(e.b.nom)} — ${fm(e.m)} · ${eur(e.du)}<small>${e.b.email ? "à " + esc(e.b.email) : "⚠️ pas d'e-mail : ouvre-la pour en saisir un"}</small></span></label><button type="button" class="small" onclick="closeOverlay();quittance('${e.b.id}','${e.m}')">Voir</button></li>`).join("")}</ul>`,
+      d => {
+        const choix = liste.filter((e, i) => d["q" + i] && e.b.email); if (!choix.length) { toast("Rien de coché."); return false; }
+        setTimeout(async () => { let n = 0; toast(`Envoi de ${choix.length} quittance(s)…`); for (const e of choix) { if (await envoyerQuittanceValidee(e.b.id, e.m)) n++; else break; }
+          toast(n === choix.length ? `✓ ${n} quittance${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""}` : `${n} envoyée(s), ${choix.length - n} non envoyée(s)`); fin(n); }, 50);
+      }, { ok: "Envoyer les quittances cochées" });
+  });
 }
 function avis(bailId, m) {
   const b = bail(bailId), e = echeance(b, m), bi = bien(b.bienId);
@@ -2673,7 +2690,7 @@ function avis(bailId, m) {
   ${lignesMontants(e)}${e.paye ? `<p>Déjà reçu : ${eur(e.paye)} · <b>reste à payer : ${eur(e.reste)}</b></p>` : ""}
   ${S.sci.iban ? `<p>Paiement par virement sur le compte : <b>${esc(S.sci.iban)}</b> (au nom de ${esc(S.sci.nom)})</p>` : ""}
   ${faitA()}<p class="small" style="margin-top:30px">Ce document n'est pas une quittance.</p>`,
-    { titre: "Avis d'échéance", fichier: `Avis-echeance-${slug(b.nom)}-${m}`, to: b.email, email: { objet: `Loyer de ${fm(m)}`, corps: `Bonjour,\n\nVoici l'avis d'échéance pour le loyer de ${fm(m)} : ${eur(e.reste)} à régler avant le ${fds(e.dueDate)}.\n\nMerci et bonne journée,\n${S.sci.gerant || ""}` } });
+    { titre: "Avis d'échéance", fichier: `Avis-echeance-${slug(b.nom)}-${m}`, to: b.email, bailId: b.id, email: { objet: `Loyer de ${fm(m)}`, corps: `Bonjour,\n\nVoici l'avis d'échéance pour le loyer de ${fm(m)} : ${eur(e.reste)} à régler avant le ${fds(e.dueDate)}.\n\nMerci et bonne journée,\n${S.sci.gerant || ""}` } });
 }
 function relance(bailId, m) {
   const b = bail(bailId), e = echeance(b, m), bi = bien(b.bienId), niv = Math.min(e.relances.length, 2), N = NIVEAUX[niv];
@@ -2685,7 +2702,7 @@ function relance(bailId, m) {
     `<p><b>Lettre recommandée avec accusé de réception</b></p><p>Madame, Monsieur,</p><p>Malgré nos relances, vous restez redevable de la somme de <b>${eur(totalDette)}</b> au titre des loyers et charges du logement situé ${esc(adresseBien(bi))} :</p>${tableau}<p>Par la présente, nous vous <b>mettons en demeure</b> de régler cette somme sous <b>8 jours</b> à compter de la réception de ce courrier.</p><p>À défaut de paiement dans ce délai, nous ferons délivrer un commandement de payer par commissaire de justice, visant la clause résolutoire prévue au bail, et engagerons la procédure judiciaire de recouvrement et de résiliation du bail. Votre garant sera également sollicité.</p><p>Vous pouvez solliciter des aides auprès de la CAF, du Fonds de solidarité pour le logement (FSL) de votre département ou de l'ADIL.</p>`
   ][niv];
   showDoc(`<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : ${N.titre}</b></p>${corps}<p>Veuillez agréer, Madame, Monsieur, l'expression de nos salutations distinguées.</p>${signature()}`,
-    { titre: N.court + " (" + (niv + 1) + "/3)", fichier: `${slug(N.court)}-${slug(b.nom)}-${m}`, to: b.email,
+    { titre: N.court + " (" + (niv + 1) + "/3)", fichier: `${slug(N.court)}-${slug(b.nom)}-${m}`, to: b.email, bailId: b.id,
       email: { objet: N.titre, corps: niv === 0 ? `Bonjour,\n\nSauf erreur de notre part, nous n'avons pas reçu le loyer de ${fm(m)} (${eur(e.reste)}). Pouvez-vous regarder ? Si c'est déjà fait, ne tenez pas compte de ce message.\n\nMerci,\n${S.sci.gerant || ""}` : `Bonjour,\n\nVous trouverez ci-joint notre courrier concernant les loyers impayés (${eur(totalDette)}).\n\n${S.sci.gerant || ""}\n${S.sci.nom || ""}` },
       onSent: () => S.relances.push({ id: uid(), bailId, mois: m, niveau: niv, date: iso(TODAY) }), sentLabel: "Marquer la relance comme envoyée" });
 }
@@ -2695,7 +2712,7 @@ function docRevisionOpen(id, i) {
   <p>Madame, Monsieur,</p><p>Conformément à la clause de révision prévue à votre bail pour le logement situé ${esc(adresseBien(bi))}, et à l'article 17-1 de la loi du 6 juillet 1989, votre loyer est révisé selon la variation de l'indice de référence des loyers (IRL) publié par l'INSEE.</p>
   <table><tbody><tr><td>Loyer hors charges actuel</td><td class="right">${eur(r.ancien)}</td></tr><tr><td>Indice de référence (${esc(r.trimestreAncien || "")})</td><td class="right">${esc(r.irlAncien)}</td></tr><tr><td>Nouvel indice (${esc(r.trimestre)})</td><td class="right">${esc(r.irlNouveau)}</td></tr><tr><td>Calcul</td><td class="right">${eur(r.ancien)} × ${esc(r.irlNouveau)} ÷ ${esc(r.irlAncien)}</td></tr><tr><td><b>Nouveau loyer hors charges</b></td><td class="right"><b>${eur(r.loyerHC)}</b></td></tr><tr><td>Charges (inchangées)</td><td class="right">${eur(r.charges)}</td></tr><tr><td><b>Nouveau total mensuel</b></td><td class="right"><b>${eur(r.loyerHC + r.charges)}</b></td></tr></tbody></table>
   <p>Ce nouveau loyer s'applique à compter de l'échéance du <b>${fd(r.depuis + "-01")}</b> (loyer de ${fm(r.depuis)}).</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`,
-    { titre: "Révision du loyer", fichier: `Revision-loyer-${slug(b.nom)}-${r.depuis}`, to: b.email, email: { objet: "Révision annuelle de votre loyer", corps: `Bonjour,\n\nComme prévu dans votre bail, votre loyer est révisé selon l'indice IRL. À partir du loyer de ${fm(r.depuis)}, il passe à ${eur(r.loyerHC)} hors charges, soit ${eur(r.loyerHC + r.charges)} charges comprises. Le détail est dans le courrier joint.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+    { titre: "Révision du loyer", fichier: `Revision-loyer-${slug(b.nom)}-${r.depuis}`, to: b.email, bailId: b.id, email: { objet: "Révision annuelle de votre loyer", corps: `Bonjour,\n\nComme prévu dans votre bail, votre loyer est révisé selon l'indice IRL. À partir du loyer de ${fm(r.depuis)}, il passe à ${eur(r.loyerHC)} hors charges, soit ${eur(r.loyerHC + r.charges)} charges comprises. Le détail est dans le courrier joint.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
 }
 const MOBILIER = ["Literie avec couette ou couverture", "Occultation des fenêtres des chambres (volets, rideaux)", "Plaques de cuisson", "Four ou four à micro-ondes", "Réfrigérateur avec compartiment congélation (≤ -6 °C)", "Vaisselle (pour prendre les repas)", "Ustensiles de cuisine", "Table et sièges", "Étagères de rangement", "Luminaires", "Matériel d'entretien ménager"];
 function docBailOpen(id) {
@@ -2738,7 +2755,7 @@ function docBailOpen(id) {
   ${meuble || mob ? `<h2>Annexe : inventaire et état du mobilier</h2><p class="small">Mobilier minimum d'un logement meublé (décret n° 2015-981 du 31 juillet 2015). À compléter et signer à l'entrée.</p><table><thead><tr><th>Élément</th><th class="right">Nombre</th><th class="right">État à l'entrée</th></tr></thead><tbody>${MOBILIER.map(x => `<tr><td>${x}</td><td class="right"> </td><td class="right"> </td></tr>`).join("")}</tbody></table>` : ""}
   <p style="margin-top:20px">Fait à ${esc(s.ville || "……")}, le ${fd(P(b.dateEntree) > TODAY ? iso(TODAY) : b.dateEntree)}, en autant d'exemplaires originaux que de parties.</p>
   <div class="sign"><div><b>Le bailleur</b><br>${estPerso() ? esc(s.gerant || "……") : `${esc(s.nom || "")}, représentée par ${esc(s.gerant || "……")}`}<br><span class="small">Signature précédée de « lu et approuvé »</span></div><div><b>Le(s) locataire(s)</b><br>${esc(b.nom)}${b.colocataires ? ", " + esc(b.colocataires) : ""}<br><span class="small">Signature précédée de « lu et approuvé »</span></div></div>`;
-  showDoc(html, { titre: "Bail – à relire avant signature", fichier: `Bail-${slug(b.nom)}`, to: b.email, email: { objet: "Votre bail de location", corps: `Bonjour,\n\nVous trouverez ci-joint le projet de bail pour le logement ${adresseBien(bi)}. Merci de le relire, nous le signerons ensemble le jour de l'état des lieux.\n\nBonne journée,\n${s.gerant || ""}` } });
+  showDoc(html, { titre: "Bail – à relire avant signature", fichier: `Bail-${slug(b.nom)}`, to: b.email, bailId: b.id, email: { objet: "Votre bail de location", corps: `Bonjour,\n\nVous trouverez ci-joint le projet de bail pour le logement ${adresseBien(bi)}. Merci de le relire, nous le signerons ensemble le jour de l'état des lieux.\n\nBonne journée,\n${s.gerant || ""}` } });
 }
 function docBilanOpen(y) {
   const rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)));
