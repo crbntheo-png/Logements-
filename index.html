@@ -485,6 +485,8 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .docs-bien h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px}.card.bien h3 a{color:inherit;text-decoration:none}
 .conf-envoi{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--warn-soft);color:var(--ink);border-radius:14px;padding:12px 14px;margin:8px 0;box-shadow:var(--sh-2)}.emailbox .fl{margin-bottom:8px}.emailbox input{width:100%}
 .sortie-l li{align-items:flex-start}.sortie-l .chk{padding-top:2px}.sl-h{display:flex;justify-content:space-between;gap:10px}.sl-sel{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.sl-sel select{flex:1;min-width:140px;font-size:.85rem;padding:6px 8px;height:auto}
+.cats-doc{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}.cat-doc{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--surface-2);text-decoration:none;color:var(--ink)}.cat-doc b{flex:1;font-size:.86rem;font-weight:700;line-height:1.2}.cat-doc small{font-weight:800;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:1px 8px}
+.chips-cat{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px;scrollbar-width:none}.chips-cat .chip{white-space:nowrap;text-decoration:none}.chips-cat .chip.on{background:var(--accent);color:var(--accent-ink)}
 </style>
 </head>
 <body>
@@ -1585,7 +1587,7 @@ function historique(b) {
 /* ================= Navigation ================= */
 const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["docs", "Docs"], ["compta", "Compta"], ["reglages", "Réglages"]];
 const ICONES = { locataires: "home", afaire: "tasks", biens: "building", docs: "folder", compta: "chart", reglages: "settings" };
-const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
+const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); });
@@ -1596,7 +1598,7 @@ function render() {
   if (MODE === "connexion") { app.innerHTML = pageConnexion(); return; }
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
-  const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
+  const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
   const navHtml = PAGES.filter(p => p[0] !== "reglages").map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}>${ic(ICONES[k])}<span>${l}</span>${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
   const nav = document.getElementById("nav"), bn = document.getElementById("bottomnav");
@@ -1613,6 +1615,7 @@ function render() {
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
   else if (h.startsWith("bien-")) html = pageBien(h.slice(5));
+  else if (h.startsWith("docs-")) html = pageDocsBien(decodeURIComponent(h.slice(5)));
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
@@ -1859,11 +1862,11 @@ function docEdl(id) {
 /* ================= Fiche d'un bien et ses documents ================= */
 const CATS_DOC = ["Bail", "État des lieux", "Diagnostics (DPE…)", "Assurance", "Taxe foncière", "Factures et travaux", "Acte d'achat / prêt", "Copropriété", "Locataire (pièces, garant…)", "Autre"];
 const iconeDoc = f => f.url ? "🔗" : /pdf/.test(f.type || "") ? "📄" : /image/.test(f.type || "") ? "🖼️" : "📎";
-function ajouterDocument(bienId, bailId) {
+function ajouterDocument(bienId, bailId, cat) {
   if (!SB) { toast("L'ajout de fichiers est disponible dans l'appli installée."); return; }
   const baux = S.baux.filter(b => b.bienId === bienId);
   modal("Ajouter un document", `<label class="fl full">Fichier (PDF, photo, scan…)<input type="file" name="fichier" required accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
-    ${sel("Catégorie", "cat", "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}
+    ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}
     ${fld("Nom affiché (facultatif)", "nom", "", "text", "full")}`,
     d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast("Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); });
 }
@@ -1876,10 +1879,10 @@ async function envoyerDocument(bienId, d, f) {
   S.fichiers.push({ id: uid(), bienId, bailId: d.bailId || "", cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) });
   save(); render(); toast("✓ Document ajouté");
 }
-function ajouterLienDoc(bienId, bailId) {
+function ajouterLienDoc(bienId, bailId, cat) {
   const baux = S.baux.filter(b => b.bienId === bienId);
   modal("Ajouter un lien (Google Drive, Dropbox…)", `${fld("Lien", "url", "", "url", "full", "required")}${fld("Nom", "nom", "", "text", "full", "required")}
-    ${sel("Catégorie", "cat", "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}`,
+    ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}`,
     d => { if (!/^https?:\/\//i.test(d.url)) { toast("Le lien doit commencer par https://"); return false; } S.fichiers.push({ id: uid(), bienId, bailId: d.bailId || "", cat: d.cat, nom: d.nom, url: d.url, date: iso(TODAY) }); });
 }
 async function ouvrirDocument(id) {
@@ -1894,15 +1897,32 @@ function supprimerDocument(id) {
   const f = S.fichiers.find(x => x.id === id);
   confirmer(`Supprimer "${f.nom}" ?`, () => { if (f.chemin && SB) SB.storage.from("documents").remove([f.chemin]).catch(() => {}); S.fichiers = S.fichiers.filter(x => x.id !== id); save(); render(); });
 }
-function listeDocuments(bienId, bailId) {
+const ICONES_CAT = { "Bail": "📝", "État des lieux": "📋", "Diagnostics (DPE…)": "🔎", "Assurance": "🛡️", "Taxe foncière": "🏛️", "Factures et travaux": "🧰", "Acte d'achat / prêt": "🏦", "Copropriété": "🏢", "Locataire (pièces, garant…)": "🪪", "Autre": "📎" };
+function docsGroupes(bienId, bailId) {
   const fs = S.fichiers.filter(f => f.bienId === bienId && (!bailId || f.bailId === bailId));
   const edls = (bailId ? edlsDuBail(bailId) : edlsDuBien(bienId)).map(e => ({ edl: e, cat: "État des lieux" }));
-  const groupes = CATS_DOC.map(c => [c, [...fs.filter(f => (f.cat || "Autre") === c), ...edls.filter(x => x.cat === c)]]).filter(g => g[1].length);
+  return CATS_DOC.map((c, i) => ({ c, i, l: [...fs.filter(f => (f.cat || "Autre") === c), ...edls.filter(x => x.cat === c)] })).filter(g => g.l.length);
+}
+const lienDocs = (bienId, i, bailId) => `#docs-${bienId}~${i}~${bailId || ""}`;
+/* Résumé compact : une tuile par type de document */
+function listeDocuments(bienId, bailId) {
+  const G = docsGroupes(bienId, bailId), n = G.reduce((t, g) => t + g.l.length, 0);
+  return `<section class="card"><div class="sec-head"><h2>📁 Documents${n ? ` <span class="count">${n}</span>` : ""}</h2>${n ? `<a class="more" href="${lienDocs(bienId, -1, bailId)}">Tout voir</a>` : ""}</div>
+    ${n ? `<div class="cats-doc">${G.map(g => `<a class="cat-doc" href="${lienDocs(bienId, g.i, bailId)}"><span aria-hidden="true">${ICONES_CAT[g.c] || "📎"}</span><b>${esc(g.c.replace(/ \(.*\)$/, ""))}</b><small>${g.l.length}</small></a>`).join("")}</div>`
+      : `<p class="note">Aucun document pour l'instant : bail signé, DPE, assurance, factures… Ajoute-les ici, tes associés les verront aussi.</p>`}
+    <div class="row" style="margin-top:12px"><button class="small primary" onclick="ajouterDocument('${bienId}'${bailId ? `,'${bailId}'` : ""})">+ Ajouter un fichier</button><button class="small" onclick="ajouterLienDoc('${bienId}'${bailId ? `,'${bailId}'` : ""})">+ Ajouter un lien</button></div></section>`;
+}
+/* Page dédiée : les documents d'un type (ou tous) */
+function pageDocsBien(arg) {
+  const [bienId, iStr, bailId] = arg.split("~"), i = +iStr, bi = bien(bienId); if (!bi) return `<div class="empty">Bien introuvable. <a href="#biens">Retour</a></div>`;
+  const G = docsGroupes(bienId, bailId || null), cat = CATS_DOC[i], groupes = i >= 0 ? G.filter(g => g.i === i) : G, b = bailId && bail(bailId);
   const ligne = f => f.edl ? `<li><span class="ico" aria-hidden="true">📋</span><span class="tx"><a href="#edl-${f.edl.id}">État des lieux ${f.edl.type === "entree" ? "d'entrée" : "de sortie"} — ${esc((bail(f.edl.bailId) || {}).nom || "")}</a><small>${fds(f.edl.date)} · ${nbPhotos(f.edl)} photo(s) · fait dans l'appli</small></span></li>`
-    : `<li><span class="ico" aria-hidden="true">${iconeDoc(f)}</span><span class="tx"><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">${esc(f.nom)}</a><small>${f.bailId && bail(f.bailId) ? esc(bail(f.bailId).nom) + " · " : ""}${f.url ? "lien" : tailleTxt(f.taille || 0)} · ajouté le ${fds(f.date)}</small></span><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></li>`;
-  return `<section class="card docs-bien"><h2>📁 Documents</h2>
-    ${groupes.length ? groupes.map(([c, l]) => `<h3>${esc(c)}</h3><ul class="todo">${l.map(ligne).join("")}</ul>`).join("") : `<p class="note">Aucun document pour l'instant. Ajoute le bail signé, le DPE, l'assurance, les factures… : tout sera ici, sur ton téléphone et celui de tes associés.</p>`}
-    <div class="row"><button class="primary" onclick="ajouterDocument('${bienId}'${bailId ? `,'${bailId}'` : ""})">+ Ajouter un fichier</button><button onclick="ajouterLienDoc('${bienId}'${bailId ? `,'${bailId}'` : ""})">+ Ajouter un lien</button></div></section>`;
+    : `<li><span class="ico" aria-hidden="true">${iconeDoc(f)}</span><span class="tx"><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">${esc(f.nom)}</a><small>${f.bailId && bail(f.bailId) && !bailId ? esc(bail(f.bailId).nom) + " · " : ""}${f.url ? "lien" : tailleTxt(f.taille || 0)} · ajouté le ${fds(f.date)}</small></span><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></li>`;
+  return `<div><a class="back" href="${b ? "#bail-" + b.id : "#bien-" + bi.id}">← ${esc(b ? b.nom : bi.nom)}</a>
+    <div class="head"><div><h1>${i >= 0 ? `${ICONES_CAT[cat] || ""} ${esc(cat)}` : "Tous les documents"}</h1><p>${esc(bi.nom)}${b ? " · " + esc(b.nom) : ""}</p></div></div></div>
+    ${G.length > 1 ? `<div class="chips-cat">${[`<a class="chip ${i < 0 ? "on" : ""}" href="${lienDocs(bienId, -1, bailId)}">Tous</a>`, ...G.map(g => `<a class="chip ${g.i === i ? "on" : ""}" href="${lienDocs(bienId, g.i, bailId)}">${esc(g.c.replace(/ \(.*\)$/, ""))} · ${g.l.length}</a>`)].join("")}</div>` : ""}
+    <section class="card docs-bien">${groupes.length ? groupes.map(g => `${i < 0 ? `<h3>${esc(g.c)}</h3>` : ""}<ul class="todo">${g.l.map(ligne).join("")}</ul>`).join("") : `<p class="note">Rien ici pour l'instant.</p>`}
+    <div class="row" style="margin-top:12px"><button class="primary" onclick="ajouterDocument('${bienId}','${bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un fichier</button><button onclick="ajouterLienDoc('${bienId}','${bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un lien</button></div></section>`;
 }
 function pageBien(id) {
   const bi = bien(id); if (!bi) return `<div class="empty">Bien introuvable. <a href="#biens">Retour</a></div>`;
@@ -1917,7 +1937,6 @@ function pageBien(id) {
       <div class="kpi"><span>Taxe foncière</span><b>${tf ? eur(tf.total) : "—"}</b><small>${tf ? tf.annee : `<button class="small ghost" onclick="taxeFonciere('${bi.id}')">Renseigner</button>`}</small></div>
     </div>
     <div class="stack">
-    ${listeDocuments(bi.id)}
     <section class="card"><h2>🏠 Le logement</h2><div class="bien"><dl>
       <dt>Type</dt><dd>${esc(bi.type || "—")} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</dd>
       <dt>Surface</dt><dd>${bi.surface ? esc(bi.surface) + " m²" : "—"}${bi.pieces ? " · " + esc(bi.pieces) + " pièce(s)" : ""}</dd>
@@ -1927,6 +1946,7 @@ function pageBien(id) {
       ${bi.prixAchat ? `<dt>Prix d'achat</dt><dd>${eur(bi.prixAchat)}</dd>` : ""}
     </dl>${bi.equipements ? `<p class="note">${nl2br(bi.equipements)}</p>` : ""}${bi.notes ? `<p class="note">📝 ${nl2br(bi.notes)}</p>` : ""}</div></section>
     <section class="card"><h2>👥 Locataires</h2><ul class="todo">${[actuel, ...anciens].filter(Boolean).map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${b === actuel ? "En place" : "Parti"} · entré le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""} · ${esc(TYPES_BAIL[b.typeBail] || "")}</small></span>${b === actuel ? `<button class="small" onclick="docBailOpen('${b.id}')">Bail</button>` : ""}</li>`).join("") || `<li><span class="tx">Aucun locataire pour l'instant.</span></li>`}</ul></section>
+    ${listeDocuments(bi.id)}
     </div>`;
 }
 function pageBiens() {
