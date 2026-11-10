@@ -493,6 +493,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .vig.ajout{border:2px dashed var(--line);color:var(--accent);font-size:12px;font-weight:700;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center}
 .inv{list-style:none;margin:0 0 10px;padding:0}.inv li{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.inv li:first-child{border-top:0}.inv .tx{flex:1;min-width:140px}.inv .qte{width:56px;text-align:center}.seg.etats.mini{margin-top:0;flex:none}.seg.etats.mini button{padding:6px 8px;font-size:.78rem;flex:none}
 .photo-plein{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;z-index:60}.photo-plein img{max-width:100%;max-height:80vh;border-radius:10px}
+.docs-bien h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px}.card.bien h3 a{color:inherit;text-decoration:none}
 </style>
 </head>
 <body>
@@ -581,7 +582,7 @@ const KEY = "gestion-sci-v1";
 const blank = () => ({
   version: 1, demo: false,
   sci: { nom: "", siege: "", siren: "", gerant: "", ville: "", regime: "IR", familiale: false, iban: "", telephone: "", email: "", associes: [] },
-  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: [], edl: [], banqueVus: {}
+  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: [], edl: [], fichiers: [], banqueVus: {}
 });
 const uid = () => Math.random().toString(36).slice(2, 10);
 function loadLocal() {
@@ -592,7 +593,7 @@ let S = blank();
 
 /* Stockage : en ligne et partagé entre associés quand c'est possible (db),
    sinon dans ce navigateur. Chaque bien, bail, paiement… est un document. */
-const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl"];
+const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl", "fichiers"];
 const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport", "banqueVus"];
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
@@ -1559,7 +1560,7 @@ function historique(b) {
 /* ================= Navigation ================= */
 const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["docs", "Docs"], ["compta", "Compta"], ["reglages", "Réglages"]];
 const ICONES = { locataires: "home", afaire: "tasks", biens: "building", docs: "folder", compta: "chart", reglages: "settings" };
-const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
+const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); });
@@ -1570,7 +1571,7 @@ function render() {
   if (MODE === "connexion") { app.innerHTML = pageConnexion(); return; }
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
-  const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
+  const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
   const navHtml = PAGES.filter(p => p[0] !== "reglages").map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}>${ic(ICONES[k])}<span>${l}</span>${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
   const nav = document.getElementById("nav"), bn = document.getElementById("bottomnav");
@@ -1586,6 +1587,7 @@ function render() {
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
+  else if (h.startsWith("bien-")) html = pageBien(h.slice(5));
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
@@ -1829,17 +1831,90 @@ function docEdl(id) {
   showDoc(html, { titre: `État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}`, fichier: `EDL-${e.type}-${slug(b.nom || "")}-${e.date}`, to: b.email, photos,
     email: { objet: `État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}`, corps: `Bonjour,\n\nVoici l'état des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"} du ${fd(e.date)}, avec les photos.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
 }
+/* ================= Fiche d'un bien et ses documents ================= */
+const CATS_DOC = ["Bail", "État des lieux", "Diagnostics (DPE…)", "Assurance", "Taxe foncière", "Factures et travaux", "Acte d'achat / prêt", "Copropriété", "Locataire (pièces, garant…)", "Autre"];
+const iconeDoc = f => f.url ? "🔗" : /pdf/.test(f.type || "") ? "📄" : /image/.test(f.type || "") ? "🖼️" : "📎";
+function ajouterDocument(bienId, bailId) {
+  if (!SB) { toast("L'ajout de fichiers est disponible dans l'appli installée."); return; }
+  const baux = S.baux.filter(b => b.bienId === bienId);
+  modal("Ajouter un document", `<label class="fl full">Fichier (PDF, photo, scan…)<input type="file" name="fichier" required accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
+    ${sel("Catégorie", "cat", "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}
+    ${fld("Nom affiché (facultatif)", "nom", "", "text", "full")}`,
+    d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast("Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); });
+}
+async function envoyerDocument(bienId, d, f) {
+  if (f.size > 20 * 1024 * 1024) { toast("Fichier trop lourd (20 Mo maximum)."); return; }
+  toast("Envoi du document…");
+  const ext = (f.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, ""), chemin = `${ESPACE}/${bienId}/${uid()}.${ext}`;
+  const r = await SB.storage.from("documents").upload(chemin, f, { contentType: f.type || "application/octet-stream" });
+  if (r.error) { toast("Envoi impossible : " + r.error.message); return; }
+  S.fichiers.push({ id: uid(), bienId, bailId: d.bailId || "", cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) });
+  save(); render(); toast("✓ Document ajouté");
+}
+function ajouterLienDoc(bienId, bailId) {
+  const baux = S.baux.filter(b => b.bienId === bienId);
+  modal("Ajouter un lien (Google Drive, Dropbox…)", `${fld("Lien", "url", "", "url", "full", "required")}${fld("Nom", "nom", "", "text", "full", "required")}
+    ${sel("Catégorie", "cat", "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}`,
+    d => { if (!/^https?:\/\//i.test(d.url)) { toast("Le lien doit commencer par https://"); return false; } S.fichiers.push({ id: uid(), bienId, bailId: d.bailId || "", cat: d.cat, nom: d.nom, url: d.url, date: iso(TODAY) }); });
+}
+async function ouvrirDocument(id) {
+  const f = S.fichiers.find(x => x.id === id); if (!f) return;
+  if (f.url) { window.open(f.url, "_blank", "noopener"); return; }
+  const w = window.open("", "_blank");
+  const r = await SB.storage.from("documents").createSignedUrl(f.chemin, 600);
+  if (r.error) { if (w) w.close(); toast("Ouverture impossible : " + r.error.message); return; }
+  if (w) w.location = r.data.signedUrl; else location.href = r.data.signedUrl;
+}
+function supprimerDocument(id) {
+  const f = S.fichiers.find(x => x.id === id);
+  confirmer(`Supprimer "${f.nom}" ?`, () => { if (f.chemin && SB) SB.storage.from("documents").remove([f.chemin]).catch(() => {}); S.fichiers = S.fichiers.filter(x => x.id !== id); save(); render(); });
+}
+function listeDocuments(bienId, bailId) {
+  const fs = S.fichiers.filter(f => f.bienId === bienId && (!bailId || f.bailId === bailId));
+  const edls = (bailId ? edlsDuBail(bailId) : edlsDuBien(bienId)).map(e => ({ edl: e, cat: "État des lieux" }));
+  const groupes = CATS_DOC.map(c => [c, [...fs.filter(f => (f.cat || "Autre") === c), ...edls.filter(x => x.cat === c)]]).filter(g => g[1].length);
+  const ligne = f => f.edl ? `<li><span class="ico" aria-hidden="true">📋</span><span class="tx"><a href="#edl-${f.edl.id}">État des lieux ${f.edl.type === "entree" ? "d'entrée" : "de sortie"} — ${esc((bail(f.edl.bailId) || {}).nom || "")}</a><small>${fds(f.edl.date)} · ${nbPhotos(f.edl)} photo(s) · fait dans l'appli</small></span></li>`
+    : `<li><span class="ico" aria-hidden="true">${iconeDoc(f)}</span><span class="tx"><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">${esc(f.nom)}</a><small>${f.bailId && bail(f.bailId) ? esc(bail(f.bailId).nom) + " · " : ""}${f.url ? "lien" : tailleTxt(f.taille || 0)} · ajouté le ${fds(f.date)}</small></span><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></li>`;
+  return `<section class="card docs-bien"><h2>📁 Documents</h2>
+    ${groupes.length ? groupes.map(([c, l]) => `<h3>${esc(c)}</h3><ul class="todo">${l.map(ligne).join("")}</ul>`).join("") : `<p class="note">Aucun document pour l'instant. Ajoute le bail signé, le DPE, l'assurance, les factures… : tout sera ici, sur ton téléphone et celui de tes associés.</p>`}
+    <div class="row"><button class="primary" onclick="ajouterDocument('${bienId}'${bailId ? `,'${bailId}'` : ""})">+ Ajouter un fichier</button><button onclick="ajouterLienDoc('${bienId}'${bailId ? `,'${bailId}'` : ""})">+ Ajouter un lien</button></div></section>`;
+}
+function pageBien(id) {
+  const bi = bien(id); if (!bi) return `<div class="empty">Bien introuvable. <a href="#biens">Retour</a></div>`;
+  const actuel = bailActifDuBien(bi.id), anciens = S.baux.filter(b => b.bienId === bi.id && b !== actuel), l = actuel ? loyerAt(actuel, CUR) : null, r = rendement(bi);
+  const tf = (S.taxes || []).filter(t => t.bienId === bi.id).sort((a, b) => b.annee - a.annee)[0];
+  return `<div><a class="back" href="#biens">← Biens</a>
+    <div class="head"><div><h1>${esc(bi.nom)}</h1><p>${esc(adresseBien(bi))}</p></div><div class="row"><button onclick="editBien('${bi.id}')">Modifier</button></div></div></div>
+    <div class="kpis">
+      <div class="kpi"><span>Occupant</span><b>${actuel ? `<a href="#bail-${actuel.id}">${esc(nomCourt(actuel.nom))}</a>` : "Vide"}</b><small>${actuel ? "depuis le " + fds(actuel.dateEntree) : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button>`}</small></div>
+      <div class="kpi"><span>Loyer</span><b>${l ? eur(l.hc + l.ch) : "—"}</b><small>${l ? eur(l.hc) + " HC + " + eur(l.ch) + " de charges" : ""}</small></div>
+      <div class="kpi"><span>Rentabilité brute</span><b>${r ? r.brut.toFixed(1).replace(".", ",") + " %" : "—"}</b><small>${r ? "loyers / prix d'achat" : "ajoute le prix d'achat"}</small></div>
+      <div class="kpi"><span>Taxe foncière</span><b>${tf ? eur(tf.total) : "—"}</b><small>${tf ? tf.annee : `<button class="small ghost" onclick="taxeFonciere('${bi.id}')">Renseigner</button>`}</small></div>
+    </div>
+    <div class="stack">
+    ${listeDocuments(bi.id)}
+    <section class="card"><h2>🏠 Le logement</h2><div class="bien"><dl>
+      <dt>Type</dt><dd>${esc(bi.type || "—")} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</dd>
+      <dt>Surface</dt><dd>${bi.surface ? esc(bi.surface) + " m²" : "—"}${bi.pieces ? " · " + esc(bi.pieces) + " pièce(s)" : ""}</dd>
+      <dt>DPE</dt><dd>${bi.dpe ? esc(bi.dpe) + (bi.dpeValidite ? " (valable jusqu'au " + fds(bi.dpeValidite) + ")" : "") : "—"}</dd>
+      <dt>Chauffage</dt><dd>${esc(bi.chauffage || "—")}</dd><dt>Eau chaude</dt><dd>${esc(bi.eauChaude || "—")}</dd>
+      <dt>Assurance PNO</dt><dd>${bi.pnoEcheance ? "échéance " + fds(bi.pnoEcheance) : "—"}</dd>
+      ${bi.prixAchat ? `<dt>Prix d'achat</dt><dd>${eur(bi.prixAchat)}</dd>` : ""}
+    </dl>${bi.equipements ? `<p class="note">${nl2br(bi.equipements)}</p>` : ""}${bi.notes ? `<p class="note">📝 ${nl2br(bi.notes)}</p>` : ""}</div></section>
+    <section class="card"><h2>👥 Locataires</h2><ul class="todo">${[actuel, ...anciens].filter(Boolean).map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${b === actuel ? "En place" : "Parti"} · entré le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""} · ${esc(TYPES_BAIL[b.typeBail] || "")}</small></span>${b === actuel ? `<button class="small" onclick="docBailOpen('${b.id}')">Bail</button>` : ""}</li>`).join("") || `<li><span class="tx">Aucun locataire pour l'instant.</span></li>`}</ul></section>
+    </div>`;
+}
 function pageBiens() {
   return `<div class="head"><div><h1>Biens</h1><p>Tes logements et qui les occupe.</p></div><button class="primary" onclick="editBien()">+ Ajouter un bien</button></div>
   ${S.biens.length ? `<div class="grid">${S.biens.map(bi => {
     const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null;
-    return `<article class="card bien"><div class="top"><span class="emoji" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span><div><h3>${esc(bi.nom)}</h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
+    return `<article class="card bien"><div class="top"><span class="emoji" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span><div><h3><a href="#bien-${bi.id}">${esc(bi.nom)}</a></h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
       ${b ? `<span class="pill ok">Loué</span>` : `<span class="pill warn">Vide</span>`}</div>
       <dl>${b ? `<dt>Locataire</dt><dd><a href="#bail-${b.id}">${esc(b.nom)}</a></dd><dt>Loyer HC</dt><dd>${eur(l.hc)}</dd><dt>Charges</dt><dd>${eur(l.ch)}</dd><dt>Depuis</dt><dd>${fds(b.dateEntree)}</dd>` : `<dt>Locataire</dt><dd>—</dd>`}
       ${(() => { const e = edlsDuBien(bi.id)[0]; return e ? `<dt>État des lieux</dt><dd><a href="#edl-${e.id}">${e.type === "entree" ? "Entrée" : "Sortie"} ${fds(e.date)} · ${nbPhotos(e)} 📷</a></dd>` : b ? `<dt>État des lieux</dt><dd><button class="small ghost" onclick="nouvelEdl('${b.id}','entree')">+ Faire</button></dd>` : ""; })()}
       <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd>
       ${(() => { const r = rendement(bi); return r ? `<dt>Rentabilité brute</dt><dd><span class="pill acc">${r.brut.toFixed(1).replace(".", ",")} %</span></dd>` : bi.prixAchat ? "" : `<dt>Rentabilité</dt><dd><button class="small ghost" onclick="editBien('${bi.id}')">Ajouter le prix</button></dd>`; })()}</dl>
-      <div class="row"><button class="small" onclick="editBien('${bi.id}')">Modifier</button><button class="small" onclick="taxeFonciere('${bi.id}')">Taxe foncière</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
+      <div class="row"><a class="btn small primary" href="#bien-${bi.id}">Voir la fiche${(() => { const n = S.fichiers.filter(f => f.bienId === bi.id).length; return n ? ` · ${n} doc${n > 1 ? "s" : ""}` : ""; })()}</a><button class="small" onclick="editBien('${bi.id}')">Modifier</button><button class="small" onclick="taxeFonciere('${bi.id}')">Taxe foncière</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
   }).join("")}</div>` : `<div class="empty">Aucun bien. Ajoute ton premier logement.</div>`}`;
 }
 
@@ -1868,6 +1943,7 @@ function pageBail(id) {
   ${(() => { const T = taches().filter(t => t.bailId === b.id).map(t => { const n = esc(b.nom); let tt = t.t.split(" : " + n).join("").split(n + " : ").join("").split(" de " + n).join("").split(" à " + n).join("").split(n).join("").replace(/\s+:\s*$/, "").trim(); tt = tt.charAt(0).toUpperCase() + tt.slice(1); return { ...t, t: tt, acts: (t.acts || []).filter(a => !/go\('bail-/.test(a[1])) }; }); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
   <div class="stack">
   ${sectionEdl(b)}
+  ${listeDocuments(b.bienId, b.id)}
   <section><h2 style="margin-bottom:10px">Loyers mois par mois</h2>
   ${ech.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Mois</th><th class="num">Dû</th><th class="num">Payé</th><th>Statut</th><th></th></tr></thead><tbody>${ech.map(e => `<tr><td class="rt-head" style="text-transform:capitalize"><b>${fm(e.m)}</b>${e.prorata ? `<div class="sub">prorata ${e.to - e.from + 1}/${e.days} j</div>` : ""}</td><td class="num" data-l="Dû">${eur(e.du)}</td><td class="num" data-l="Payé">${eur(e.paye)}</td><td data-l="Statut">${pillStatut(e)}${e.quittance ? ` <span class="pill acc">Quittance envoyée</span>` : ""}</td><td class="rt-acts"><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Pas encore d'échéance.</div>`}
   </section>
