@@ -495,6 +495,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .photo-plein{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;z-index:60}.photo-plein img{max-width:100%;max-height:80vh;border-radius:10px}
 .docs-bien h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 4px}.card.bien h3 a{color:inherit;text-decoration:none}
 .conf-envoi{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--warn-soft);color:var(--ink);border-radius:14px;padding:12px 14px;margin:8px 0;box-shadow:var(--sh-2)}.emailbox .fl{margin-bottom:8px}.emailbox input{width:100%}
+.sortie-l li{align-items:flex-start}.sortie-l .chk{padding-top:2px}.sl-h{display:flex;justify-content:space-between;gap:10px}.sl-sel{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.sl-sel select{flex:1;min-width:140px;font-size:.85rem;padding:6px 8px;height:auto}
 </style>
 </head>
 <body>
@@ -753,6 +754,40 @@ function carteBanqueAccueil() {
   const ent = ops.filter(o => o.montant > 0).reduce((s, o) => s + o.montant, 0), sor = ops.filter(o => o.montant < 0).reduce((s, o) => s - o.montant, 0);
   return `<a class="card banque-mini" href="#compta"><span class="bq-ico" aria-hidden="true">🏦</span><span class="tx"><small>Compte bancaire · ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0].maj_le)}</small><b>${eur(solde)}</b><small>Ce mois-ci : <span class="pos">+${eur(ent)}</span> · <span class="neg">−${eur(sor)}</span></small></span><span aria-hidden="true">›</span></a>`;
 }
+/* Sorties d'argent de la banque à transformer en dépenses de compta (classées d'avance, validées par toi) */
+function sortiesAClasser(y) {
+  const deja = new Set(S.depenses.filter(d => d.banqueTx).map(d => String(d.banqueTx))), vus = S.banqueVus || {};
+  return BANQUE.ops.filter(o => o.montant < 0 && o.date.startsWith(String(y)) && !deja.has(o.tx_id) && vus[o.tx_id] !== "ignore");
+}
+function sectionSorties(y) {
+  if (!SB || !BANQUE.lien) return "";
+  const L = sortiesAClasser(y); if (!L.length) return "";
+  const vis = view.sortiesTout ? L : L.slice(0, 15), tot = L.reduce((t, o) => t - o.montant, 0);
+  const optsBien = [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])];
+  return `<section class="card sorties"><h2>🧾 ${L.length} sortie${L.length > 1 ? "s" : ""} d'argent à mettre en compta</h2>
+    <p class="note">${eur(tot)} sortis du compte en ${y}. L'appli a deviné la catégorie : vérifie, change si besoin, puis enregistre. Elle retiendra tes choix pour les fois suivantes.</p>
+    <form onsubmit="event.preventDefault();validerSorties(this)"><ul class="ops sortie-l">${vis.map(o => { const c = classerSortie(o);
+      return `<li><label class="chk"><input type="checkbox" name="ok_${o.tx_id}" ${c.cat ? "checked" : ""} aria-label="Enregistrer"></label><div class="tx"><div class="sl-h"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span><b class="neg">−${eur(-o.montant)}</b></div>
+        <small>${fds(o.date)}${c.appris ? " · d'après ton choix précédent" : ""}</small>
+        <div class="sl-sel"><select name="cat_${o.tx_id}" aria-label="Catégorie"><option value="">— à classer —</option>${CATS.map(k => `<option ${k === c.cat ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>
+        <select name="bien_${o.tx_id}" aria-label="Bien">${optsBien.map(([v, l]) => `<option value="${v}" ${v === c.bienId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+        <button type="button" class="small ghost" onclick="ignorerSortie('${o.tx_id}')">Ignorer</button></div></div></li>`; }).join("")}</ul>
+    <div class="row">${L.length > 15 ? `<button type="button" class="small ghost" onclick="view.sortiesTout=!view.sortiesTout;render()">${view.sortiesTout ? "Moins" : `Voir les ${L.length}`}</button>` : ""}<button class="primary">Enregistrer les lignes cochées</button></div></form></section>`;
+}
+function validerSorties(f) {
+  const d = Object.fromEntries(new FormData(f).entries()); let n = 0, sansCat = 0;
+  const regles = Object.assign({}, S.sci.reglesBanque);
+  BANQUE.ops.forEach(o => {
+    if (!d["ok_" + o.tx_id]) return; const cat = d["cat_" + o.tx_id], bienId = d["bien_" + o.tx_id] || "";
+    if (!cat) { sansCat++; return; }
+    const auto = classerSortie(o);
+    if (cat !== auto.cat || bienId !== auto.bienId) regles[motifBanque(o.libelle)] = { cat, bienId };
+    S.depenses.push({ id: "bq" + o.tx_id, date: o.date, montant: r2(-o.montant), categorie: cat, bienId, libelle: (o.libelle || "").slice(0, 80), recuperable: false, banqueTx: o.tx_id }); n++;
+  });
+  S.sci.reglesBanque = regles; save(); render();
+  toast(n ? `✓ ${n} dépense${n > 1 ? "s" : ""} enregistrée${n > 1 ? "s" : ""}` + (sansCat ? ` · ${sansCat} sans catégorie laissée${sansCat > 1 ? "s" : ""} de côté` : "") : "Coche des lignes et choisis leur catégorie.");
+}
+function ignorerSortie(tx) { S.banqueVus = Object.assign({}, S.banqueVus, { [tx]: "ignore" }); save(); render(); toast("Ignorée (ce n'est pas une dépense)"); }
 function sectionBanque() {
   if (!SB) return "";
   if (!BANQUE.lien) return `<section class="card"><h2>🏦 Brancher la banque (via Pennylane)</h2>
@@ -1217,6 +1252,7 @@ function taches() {
     if (p.ok) add({ bailId: b.id, key: "plan-" + b.id + CUR, prio: "info", date: TODAY, done: true, t: `Plan de remboursement suivi : ${esc(b.nom)}`, d: `Reste ${eur(p.dette)} à rembourser · ${eur(p.mensualite)} par mois en plus du loyer · fin prévue en ${fm(p.fin)}`, acts: [["Il a versé…", `verserSomme('${b.id}')`]] });
     else add({ bailId: b.id, key: "planko-" + b.id + CUR, prio: "urgent", date: TODAY, t: `Plan de remboursement non suivi : ${esc(b.nom)}`, d: `Il devrait encore devoir ${eur(p.attendu)}, il doit ${eur(p.dette)} : il manque ${eur(p.manque)}.`, acts: [["Il a versé…", `verserSomme('${b.id}')`, "primary"], ["Relancer", `relance('${b.id}','${(echeancesBail(b).find(e => e.statut === "retard") || {}).m || CUR}')`]] });
   });
+  if (SB && BANQUE.lien) { const n = sortiesAClasser(TODAY.getFullYear()).length; if (n) add({ key: "bqdep-" + CUR + "-" + n, prio: "info", date: TODAY, t: `${n} sortie${n > 1 ? "s" : ""} d'argent à mettre en compta`, d: "Prêt, assurance, taxe, eau… déjà classées par l'appli : il reste à vérifier et enregistrer.", acts: [["Classer", "go('compta')", "primary"]] }); }
   const enPlan = id => { const p = planEtat(bail(id)); return p && !p.fait; };
   ech.filter(e => e.statut === "retard" && !enPlan(e.b.id)).forEach(e => {
     const niv = e.relances.length;
@@ -1982,7 +2018,26 @@ function pageLoyers() {
   <p class="note">"A payé" = le locataire a payé le total aujourd'hui (la quittance part toute seule si son e-mail est renseigné). "Autre montant…" = paiement partiel ou à une autre date. ↺ annule le dernier paiement saisi.</p>`;
 }
 
-const CATS = ["Taxe foncière", "Charges de copropriété", "Assurance propriétaire (PNO)", "Assurance loyers impayés", "Travaux d'entretien / réparation", "Travaux d'amélioration", "Intérêts d'emprunt", "Assurance emprunteur", "Remboursement capital emprunt", "Frais bancaires", "Honoraires (comptable, notaire, avocat…)", "Diagnostics", "Eau / électricité / gaz", "Frais de gestion / annonces", "Autre"];
+/* Ce qui sort du compte mais n'est pas une charge de l'année (capital remboursé, achat du bien) */
+const HORS_RESULTAT = new Set(["Remboursement capital emprunt", "Échéance de prêt (capital + intérêts, à ventiler)", "Achat du bien / frais d'acquisition"]);
+/* Classement automatique des sorties d'argent : règles de base + ce que tu as déjà classé toi-même */
+const REGLES_BANQUE = [
+  [/ECH PRET INT\b/, "Intérêts d'emprunt"], [/ECH PRET CAP/, "Échéance de prêt (capital + intérêts, à ventiler)"], [/COMMIS(SION)? PRET|FRAIS DE DOSSIER/, "Frais bancaires"],
+  [/ASSURANCE (DU )?PROPRIETAIRE|\bPNO\b/, "Assurance propriétaire (PNO)"], [/LOYERS? IMPAYES|\bGLI\b/, "Assurance loyers impayés"], [/ASSURANCE EMPRUNTEUR|CNP|CARDIF/, "Assurance emprunteur"],
+  [/DGFIP.*\bTF\b|IMPOT TF|TAXE FONCIERE/, "Taxe foncière"], [/SAUR|VEOLIA|EAU DE|EDF|ENGIE|TOTALENERGIES|GRDF/, "Eau / électricité / gaz"],
+  [/FACT SGT|COTIS|FRAIS BANC|COMMISSION|AGIOS/, "Frais bancaires"], [/CONCIERGERIE|AIRBNB|ABRITEL|LEBONCOIN|SELOGER/, "Frais de gestion / annonces"],
+  [/COMPTA|EXPERT.?COMPTABLE|BRETALLIANCE|AVOCAT|HUISSIER|COMMISSAIRE DE JUSTICE/, "Honoraires (comptable, notaire, avocat…)"], [/SYNDIC|COPRO/, "Charges de copropriété"],
+  [/NOTAIRE|CORNILLE|IMMO COM|AGENCE IMMO|SEQUESTRE/, "Achat du bien / frais d'acquisition"],
+  [/LEROY|BRICO|CASTORAMA|WELDOM|POINT P|PLOMB|ELECTRI|MENUISERIE|ARTISAN|YESSS/, "Travaux d'entretien / réparation"], [/DIAGNOST/, "Diagnostics"]
+];
+const motifBanque = lib => normTxt(lib).replace(/[^A-Z ]+/g, " ").split(" ").filter(m => m.length >= 3 && !["VIR", "SEPA", "PRLV", "INST", "FACTURE", "CLIENTS"].includes(m)).slice(0, 3).join(" ");
+function classerSortie(op) {
+  const appris = (S.sci.reglesBanque || {})[motifBanque(op.libelle)];
+  if (appris) return { cat: appris.cat, bienId: appris.bienId || "", appris: true };
+  const lib = normTxt(op.libelle); const r = REGLES_BANQUE.find(([re]) => re.test(lib));
+  return { cat: r ? r[1] : "", bienId: "" };
+}
+const CATS = ["Taxe foncière", "Charges de copropriété", "Assurance propriétaire (PNO)", "Assurance loyers impayés", "Travaux d'entretien / réparation", "Travaux d'amélioration", "Intérêts d'emprunt", "Assurance emprunteur", "Remboursement capital emprunt", "Échéance de prêt (capital + intérêts, à ventiler)", "Achat du bien / frais d'acquisition", "Frais bancaires", "Honoraires (comptable, notaire, avocat…)", "Diagnostics", "Eau / électricité / gaz", "Frais de gestion / annonces", "Autre"];
 function recettes(year) {
   const by = {};
   S.paiements.filter(p => (p.date || "").startsWith(String(year))).forEach(p => {
@@ -1990,13 +2045,24 @@ function recettes(year) {
     const k = b.bienId; by[k] = by[k] || { loyers: 0, charges: 0 };
     by[k].charges += p.montant * part; by[k].loyers += p.montant * (1 - part);
   });
+  // Loyers d'avant le suivi dans l'appli, et locations saisonnières : lus directement dans la banque
+  if (SB && BANQUE.ops.length) {
+    const lies = new Set(S.paiements.filter(p => p.tx).map(p => String(p.tx)));
+    BANQUE.ops.filter(o => o.montant > 0 && o.date.startsWith(String(year)) && !lies.has(o.tx_id)).forEach(o => {
+      const b = bailDuVirement(o); let k = null;
+      if (b) { const debut = b.suiviDepuis || mk(P(b.dateEntree)); if (o.date.slice(0, 7) < debut) k = b.bienId; }
+      else if (/AIRBNB|ABRITEL|BOOKING|GITES/.test(normTxt(o.libelle))) k = "";
+      if (k === null) return;
+      by[k] = by[k] || { loyers: 0, charges: 0 }; by[k].loyers += o.montant; by[k].banque = (by[k].banque || 0) + o.montant;
+    });
+  }
   (S.taxes || []).forEach(tx => tx.parts.filter(p => p.payeLe && p.payeLe.startsWith(String(year))).forEach(p => { by[tx.bienId] = by[tx.bienId] || { loyers: 0, charges: 0 }; by[tx.bienId].charges += p.montant; }));
   return by;
 }
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const lignes = [...S.biens.map(b => ({ id: b.id, nom: b.nom })), { id: "", nom: "SCI (frais généraux)" }].map(x => {
-    const r = rec[x.id] || { loyers: 0, charges: 0 }, d = deps.filter(dd => (dd.bienId || "") === x.id && dd.categorie !== "Remboursement capital emprunt").reduce((s, dd) => s + +dd.montant, 0);
+    const r = rec[x.id] || { loyers: 0, charges: 0 }, d = deps.filter(dd => (dd.bienId || "") === x.id && !HORS_RESULTAT.has(dd.categorie)).reduce((s, dd) => s + +dd.montant, 0);
     return { ...x, loyers: r.loyers, charges: r.charges, dep: d, res: r.loyers + r.charges - d };
   });
   const tot = lignes.reduce((t, l) => ({ loyers: t.loyers + l.loyers, charges: t.charges + l.charges, dep: t.dep + l.dep, res: t.res + l.res }), { loyers: 0, charges: 0, dep: 0, res: 0 });
@@ -2005,8 +2071,9 @@ function pageCompta() {
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
   <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button><button class="small" onclick="importerReleve()">🏦 Importer le relevé</button><button class="small" onclick="exportCSV(${y})">📊 Export comptable</button><button class="small" onclick="docBilanOpen(${y})">📄 Bilan PDF</button></div>
-  <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>hors charges</small></div><div class="kpi"><span>Charges encaissées</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
+  <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${y === TODAY.getFullYear() ? sectionBanque() : ""}
+  ${sectionSorties(y)}
   ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
   <section><h2 style="margin-bottom:10px">Par bien</h2><div class="table-wrap"><table class="rt"><thead><tr><th>Bien</th><th class="num">Loyers</th><th class="num">Charges reçues</th><th class="num">Dépenses</th><th class="num">Résultat</th></tr></thead><tbody>
   ${lignes.map(l => `<tr><td class="rt-head"><b>${esc(l.nom)}</b></td><td class="num" data-l="Loyers">${eur(l.loyers)}</td><td class="num" data-l="Charges reçues">${eur(l.charges)}</td><td class="num" data-l="Dépenses">${eur(l.dep)}</td><td class="num" data-l="Résultat"><b>${eur(l.res)}</b></td></tr>`).join("")}
@@ -2770,7 +2837,7 @@ function docBailOpen(id) {
 }
 function docBilanOpen(y) {
   const rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)));
-  const rows = [...S.biens, { id: "", nom: "SCI (frais généraux)" }].map(bi => { const r = rec[bi.id] || { loyers: 0, charges: 0 }; const d = deps.filter(x => (x.bienId || "") === bi.id && x.categorie !== "Remboursement capital emprunt").reduce((s, x) => s + +x.montant, 0); return { nom: bi.nom, ...r, d }; });
+  const rows = [...S.biens, { id: "", nom: "SCI (frais généraux)" }].map(bi => { const r = rec[bi.id] || { loyers: 0, charges: 0 }; const d = deps.filter(x => (x.bienId || "") === bi.id && !HORS_RESULTAT.has(x.categorie)).reduce((s, x) => s + +x.montant, 0); return { nom: bi.nom, ...r, d }; });
   const t = rows.reduce((a, r) => ({ l: a.l + r.loyers, c: a.c + r.charges, d: a.d + r.d }), { l: 0, c: 0, d: 0 });
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
   const parts = S.sci.associes.reduce((s, a) => s + +a.parts, 0), res = t.l + t.c - t.d;
