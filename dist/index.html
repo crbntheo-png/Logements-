@@ -194,6 +194,8 @@ button.small .ic { width: 16px; height: 16px; }
 /* Raccourcis */
 .quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .quick button { height: auto; flex-direction: column; gap: 8px; padding: 16px 8px; border-radius: var(--r); background: var(--surface); box-shadow: var(--sh-2); white-space: normal; text-align: center; font-size: .84rem; line-height: 1.25; color: var(--ink-2); }
+.quick a.qa { display: flex; align-items: center; flex-direction: column; gap: 8px; padding: 16px 8px; border-radius: var(--r); background: var(--surface); box-shadow: var(--sh-2); text-align: center; font-size: .84rem; font-weight: 600; line-height: 1.25; color: var(--ink-2); text-decoration: none; }
+.quick a.qa:hover { box-shadow: 0 0 0 2px var(--accent-soft), var(--sh-2); }
 .quick button:hover { background: var(--surface); box-shadow: 0 0 0 2px var(--accent-soft), var(--sh-2); }
 .quick .qi { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
 
@@ -1613,7 +1615,8 @@ function pageAccueil(T) {
     ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span class="who"><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="tile-state"><i class="dot"></i>Disponible</div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">➕ Mettre un locataire</button></div></article>`).join("")}</div>
     ${anciens.length ? `<details class="anciens"><summary>${ic("chevR", "s")} Anciens locataires (${anciens.length})</summary><ul class="todo">${anciens.map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${esc(bienLabel(bien(b.bienId)))} · parti le ${fds(b.dateSortie)}</small></span>${ic("chevR", "chev")}</li>`).join("")}</ul></details>` : ""}
   </section>
-  <section><h2 class="sec">Raccourcis</h2><div class="quick"><button onclick="importerReleve()"><span class="qi">🏦</span>Importer le relevé</button><button onclick="go('docs')"><span class="qi">📁</span>Documents</button><button onclick="editDepense()"><span class="qi">🧾</span>Ajouter une dépense</button></div></section>`;
+  <section><h2 class="sec">Raccourcis</h2><div class="quick"><button onclick="importerReleve()"><span class="qi">🏦</span>Importer le relevé</button><button onclick="go('docs')"><span class="qi">📁</span>Documents</button><button onclick="editDepense()"><span class="qi">🧾</span>Ajouter une dépense</button></div></section>
+  ${(S.sci.liens || []).length ? `<section><h2 class="sec">Mes autres applis</h2><div class="quick">${S.sci.liens.map(l => `<a class="qa" href="${esc(l.url)}" target="_blank" rel="noopener"><span class="qi">${esc(l.icone || "🔗")}</span>${esc(l.nom)}</a>`).join("")}</div></section>` : ""}`;
 }
 /* Les choses à faire, regroupées et résumées en une ligne chacune */
 function aFaireCourt(T) {
@@ -1774,6 +1777,10 @@ function pageReglages() {
       <label class="fl full" style="grid-column:1/-1">Un associé par ligne : Nom ; nombre de parts ; e-mail
       <textarea name="associes" rows="3">${esc(s.associes.map(a => [a.nom, a.parts, a.email].filter(x => x !== undefined && x !== "").join(" ; ")).join("\n"))}</textarea></label>
     </fieldset>
+    <fieldset><legend>Mes autres applis</legend>
+      <label class="fl full" style="grid-column:1/-1">Affichées sur l'accueil. Une par ligne : Nom ; lien ; emoji (facultatif)
+      <textarea name="liens" rows="3" placeholder="Boussole Fiscale ; https://claude.ai/artifact/… ; 🧭">${esc((s.liens || []).map(l => [l.nom, l.url, l.icone].filter(Boolean).join(" ; ")).join("\n"))}</textarea></label>
+    </fieldset>
     <fieldset><legend>Carnet d'adresses</legend>
       <label class="fl full" style="grid-column:1/-1">Comptable, syndic, notaire, assureur, artisans… Un par ligne : Nom ; rôle ; e-mail
       <textarea name="contacts" rows="4" placeholder="Cabinet Dupont ; Comptable ; compta@exemple.fr">${esc((s.contacts || []).map(c => [c.nom, c.role, c.email].join(" ; ")).join("\n"))}</textarea></label>
@@ -1927,6 +1934,7 @@ function saveSci(f) {
   d.familiale = d.familiale === "1";
   d.autoQuittance = d.autoQuittance !== "0";
   d.associes = d.associes.split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, p, e]) => ({ nom: n.trim(), parts: +(p || 0), email: (e || "").trim() }));
+  d.liens = (d.liens || "").split("\n").map(l => l.split(";").map(x => x.trim())).filter(x => x[0] && /^https?:\/\//i.test(x[1] || "")).map(([nom, url, icone]) => ({ nom, url, icone: icone || "" }));
   d.contacts = (d.contacts || "").split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, r, e]) => ({ nom: n.trim(), role: (r || "").trim(), email: (e || "").trim() }));
   const nouveauDrive = idDrive(d.drive); delete d.drive; if (nouveauDrive && nouveauDrive !== driveRacine()) { d.driveGenId = ""; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; } d.driveId = nouveauDrive || S.sci.driveId || "";
   d.archiveDrive = d.archiveDrive !== "0";
