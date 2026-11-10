@@ -474,6 +474,14 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .banque .bq-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.bq-solde{font-size:24px;white-space:nowrap}
 .ops{list-style:none;margin:10px 0;padding:0}.ops li{display:flex;gap:10px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line)}.ops .op-d{color:var(--muted);font-size:13px;width:40px;flex:none;font-variant-numeric:tabular-nums}.ops .tx{flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere}.ops .tx small{display:block}.ops .lien{color:var(--ok);font-weight:700}.ops b{white-space:nowrap;font-variant-numeric:tabular-nums}
 .ops .lb{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.banque .bq-head h2{margin:0}
+.edl-infos{display:grid;grid-template-columns:1fr 1fr;gap:10px}.edl-infos .fl{min-width:0}.edl-infos input{width:100%;min-width:0}@media(min-width:700px){.edl-infos{grid-template-columns:repeat(3,1fr)}}
+.piece .piece-h{display:flex;justify-content:space-between;align-items:center}.piece h3{margin:0}.piece textarea{width:100%;margin-top:10px}
+.seg.etats{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.seg.etats button{flex:1;min-width:0;height:auto;padding:9px 6px;border-radius:10px;background:var(--surface-2);color:var(--ink-2);font-weight:600;font-size:.85rem}
+.seg.etats button.on.bon{background:var(--ok-soft);color:var(--ok);box-shadow:inset 0 0 0 2px var(--ok)}.seg.etats button.on.usage{background:var(--warn-soft);color:var(--warn);box-shadow:inset 0 0 0 2px var(--warn)}.seg.etats button.on.mauvais{background:var(--bad-soft);color:var(--bad);box-shadow:inset 0 0 0 2px var(--bad)}
+.vignettes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.vig{width:76px;height:76px;border-radius:12px;overflow:hidden;padding:0;background:var(--surface-2);display:grid;place-items:center;cursor:pointer;border:0}.vig img{width:100%;height:100%;object-fit:cover;display:block}
+.vig.ajout{border:2px dashed var(--line);color:var(--accent);font-size:12px;font-weight:700;display:flex;flex-direction:column;gap:2px;align-items:center;justify-content:center}
+.inv{list-style:none;margin:0 0 10px;padding:0}.inv li{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.inv li:first-child{border-top:0}.inv .tx{flex:1;min-width:140px}.inv .qte{width:56px;text-align:center}.seg.etats.mini{margin-top:0;flex:none}.seg.etats.mini button{padding:6px 8px;font-size:.78rem;flex:none}
+.photo-plein{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:16px;z-index:60}.photo-plein img{max-width:100%;max-height:80vh;border-radius:10px}
 </style>
 </head>
 <body>
@@ -562,7 +570,7 @@ const KEY = "gestion-sci-v1";
 const blank = () => ({
   version: 1, demo: false,
   sci: { nom: "", siege: "", siren: "", gerant: "", ville: "", regime: "IR", familiale: false, iban: "", telephone: "", email: "", associes: [] },
-  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: [], banqueVus: {}
+  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: [], edl: [], banqueVus: {}
 });
 const uid = () => Math.random().toString(36).slice(2, 10);
 function loadLocal() {
@@ -573,7 +581,7 @@ let S = blank();
 
 /* Stockage : en ligne et partagé entre associés quand c'est possible (db),
    sinon dans ce navigateur. Chaque bien, bail, paiement… est un document. */
-const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes"];
+const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl"];
 const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport", "banqueVus"];
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
@@ -668,6 +676,7 @@ async function ouvrirEspace(id) {
     .on("postgres_changes", { event: "*", schema: "public", table: "docs", filter: "espace_id=eq." + id }, p => {
       if (ESPACE !== id) return;
       if (p.eventType === "DELETE") { const o = p.old || {}; const k = o.coll + "/" + o.doc_id; if (!(k in synced)) return; delete synced[k]; if (o.coll !== "meta") S[o.coll] = (S[o.coll] || []).filter(x => x.id !== o.doc_id); remoteChanged(); return; }
+      if (p.new && estMonEcho(p.new.coll + "/" + p.new.doc_id, p.new.data)) return;
       if (appliquerLigne(p.new)) remoteChanged();
     }).subscribe();
   MODE = "partage"; render();
@@ -762,8 +771,15 @@ function appliquerLigne(l) {
   return true;
 }
 let ECRITURE = Promise.resolve();
+/* Échos : versions que j'ai moi-même écrites. Quand le serveur me les renvoie (temps réel), je les ignore,
+   sinon un ancien écho pourrait écraser une modification plus récente faite entre-temps. */
+const ECHOS = {};
+const canon = v => Array.isArray(v) ? "[" + v.map(canon).join(",") + "]" : v && typeof v === "object" ? "{" + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}" : JSON.stringify(v === undefined ? null : v);
+function noterEcho(k, v) { const c = canon(v); (ECHOS[k] = ECHOS[k] || new Set()).add(c); setTimeout(() => { ECHOS[k] && ECHOS[k].delete(c); }, 120000); }
+const estMonEcho = (k, v) => !!(ECHOS[k] && ECHOS[k].has(canon(v)));
 function ecrireSupabase(changes) {
   const esp = ESPACE;
+  changes.forEach(([p, v]) => { if (v !== null) noterEcho(p, v); });
   ECRITURE = ECRITURE.then(async () => {
     const aEcrire = changes.filter(c => c[1] !== null).map(([p, v]) => { const [coll, doc_id] = p.split("/"); return { espace_id: esp, coll, doc_id, data: v, maj_le: new Date().toISOString() }; });
     const aSuppr = changes.filter(c => c[1] === null).map(([p]) => p.split("/"));
@@ -1532,7 +1548,7 @@ function historique(b) {
 /* ================= Navigation ================= */
 const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["docs", "Docs"], ["compta", "Compta"], ["reglages", "Réglages"]];
 const ICONES = { locataires: "home", afaire: "tasks", biens: "building", docs: "folder", compta: "chart", reglages: "settings" };
-const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
+const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); });
@@ -1543,7 +1559,7 @@ function render() {
   if (MODE === "connexion") { app.innerHTML = pageConnexion(); return; }
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
-  const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : (PAGES.find(p => p[0] === h) ? h : "locataires");
+  const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
   const navHtml = PAGES.filter(p => p[0] !== "reglages").map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}>${ic(ICONES[k])}<span>${l}</span>${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
   const nav = document.getElementById("nav"), bn = document.getElementById("bottomnav");
@@ -1558,11 +1574,13 @@ function render() {
   const banner = bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
+  else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
   const actif = document.activeElement, focusId = actif && actif.id && app.contains(actif) ? actif.id : null, selS = focusId && actif.selectionStart, selE = focusId && actif.selectionEnd;
   app.innerHTML = banner + html;
+  if (h.startsWith("edl-") || h.startsWith("bail-") || page === "biens") setTimeout(hydraterPhotos, 0);
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { el.setSelectionRange(selS, selE); } catch (e) {} } }
   document.title = S.sci.nom || "Gestion SCI";
   if (POINT) afficherPoint();
@@ -1669,6 +1687,137 @@ function pageAFaire(T) {
   <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); return g.length ? `<p class="group-title">${l} (${g.length})</p>` + g.map(taskHtml).join("") : ""; }).join("") : `<div class="empty">Rien à faire. Tout est à jour.</div>`}</section>`;
 }
 
+/* ================= États des lieux & inventaire ================= */
+const ETATS = [["bon", "Bon"], ["usage", "Usure normale"], ["mauvais", "Abîmé"]];
+const INVENTAIRE_TYPE = ["Lit(s) avec matelas", "Couette ou couverture", "Oreillers", "Rideaux / volets (chambres)", "Plaques de cuisson", "Four ou micro-ondes", "Réfrigérateur avec congélateur", "Assiettes", "Verres", "Couverts", "Casseroles et poêles", "Ustensiles de cuisine", "Table", "Chaises", "Canapé", "Étagères / rangements", "Luminaires", "Aspirateur / balai", "Lave-linge"];
+function piecesParDefaut(bi) {
+  const n = Math.max(1, +bi.pieces || 1), out = ["Entrée", n > 1 ? "Séjour" : "Pièce principale", "Cuisine"];
+  for (let i = 1; i < n; i++) out.push(n > 2 ? "Chambre " + i : "Chambre");
+  out.push("Salle de bain", "WC");
+  return out.map(nom => ({ nom, etat: "", commentaire: "", photos: [] }));
+}
+const edlsDuBail = id => S.edl.filter(e => e.bailId === id).sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+const edlsDuBien = id => S.edl.filter(e => e.bienId === id).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+const nbPhotos = e => (e.pieces || []).reduce((s, p) => s + (p.photos || []).length, 0) + (e.photos || []).length;
+function nouvelEdl(bailId, type) {
+  const b = bail(bailId), bi = bien(b.bienId) || {}, entree = edlsDuBail(bailId).find(e => e.type === "entree");
+  const meuble = b.typeBail !== "vide" || bi.meuble === "meuble";
+  const e = { id: uid(), bailId, bienId: b.bienId, type, date: type === "entree" ? (b.dateEntree || iso(TODAY)) : (b.dateSortie || iso(TODAY)), cles: entree ? entree.cles : "",
+    compteurs: { elec: "", eauFroide: "", eauChaude: "", gaz: "" }, remarques: "", photos: [],
+    pieces: entree ? entree.pieces.map(p => ({ nom: p.nom, etat: "", commentaire: "", photos: [] })) : piecesParDefaut(bi),
+    inventaire: meuble ? (entree && entree.inventaire ? entree.inventaire.map(x => ({ nom: x.nom, qte: x.qte, etat: "" })) : INVENTAIRE_TYPE.map(nom => ({ nom, qte: "", etat: "" }))) : null };
+  S.edl.push(e); if (type === "entree" && !b.edlEntree) b.edlEntree = e.date; save(); go("edl-" + e.id);
+}
+const edl = id => S.edl.find(e => e.id === id);
+function majEdl(id, chemin, v) {
+  const e = edl(id); if (!e) return; const k = chemin.split("."); let o = e;
+  for (let i = 0; i < k.length - 1; i++) o = o[k[i]];
+  o[k[k.length - 1]] = v; save();
+}
+function etatEdl(id, i, v) { const e = edl(id); e.pieces[i].etat = e.pieces[i].etat === v ? "" : v; save(); render(); }
+function etatInv(id, i, v) { const e = edl(id); e.inventaire[i].etat = e.inventaire[i].etat === v ? "" : v; save(); render(); }
+function ajouterPieceEdl(id) { modal("Ajouter une pièce", fld("Nom (ex : Chambre 3, Balcon, Cave)", "nom", "", "text", "full", "required"), d => { edl(id).pieces.push({ nom: d.nom, etat: "", commentaire: "", photos: [] }); }); }
+function ajouterObjetInv(id) { modal("Ajouter un objet", fld("Objet", "nom", "", "text", "full", "required") + fld("Nombre", "qte", "1", "number"), d => { const e = edl(id); (e.inventaire = e.inventaire || []).push({ nom: d.nom, qte: d.qte, etat: "" }); }); }
+function suppPieceEdl(id, i) { const e = edl(id); confirmer(`Retirer "${e.pieces[i].nom}" (et ses photos) ?`, () => { supprimerFichiers(e.pieces[i].photos || []); e.pieces.splice(i, 1); save(); render(); }); }
+function supprimerEdl(id) { const e = edl(id); confirmer("Supprimer cet état des lieux et toutes ses photos ?", () => { supprimerFichiers([...(e.photos || []), ...e.pieces.flatMap(p => p.photos || [])]); S.edl = S.edl.filter(x => x.id !== id); save(); go("bail-" + e.bailId); }); }
+/* Photos : réduites sur le téléphone puis rangées dans l'espace privé du serveur */
+const PHOTO_URLS = {};
+function reduirePhoto(f) {
+  return new Promise((ok, ko) => { const img = new Image(), u = URL.createObjectURL(f);
+    img.onload = () => { const r = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); c.toBlob(b => b ? ok(b) : ko(new Error("Photo illisible")), "image/jpeg", 0.78); };
+    img.onerror = () => { URL.revokeObjectURL(u); ko(new Error("Photo illisible")); }; img.src = u; });
+}
+async function ajouterPhotos(id, i, input) {
+  const fichiers = [...input.files]; input.value = ""; if (!fichiers.length) return;
+  if (!SB) { toast("Les photos sont disponibles dans l'appli installée."); return; }
+  const e = edl(id), cible = i === -1 ? (e.photos = e.photos || []) : e.pieces[i].photos;
+  toast(`Envoi de ${fichiers.length} photo${fichiers.length > 1 ? "s" : ""}…`); let n = 0;
+  for (const f of fichiers) {
+    try { const blob = await reduirePhoto(f), chemin = `${ESPACE}/${id}/${uid()}.jpg`;
+      const r = await SB.storage.from("photos").upload(chemin, blob, { contentType: "image/jpeg" });
+      if (r.error) throw r.error; cible.push(chemin); PHOTO_URLS[chemin] = URL.createObjectURL(blob); n++; save(); render();
+    } catch (err) { toast("Une photo n'a pas pu être envoyée : " + (err.message || err)); }
+  }
+  if (n) toast(`✓ ${n} photo${n > 1 ? "s" : ""} ajoutée${n > 1 ? "s" : ""}`);
+}
+async function hydraterPhotos() {
+  const imgs = [...document.querySelectorAll("img[data-photo]")], manque = [...new Set(imgs.map(i => i.dataset.photo).filter(c => !PHOTO_URLS[c]))];
+  if (manque.length && SB) { const r = await SB.storage.from("photos").createSignedUrls(manque, 3600); (r.data || []).forEach(x => { if (x.signedUrl) PHOTO_URLS[x.path] = x.signedUrl; }); }
+  document.querySelectorAll("img[data-photo]").forEach(i => { const u = PHOTO_URLS[i.dataset.photo]; if (u && i.src !== u) i.src = u; });
+}
+function supprimerFichiers(chemins) { if (SB && chemins.length) SB.storage.from("photos").remove(chemins).catch(() => {}); }
+function voirPhoto(id, i, k) {
+  const e = edl(id), liste = i === -1 ? e.photos : e.pieces[i].photos, c = liste[k];
+  const ov = document.getElementById("overlay");
+  ov.innerHTML = `<div class="photo-plein"><img alt="" data-photo="${esc(c)}" src="${esc(PHOTO_URLS[c] || "")}"><div class="row"><button onclick="closeOverlay()">Fermer</button><button class="danger" onclick="suppPhoto('${id}',${i},${k})">Supprimer la photo</button></div></div>`;
+  ov.hidden = false; hydraterPhotos();
+}
+function suppPhoto(id, i, k) { const e = edl(id), liste = i === -1 ? e.photos : e.pieces[i].photos; supprimerFichiers([liste[k]]); liste.splice(k, 1); save(); closeOverlay(); render(); }
+const vignettes = (id, i, liste) => `<div class="vignettes">${(liste || []).map((c, k) => `<button type="button" class="vig" onclick="voirPhoto('${id}',${i},${k})" aria-label="Voir la photo ${k + 1}"><img alt="" data-photo="${esc(c)}" src="${esc(PHOTO_URLS[c] || "")}" loading="lazy"></button>`).join("")}
+  <label class="vig ajout">${ic("plus")}<span>Photo</span><input type="file" accept="image/*" multiple hidden onchange="ajouterPhotos('${id}',${i},this)"></label></div>`;
+function pageEdl(id) {
+  const e = edl(id); if (!e) return `<div class="empty">État des lieux introuvable. <a href="#biens">Retour</a></div>`;
+  const b = bail(e.bailId) || {}, bi = bien(e.bienId) || {}, ref = e.type === "sortie" ? edlsDuBail(e.bailId).find(x => x.type === "entree") : null;
+  const remplies = e.pieces.filter(p => p.etat).length;
+  return `<div><a class="back" href="#bail-${e.bailId}">← ${esc(b.nom || "Locataire")}</a>
+    <div class="head"><div><h1>État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}</h1><p>${esc(bienLabel(bi))} · ${esc(b.nom || "")} · ${remplies}/${e.pieces.length} pièces faites · ${nbPhotos(e)} photo${nbPhotos(e) > 1 ? "s" : ""}</p></div>
+    <div class="row"><button class="primary" onclick="docEdl('${id}')">📄 PDF à signer</button></div></div></div>
+    ${!SB ? `<div class="banner"><span>Les photos sont disponibles dans l'appli installée (version en ligne).</span></div>` : ""}
+    <section class="card"><div class="edl-infos">
+      <label class="fl">Date<input type="date" value="${esc(e.date)}" onchange="majEdl('${id}','date',this.value)"></label>
+      <label class="fl">Clés remises (nombre, badges…)<input value="${esc(e.cles || "")}" placeholder="3 clés, 1 badge" onchange="majEdl('${id}','cles',this.value)"></label>
+      <label class="fl">Compteur électricité<input inputmode="numeric" value="${esc(e.compteurs.elec)}" placeholder="${ref && ref.compteurs.elec ? "Entrée : " + esc(ref.compteurs.elec) : ""}" onchange="majEdl('${id}','compteurs.elec',this.value)"></label>
+      <label class="fl">Eau froide (m³)<input inputmode="decimal" value="${esc(e.compteurs.eauFroide)}" placeholder="${ref && ref.compteurs.eauFroide ? "Entrée : " + esc(ref.compteurs.eauFroide) : ""}" onchange="majEdl('${id}','compteurs.eauFroide',this.value)"></label>
+      <label class="fl">Eau chaude (m³)<input inputmode="decimal" value="${esc(e.compteurs.eauChaude)}" placeholder="${ref && ref.compteurs.eauChaude ? "Entrée : " + esc(ref.compteurs.eauChaude) : ""}" onchange="majEdl('${id}','compteurs.eauChaude',this.value)"></label>
+      <label class="fl">Gaz (m³)<input inputmode="decimal" value="${esc(e.compteurs.gaz)}" placeholder="${ref && ref.compteurs.gaz ? "Entrée : " + esc(ref.compteurs.gaz) : ""}" onchange="majEdl('${id}','compteurs.gaz',this.value)"></label>
+    </div><p class="note" style="margin-top:8px">Photos des compteurs, des clés, vue générale :</p>${vignettes(id, -1, e.photos)}</section>
+    <h2 class="sec">Pièce par pièce</h2>
+    <div class="stack">${e.pieces.map((p, i) => { const r = ref && ref.pieces.find(x => x.nom === p.nom);
+      return `<section class="card piece"><div class="piece-h"><h3>${esc(p.nom)}</h3><button class="small ghost" onclick="suppPieceEdl('${id}',${i})" aria-label="Retirer la pièce">✕</button></div>
+      ${r ? `<p class="note">À l'entrée : <b>${esc((ETATS.find(x => x[0] === r.etat) || ["", "non noté"])[1])}</b>${r.commentaire ? " — " + esc(r.commentaire) : ""}${(r.photos || []).length ? ` · ${r.photos.length} photo(s)` : ""}</p>` : ""}
+      <div class="seg etats" role="group" aria-label="État">${ETATS.map(([k, l]) => `<button type="button" class="${p.etat === k ? "on " + k : ""}" onclick="etatEdl('${id}',${i},'${k}')">${l}</button>`).join("")}</div>
+      <textarea rows="2" placeholder="Murs, sol, plafond, fenêtres, équipements… (ex : trou de cheville mur gauche)" onchange="majEdl('${id}','pieces.${i}.commentaire',this.value)">${esc(p.commentaire)}</textarea>
+      ${vignettes(id, i, p.photos)}</section>`; }).join("")}</div>
+    <div class="row" style="margin:10px 0 18px"><button onclick="ajouterPieceEdl('${id}')">+ Ajouter une pièce</button></div>
+    ${e.inventaire ? `<h2 class="sec">Inventaire du mobilier (meublé)</h2><section class="card"><ul class="inv">${e.inventaire.map((x, i) => `<li><span class="tx">${esc(x.nom)}</span>
+      <input class="qte" inputmode="numeric" aria-label="Nombre" placeholder="Nb" value="${esc(x.qte)}" onchange="majEdl('${id}','inventaire.${i}.qte',this.value)">
+      <span class="seg etats mini">${ETATS.map(([k, l]) => `<button type="button" class="${x.etat === k ? "on " + k : ""}" onclick="etatInv('${id}',${i},'${k}')" title="${l}">${l.split(" ")[0]}</button>`).join("")}</span></li>`).join("")}</ul>
+      <button class="small" onclick="ajouterObjetInv('${id}')">+ Ajouter un objet</button></section>` : ""}
+    <section class="card" style="margin-top:14px"><h2>Remarques</h2><textarea rows="3" placeholder="Ce que le locataire et toi voulez noter" onchange="majEdl('${id}','remarques',this.value)">${esc(e.remarques || "")}</textarea></section>
+    <div class="row" style="margin-top:14px"><button class="primary" onclick="docEdl('${id}')">📄 PDF à signer</button><button class="ghost danger" onclick="supprimerEdl('${id}')">Supprimer</button></div>`;
+}
+function sectionEdl(b) {
+  const L = edlsDuBail(b.id), a = L.find(e => e.type === "entree"), s2 = L.find(e => e.type === "sortie");
+  const ligne = (e, t) => e ? `<li><span class="ico" aria-hidden="true">📋</span><span class="tx"><a href="#edl-${e.id}">${t} du ${fds(e.date)}</a><small>${e.pieces.filter(p => p.etat).length}/${e.pieces.length} pièces · ${nbPhotos(e)} photo${nbPhotos(e) > 1 ? "s" : ""}${e.inventaire ? " · inventaire" : ""}</small></span><a class="btn small" href="#edl-${e.id}">Ouvrir</a></li>` : "";
+  return `<section class="card"><h2>📋 États des lieux${b.typeBail !== "vide" ? " et inventaire" : ""}</h2>
+    ${L.length ? `<ul class="todo">${ligne(a, "Entrée")}${ligne(s2, "Sortie")}</ul>` : `<p class="note">Aucun état des lieux dans l'appli${b.edlEntree ? ` (entrée faite le ${fds(b.edlEntree)}, sur papier ?)` : ""}. Fais-le directement sur le téléphone, pièce par pièce, avec les photos.</p>`}
+    <div class="row">${a ? "" : `<button class="primary" onclick="nouvelEdl('${b.id}','entree')">+ État des lieux d'entrée</button>`}${s2 ? "" : `<button ${a ? 'class="primary"' : ""} onclick="nouvelEdl('${b.id}','sortie')">+ État des lieux de sortie</button>`}</div></section>`;
+}
+async function imagesDoc(o) {
+  const chemins = (o && o.photos) || []; if (!chemins.length || !SB) return [];
+  const manque = chemins.map(c => c.chemin).filter(c => !PHOTO_URLS[c]);
+  if (manque.length) { const r = await SB.storage.from("photos").createSignedUrls(manque, 3600); (r.data || []).forEach(x => { if (x.signedUrl) PHOTO_URLS[x.path] = x.signedUrl; }); }
+  const out = [];
+  for (const c of chemins) { try { const bl = await (await fetch(PHOTO_URLS[c.chemin])).blob(); const data = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(bl); }); const im = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = data; }); out.push({ data, w: im.width, h: im.height, legende: c.legende }); } catch (e) {} }
+  if (out.length) toast(`PDF avec ${out.length} photo${out.length > 1 ? "s" : ""}`);
+  return out;
+}
+function docEdl(id) {
+  const e = edl(id), b = bail(e.bailId) || {}, bi = bien(e.bienId) || {}, etat = k => (ETATS.find(x => x[0] === k) || ["", "—"])[1];
+  const photos = [...(e.photos || []).map(c => ({ chemin: c, legende: "Compteurs / clés / général" })), ...e.pieces.flatMap(p => (p.photos || []).map(c => ({ chemin: c, legende: p.nom })))];
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div><h1>État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}${e.inventaire ? " et inventaire du mobilier" : ""}</h1>
+  <p class="center">Établi contradictoirement le ${fd(e.date)} (loi n° 89-462 du 6 juillet 1989, art. 3-2 ; décret n° 2016-382)</p>
+  <p style="margin-top:14px"><b>Logement :</b> ${esc(adresseBien(bi))}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " pièce(s)" : ""}</p>
+  <p><b>Bailleur :</b> ${esc(estPerso() ? S.sci.gerant || "" : (S.sci.nom || "") + (S.sci.gerant ? ", représentée par " + S.sci.gerant : ""))} · <b>Locataire :</b> ${esc(b.nom || "")}${b.colocataires ? ", " + esc(b.colocataires) : ""}</p>
+  <h2>Relevés et clés</h2><table><tbody><tr><td>Électricité</td><td class="right">${esc(e.compteurs.elec || "—")}</td></tr><tr><td>Eau froide</td><td class="right">${esc(e.compteurs.eauFroide || "—")}</td></tr><tr><td>Eau chaude</td><td class="right">${esc(e.compteurs.eauChaude || "—")}</td></tr><tr><td>Gaz</td><td class="right">${esc(e.compteurs.gaz || "—")}</td></tr><tr><td>Clés remises</td><td class="right">${esc(e.cles || "—")}</td></tr></tbody></table>
+  <h2>Pièce par pièce</h2><table><thead><tr><th>Pièce</th><th>État</th><th>Observations</th></tr></thead><tbody>${e.pieces.map(p => `<tr><td>${esc(p.nom)}</td><td>${etat(p.etat)}</td><td>${esc(p.commentaire || "")}${(p.photos || []).length ? ` (${p.photos.length} photo${p.photos.length > 1 ? "s" : ""})` : ""}</td></tr>`).join("")}</tbody></table>
+  ${e.inventaire ? `<h2>Inventaire du mobilier</h2><table><thead><tr><th>Élément</th><th>Nombre</th><th>État</th></tr></thead><tbody>${e.inventaire.map(x => `<tr><td>${esc(x.nom)}</td><td>${esc(x.qte || "—")}</td><td>${etat(x.etat)}</td></tr>`).join("")}</tbody></table>` : ""}
+  ${e.remarques ? `<h2>Remarques</h2><p>${nl2br(e.remarques)}</p>` : ""}
+  <p class="small">${e.type === "entree" ? "Le locataire peut demander à compléter cet état des lieux dans les 10 jours suivant sa signature, et pendant le premier mois de la période de chauffe pour les éléments de chauffage." : "La comparaison avec l'état des lieux d'entrée sert à établir les éventuelles retenues sur le dépôt de garantie, hors usure normale."}</p>
+  ${faitA(P(e.date) || TODAY)}<div class="sign"><div><b>Le bailleur</b><br><span class="small">Signature</span></div><div><b>Le(s) locataire(s)</b><br><span class="small">Signature précédée de « lu et approuvé »</span></div></div>`;
+  showDoc(html, { titre: `État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}`, fichier: `EDL-${e.type}-${slug(b.nom || "")}-${e.date}`, to: b.email, photos,
+    email: { objet: `État des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"}`, corps: `Bonjour,\n\nVoici l'état des lieux ${e.type === "entree" ? "d'entrée" : "de sortie"} du ${fd(e.date)}, avec les photos.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+}
 function pageBiens() {
   return `<div class="head"><div><h1>Biens</h1><p>Tes logements et qui les occupe.</p></div><button class="primary" onclick="editBien()">+ Ajouter un bien</button></div>
   ${S.biens.length ? `<div class="grid">${S.biens.map(bi => {
@@ -1676,6 +1825,7 @@ function pageBiens() {
     return `<article class="card bien"><div class="top"><span class="emoji" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span><div><h3>${esc(bi.nom)}</h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
       ${b ? `<span class="pill ok">Loué</span>` : `<span class="pill warn">Vide</span>`}</div>
       <dl>${b ? `<dt>Locataire</dt><dd><a href="#bail-${b.id}">${esc(b.nom)}</a></dd><dt>Loyer HC</dt><dd>${eur(l.hc)}</dd><dt>Charges</dt><dd>${eur(l.ch)}</dd><dt>Depuis</dt><dd>${fds(b.dateEntree)}</dd>` : `<dt>Locataire</dt><dd>—</dd>`}
+      ${(() => { const e = edlsDuBien(bi.id)[0]; return e ? `<dt>État des lieux</dt><dd><a href="#edl-${e.id}">${e.type === "entree" ? "Entrée" : "Sortie"} ${fds(e.date)} · ${nbPhotos(e)} 📷</a></dd>` : b ? `<dt>État des lieux</dt><dd><button class="small ghost" onclick="nouvelEdl('${b.id}','entree')">+ Faire</button></dd>` : ""; })()}
       <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd>
       ${(() => { const r = rendement(bi); return r ? `<dt>Rentabilité brute</dt><dd><span class="pill acc">${r.brut.toFixed(1).replace(".", ",")} %</span></dd>` : bi.prixAchat ? "" : `<dt>Rentabilité</dt><dd><button class="small ghost" onclick="editBien('${bi.id}')">Ajouter le prix</button></dd>`; })()}</dl>
       <div class="row"><button class="small" onclick="editBien('${bi.id}')">Modifier</button><button class="small" onclick="taxeFonciere('${bi.id}')">Taxe foncière</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
@@ -1706,6 +1856,7 @@ function pageBail(id) {
       <div class="row"><button class="primary" onclick="verserSomme('${b.id}')">Il a versé une somme</button><button onclick="editPlan('${b.id}')">${p ? "Modifier le plan" : "Plan de remboursement"}</button>${p ? `<button class="ghost" onclick="docPlan('${b.id}')">Accord à signer</button>` : ""}</div></section>`; })()}
   ${(() => { const T = taches().filter(t => t.bailId === b.id).map(t => { const n = esc(b.nom); let tt = t.t.split(" : " + n).join("").split(n + " : ").join("").split(" de " + n).join("").split(" à " + n).join("").split(n).join("").replace(/\s+:\s*$/, "").trim(); tt = tt.charAt(0).toUpperCase() + tt.slice(1); return { ...t, t: tt, acts: (t.acts || []).filter(a => !/go\('bail-/.test(a[1])) }; }); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
   <div class="stack">
+  ${sectionEdl(b)}
   <section><h2 style="margin-bottom:10px">Loyers mois par mois</h2>
   ${ech.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Mois</th><th class="num">Dû</th><th class="num">Payé</th><th>Statut</th><th></th></tr></thead><tbody>${ech.map(e => `<tr><td class="rt-head" style="text-transform:capitalize"><b>${fm(e.m)}</b>${e.prorata ? `<div class="sub">prorata ${e.to - e.from + 1}/${e.days} j</div>` : ""}</td><td class="num" data-l="Dû">${eur(e.du)}</td><td class="num" data-l="Payé">${eur(e.paye)}</td><td data-l="Statut">${pillStatut(e)}${e.quittance ? ` <span class="pill acc">Quittance envoyée</span>` : ""}</td><td class="rt-acts"><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Pas encore d'échéance.</div>`}
   </section>
@@ -2024,7 +2175,7 @@ function showDoc(html, o = {}) {
   if (mail) document.getElementById("dsend").onclick = async ev => {
     const bt = ev.currentTarget; bt.disabled = true; bt.lastChild.textContent = "Envoi…";
     const corps = (document.getElementById("mailtxt") || {}).value || (o.email ? o.email.corps : "");
-    const ok = await envoyerMail({ to: o.to, objet: o.email ? o.email.objet : o.titre, corps, html, fichier: o.fichier });
+    const ok = await envoyerMail({ to: o.to, objet: o.email ? o.email.objet : o.titre, corps, html, fichier: o.fichier, photos: o.photos });
     if (ok) { if (o.onSent) o.onSent(); save(); closeOverlay(); toast("Envoyé à " + o.to); }
     else { bt.disabled = false; bt.lastChild.textContent = "Envoyer"; }
   };
@@ -2034,7 +2185,7 @@ function copier() { const t = document.getElementById("mailtxt"); const done = (
 const slug = s => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 /* Fabrique un vrai PDF (texte) à partir du document affiché */
-function fairePdf(html) {
+function fairePdf(html, images = []) {
   if (!window.jspdf) throw new Error("PDF indisponible (connexion internet nécessaire)");
   const stage = document.getElementById("pdfstage");
   stage.innerHTML = `<div class="paper">${html}</div>`;
@@ -2088,11 +2239,25 @@ function fairePdf(html) {
   }
   [...root.children].forEach(block);
   stage.innerHTML = "";
+  if (images && images.length) {
+    doc.addPage(); y = M; write("PHOTOS", { size: 10.5, bold: true }); y += 2;
+    images.forEach(im => {
+      const w = W / 2 - 4, h = Math.min(w * im.h / im.w, 95);
+      const ww = h * im.w / im.h;
+      if (!images._col) images._col = 0;
+      if (images._col === 0) ensure(h + 10);
+      const x = M + images._col * (W / 2 + 4);
+      try { doc.addImage(im.data, "JPEG", x, y, ww, h); } catch (e) {}
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.text(doc.splitTextToSize(im.legende || "", w)[0] || "", x, y + h + 4);
+      if (images._col === 1) { y += h + 9; images._col = 0; } else images._col = 1;
+    });
+    delete images._col;
+  }
   return doc;
 }
 async function telechargerPdf() {
   if (!CURDOC) return;
-  let doc; try { doc = fairePdf(CURDOC.html); } catch (e) { toast(e.message); return; }
+  let doc; try { doc = fairePdf(CURDOC.html, await imagesDoc(CURDOC.o)); } catch (e) { toast(e.message); return; }
   const name = (CURDOC.o.fichier || "document") + ".pdf";
   if (DL) { try { await DL.save({ filename: name, data: doc.output("blob") }); toast("PDF enregistré"); } catch (e) { if (e && e.code !== "declined") toast("Téléchargement impossible ici."); } }
   else doc.save(name);
@@ -2101,7 +2266,7 @@ async function telechargerPdf() {
 const peutPartager = () => { try { return !!(navigator.canShare && navigator.canShare({ files: [new File([""], "t.pdf", { type: "application/pdf" })] })); } catch (e) { return false; } };
 async function partagerPdf() {
   if (!CURDOC) return;
-  let doc; try { doc = fairePdf(CURDOC.html); } catch (e) { toast(e.message); return; }
+  let doc; try { doc = fairePdf(CURDOC.html, await imagesDoc(CURDOC.o)); } catch (e) { toast(e.message); return; }
   const f = new File([doc.output("blob")], (CURDOC.o.fichier || "document") + ".pdf", { type: "application/pdf" });
   const corps = (document.getElementById("mailtxt") || {}).value || "";
   try { await navigator.share({ files: [f], title: CURDOC.o.titre || f.name, text: corps }); }
@@ -2137,8 +2302,8 @@ async function envoyerMailBrut({ to, objet, corps, pieces = [] }) {
   try { await MCP.callTool("Gmail", GMAIL_TOOL, input); return true; }
   catch (e) { toast(erreurConnecteur(e, "Gmail")); return false; }
 }
-async function envoyerMail({ to, objet, corps, html, fichier }) {
-  let pdf; try { pdf = fairePdf(html); } catch (e) { toast(e.message); return false; }
+async function envoyerMail({ to, objet, corps, html, fichier, photos }) {
+  let pdf; try { pdf = fairePdf(html, await imagesDoc({ photos })); } catch (e) { toast(e.message); return false; }
   const b64 = pdf.output("datauristring").split(",")[1];
   const ok = await envoyerMailBrut({ to, objet, corps, pieces: [{ nom: fichier + ".pdf", b64, type: "application/pdf" }] });
   if (ok) archiver(b64, fichier);
