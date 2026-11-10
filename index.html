@@ -642,6 +642,7 @@ async function bootSupabase() {
 async function apresConnexion(user) {
   SB_USER = user; MODE = "chargement"; render();
   try { await SB.rpc("accepter_invitations"); } catch (e) {}
+  SB.from("gmail_comptes").select("adresse").eq("user_id", user.id).maybeSingle().then(g => { GMAIL = g.data || null; }, () => {});
   const r = await SB.from("espaces").select("id, nom, cree_le").order("cree_le");
   if (r.error) { MODE = "connexion"; render(); toast("Impossible de charger tes espaces : " + r.error.message); return; }
   ESPACES = r.data || [];
@@ -862,6 +863,43 @@ function partagerLien() {
   if (navigator.share) navigator.share({ title: "Appli de gestion locative", text: "Ouvre ce lien (sur iPhone : dans Safari), suis les étapes pour installer l'appli, puis connecte-toi avec ton e-mail :", url }).catch(() => {});
   else copierTexte(url);
 }
+/* Envoi depuis le Gmail de la personne (si branché) */
+let GMAIL = null;
+async function appelGmail(corps) {
+  const s = (await SB.auth.getSession()).data.session;
+  const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/envoyer-gmail", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s && s.access_token) }, body: JSON.stringify(corps) });
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  return r.ok && j.ok ? { ok: true } : { ok: false, erreur: j.erreur || j.message || "erreur " + r.status };
+}
+async function envoyerViaGmail({ to, objet, corps, pieces }) {
+  const p = pieces[0];
+  const r = await appelGmail({ espace: ESPACE, a: to, objet, texte: corps, nom: estPerso() ? S.sci.gerant || "" : S.sci.nom || "", nom_fichier: p ? p.nom : null, pdf_base64: p ? p.b64 : null });
+  if (!r.ok) toast("L'e-mail n'est pas parti : " + r.erreur);
+  return r.ok;
+}
+function sectionGmail() {
+  if (GMAIL) return `<section class="card"><h2>✉️ Envoi depuis ton Gmail</h2><p class="note">✅ Tes quittances, relances et documents partent de <b>${esc(GMAIL.adresse)}</b>, et on les retrouve dans tes "Messages envoyés".</p><div class="row"><button class="small ghost" onclick="debrancherGmail()">Débrancher</button></div></section>`;
+  return `<section class="card install-tuto"><h2>✉️ Envoyer depuis ton adresse Gmail</h2>
+    <p class="note">Aujourd'hui, tes e-mails partent par le serveur de l'appli. Branche ton Gmail pour qu'ils partent de ta vraie adresse.</p>
+    <ol class="tuto">
+      <li>Ouvre <a href="https://myaccount.google.com/signinoptions/twosv" target="_blank" rel="noopener">la page "Validation en deux étapes" de Google</a>. Si elle est désactivée, touche <b>Activer</b> et suis les étapes : Google l'exige.</li>
+      <li>Ouvre <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">la page "Mots de passe des applications"</a>.</li>
+      <li>Dans <b>Nom de l'application</b>, écris <b>Gestion SCI</b>, puis touche <b>Créer</b>.</li>
+      <li>Google affiche un mot de passe de 16 lettres dans un cadre jaune. Copie-le et colle-le ci-dessous, puis touche <b>Brancher</b>.</li></ol>
+    <form style="display:grid;gap:12px;margin-top:8px" onsubmit="event.preventDefault();brancherGmail(this)"><label class="fl full">Ton adresse Gmail<input name="adresse" type="email" required value="${esc(SB_USER && SB_USER.email || "")}"></label>
+      <label class="fl full">Mot de passe d'application (16 lettres)<input name="mdp" required autocomplete="off" placeholder="abcd efgh ijkl mnop"></label>
+      <button class="primary full" id="gm_btn">Brancher</button></form></section>`;
+}
+async function brancherGmail(f) {
+  const bt = document.getElementById("gm_btn"); bt.disabled = true; bt.textContent = "Vérification…";
+  const adresse = f.adresse.value.trim(), mdp = f.mdp.value;
+  const t = await appelGmail({ action: "tester", adresse, mdp });
+  if (!t.ok) { bt.disabled = false; bt.textContent = "Brancher"; toast(t.erreur); return; }
+  const r = await SB.rpc("gmail_brancher", { adresse, mdp });
+  if (r.error) { bt.disabled = false; bt.textContent = "Brancher"; toast(r.error.message); return; }
+  GMAIL = { adresse: adresse.toLowerCase() }; render(); toast("✅ Gmail branché : tes e-mails partent maintenant de " + adresse);
+}
+function debrancherGmail() { confirmer("Débrancher ton Gmail ? Les e-mails repartiront par le serveur de l'appli.", async () => { await SB.rpc("gmail_debrancher"); GMAIL = null; render(); }); }
 /* Envoi d'un e-mail par le serveur (Brevo), avec suivi du résultat */
 async function envoyerViaServeur({ to, objet, corps, pieces }) {
   const p = pieces[0];
@@ -1746,7 +1784,7 @@ function pageCompta() {
 function pageReglages() {
   const s = S.sci;
   return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div></div>
-  ${SB ? sectionInstall() + sectionMembres() : ""}
+  ${SB ? sectionInstall() + sectionMembres() + sectionGmail() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
     ${sel("Tu loues", "forme", s.forme || "sci", [["sci", "Avec une SCI"], ["perso", "En nom propre (particulier)"]], "full")}
@@ -2079,7 +2117,7 @@ function erreurConnecteur(e, nom) {
 const b64Octets = b64 => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
 let FILEARGS = null;
 async function envoyerMailBrut({ to, objet, corps, pieces = [] }) {
-  if (!MCP && SB && ESPACE) { const dests = (Array.isArray(to) ? to : [to]).filter(Boolean); if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; } return envoyerViaServeur({ to: dests, objet, corps, pieces }); }
+  if (!MCP && SB && ESPACE) { const dests = (Array.isArray(to) ? to : [to]).filter(Boolean); if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; } return GMAIL ? envoyerViaGmail({ to: dests, objet, corps, pieces }) : envoyerViaServeur({ to: dests, objet, corps, pieces }); }
   if (!MCP) { toast("L'envoi d'e-mails n'est pas disponible ici."); return false; }
   const dests = (Array.isArray(to) ? to : [to]).filter(Boolean);
   if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; }
