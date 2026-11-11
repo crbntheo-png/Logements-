@@ -487,6 +487,8 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .sortie-l li{align-items:flex-start}.sortie-l .chk{padding-top:2px}.sl-h{display:flex;justify-content:space-between;gap:10px}.sl-sel{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.sl-sel select{flex:1;min-width:140px;font-size:.85rem;padding:6px 8px;height:auto}
 .cats-doc{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}.cat-doc{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--surface-2);text-decoration:none;color:var(--ink)}.cat-doc b{flex:1;font-size:.86rem;font-weight:700;line-height:1.2}.cat-doc small{font-weight:800;color:var(--accent);background:var(--accent-soft);border-radius:99px;padding:1px 8px}
 .chips-cat{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px;scrollbar-width:none}.chips-cat .chip{white-space:nowrap;text-decoration:none}.chips-cat .chip.on{background:var(--accent);color:var(--accent-ink)}
+.guide .etapes{list-style:none;margin:10px 0 6px;padding:0}.etape{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}.etape:first-child{border-top:0}.etape .num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:14px}.etape.ok .num{background:var(--ok-soft);color:var(--ok)}.etape.ok b{color:var(--muted);text-decoration:line-through}.etape .tx{flex:1;min-width:0}.etape p{margin:4px 0 0;font-size:.9rem;line-height:1.45}.lbl{font-weight:700;color:var(--ink-2)}.et-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}.et-h b{flex:1;min-width:150px}.etape.next{background:var(--accent-soft);margin:0 -12px;padding:12px;border-radius:14px;border-top:0}
+.aide p{margin:6px 0;line-height:1.5}
 </style>
 </head>
 <body>
@@ -726,7 +728,7 @@ function rapprocherBanque() {
     const manuel = Object.values(lot).find(ps => Math.abs(ps.reduce((s, p) => s + +p.montant, 0) - op.montant) < 0.01);
     if (manuel) { manuel.forEach(p => p.tx = op.tx_id); lies.add(op.tx_id); modif = true; continue; }
     let reste = r2(op.montant);
-    for (const x of echeancesBail(b, addM(op.date.slice(0, 7), 1))) {
+    for (const x of ordreImputation(b, op.date.slice(0, 7), addM(op.date.slice(0, 7), 1))) {
       if (reste <= 0) break; if (x.reste <= 0) continue;
       const part = r2(Math.min(reste, x.reste)); reste = r2(reste - part);
       S.paiements.push({ id: "tx" + op.tx_id + "-" + x.m, bailId: b.id, mois: x.m, montant: part, date: op.date, mode: "virement", tx: op.tx_id, lot: "tx" + op.tx_id });
@@ -780,11 +782,19 @@ function validerSorties(f) {
 }
 function ignorerSortie(tx) { S.banqueVus = Object.assign({}, S.banqueVus, { [tx]: "ignore" }); save(); render(); toast("Ignorée (ce n'est pas une dépense)"); }
 function sectionBanque() {
-  if (!SB) return "";
-  if (!BANQUE.lien) return `<section class="card"><h2>🏦 Brancher la banque (via Pennylane)</h2>
-    <p class="note">Si ta SCI utilise Pennylane, l'appli lit les opérations de ton compte toutes les heures : solde, entrées, sorties, et les virements des locataires cochent les loyers tout seuls.</p>
-    <p class="note">Pour obtenir le jeton : dans Pennylane, va dans <b>Paramètres</b>, puis <b>Connectivité</b>, puis <b>Développeurs</b>, puis <b>Générer un token API</b>, en lecture seule.</p>
-    <form class="row" onsubmit="event.preventDefault();brancherBanque(this)"><input name="jeton" required placeholder="Colle le jeton Pennylane ici" aria-label="Jeton Pennylane" autocomplete="off" style="flex:1;min-width:200px"><button class="primary" id="bq_btn">Brancher</button></form></section>`;
+  if (!SB || !BANQUE.lien) return `<section class="card install-tuto"><h2>🏦 Ta banque dans l'appli</h2>
+    <p class="note"><b>Pourquoi :</b> les loyers reçus se cochent tout seuls, les quittances sont prêtes, et la compta se remplit avec tes dépenses. Tu n'as presque plus besoin d'ouvrir l'appli de ta banque.</p>
+    <h3>Le plus simple : ton relevé, une fois par mois (2 minutes)</h3>
+    <ol class="tuto">
+      <li>Ouvre le <b>site internet</b> de ta banque (souvent plus complet que l'appli du téléphone) et va sur le compte où arrivent les loyers.</li>
+      <li>Cherche un bouton <b>Télécharger</b>, <b>Exporter</b> ou <b>Relevé d'opérations</b> (parfois une petite flèche vers le bas ⬇).</li>
+      <li>Choisis le format <b>CSV</b> (sinon <b>Excel</b>) et la période : <b>le mois dernier</b>. Enregistre le fichier.</li>
+      <li>Reviens ici, touche <b>Importer le relevé</b> et choisis le fichier. L'appli reconnaît les loyers et les dépenses : tu vérifies, tu valides.</li></ol>
+    <p class="note">Pas de bouton d'export dans ta banque ? Sélectionne les lignes du relevé à l'écran, copie-les et colle-les dans la case prévue : ça marche aussi.</p>
+    <div class="row"><button class="primary" onclick="importerReleve()">🏦 Importer le relevé</button></div>
+    ${SB ? `<details style="margin-top:12px"><summary>Tu utilises Pennylane ? Tout devient automatique</summary>
+    <p class="note">L'appli lit alors ton compte toute seule, toutes les heures. Dans Pennylane : <b>Paramètres</b> › <b>Connectivité</b> › <b>Développeurs</b> › <b>Générer un token API</b> (lecture seule), puis colle-le ici. Si c'est ton comptable qui gère Pennylane, demande-lui ce jeton.</p>
+    <form class="row" onsubmit="event.preventDefault();brancherBanque(this)"><input name="jeton" required placeholder="Colle le jeton Pennylane ici" aria-label="Jeton Pennylane" autocomplete="off" style="flex:1;min-width:200px"><button class="primary" id="bq_btn">Brancher</button></form></details>` : ""}</section>`;
   const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), ops = BANQUE.ops.slice(0, view.banqueTout ? 400 : 25);
   const lies = new Map(S.paiements.filter(p => p.tx).map(p => [String(p.tx), p]));
   return `<section class="card banque"><div class="bq-head"><div><h2>🏦 Compte bancaire</h2><p class="note">${BANQUE.comptes.map(c => esc(c.nom)).join(" · ")} · mis à jour ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0]?.maj_le || Date.now())}${BANQUE.lien.erreur ? ` · ⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p></div><b class="bq-solde">${eur(solde)}</b></div>
@@ -1133,6 +1143,14 @@ function echeancesBail(b, upTo = CUR) {
 }
 /* Dette d'un locataire : loyers échus non payés (le mois en cours compte dès sa date de paiement passée) */
 const detteBail = b => r2(echeancesBail(b).filter(e => e.statut === "retard").reduce((s, e) => s + e.reste, 0));
+/* Ordre d'imputation d'un versement. Avec un plan de rattrapage : le loyer du mois d'abord (il est "payé"),
+   le surplus rembourse le retard le plus ancien. Sans plan : le plus ancien d'abord (règle légale). */
+function ordreImputation(b, mois, upTo) {
+  const L = echeancesBail(b, upTo), p = planEtat(b);
+  if (!p || p.fait) return L;
+  const cur = L.find(x => x.m === mois);
+  return cur ? [cur, ...L.filter(x => x !== cur)] : L;
+}
 /* Plan de remboursement : X € par mois en plus du loyer, à partir d'un mois donné */
 function planEtat(b) {
   const pl = b.plan; if (!pl || !(+pl.mensualite > 0)) return null;
@@ -1151,7 +1169,7 @@ function verserSomme(bailId) {
     d => {
       let reste = r2(+d.montant); if (!(reste > 0)) { toast("Le montant doit être supérieur à 0."); return false; }
       const lot = uid(), payes = [];
-      for (const x of echeancesBail(b, addM(CUR, 12))) {
+      for (const x of ordreImputation(b, d.date.slice(0, 7), addM(CUR, 12))) {
         if (reste <= 0) break; if (x.reste <= 0) continue;
         const part = r2(Math.min(reste, x.reste)); reste = r2(reste - part);
         S.paiements.push({ id: uid(), bailId, mois: x.m, montant: part, date: d.date, mode: d.mode, lot });
@@ -1170,6 +1188,31 @@ function editPlan(bailId) {
     d => { const de = r2(+d.dette), me = r2(+d.mensualite); if (!(de > 0) || !(me > 0)) { toast("Indique la dette et la somme mensuelle."); return false; }
       b.plan = { dette: de, mensualite: me, debut: d.debut, cree: pl.cree || iso(TODAY) }; toast(`Plan enregistré : ${eur(me)} par mois pendant ${Math.ceil(de / me)} mois`); },
     pl.mensualite ? { del: () => { delete b.plan; }, delMsg: "Arrêter le suivi de ce plan ?" } : {});
+}
+/* Message très simple au locataire : où il en est, ce qu'il doit payer chaque mois, jusqu'à quand */
+function docPointLocataire(bailId) {
+  const b = bail(bailId), p = planEtat(b), e = echeance(b, CUR), l = loyerAt(b, CUR), loyer = r2(l.hc + l.ch), dette = p ? p.dette : detteBail(b);
+  const paye = e && e.statut === "paye", jour = +b.jourPaiement || 1, prenomL = String(nomCourt(b.nom)).split(/\s+/)[0];
+  let reste = dette, m = paye ? addM(CUR, 1) : CUR; const lignes = [];
+  if (p) for (let i = 0; reste > 0.009 && i < 120; i++, m = addM(m, 1)) { const ratt = r2(Math.min(p.mensualite, reste)); reste = r2(reste - ratt); lignes.push({ m, total: r2(loyer + ratt), ratt, reste }); }
+  const fin = lignes.length ? lignes[lignes.length - 1].m : null, mensuel = p ? r2(loyer + Math.min(p.mensualite, dette)) : loyer;
+  const boite = (t, v, s2, c) => `<tr><td>${t}${s2 ? `<br><span class="small">${s2}</span>` : ""}</td><td class="right"><b>${v}</b></td></tr>`;
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div><h1>Où en est votre loyer ?</h1><p class="center">Point du ${fd(TODAY)}</p>
+  <table><tbody>
+  ${e ? boite(`Loyer de ${fm(CUR)}`, paye ? "Payé, merci" : eur(e.reste) + " à payer", paye ? "" : "avant le " + fd(e.dueDate)) : ""}
+  ${boite("Retard à rattraper", eur(dette), dette > 0 ? "loyers des mois précédents pas encore payés" : "aucun retard")}
+  ${p && dette > 0 ? boite("À payer chaque mois", eur(mensuel), `${eur(loyer)} de loyer + ${eur(Math.min(p.mensualite, dette))} pour rattraper le retard, avant le ${jour} du mois`) : ""}
+  ${fin ? boite("Retard rattrapé en", fm(fin), "si chaque paiement est fait à temps") : ""}
+  </tbody></table>
+  ${lignes.length ? `<h2>Vos prochains paiements</h2><table><thead><tr><th>Mois</th><th class="right">À payer</th><th class="right">Retard restant après</th></tr></thead><tbody>${lignes.map(x => `<tr><td style="text-transform:capitalize">${fm(x.m)}</td><td class="right">${eur(x.total)}</td><td class="right">${eur(x.reste)}</td></tr>`).join("")}</tbody></table>` : ""}
+  <p style="margin-top:14px">${p ? "Si un mois vous ne pouvez pas payer cette somme, prévenez-nous avant la date : on trouvera une solution." : dette > 0 ? "Merci de régler ce retard rapidement, ou de nous contacter pour mettre en place un paiement en plusieurs fois." : ""}</p>
+  ${faitA()}${signature()}`;
+  const corps = [`Bonjour ${prenomL},`, "", e ? (paye ? `Votre loyer de ${fm(CUR)} est bien payé, merci.` : `Votre loyer de ${fm(CUR)} (${eur(e.reste)}) est à payer avant le ${fd(e.dueDate)}.`) : "",
+    dette > 0 ? `Il reste ${eur(dette)} de retard à rattraper.` : "Vous n'avez aucun retard.",
+    p && dette > 0 ? `Comme convenu, chaque mois vous payez ${eur(mensuel)} (${eur(loyer)} de loyer + ${eur(Math.min(p.mensualite, dette))} de rattrapage), avant le ${jour} du mois.` : "",
+    fin ? `Si tout est payé à temps, le retard sera rattrapé en ${fm(fin)}.` : "", "", "Le détail est dans le document joint. Une question ? Répondez simplement à ce message.", "", "Bonne journée,", S.sci.gerant || ""].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
+  showDoc(html, { titre: "Point sur le loyer", fichier: `Point-loyer-${slug(b.nom)}-${CUR}`, to: b.email, bailId: b.id, email: { objet: `Votre loyer : où vous en êtes (${fm(CUR)})`, corps },
+    onSent: () => { S.faits["pt-" + b.id + "-" + CUR] = iso(TODAY); }, sentLabel: "Déjà envoyé autrement" });
 }
 function docPlan(bailId) {
   const b = bail(bailId), p = planEtat(b); if (!p) return;
@@ -1239,10 +1282,14 @@ function taches() {
   const add = (o) => T.push(o);
   const ech = toutesEcheances();
   // 1. Impayés
+  S.baux.forEach(b => { const p = planEtat(b); if (!p || p.fait || fait("pt-" + b.id + "-" + CUR)) return;
+    add({ bailId: b.id, key: "pt-" + b.id + "-" + CUR, prio: "soon", date: TODAY, done: true, t: `Envoyer le point du mois à ${esc(b.nom)}`, d: `Retard restant ${eur(p.dette)} · ${eur(p.mensualite)} de rattrapage par mois. Un message très simple, à vérifier avant l'envoi.`, acts: [["Préparer le message", `docPointLocataire('${b.id}')`, "primary"]] });
+  });
   S.baux.forEach(b => { const p = planEtat(b); if (!p || p.fait) return;
     if (p.ok) add({ bailId: b.id, key: "plan-" + b.id + CUR, prio: "info", date: TODAY, done: true, t: `Plan de remboursement suivi : ${esc(b.nom)}`, d: `Reste ${eur(p.dette)} à rembourser · ${eur(p.mensualite)} par mois en plus du loyer · fin prévue en ${fm(p.fin)}`, acts: [["Il a versé…", `verserSomme('${b.id}')`]] });
     else add({ bailId: b.id, key: "planko-" + b.id + CUR, prio: "urgent", date: TODAY, t: `Plan de remboursement non suivi : ${esc(b.nom)}`, d: `Il devrait encore devoir ${eur(p.attendu)}, il doit ${eur(p.dette)} : il manque ${eur(p.manque)}.`, acts: [["Il a versé…", `verserSomme('${b.id}')`, "primary"], ["Relancer", `relance('${b.id}','${(echeancesBail(b).find(e => e.statut === "retard") || {}).m || CUR}')`]] });
   });
+  if (!(SB && BANQUE.lien) && S.baux.length && !fait("rel-" + CUR) && TODAY.getDate() >= 3) add({ key: "rel-" + CUR, prio: "info", date: TODAY, done: true, t: "Importer le relevé bancaire du mois", d: "2 minutes : les loyers reçus se cochent tout seuls et la compta se remplit.", acts: [["Importer", "importerReleve()", "primary"], ["Comment faire ?", "go('compta')"]] });
   if (SB && BANQUE.lien) { const n = sortiesAClasser(TODAY.getFullYear()).length; if (n) add({ key: "bqdep-" + CUR + "-" + n, prio: "info", date: TODAY, t: `${n} sortie${n > 1 ? "s" : ""} d'argent à mettre en compta`, d: "Prêt, assurance, taxe, eau… déjà classées par l'appli : il reste à vérifier et enregistrer.", acts: [["Classer", "go('compta')", "primary"]] }); }
   const enPlan = id => { const p = planEtat(bail(id)); return p && !p.fait; };
   ech.filter(e => e.statut === "retard" && !enPlan(e.b.id)).forEach(e => {
@@ -1616,6 +1663,7 @@ function render() {
   else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
   else if (h.startsWith("bien-")) html = pageBien(h.slice(5));
   else if (h.startsWith("docs-")) html = pageDocsBien(decodeURIComponent(h.slice(5)));
+  else if (h === "aide") html = pageAide();
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
@@ -1635,7 +1683,53 @@ function taskHtml(t) {
   const acts = (t.acts || []).map(([l, f, c]) => `<button class="small ${c || ""}" onclick="${f}">${l}</button>`).join("") + (t.done ? `<button class="small ghost" onclick="marquerFait('${t.key}')">✓ C'est fait</button>` : "");
   return `<div class="task ${t.prio}"><span class="ico" aria-hidden="true">${icoTache(t)}</span><div><div class="t">${t.t}</div><div class="d">${t.d}</div></div>${acts ? `<div class="acts">${acts}</div>` : ""}</div>`;
 }
+/* Guide de démarrage : quoi faire, pourquoi, ce que ça rapporte */
+function etapesGuide() {
+  const relOk = Object.keys(S.faits || {}).some(k => k.startsWith("rel-")) || !!(BANQUE && BANQUE.lien);
+  let installOk = false; try { installOk = estInstallee() || localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) { installOk = estInstallee(); }
+  const L = [
+    { ok: !!(S.sci.nom && S.sci.gerant && S.sci.siege), ico: "🏛", t: estPerso() ? "Tes infos de propriétaire" : "Les infos de ta société", pourquoi: "Ton nom, ton adresse et le signataire apparaissent sur chaque quittance, bail et courrier. Sans eux, les documents sont incomplets.", comment: "Réglages › rubrique « La SCI ». 1 minute.", btn: ["Remplir", "go('reglages')"] },
+    { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: "Un par logement : adresse, surface, meublé ou vide.", btn: ["Ajouter un logement", "editBien()"] },
+    { ok: S.baux.length > 0, ico: "👤", t: "Tes locataires", pourquoi: "L'appli calcule chaque mois ce qui est dû, te dit qui est en retard, prépare quittances et relances, et te rappelle la révision du loyer (IRL) au bon moment.", comment: "Nom, e-mail, date d'entrée, loyer. L'e-mail sert à envoyer les documents.", btn: ["Ajouter un locataire", "editBail()"] },
+    { ok: relOk, ico: "🏦", t: "Ta banque", pourquoi: "Les loyers reçus se cochent tout seuls et la compta se remplit avec tes dépenses : plus de pointage à la main.", comment: "Ton relevé une fois par mois (2 min), ou Pennylane si tu l'as.", btn: ["Voir comment", "go('compta')"] },
+    { ok: S.fichiers.length > 0 || S.edl.length > 0, ico: "📁", t: "Tes documents", pourquoi: "Bail signé, DPE, assurance, factures : tout est rangé par logement, sur ton téléphone et celui de tes associés. Fini de chercher dans les mails.", comment: "Fiche d'un logement › Documents › Ajouter un fichier (PDF ou photo).", btn: ["Ouvrir mes logements", "go('biens')"] },
+  ];
+  if (SB) L.push(
+    { ok: !!GMAIL, ico: "✉️", t: "Envoyer depuis ton adresse", pourquoi: "Quittances et relances partent de ta vraie adresse e-mail et tu les retrouves dans tes « Messages envoyés ». Rien ne part sans ton accord.", comment: "Réglages › « Envoyer depuis ton adresse Gmail ». 3 minutes.", btn: ["Brancher Gmail", "go('reglages')"], option: true },
+    { ok: !!(MEMBRES && (MEMBRES.membres.length > 1 || MEMBRES.invitations.length)), ico: "🤝", t: "Inviter tes associés", pourquoi: "Chacun voit les mêmes chiffres en direct, sur son téléphone. Plus de tableur à s'envoyer.", comment: "Réglages › « Membres de l'espace » › leur e-mail.", btn: ["Inviter", "go('reglages')"], option: true },
+    { ok: installOk, ico: "📲", t: "Mettre l'appli sur ton téléphone", pourquoi: "Une icône sur l'écran d'accueil : tu l'ouvres en un geste, comme une vraie appli.", comment: "Réglages › « Installer l'appli » : le tuto pas à pas.", btn: ["Voir le tuto", "go('reglages')"], option: true });
+  return L;
+}
+function blocGuide(complet) {
+  const E = etapesGuide(), faites = E.filter(e => e.ok).length, prochaine = E.find(e => !e.ok);
+  const li = (e, i) => { const detail = complet || e === prochaine;
+    return `<li class="etape ${e.ok ? "ok" : ""} ${e === prochaine ? "next" : ""}"><span class="num" aria-hidden="true">${e.ok ? "✓" : i + 1}</span><div class="tx"><div class="et-h"><b>${e.ico} ${e.t}</b>${e.option && !e.ok ? `<span class="pill info">conseillé</span>` : ""}${!detail && !e.ok ? `<button class="small ghost" onclick="${e.btn[1]}">${e.btn[0]}</button>` : ""}</div>
+    ${detail ? `<p><span class="lbl">Pourquoi :</span> ${e.pourquoi}</p><p class="note"><span class="lbl">Comment :</span> ${e.comment}</p>${e.ok ? "" : `<button class="small primary" style="margin-top:8px" onclick="${e.btn[1]}">${e.btn[0]}</button>`}` : ""}</div></li>`; };
+  return `<section class="card guide"><div class="sec-head"><h2>🚀 Bien démarrer <span class="count">${faites}/${E.length}</span></h2>${complet ? "" : `<a class="more" href="#aide">Comment ça marche ?</a>`}</div>
+    <div class="barre"><i style="width:${Math.round(faites / E.length * 100)}%"></i></div>
+    <ol class="etapes">${E.map(li).join("")}</ol>
+    ${complet ? "" : `<div class="row"><button class="small ghost" onclick="S.faits.guideMasque=iso(TODAY);save();render()">Masquer ce guide</button></div>`}</section>`;
+}
+function pageAide() {
+  const bloc = (ico, t, sert, quand, auto) => `<section class="card aide"><h2>${ico} ${t}</h2><p><span class="lbl">À quoi ça sert :</span> ${sert}</p><p><span class="lbl">Quand y aller :</span> ${quand}</p>${auto ? `<p><span class="lbl">Ce que l'appli fait pour toi :</span> ${auto}</p>` : ""}</section>`;
+  return `<div><a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>Comment ça marche ?</h1><p>L'appli tient tes loyers, tes documents et ta compta. Toi, tu valides.</p></div></div></div>
+    ${blocGuide(true)}
+    <div class="stack">
+    ${bloc("🏠", "Accueil", "Voir en 5 secondes où en sont les loyers du mois, qui a payé, qui est en retard, et les prochaines échéances.", "Chaque fois que tu ouvres l'appli.", "Calcule ce qui est dû (avec prorata d'arrivée et de départ) et repère les retards.")}
+    ${bloc("✅", "À faire", "La liste de tout ce qui demande une action : quittance à envoyer, relance, révision de loyer, assurance à demander, taxe foncière à répartir…", "Une fois par semaine, ou quand le petit chiffre rouge apparaît.", "Prépare les documents et les messages. Chaque envoi s'ouvre en aperçu : rien ne part sans ton accord.")}
+    ${bloc("🏢", "Biens", "La fiche de chaque logement : occupant, loyer, rentabilité, états des lieux et tous les documents rangés par type.", "Quand tu cherches un document ou que tu fais un état des lieux.", "Range les documents par logement et par locataire, garde les photos des états des lieux.")}
+    ${bloc("📁", "Docs", "Tes documents et ton dossier Google Drive.", "Quand tu veux ouvrir le Drive de la société.", "")}
+    ${bloc("📊", "Compta", "Ce qui est entré et sorti, logement par logement, le résultat de l'année et la part de chaque associé. Ta banque y est branchée.", "Une fois par mois, après le relevé, et en fin d'année pour le comptable.", "Reconnaît les loyers dans la banque, classe les dépenses (prêt, assurance, taxe, eau…) et retient tes choix. Export pour le comptable en un clic.")}
+    ${bloc("⚙️", "Réglages", "Tes infos, tes associés, l'envoi d'e-mails depuis ton adresse, l'installation sur le téléphone.", "Au début, puis rarement.", "")}
+    <section class="card aide"><h2>🔒 Ce qui ne se fait jamais sans toi</h2><p>Aucun e-mail ne part tout seul : quittances, relances et courriers s'ouvrent en aperçu, tu vérifies l'adresse et le texte, puis tu confirmes. Les dépenses trouvées dans la banque attendent ta validation.</p></section>
+    </div>`;
+}
 function pageBienvenue() {
+  return `<div class="greet"><h1>Bienvenue 👋</h1><p>En quelques étapes, l'appli tient tes loyers, tes quittances, tes documents et ta compta. Chaque étape te dit pourquoi elle compte.</p></div>
+  ${blocGuide(false).replace('<button class="small ghost" onclick="S.faits.guideMasque=iso(TODAY);save();render()">Masquer ce guide</button>', '<a class="btn small ghost" href="#aide">Comment ça marche ?</a>')}
+  ${SB ? "" : `<div class="banner" style="background:var(--surface);box-shadow:var(--sh-1)"><span>✨ Envie de voir à quoi ça ressemble d'abord ?</span><button class="small" onclick="chargerDemo()">Charger un exemple</button></div>`}`;
+}
+function ancienneBienvenue() {
   const st = (ok, ico, t, d, btn) => `<div class="task ${ok ? "" : "info"}"><span class="ico" aria-hidden="true">${ok ? "✅" : ico}</span><div><div class="t">${t}</div><div class="d">${d}</div></div><div class="acts">${ok ? `<span class="pill ok">Fait</span>` : btn}</div></div>`;
   return `<div class="greet"><h1>Bienvenue</h1><p>Trois étapes, et l'appli s'occupe du reste : loyers, quittances, relances, révisions.</p></div>
   <section class="tasks">
@@ -1652,8 +1746,11 @@ function carteLocataire(b) {
   let etat, cls, act = "", montant = eur(l.hc + l.ch), dot = "";
   if (P(b.dateEntree) > TODAY) { etat = `Arrive le ${fd(b.dateEntree)}`; cls = "info"; dot = "info"; }
   else if (planEtat(b) && !planEtat(b).fait) {
-    const p = planEtat(b); etat = p.ok ? `Plan de remboursement · reste ${eur(p.dette)}` : `Plan non suivi · manque ${eur(p.manque)}`; cls = p.ok ? "warn" : "bad"; dot = cls; montant = eur(p.dette);
-    act = `<button class="primary" onclick="verserSomme('${b.id}')">✓ Il a versé…</button>${p.ok ? "" : `<button onclick="relance('${b.id}','${(retards[0] || { m: CUR }).m}')">✉ Relancer</button>`}`;
+    const p = planEtat(b), paye = e && e.statut === "paye", aPayer = e ? r2(e.reste + Math.min(p.mensualite, p.dette)) : 0;
+    etat = paye ? `✅ Loyer payé · retard à rattraper : ${eur(p.dette)}` : `À payer : ${eur(aPayer)} (loyer + ${eur(Math.min(p.mensualite, p.dette))} de rattrapage)`;
+    if (!p.ok) etat += ` · ⚠️ en retard sur le plan de ${eur(p.manque)}`;
+    cls = paye && p.ok ? "ok" : p.ok ? "warn" : "bad"; dot = paye && p.ok ? "warn" : cls; montant = paye ? `reste ${eur(p.dette)}` : eur(aPayer);
+    act = `<button class="primary" onclick="verserSomme('${b.id}')">✓ Il a versé…</button><button onclick="docPointLocataire('${b.id}')">📩 Point au locataire</button>`;
   }
   else if (retards.length) {
     const tot = retards.reduce((s, x) => s + x.reste, 0), maxJ = Math.max(...retards.map(x => x.retardJ)), leger = retards.length === 1 && maxJ <= 5;
@@ -1682,6 +1779,7 @@ function pageAccueil(T) {
   const enRetard = mois.filter(e => e.statut === "retard").length, pct = attendu ? Math.round(encaisse / attendu * 100) : 0;
   const h = new Date().getHours(), salut = h < 5 ? "Bonsoir" : h < 18 ? "Bonjour" : "Bonsoir";
   return `<div class="greet"><h1>${salut}${S.sci.gerant ? " " + esc(String(S.sci.gerant).split(/\s+/)[0]) : ""}</h1><p>${fd(TODAY).replace(/^./, c => c.toUpperCase())} · ${items.length ? `${items.length} chose${items.length > 1 ? "s" : ""} à faire` : "tout est en ordre"}</p></div>
+  ${!S.faits.guideMasque && etapesGuide().some(e => !e.ok) ? blocGuide(false) : ""}
   <section class="hero" aria-label="Loyers du mois">
     <p class="hero-k">Loyers de ${fm(CUR)}</p>
     <p class="hero-amount">${eur(encaisse)} <small>/ ${eur(attendu)}</small></p>
@@ -1984,7 +2082,7 @@ function pageBail(id) {
         <div class="barre" role="img" aria-label="${p.pct} % remboursé"><i style="width:${p.pct}%"></i></div>
         <p class="note">Remboursé : <b>${eur(Math.max(0, r2(b.plan.dette - p.dette)))}</b> sur ${eur(b.plan.dette)} · reste <b>${eur(p.dette)}</b>${p.fait ? "" : p.ok ? " · ✅ il suit le plan" : ` · ⚠️ en retard sur le plan de ${eur(p.manque)}`}</p>`
       : `<p>Il doit <b>${eur(dette)}</b>. S'il ne peut pas tout payer d'un coup, mettez en place un plan : il paie son loyer, plus une somme fixe chaque mois.</p>`}
-      <div class="row"><button class="primary" onclick="verserSomme('${b.id}')">Il a versé une somme</button><button onclick="editPlan('${b.id}')">${p ? "Modifier le plan" : "Plan de remboursement"}</button>${p ? `<button class="ghost" onclick="docPlan('${b.id}')">Accord à signer</button>` : ""}</div></section>`; })()}
+      <div class="row"><button class="primary" onclick="verserSomme('${b.id}')">Il a versé une somme</button><button onclick="editPlan('${b.id}')">${p ? "Modifier le plan" : "Plan de remboursement"}</button>${p ? `<button class="ghost" onclick="docPlan('${b.id}')">Accord à signer</button>` : ""}<button class="ghost" onclick="docPointLocataire('${b.id}')">📩 Point au locataire</button></div></section>`; })()}
   ${(() => { const T = taches().filter(t => t.bailId === b.id).map(t => { const n = esc(b.nom); let tt = t.t.split(" : " + n).join("").split(n + " : ").join("").split(" de " + n).join("").split(" à " + n).join("").split(n).join("").replace(/\s+:\s*$/, "").trim(); tt = tt.charAt(0).toUpperCase() + tt.slice(1); return { ...t, t: tt, acts: (t.acts || []).filter(a => !/go\('bail-/.test(a[1])) }; }); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
   <div class="stack">
   ${sectionEdl(b)}
@@ -2097,7 +2195,7 @@ function pageCompta() {
 
 function pageReglages() {
   const s = S.sci;
-  return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div></div>
+  return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div><a class="btn small" href="#aide">❓ Comment ça marche ?</a></div>
   ${SB ? sectionInstall() + sectionMembres() + sectionGmail() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
@@ -2688,7 +2786,7 @@ function revueReleve() {
     <p class="full note">Les opérations validées ne seront plus proposées au prochain import.</p>`,
     d => {
       let nl = 0, nd = 0; const aEnvoyer = [];
-      S.banqueVus = Object.assign({}, S.banqueVus);
+      S.banqueVus = Object.assign({}, S.banqueVus); S.faits["rel-" + CUR] = iso(TODAY);
       RELEVE.forEach((o, i) => {
         if (d["m" + i]) { const [bailId, mois] = d["m" + i].split("|"); S.paiements.push({ id: uid(), bailId, mois, montant: o.montant, date: o.date, mode: "virement", banque: o.lib }); nl++; aEnvoyer.push([bailId, mois]); S.banqueVus[o.cle] = 1; }
         else if (o.type === "depense" && d["d" + i]) { S.depenses.push({ id: uid(), date: o.date, bienId: d["b" + i] || "", categorie: d["c" + i], libelle: o.lib.slice(0, 80), montant: -o.montant, recuperable: false, banque: true }); nd++; S.banqueVus[o.cle] = 1; }
