@@ -1,0 +1,23 @@
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const DIST = require('path').join(__dirname, '..', 'dist'), out = __dirname + '/shots26'; fs.mkdirSync(out, { recursive: true });
+const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
+(async () => {
+  const b = await chromium.launch({ proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } }); const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
+  p.on('pageerror', e => errs.push(e.message));
+  await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
+  await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-b@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
+  await p.waitForTimeout(1200); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Nouveau venu'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
+  await p.screenshot({ path: out + '/1-bienvenue.png', fullPage: true });
+  console.log('étapes', await p.evaluate(() => etapesGuide().map(e => (e.ok ? '✓ ' : '· ') + e.t)));
+  await p.evaluate(() => location.hash = 'aide'); await p.waitForTimeout(500); await p.screenshot({ path: out + '/2-aide.png', fullPage: true });
+  await p.evaluate(() => location.hash = 'compta'); await p.waitForTimeout(500); await p.screenshot({ path: out + '/3-compta.png', fullPage: true });
+  await p.evaluate(() => { S.sci.gerant = 'Jean'; S.sci.siege = '1 rue'; S.biens.push({ id: 'x', nom: 'Studio', type: 'Studio', adresse: '1 rue', cp: '35000', ville: 'Rennes', meuble: 'vide' }); S.baux.push({ id: 'y', bienId: 'x', nom: 'Paul Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save(); location.hash = ''; render(); });
+  await p.waitForTimeout(500); await p.screenshot({ path: out + '/4-accueil.png', fullPage: true });
+  console.log('tâches', await p.evaluate(() => taches().map(t => t.t)));
+  await p.click('text=Masquer ce guide'); await p.waitForTimeout(300); console.log('guide masqué', await p.evaluate(() => !document.querySelector('.guide')));
+  await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });
+  console.log('ERR', errs); await b.close(); srv.close();
+})().catch(e => { console.log('FATAL', e.message); process.exit(1); });

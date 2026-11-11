@@ -1,0 +1,28 @@
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const DIST = require('path').join(__dirname, '..', 'dist');
+const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
+(async () => {
+  const b = await chromium.launch({ proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } }); const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
+  p.on('pageerror', e => errs.push(e.message));
+  await p.route('**/html2canvas.min.js', r => r.fulfill({ path: __dirname + '/vendor/h2c/package/dist/html2canvas.min.js', contentType: 'application/javascript' }));
+  await p.route('**/jspdf.umd.min.js', r => r.fulfill({ path: __dirname + '/vendor/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' }));
+  await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
+  console.log('bouton ? à la connexion', await p.evaluate(() => { const b = document.getElementById('aideBtn'); return !!b && !b.hidden; }));
+  await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
+  await p.waitForTimeout(1200); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test signalement'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
+  console.log('bouton ? visible', await p.evaluate(() => { const b = document.getElementById('aideBtn'); return !!b && !b.hidden; }));
+  await p.screenshot({ path: __dirname + '/b28-fab.png' });
+  await p.click('#aideBtn'); await p.waitForTimeout(2500);
+  console.log('capture', await p.evaluate(() => CAPTURE ? Math.round(CAPTURE.length / 1024) + ' Ko' : 'aucune'));
+  await p.screenshot({ path: __dirname + '/b28-form.png' });
+  await p.evaluate(() => { const o = SB.rpc.bind(SB); window.ARGS = null; SB.rpc = (n, a) => n === 'signaler' ? (ARGS = a, Promise.resolve({ data: 99 })) : o(n, a); });
+  await p.fill('#overlay textarea[name=message]', '[TEST automatique] Vérification du bouton « ? » : tu peux ignorer ce message.');
+  await p.click('#overlay button.primary >> nth=-1'); await p.waitForTimeout(3500);
+  console.log('toast', await p.evaluate(() => (document.getElementById('toast') || {}).innerText));
+  console.log('envoyé', await p.evaluate(() => ARGS && [ARGS.type, ARGS.page, ARGS.contexte.ecran, ARGS.capture_b64 ? Math.round(ARGS.capture_b64.length / 1024) + ' Ko' : null]));
+  await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });
+  console.log('ERR', errs); await b.close(); srv.close();
+})().catch(e => { console.log('FATAL', e.message); process.exit(1); });

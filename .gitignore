@@ -1,1 +1,7 @@
 .env
+tests/*.jpg
+tests/*.pdf
+tests/*.png
+tests/gtp.json
+tests/shots*/
+tests/vendor/

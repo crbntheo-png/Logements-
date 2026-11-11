@@ -1,0 +1,43 @@
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path'), { execSync } = require('child_process');
+const DIST = require('path').join(__dirname, '..', 'dist'), GTP = '1be09613-be2e-49f7-85ca-583ebecc723c';
+const sql = q => execSync(`python3 ${__dirname}/sql.py ${JSON.stringify(q)}`, { env: process.env }).toString();
+const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
+(async () => {
+  const b = await chromium.launch({ proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } }); const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
+  p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && errs.push(m.text()));
+  await p.route('**/jspdf.umd.min.js', r => r.fulfill({ path: __dirname + '/vendor/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' }));
+  await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
+  await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
+  await p.waitForTimeout(1200);
+  if (await p.evaluate(() => MODE) !== 'nouvel-espace') await p.evaluate(() => { MODE = 'nouvel-espace'; render(); });
+  await p.fill('#esp_nom', 'Copie GTP compta'); await p.click('#esp_btn'); await p.waitForTimeout(1500);
+  const E = await p.evaluate(() => ESPACE);
+  sql(`insert into docs (espace_id, coll, doc_id, data) select '${E}', coll, doc_id, data from docs where espace_id='${GTP}' on conflict (espace_id, coll, doc_id) do update set data = excluded.data; insert into banque select '${E}', tx_id, date, montant, libelle, compte from banque where espace_id='${GTP}'; insert into banque_comptes select '${E}', compte_id, nom, solde, maj_le from banque_comptes where espace_id='${GTP}'; insert into banque_liens (espace_id, derniere_synchro) values ('${E}', now());`);
+  await p.reload(); await p.waitForTimeout(4000);
+  console.log('espace', await p.evaluate(() => [S.sci.nom, ESPACE === E] , E).catch(() => 0));
+  const r = await p.evaluate(() => S.baux.map(b => { const e = echeance(b, CUR); return `${b.nom}: ${e ? e.statut + ' payé ' + e.paye : '-'} | ` + S.paiements.filter(x => x.bailId === b.id).map(x => `${x.mois} ${x.montant} tx=${x.tx || 'manuel'}`).join(', '); }));
+  console.log(r.join('\n'));
+  console.log('toasts/banque', await p.evaluate(() => [BANQUE.etat, BANQUE.ops.length, BANQUE.comptes.map(c => c.solde)]));
+  // 2e passage : rien de neuf (pas de doublon)
+  await p.evaluate(() => location.hash = 'compta'); await p.waitForTimeout(800);
+  const res = await p.evaluate(() => { const L = sortiesAClasser(2026); const par = {}; L.forEach(o => { const c = classerSortie(o).cat || '(à classer)'; par[c] = (par[c] || 0) + 1; }); return [L.length, par]; });
+  console.log('sorties 2026', JSON.stringify(res, null, 1));
+  console.log('tâche', await p.evaluate(() => taches().filter(t => t.key && t.key.startsWith('bqdep')).map(t => t.t)));
+  await p.screenshot({ path: __dirname + '/b23-compta.png', fullPage: false });
+  const sec = p.locator('section.sorties'); await sec.scrollIntoViewIfNeeded(); await p.screenshot({ path: __dirname + '/b23-sorties.png' });
+  // change la 1re ligne EDF vers un bien, puis valide tout
+  await p.evaluate(() => { const o = sortiesAClasser(2026).find(o => /EDF/.test(o.libelle)); document.querySelector(`[name=bien_${o.tx_id}]`).value = 'agonD'; view.sortiesTout = true; });
+  await p.evaluate(() => { view.sortiesTout = true; render(); }); await p.waitForTimeout(300);
+  await p.evaluate(() => { const o = sortiesAClasser(2026).find(o => /EDF/.test(o.libelle)); document.querySelector(`[name=bien_${o.tx_id}]`).value = 'agonD'; });
+  await p.click('section.sorties button.primary'); await p.waitForTimeout(800);
+  console.log('dépenses', await p.evaluate(() => [S.depenses.length, sortiesAClasser(2026).length, Object.keys(S.sci.reglesBanque || {})]));
+  console.log('EDF suivantes rangées sur agonD ?', await p.evaluate(() => S.depenses.filter(d => /EDF/.test(d.libelle)).map(d => d.bienId).join(',')));
+  console.log('résultat compta', await p.evaluate(() => document.querySelector('.kpis').innerText.replace(/\n+/g, ' | ')));
+  await p.reload(); await p.waitForTimeout(3500);
+  console.log('après rechargement', await p.evaluate(() => [S.depenses.length, sortiesAClasser(2026).length]));
+  await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });
+  console.log('ERR', errs); await b.close(); srv.close();
+})().catch(e => { console.log('FATAL', e.message); process.exit(1); });
