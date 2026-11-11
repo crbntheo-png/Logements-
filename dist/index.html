@@ -22,7 +22,7 @@
 <style>
 /* Mise en page : en-tête fixe, contenu centré (max 1120px), cartes blanches nettes ; une carte sombre "solde du mois" en tête ; vert émeraude pour l'action, couleurs d'état réservées */
 :root {
-  --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f1f3f6; --surface-3: #e9ecf1;
+  --bg: #f4f5f7; --surface: #ffffff; --surface-glass: rgba(255,255,255,.88); --accent-glow: rgba(11,122,100,.42); --surface-2: #f1f3f6; --surface-3: #e9ecf1;
   --ink: #101828; --ink-2: #344054; --muted: #667085; --line: #e5e8ee;
   --accent: #0b7a64; --accent-2: #0a6654; --accent-ink: #ffffff; --accent-soft: #e2f3ee;
   --ok: #067647; --ok-soft: #dcfae6; --warn: #b54708; --warn-soft: #fef0c7; --bad: #c4320a; --bad-soft: #fee4e2;
@@ -38,7 +38,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b0f16; --surface: #141b26; --surface-2: #1b2431; --surface-3: #243042;
+    --bg: #0b0f16; --surface: #141b26; --surface-glass: rgba(20,27,38,.88); --accent-glow: rgba(60,198,162,.42); --surface-2: #1b2431; --surface-3: #243042;
     --ink: #f2f4f7; --ink-2: #d0d5dd; --muted: #98a2b3; --line: #253041;
     --accent: #3cc6a2; --accent-2: #5fd4b5; --accent-ink: #04241c; --accent-soft: #123329;
     --ok: #47cd89; --ok-soft: #0f2e20; --warn: #fdb022; --warn-soft: #36270b; --bad: #f97066; --bad-soft: #3a1714;
@@ -48,7 +48,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0b0f16; --surface: #141b26; --surface-2: #1b2431; --surface-3: #243042;
+  --bg: #0b0f16; --surface: #141b26; --surface-glass: rgba(20,27,38,.88); --accent-glow: rgba(60,198,162,.42); --surface-2: #1b2431; --surface-3: #243042;
   --ink: #f2f4f7; --ink-2: #d0d5dd; --muted: #98a2b3; --line: #253041;
   --accent: #3cc6a2; --accent-2: #5fd4b5; --accent-ink: #04241c; --accent-soft: #123329;
   --ok: #47cd89; --ok-soft: #0f2e20; --warn: #fdb022; --warn-soft: #36270b; --bad: #f97066; --bad-soft: #3a1714;
@@ -77,7 +77,7 @@ a:hover { text-decoration: underline; }
 .ic-ok { color: var(--ok); } .ic-warn { color: var(--warn); } .ic-bad { color: var(--bad); } .ic-acc { color: var(--accent); }
 
 /* En-tête */
-header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--line); }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface-glass); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--line); }
 .top-inner { max-width: 1120px; margin: 0 auto; height: var(--head-h); display: flex; align-items: center; gap: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .logo { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(140deg, var(--accent), var(--night)); color: #fff; display: grid; place-items: center; flex: none; }
@@ -103,13 +103,13 @@ nav.tabs a.on { background: var(--accent-soft); color: var(--accent); }
 /* Barre du bas (téléphone) */
 #bottomnav { display: none; }
 @media (max-width: 860px) {
-  #bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); padding: 0 max(6px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(6px, env(safe-area-inset-left, 0px)); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-top: 1px solid var(--line); }
+  #bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); padding: 0 max(6px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(6px, env(safe-area-inset-left, 0px)); background: var(--surface-glass); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-top: 1px solid var(--line); }
   #bottomnav a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: var(--nav-h); color: var(--muted); font-size: .68rem; font-weight: 700; text-decoration: none; }
   #bottomnav a .ic { width: 23px; height: 23px; }
   #bottomnav a.on { color: var(--accent); }
   #bottomnav a.on .ic { stroke-width: 2.3; }
   #bottomnav .badge { position: absolute; top: 8px; left: calc(50% + 6px); }
-  #bottomnav .plus { justify-self: center; width: 52px; height: 52px; border-radius: 16px; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 40%, transparent); cursor: pointer; }
+  #bottomnav .plus { justify-self: center; width: 52px; height: 52px; border-radius: 16px; border: 0; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; box-shadow: 0 6px 16px var(--accent-glow); cursor: pointer; }
   #bottomnav .plus .ic { width: 26px; height: 26px; stroke-width: 2.4; }
 }
 
@@ -164,7 +164,7 @@ button.small .ic { width: 16px; height: 16px; }
 .greet h1 { font-size: 1.75rem; }
 .greet p { color: var(--muted); margin-top: 4px; font-weight: 500; }
 .hero { position: relative; overflow: hidden; border-radius: var(--r-lg); padding: 22px; color: var(--night-ink); background: radial-gradient(120% 140% at 100% 0%, var(--night-2) 0%, var(--night) 60%); box-shadow: var(--sh-3); display: grid; gap: 16px; }
-.hero::after { content: ""; position: absolute; width: 260px; height: 260px; right: -80px; top: -110px; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 45%, transparent), transparent); pointer-events: none; }
+.hero::after { content: ""; position: absolute; width: 260px; height: 260px; right: -80px; top: -110px; border-radius: 50%; background: radial-gradient(closest-side, var(--accent-glow), transparent); pointer-events: none; }
 .hero-k { color: var(--night-muted); font-weight: 650; font-size: .85rem; display: flex; align-items: center; gap: 6px; }
 .hero-k::first-letter { text-transform: uppercase; }
 .hero-amount { font-size: 2.3rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
@@ -500,6 +500,10 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .chips-cat{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px;scrollbar-width:none}.chips-cat .chip{white-space:nowrap;text-decoration:none}.chips-cat .chip.on{background:var(--accent);color:var(--accent-ink)}
 .guide .etapes{list-style:none;margin:10px 0 6px;padding:0}.etape{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}.etape:first-child{border-top:0}.etape .num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:14px}.etape.ok .num{background:var(--ok-soft);color:var(--ok)}.etape.ok b{color:var(--muted);text-decoration:line-through}.etape .tx{flex:1;min-width:0}.etape p{margin:4px 0 0;font-size:.9rem;line-height:1.45}.lbl{font-weight:700;color:var(--ink-2)}.et-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}.et-h b{flex:1;min-width:150px}.etape.next{background:var(--accent-soft);margin:0 -12px;padding:12px;border-radius:14px;border-top:0}
 .aide p{margin:6px 0;line-height:1.5}
+.aide-fab{position:fixed;right:14px;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom));z-index:40;width:46px;height:46px;border-radius:50%;padding:0;font-size:1.35rem;font-weight:800;background:var(--surface);color:var(--accent);box-shadow:var(--sh-3);border:1px solid var(--line);display:grid;place-items:center}
+.aide-fab.charge{opacity:.5;pointer-events:none}@media(min-width:900px){.aide-fab{bottom:22px;right:22px}}
+.types-sig{display:flex;gap:6px;flex-wrap:wrap}.types-sig label{flex:1;min-width:110px}.types-sig input{position:absolute;opacity:0}.types-sig span{display:block;text-align:center;padding:10px 6px;border-radius:12px;background:var(--surface-2);font-weight:700;font-size:.85rem;cursor:pointer}.types-sig input:checked+span{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}.types-sig input:focus-visible+span{outline:2px solid var(--accent)}
+.sig-capture{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.9rem}.sig-capture img{width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:var(--surface-2)}
 </style>
 </head>
 <body>
@@ -1700,6 +1704,7 @@ function render() {
   if (h.startsWith("edl-") || h.startsWith("bail-") || page === "biens") setTimeout(hydraterPhotos, 0);
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { el.setSelectionRange(selS, selE); } catch (e) {} } }
   document.title = S.sci.nom || "Gestion SCI";
+  boutonAide();
   if (POINT) afficherPoint();
 }
 
@@ -1755,6 +1760,57 @@ function pageAide() {
     ${bloc("⚙️", "Réglages", "Tes infos, tes associés, l'envoi d'e-mails depuis ton adresse, l'installation sur le téléphone.", "Au début, puis rarement.", "")}
     <section class="card aide"><h2>🔒 Ce qui ne se fait jamais sans toi</h2><p>Aucun e-mail ne part tout seul : quittances, relances et courriers s'ouvrent en aperçu, tu vérifies l'adresse et le texte, puis tu confirmes. Les dépenses trouvées dans la banque attendent ta validation.</p></section>
     </div>`;
+}
+/* ================= Signaler un problème / une idée (bouton « ? » toujours visible) ================= */
+let CAPTURE = null;
+function chargerH2C() {
+  if (window.html2canvas) return Promise.resolve();
+  return new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc); });
+}
+async function capturerEcran() {
+  try {
+    await chargerH2C();
+    const c = await window.html2canvas(document.body, { x: window.scrollX, y: window.scrollY, width: window.innerWidth, height: window.innerHeight, scale: 1, logging: false, useCORS: true, ignoreElements: el => el.id === "aideBtn" || el.id === "toast" });
+    const r = Math.min(1, 1100 / Math.max(c.width, c.height)), d = document.createElement("canvas");
+    d.width = Math.round(c.width * r); d.height = Math.round(c.height * r); d.getContext("2d").drawImage(c, 0, 0, d.width, d.height);
+    return d.toDataURL("image/jpeg", 0.72);
+  } catch (e) { return null; }
+}
+async function ouvrirSignalement() {
+  if (!SB) { toast("Le bouton « ? » marche dans l'appli installée (version en ligne)."); return; }
+  const bt = document.getElementById("aideBtn"); if (bt) bt.classList.add("charge");
+  CAPTURE = await capturerEcran(); if (bt) bt.classList.remove("charge");
+  modal("Un souci ? Une idée ?", `<div class="full types-sig" role="radiogroup" aria-label="Type de message">
+      <label><input type="radio" name="type" value="bug" checked><span>🐞 Ça ne marche pas</span></label>
+      <label><input type="radio" name="type" value="idee"><span>💡 Une idée</span></label>
+      <label><input type="radio" name="type" value="question"><span>❓ Une question</span></label></div>
+    <label class="fl full">Explique en une ou deux phrases<textarea name="message" rows="4" required placeholder="Ex : quand je touche « Envoyer la quittance », rien ne se passe."></textarea></label>
+    ${CAPTURE ? `<label class="full sig-capture"><input type="checkbox" name="avecCapture" checked> <span>Joindre la capture de l'écran que tu regardais</span><img src="${CAPTURE}" alt="Capture de l'écran"></label>` : ""}
+    <label class="fl full">${CAPTURE ? "Ou" : ""} ajoute une photo ou une capture (facultatif)<input type="file" name="photo" accept="image/*"></label>
+    <p class="full note">On reçoit aussi la page où tu étais et le modèle de ton téléphone, pour comprendre plus vite. On te répond par e-mail.</p>`,
+    d => {
+      if (!(d.message || "").trim()) { toast("Écris quelques mots."); return false; }
+      const f = document.querySelector('#overlay input[name=photo]').files[0];
+      envoyerSignalement(d.type || "bug", d.message.trim(), f, !!d.avecCapture);
+    }, { ok: "Envoyer" });
+}
+async function envoyerSignalement(type, message, fichier, avecCapture) {
+  toast("Envoi…");
+  let b64 = null;
+  try {
+    if (fichier) { const bl = await reduirePhoto(fichier); b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(",")[1]); fr.readAsDataURL(bl); }); }
+    else if (avecCapture && CAPTURE) b64 = CAPTURE.split(",")[1];
+  } catch (e) { b64 = null; }
+  const contexte = { espace: ESPACE || "", appareil: navigator.userAgent, ecran: innerWidth + "×" + innerHeight, installee: estInstallee(), mode: MODE };
+  const r = await SB.rpc("signaler", { type, message, page: (location.hash || "#accueil"), contexte, capture_b64: b64 });
+  if (r.error) { toast("Pas envoyé : " + r.error.message); return; }
+  CAPTURE = null; toast("✓ Merci ! Ton message est bien parti, on te répond par e-mail.");
+}
+function boutonAide() {
+  let b = document.getElementById("aideBtn");
+  const visible = SB && MODE === "partage";
+  if (!b && visible) { b = document.createElement("button"); b.id = "aideBtn"; b.className = "aide-fab"; b.type = "button"; b.setAttribute("aria-label", "Signaler un problème, proposer une idée ou poser une question"); b.title = "Un souci ? Une idée ?"; b.textContent = "?"; b.onclick = ouvrirSignalement; document.body.appendChild(b); }
+  if (b) b.hidden = !visible;
 }
 function pageBienvenue() {
   return `<div class="greet"><h1>Bienvenue 👋</h1><p>En quelques étapes, l'appli tient tes loyers, tes quittances, tes documents et ta compta. Chaque étape te dit pourquoi elle compte.</p></div>
@@ -2227,7 +2283,7 @@ function pageCompta() {
 
 function pageReglages() {
   const s = S.sci;
-  return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div><a class="btn small" href="#aide">❓ Comment ça marche ?</a></div>
+  return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div><span class="row"><a class="btn small" href="#aide">❓ Comment ça marche ?</a>${SB ? `<button class="small" onclick="ouvrirSignalement()">🐞 Signaler un problème</button>` : ""}</span></div>
   ${SB ? sectionInstall() + sectionMembres() + sectionGmail() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
