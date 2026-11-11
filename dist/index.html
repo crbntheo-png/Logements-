@@ -699,6 +699,7 @@ async function ouvrirEspace(id) {
     }).subscribe();
   MODE = "partage"; render();
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
+  chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
 /* ================= Banque (via Pennylane, lue par le serveur) ================= */
 let BANQUE = { etat: "vide", ops: [], comptes: [], lien: null };
@@ -761,7 +762,9 @@ function carteBanqueAccueil() {
 /* Sorties d'argent de la banque à transformer en dépenses de compta (classées d'avance, validées par toi) */
 function sortiesAClasser(y) {
   const deja = new Set(S.depenses.filter(d => d.banqueTx).map(d => String(d.banqueTx))), vus = S.banqueVus || {};
-  return BANQUE.ops.filter(o => o.montant < 0 && o.date.startsWith(String(y)) && !deja.has(o.tx_id) && vus[o.tx_id] !== "ignore");
+  const tfSaisie = r2((S.taxes || []).filter(t => t.annee === +y).reduce((a, t) => a + (+t.total || 0), 0));
+  return BANQUE.ops.filter(o => o.montant < 0 && o.date.startsWith(String(y)) && !deja.has(o.tx_id) && vus[o.tx_id] !== "ignore"
+    && !(tfSaisie > 0 && classerSortie(o).cat === "Taxe foncière" && Math.abs(-o.montant - tfSaisie) < 2 + tfSaisie * 0.5));
 }
 function sectionSorties(y) {
   if (!SB || !BANQUE.lien) return "";
@@ -1201,6 +1204,20 @@ function editPlan(bailId) {
     pl.mensualite ? { del: () => { delete b.plan; }, delMsg: "Arrêter le suivi de ce plan ?" } : {});
 }
 /* Message très simple au locataire : où il en est, ce qu'il doit payer chaque mois, jusqu'à quand */
+function docDemandeAssurance(bailId) {
+  const b = bail(bailId), bi = bien(b.bienId), prenomL = String(nomCourt(b.nom)).split(/\s+/)[0];
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : attestation d'assurance habitation</b></p>
+  <p>Bonjour ${esc(prenomL)},</p><p>Comme chaque année, pouvez-vous nous envoyer l'<b>attestation d'assurance habitation</b> du logement situé ${esc(adresseBien(bi))} ?</p>
+  <p>C'est un document d'une page que votre assureur vous donne (souvent téléchargeable dans votre espace en ligne ou votre appli d'assurance). Une photo ou un PDF suffit.</p>
+  <p class="small">Rappel : l'assurance contre les risques locatifs (incendie, dégât des eaux…) est obligatoire pour le locataire (loi n° 89-462 du 6 juillet 1989, article 7 g).</p><p>Merci d'avance,</p>${signature()}`;
+  showDoc(html, { titre: "Demande d'attestation d'assurance", fichier: `Demande-assurance-${slug(b.nom)}`, to: b.email, bailId: b.id,
+    email: { objet: "Votre attestation d'assurance habitation", corps: `Bonjour ${prenomL},\n\nComme chaque année, pouvez-vous nous envoyer l'attestation d'assurance habitation du logement ? C'est une page que votre assureur vous donne (souvent dans votre espace en ligne). Une photo ou un PDF suffit, en réponse à ce message.\n\nMerci d'avance,\n${S.sci.gerant || ""}` } });
+}
+function assuranceRecue(bailId) {
+  const b = bail(bailId);
+  modal(`Attestation reçue — ${esc(b.nom)}`, `<p class="full note">Indique jusqu'à quand il est assuré (c'est écrit sur l'attestation). L'appli te rappellera de redemander la suivante un mois avant.</p>${fld("Assuré jusqu'au", "fin", b.assuranceFin || iso(addDays(TODAY, 365)), "date", "", "required")}<p class="full note">Tu peux aussi ranger l'attestation dans ses documents juste après.</p>`,
+    d => { b.assuranceFin = d.fin; toast("C'est noté"); setTimeout(() => confirmer("Ranger aussi l'attestation (photo ou PDF) dans ses documents ?", () => ajouterDocument(b.bienId, b.id, "Locataire (pièces, garant…)")), 400); });
+}
 function docPointLocataire(bailId) {
   const b = bail(bailId), p = planEtat(b), e = echeance(b, CUR), l = loyerAt(b, CUR), loyer = r2(l.hc + l.ch), dette = p ? p.dette : detteBail(b);
   const paye = e && e.statut === "paye", jour = +b.jourPaiement || 1, prenomL = String(nomCourt(b.nom)).split(/\s+/)[0];
@@ -1350,8 +1367,8 @@ function taches() {
       if ((!fin || fin <= addDays(TODAY, 30)) && !fait(k))
         add({ bailId: b.id, key: k, prio: fin && fin < TODAY || !fin ? "soon" : "info", date: fin || TODAY, done: true,
           t: `Attestation d'assurance habitation : ${esc(b.nom)}`,
-          d: fin ? `Expire le ${fd(fin)} — demander la nouvelle attestation (obligatoire chaque année).` : "Aucune date d'expiration renseignée — demander l'attestation.",
-          acts: [["Renseigner", `editBail('${b.id}')`]] });
+          d: (fin ? `Son assurance se termine le ${fd(fin)}. ` : "Tu n'as pas encore sa preuve d'assurance. ") + "Le locataire doit être assuré (incendie, dégât des eaux) et te le prouver chaque année avec une attestation de son assureur. Sans elle, en cas de sinistre, c'est ta propre assurance qui paie, et tu peux même résilier le bail.",
+          acts: [["Lui demander", `docDemandeAssurance('${b.id}')`, "primary"], ["Je l'ai reçue", `assuranceRecue('${b.id}')`]] });
     }
     // 6. Départ / état des lieux / dépôt de garantie
     if (b.dateSortie) {
@@ -1709,6 +1726,10 @@ function etapesGuide() {
     { ok: !!GMAIL, ico: "✉️", t: "Envoyer depuis ton adresse", pourquoi: "Quittances et relances partent de ta vraie adresse e-mail et tu les retrouves dans tes « Messages envoyés ». Rien ne part sans ton accord.", comment: "Réglages › « Envoyer depuis ton adresse Gmail ». 3 minutes.", btn: ["Brancher Gmail", "go('reglages')"], option: true },
     { ok: !!(MEMBRES && (MEMBRES.membres.length > 1 || MEMBRES.invitations.length)), ico: "🤝", t: "Inviter tes associés", pourquoi: "Chacun voit les mêmes chiffres en direct, sur son téléphone. Plus de tableur à s'envoyer.", comment: "Réglages › « Membres de l'espace » › leur e-mail.", btn: ["Inviter", "go('reglages')"], option: true },
     { ok: installOk, ico: "📲", t: "Mettre l'appli sur ton téléphone", pourquoi: "Une icône sur l'écran d'accueil : tu l'ouvres en un geste, comme une vraie appli.", comment: "Réglages › « Installer l'appli » : le tuto pas à pas.", btn: ["Voir le tuto", "go('reglages')"], option: true });
+  // Une étape réussie une fois reste cochée (même si l'info n'est pas encore rechargée)
+  let neuf = false; S.faits = S.faits || {};
+  L.forEach(e => { const k = "guide-" + e.t; if (e.ok && !S.faits[k]) { S.faits[k] = iso(TODAY); neuf = true; } if (S.faits[k]) e.ok = true; });
+  if (neuf && MODE === "partage") setTimeout(save, 0);
   return L;
 }
 function blocGuide(complet) {
@@ -1823,7 +1844,7 @@ function aFaireCourt(T) {
   prend(t => t.key.startsWith("rev-") && t.acts.length).forEach(t => { const b = bail(t.bailId), rv = revInfo(b); out.push({ ico: "📈", prio: "soon", t: `Augmenter le loyer de ${prenom(b.nom)}`, s: `${eur(rv.ancien)} → ${eur(rv.nouveau)}`, btn: ["Appliquer", `revision('${b.id}')`] }); });
   prend(t => t.key.startsWith("teom-")).forEach(t => { const b = bail(t.bailId); out.push({ ico: "🗑️", prio: "soon", t: `Ordures ménagères à récupérer : ${esc(b.nom.replace(/\s*\(.*?\)/g, ""))}`, s: t.t.split(" doit ")[1], btn: t.acts[0] }); });
   const ass = prend(t => t.key.startsWith("ass-") && t.prio !== "info");
-  if (ass.length) out.push({ ico: "🛡️", prio: "soon", t: `Demander l'attestation d'assurance à ${ass.map(t => prenom(bail(t.bailId).nom)).join(", ")}`, btn: ["Voir", "go('afaire')"] });
+  if (ass.length) out.push({ ico: "🛡️", prio: "soon", t: `Preuve d'assurance habitation à demander à ${ass.map(t => prenom(bail(t.bailId).nom)).join(", ")}`, s: "Obligatoire chaque année : protège ton logement en cas d'incendie ou de dégât des eaux.", btn: ["Voir", "go('afaire')"] });
   const reg = prend(t => t.key.startsWith("regul-") && t.prio !== "info");
   if (reg.length) out.push({ ico: "🧾", prio: "soon", t: `Régulariser les charges (${reg.length} locataire${reg.length > 1 ? "s" : ""})`, btn: ["Voir", "go('afaire')"] });
   prend(t => t.key.startsWith("dep-")).forEach(t => out.push({ ico: "🔑", prio: t.prio, t: `Rendre le dépôt de garantie à ${prenom(bail(t.bailId).nom)}`, btn: t.acts[0] }));
