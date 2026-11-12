@@ -1,5 +1,7 @@
 # Reprendre le travail sur l'appli « Gestion locative »
 
+> **Avant toute chose : lire aussi `JOURNAL.md`** (ce qui a été fait par les autres sessions et ce qui reste à faire), et le mettre à jour en fin de session.
+
 Ce fichier sert à une nouvelle session Claude Code (ou à un humain) pour comprendre l'appli en 5 minutes et continuer à la faire évoluer.
 
 ## En bref
