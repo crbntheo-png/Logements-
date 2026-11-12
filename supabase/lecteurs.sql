@@ -59,5 +59,31 @@ end $$;
 revoke all on function public.changer_role(uuid, uuid, text) from public, anon;
 grant execute on function public.changer_role(uuid, uuid, text) to authenticated;
 
+
 -- Envoyer des e-mails : seulement ceux qui peuvent modifier
-create or replace function public.envoyer_mail_garde() returns trigger language plpgsql as $$ begin return new; end $$;
+create or replace function public.envoyer_mail(espace uuid, a text[], objet text, texte text, nom_fichier text default null, pdf_base64 text default null, repondre_a text default null)
+returns bigint language plpgsql security definer set search_path = public, extensions as $$
+declare cle text; expediteur text; nom_exp text; corps jsonb; req bigint;
+begin
+  if not public.est_editeur(espace) then raise exception 'Accès en lecture seule : tu ne peux pas envoyer de message'; end if;
+  if a is null or array_length(a, 1) is null then raise exception 'Destinataire manquant'; end if;
+  select decrypted_secret into cle from vault.decrypted_secrets where name = 'brevo_api_key';
+  select decrypted_secret into expediteur from vault.decrypted_secrets where name = 'brevo_sender';
+  if cle is null or expediteur is null then raise exception 'Envoi d''e-mails pas encore configuré'; end if;
+  select nom into nom_exp from public.espaces where id = espace;
+  corps := jsonb_build_object(
+    'sender', jsonb_build_object('name', nom_exp, 'email', expediteur),
+    'to', (select jsonb_agg(jsonb_build_object('email', x)) from unnest(a) x),
+    'subject', objet,
+    'textContent', texte,
+    'replyTo', jsonb_build_object('email', coalesce(repondre_a, auth.jwt() ->> 'email', expediteur))
+  );
+  if pdf_base64 is not null then
+    corps := corps || jsonb_build_object('attachment', jsonb_build_array(jsonb_build_object('name', coalesce(nom_fichier, 'document.pdf'), 'content', pdf_base64)));
+  end if;
+  select net.http_post(url := 'https://api.brevo.com/v3/smtp/email', body := corps,
+    headers := jsonb_build_object('api-key', cle, 'content-type', 'application/json', 'accept', 'application/json'), timeout_milliseconds := 15000) into req;
+  insert into public.envois (espace_id, destinataires, objet, requete_id) values (espace, a, objet, req);
+  return req;
+end $$;
+drop function if exists public.envoyer_mail_garde();

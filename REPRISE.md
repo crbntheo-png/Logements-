@@ -92,6 +92,7 @@ Déployer la fonction Gmail : voir la commande `functions/deploy` de l'API Supab
 | `tests/test26.js` | Parcours d'un nouvel utilisateur (guide) |
 | `tests/test28.js` | Bouton « ? » de signalement avec capture d'écran |
 | `tests/test29.js` | Paiement partiel étalé, ordures ménagères (tous les choix), avenant au bail |
+| `tests/test31.js` | Vraie base : lecture seule (voir sans modifier ni envoyer), changement de rôle, préférences de notification |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.

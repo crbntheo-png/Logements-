@@ -8,7 +8,7 @@ const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURICompo
 const MDP = 'TestMotDePasse-2026!';
 const log = (...a) => console.log(...a);
 (async () => {
-  const b = await chromium.launch({ proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } });
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: "localhost,127.0.0.1" } } : {});
   const errs = [];
   const nouvelle = async (vp) => { const ctx = await b.newContext({ viewport: vp, ignoreHTTPSErrors: true, serviceWorkers: 'block' }); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && errs.push(m.text())); await p.route('**/jspdf.umd.min.js', r => r.fulfill({ path: __dirname + '/vendor/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' })); return p; };
   const connecter = async (p, email) => { await p.evaluate(async ([e, m]) => { const r = await SB.auth.signInWithPassword({ email: e, password: m }); if (r.error) throw new Error(r.error.message); await apresConnexion(r.data.user); }, [email, MDP]); await p.waitForTimeout(800); };

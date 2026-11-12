@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     }
     const tr = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user: adresse, pass: String(mdp || "").replace(/\s+/g, "") } });
     if (c.action === "tester") { await tr.verify(); return rep({ ok: true }); }
-    const { data: membre } = await moi.rpc("est_membre", { e: c.espace });
+    const { data: membre } = await moi.rpc("est_editeur", { e: c.espace });
     if (!membre) return rep({ erreur: "Accès refusé" }, 403);
     const a = (c.a || []).filter((x: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
     if (!a.length) return rep({ erreur: "Destinataire manquant" }, 400);
