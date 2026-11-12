@@ -91,6 +91,7 @@ Déployer la fonction Gmail : voir la commande `functions/deploy` de l'API Supab
 | `tests/test22.js` | Aucun envoi sans validation |
 | `tests/test26.js` | Parcours d'un nouvel utilisateur (guide) |
 | `tests/test28.js` | Bouton « ? » de signalement avec capture d'écran |
+| `tests/test29.js` | Paiement partiel étalé, ordures ménagères (tous les choix), avenant au bail |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.
 Après chaque changement : `node tests/test5.js` au minimum, puis `./deploy.sh`.
