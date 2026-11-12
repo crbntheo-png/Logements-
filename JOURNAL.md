@@ -24,6 +24,16 @@ Règle pour chaque session :
 
 ## Historique
 
+### 13/11/2026 — optimisation de la vitesse (demande de Théo : "optimiser de ouf")
+- **Calculs** : les loyers étaient recalculés des milliers de fois par écran (chaque mois relisait tous les paiements, et le suivi d'étalement relançait tout le calcul). Ajouté une mémoire de calcul pendant chaque affichage (`MEMO`, `indexBail`, `echeancesBail`/`planEtat` mémorisés, vidée à chaque `save()`), et des formats de dates préparés une fois (`F_D`, `F_M`, `cache1` pour `addM`, `dim`, `fm`). Avec 28 locataires sur 10 ans (3 640 paiements, 905 dépenses) : avant, l'appli restait bloquée plusieurs minutes ; maintenant chaque page s'affiche en moins de 0,04 s (`tests/perf.js`).
+- **À faire** : au-delà de 60 tâches dans un groupe, on en montre 40 et un bouton "Voir les N autres".
+- **Associés** : plusieurs changements reçus d'un coup ne redessinent l'écran qu'une fois (`remoteChanged` regroupé sur 60 ms).
+- **Ouverture instantanée** : les données de la dernière visite sont gardées sur l'appareil (`gestion-sci-cache`) et affichées tout de suite, puis remises à jour en ligne sans bloquer (`ouvrirDepuisCache`, `ouvrirEspace(id, true)`) ; ce que tu modifies pendant cette mise à jour n'est pas écrasé. Sans connexion, tu vois tes données de la dernière ouverture. Copie effacée à la déconnexion (et l'ancienne `gestion-sci-v1` aussi).
+- **Appli installée** (`build.py`, sw.js) : la copie de l'appli sur le téléphone s'ouvre d'abord, la nouvelle version se télécharge en fond et s'installe quand l'appli passe en arrière-plan (jamais pendant une saisie ou une fenêtre ouverte) ; vérification des mises à jour à chaque retour dans l'appli.
+- Tests : test5 OK ; test15, 17, 20, 22, 23, 25, 26, 28, 29, 30 OK ; test31 10/10 ; nouveau test32 9/9 (vraie base) ; test9 OK (corrigé : B ouvre bien l'espace de A, le direct est vérifié : 1 paiement vu). Tests 17, 20, 23, 26 et 28 rendus utilisables sans proxy (comme test9). test17 et test23 ont besoin des clés chargées (`set -a; . ./.env; set +a`). Un espace "Copie GTP compta" laissé par test23 (planté faute de clés) a été supprimé (compte de test).
+- En ligne (vérifié sur gestion-locative-sci.pages.dev).
+- Pas vérifié : sur un vrai téléphone, l'ouverture sans connexion et l'installation automatique d'une nouvelle version (la 1re fois, l'ancienne version de l'appli doit d'abord se mettre à jour une fois).
+
 ### 12/11/2026 (suite) — session du compte principal
 - Retiré la rubrique « Mes autres applis » (Boussole Fiscale, Contre-Visite) de l'accueil et des réglages, et vidé les liens de l'espace GTP.
 - Réglage Google Drive réécrit (à quoi il sert, comment copier le lien).

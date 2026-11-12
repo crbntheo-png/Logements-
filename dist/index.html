@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -660,6 +660,7 @@ const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
 function save() {
+  if (MEMO) MEMO = new Map();
   if (LECTURE && SB) { revenirAuxDonneesEnLigne(); toast("👀 Tu es en lecture seule : rien n'a été modifié."); setTimeout(render, 0); return; }
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
   if (MODE !== "partage") return;
@@ -680,7 +681,10 @@ function save() {
     });
   });
 }
-function remoteChanged() {
+/* Plusieurs changements reçus d'un coup (import d'un associé…) : un seul nouvel affichage */
+let RC_T = null;
+function remoteChanged() { if (RC_T) return; RC_T = setTimeout(() => { RC_T = null; remoteChanged0(); }, 60); }
+function remoteChanged0() {
   const a = document.activeElement, saisie = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && document.getElementById("app").contains(a);
   if (!document.getElementById("overlay").hidden || !document.getElementById("focus").hidden || saisie) { pendingRender = true; return; }
   render();
@@ -716,35 +720,67 @@ let SB = null, SB_USER = null, ESPACE = null, ESPACES = [], SB_CANAL = null, CON
 async function bootSupabase() {
   const c = window.APP_SUPABASE;
   SB = window.supabase.createClient(c.url, c.cle, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "gestion-sci-auth" } });
-  SB.auth.onAuthStateChange((ev, session) => { if (ev === "SIGNED_OUT") { SB_USER = null; ESPACE = null; MODE = "connexion"; render(); } });
+  SB.auth.onAuthStateChange((ev, session) => { if (ev === "SIGNED_OUT") { oublierCache(); SB_USER = null; ESPACE = null; MODE = "connexion"; render(); } });
   let session = null;
   try { session = (await SB.auth.getSession()).data.session; } catch (e) {}
   if (!session) { MODE = "connexion"; render(); return; }
+  const copie = lireCache(session.user.id);
+  if (copie) { SB_USER = session.user; ouvrirDepuisCache(copie); return apresConnexion(session.user, true); }
   await apresConnexion(session.user);
 }
-async function apresConnexion(user) {
-  SB_USER = user; MODE = "chargement"; render();
+/* Ouverture instantanée : on affiche tout de suite les données de la dernière visite (gardées sur cet appareil),
+   puis on les remet à jour en ligne sans bloquer. Effacées à la déconnexion. */
+const CACHE_KEY = "gestion-sci-cache";
+let CACHE_T = null, APERCU = false;
+function lireCache(userId) {
+  try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); return c && c.v === 1 && c.uid === userId && c.espace && c.synced ? c : null; } catch (e) { return null; }
+}
+function memoriserCache() {
+  if (!SB || !SB_USER || !ESPACE || MODE !== "partage" || APERCU) return;
+  clearTimeout(CACHE_T);
+  CACHE_T = setTimeout(() => { if (!SB_USER || !ESPACE) return; try { localStorage.setItem(CACHE_KEY, JSON.stringify({ v: 1, uid: SB_USER.id, espace: ESPACE, espaces: ESPACES, lecture: LECTURE, synced })); } catch (e) {} }, 800);
+}
+function oublierCache() { clearTimeout(CACHE_T); try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(KEY); } catch (e) {} }
+function ouvrirDepuisCache(c) {
+  ESPACE = c.espace; ESPACES = c.espaces || []; S = blank(); synced = {}; APERCU = true;
+  Object.entries(c.synced).forEach(([k, j]) => { const i = k.indexOf("/"); try { appliquerLigne({ coll: k.slice(0, i), doc_id: k.slice(i + 1), data: JSON.parse(j) }); } catch (e) {} });
+  LECTURE = !!c.lecture; document.body.classList.toggle("lecture", LECTURE);
+  MODE = "partage"; render();
+}
+async function apresConnexion(user, enFond) {
+  SB_USER = user; if (!enFond) { MODE = "chargement"; render(); }
   try { await SB.rpc("accepter_invitations"); } catch (e) {}
   SB.from("gmail_comptes").select("adresse").eq("user_id", user.id).maybeSingle().then(g => { GMAIL = g.data || null; }, () => {});
   const r = await SB.from("espaces").select("id, nom, cree_le").order("cree_le");
-  if (r.error) { MODE = "connexion"; render(); toast("Impossible de charger tes espaces : " + r.error.message); return; }
+  if (r.error) { if (enFond) { toast("📴 Pas de connexion : tu vois tes données de la dernière ouverture."); return; } MODE = "connexion"; render(); toast("Impossible de charger tes espaces : " + r.error.message); return; }
   ESPACES = r.data || [];
+  if (enFond && ESPACES.some(e => e.id === ESPACE)) return ouvrirEspace(ESPACE, true);
+  APERCU = false;
   if (!ESPACES.length) { MODE = "nouvel-espace"; render(); return; }
   let dernier = null; try { dernier = localStorage.getItem("gestion-sci-espace"); } catch (e) {}
   await ouvrirEspace((ESPACES.find(e => e.id === dernier) || ESPACES[0]).id);
 }
-async function ouvrirEspace(id) {
-  MODE = "chargement"; render();
+async function ouvrirEspace(id, enFond) {
+  if (!enFond) { APERCU = false; MODE = "chargement"; render(); }
   if (SB_CANAL) { try { SB.removeChannel(SB_CANAL); } catch (e) {} SB_CANAL = null; }
   ESPACE = id; try { localStorage.setItem("gestion-sci-espace", id); } catch (e) {}
-  S = blank(); synced = {}; MEMBRES = null; LECTURE = false; document.body.classList.remove("lecture"); DOCS = { etat: "vide", fichiers: [], dossiers: {} };
-  const lignes = [];
+  if (!enFond) { S = blank(); synced = {}; LECTURE = false; document.body.classList.remove("lecture"); DOCS = { etat: "vide", fichiers: [], dossiers: {} }; }
+  MEMBRES = null;
+  const lignes = []; let ok = true;
   for (let de = 0; ; de += 1000) {
     const r = await SB.from("docs").select("coll, doc_id, data").eq("espace_id", id).range(de, de + 999);
-    if (r.error) { toast("Chargement impossible : " + r.error.message); break; }
+    if (r.error) { ok = false; toast(enFond ? "📴 Pas de connexion : tu vois tes données de la dernière ouverture." : "Chargement impossible : " + r.error.message); break; }
     lignes.push(...r.data); if (r.data.length < 1000) break;
   }
-  lignes.forEach(l => appliquerLigne(l));
+  if (ESPACE !== id) return;
+  if (enFond) {
+    if (!ok) return;
+    // On remet à jour ce qui a changé depuis la dernière ouverture, sans toucher à ce que tu viens de modifier
+    const enCours = k => ECHOS[k] && ECHOS[k].size, vus = new Set();
+    lignes.forEach(l => { const k = l.coll + "/" + l.doc_id; vus.add(k); if (!enCours(k)) appliquerLigne(l); });
+    Object.keys(synced).forEach(k => { if (vus.has(k) || enCours(k) || k === "meta/main") return; const i = k.indexOf("/"), coll = k.slice(0, i), did = k.slice(i + 1); delete synced[k]; S[coll] = (S[coll] || []).filter(x => x.id !== did); });
+    APERCU = false;
+  } else lignes.forEach(l => appliquerLigne(l));
   const esp = ESPACES.find(e => e.id === id);
   if (esp && !S.sci.nom) S.sci.nom = esp.nom;
   SB_CANAL = SB.channel("docs-" + id)
@@ -754,7 +790,7 @@ async function ouvrirEspace(id) {
       if (p.new && estMonEcho(p.new.coll + "/" + p.new.doc_id, p.new.data)) return;
       if (appliquerLigne(p.new)) remoteChanged();
     }).subscribe();
-  MODE = "partage"; render();
+  MODE = "partage"; if (enFond) remoteChanged(); else render();
   setTimeout(() => majIrlInsee(false), 4000);
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
@@ -1117,14 +1153,18 @@ const iso = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.get
 const P = s => { if (!s) return null; const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d || 1); };
 const mk = d => d.getFullYear() + "-" + pad(d.getMonth() + 1);
 const CUR = mk(TODAY);
-const addM = (m, n) => { const [y, mo] = m.split("-").map(Number); return mk(new Date(y, mo - 1 + n, 1)); };
-const dim = m => { const [y, mo] = m.split("-").map(Number); return new Date(y, mo, 0).getDate(); };
+/* Petites mémoires : ces calculs de dates sont refaits des milliers de fois par écran */
+const cache1 = (f, max = 5000) => { const c = new Map(); return k => { let v = c.get(k); if (v === undefined) { if (c.size > max) c.clear(); v = f(k); c.set(k, v); } return v; }; };
+const addM0 = cache1(k => { const [m, n] = k.split("|"); const [y, mo] = m.split("-").map(Number); return mk(new Date(y, mo - 1 + +n, 1)); });
+const addM = (m, n) => addM0(m + "|" + n);
+const dim = cache1(m => { const [y, mo] = m.split("-").map(Number); return new Date(y, mo, 0).getDate(); });
 const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 const addYears = (d, n) => new Date(d.getFullYear() + n, d.getMonth(), d.getDate());
 const daysBetween = (a, b) => Math.round((b - a) / 86400000);
-const fd = s => { const d = typeof s === "string" ? P(s) : s; return d ? d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }).replace(/^1 /, "1er ") : "—"; };
-const fds = s => { const d = typeof s === "string" ? P(s) : s; return d ? d.toLocaleDateString("fr-FR") : "—"; };
-const fm = m => { const [y, mo] = m.split("-").map(Number); return new Date(y, mo - 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); };
+const F_D = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" }), F_DS = new Intl.DateTimeFormat("fr-FR"), F_M = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" });
+const fd = s => { const d = typeof s === "string" ? P(s) : s; return d && !isNaN(d) ? F_D.format(d).replace(/^1 /, "1er ") : d ? "Invalid Date" : "—"; };
+const fds = s => { const d = typeof s === "string" ? P(s) : s; return d && !isNaN(d) ? F_DS.format(d) : d ? "Invalid Date" : "—"; };
+const fm = cache1(m => { const [y, mo] = String(m).split("-").map(Number); const d = new Date(y, mo - 1, 1); return isNaN(d) ? "Invalid Date" : F_M.format(d); });
 const EUR = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
 const eur = n => EUR.format(Math.round((+n || 0) * 100) / 100);
 const r2 = n => Math.round(n * 100) / 100;
@@ -1184,7 +1224,7 @@ function loyerAt(b, m) {
   return r ? { hc: +r.loyerHC, ch: +r.charges } : { hc: +b.loyerHC || 0, ch: +b.charges || 0 };
 }
 /* Échéance d'un bail pour un mois donné (avec prorata d'entrée/sortie) */
-function echeance(b, m) {
+function echeance(b, m, ix) {
   const start = mk(P(b.dateEntree)), suivi = b.suiviDepuis || start;
   if (m < start || m < suivi) return null;
   if (b.dateSortie && m > mk(P(b.dateSortie))) return null;
@@ -1196,7 +1236,7 @@ function echeance(b, m) {
   const hc = r2(L.hc * f), ch = r2(L.ch * f), du = r2(hc + ch + exT);
   const j = Math.min(+b.jourPaiement || 1, days);
   const dueDate = new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, j);
-  const pays = S.paiements.filter(p => p.bailId === b.id && p.mois === m);
+  const pays = ix ? (ix.pay[m] || []) : S.paiements.filter(p => p.bailId === b.id && p.mois === m);
   const paye = r2(pays.reduce((s, p) => s + (+p.montant || 0), 0));
   const reste = r2(Math.max(0, du - paye));
   let statut;
@@ -1209,13 +1249,27 @@ function echeance(b, m) {
   const retardJ = statut === "retard" ? daysBetween(dueDate, TODAY) : 0;
   const lastPay = pays.map(p => p.date).sort().pop();
   return { b, m, hc, ch, extras, exT, du, paye, reste, statut, dueDate, retardJ, from, to, days, prorata: f < 1, lastPay, pays,
-    quittance: S.quittances[b.id + "|" + m], relances: S.relances.filter(r => r.bailId === b.id && r.mois === m) };
+    quittance: S.quittances[b.id + "|" + m], relances: ix ? (ix.rel[m] || []) : S.relances.filter(r => r.bailId === b.id && r.mois === m) };
+}
+/* Mémoire de calcul : pendant un affichage, chaque calcul de loyers n'est fait qu'une fois (vidée à chaque modification) */
+let MEMO = null;
+function memo(k, f) { if (!MEMO) return f(); if (!MEMO.has(k)) MEMO.set(k, f()); return MEMO.get(k); }
+function indexBail(b) {
+  return memo("ix|" + b.id, () => { const ix = { pay: {}, rel: {} };
+    S.paiements.forEach(p => { if (p.bailId === b.id) (ix.pay[p.mois] = ix.pay[p.mois] || []).push(p); });
+    (S.relances || []).forEach(r => { if (r.bailId === b.id) (ix.rel[r.mois] = ix.rel[r.mois] || []).push(r); });
+    return ix; });
 }
 function echeancesBail(b, upTo = CUR) {
+  if (MEMO) { const k = "eb|" + b.id + "|" + upTo; if (MEMO.has(k) && MEMO.get(k + "|b") === b) return MEMO.get(k).slice(); const r = echeancesBail0(b, upTo); MEMO.set(k, r); MEMO.set(k + "|b", b); return r.slice(); }
+  return echeancesBail0(b, upTo);
+}
+function echeancesBail0(b, upTo) {
+  const ix = indexBail(b);
   const out = []; let m = b.suiviDepuis || mk(P(b.dateEntree));
   if (m < mk(P(b.dateEntree))) m = mk(P(b.dateEntree));
   let guard = 0;
-  while (m <= upTo && guard++ < 600) { const e = echeance(b, m); if (e) out.push(e); m = addM(m, 1); }
+  while (m <= upTo && guard++ < 600) { const e = echeance(b, m, ix); if (e) out.push(e); m = addM(m, 1); }
   return out;
 }
 /* Dette d'un locataire : loyers échus non payés (le mois en cours compte dès sa date de paiement passée) */
@@ -1263,6 +1317,10 @@ function ordreImputation(b, mois, upTo) {
 }
 /* Plan de remboursement : X € par mois en plus du loyer, à partir d'un mois donné */
 function planEtat(b) {
+  if (MEMO) { const k = "pe|" + b.id; if (MEMO.has(k) && MEMO.get(k + "|b") === b) return MEMO.get(k); const r = planEtat0(b); MEMO.set(k, r); MEMO.set(k + "|b", b); return r; }
+  return planEtat0(b);
+}
+function planEtat0(b) {
   const pl = b.plan; if (!pl || !(+pl.mensualite > 0)) return null;
   const j = Math.min(+b.jourPaiement || 1, 28), passe = m => new Date(+m.slice(0, 4), +m.slice(5) - 1, j) < TODAY;
   let k = 0; for (let m = pl.debut; m <= CUR && k < 600; m = addM(m, 1)) if (passe(m)) k++;
@@ -1863,6 +1921,11 @@ let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); });
 function render() {
+  MEMO = new Map();
+  try { render0(); } finally { MEMO = null; }
+  memoriserCache();
+}
+function render0() {
   const app = document.getElementById("app");
   document.body.classList.toggle("sans-nav", MODE === "connexion" || MODE === "nouvel-espace" || MODE === "chargement");
   if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
@@ -2115,7 +2178,7 @@ function aFaireCourt(T) {
 function pageAFaire(T) {
   const groups = [["urgent", "Urgent"], ["soon", "À faire bientôt"], ["info", "À surveiller"]];
   return `<div class="head"><div><h1>À faire</h1><p>Tout ce qui demande une action, pour les locataires et pour la SCI.</p></div><div class="row"><button onclick="editRappel()">+ Rappel</button></div></div>
-  <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); return g.length ? `<p class="group-title">${l} (${g.length})</p>` + g.map(taskHtml).join("") : ""; }).join("") : `<div class="empty">Rien à faire. Tout est à jour.</div>`}</section>`;
+  <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); const vis = view.afaireTout || g.length <= 60 ? g : g.slice(0, 40); return g.length ? `<p class="group-title">${l} (${g.length})</p>` + vis.map(taskHtml).join("") + (vis.length < g.length ? `<button class="ghost small" onclick="view.afaireTout=true;render()">Voir les ${g.length - vis.length} autres</button>` : "") : ""; }).join("") : `<div class="empty">Rien à faire. Tout est à jour.</div>`}</section>`;
 }
 
 /* ================= États des lieux & inventaire ================= */
@@ -3992,6 +4055,11 @@ function chargerDemo() { confirmer("Remplacer vos données par l'exemple ? Tél�
 
 boot();
 </script>
-<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
+<script>if ("serviceWorker" in navigator) {
+  const avait = !!navigator.serviceWorker.controller; let maj = false;
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").then(r => { setInterval(() => r.update().catch(() => {}), 3600000); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") r.update().catch(() => {}); }); }).catch(() => {}));
+  // Nouvelle version installée : on recharge quand l'appli passe en arrière-plan (jamais pendant que tu tapes)
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!avait || maj) return; maj = true; const libre = () => { const o = document.getElementById("overlay"), f = document.getElementById("focus"); return (!o || o.hidden) && (!f || f.hidden); }; const go = () => { if (document.visibilityState === "hidden" && libre()) location.reload(); }; go(); document.addEventListener("visibilitychange", go); });
+}</script>
 </body>
 </html>

@@ -44,6 +44,7 @@ const log = (...a) => console.log(...a);
   await A.screenshot({ path: out + '/4-membres.png', fullPage: true });
   // B se reconnecte : rejoint l'espace
   await B.evaluate(() => apresConnexion(SB_USER)); await B.waitForTimeout(2500);
+  await B.evaluate(id => ouvrirEspace(id), await A.evaluate(() => ESPACE)); await B.waitForTimeout(2500);
   log('B après invitation', await B.evaluate(() => [MODE, ESPACES.map(e => e.nom), S.baux.map(x => x.nom)]));
   // temps réel : A marque le loyer payé, B le voit
   await A.evaluate(() => location.hash = 'locataires'); await A.waitForTimeout(500);

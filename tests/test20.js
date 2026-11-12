@@ -6,7 +6,7 @@ const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': '
 const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
 const MDP = 'TestMotDePasse-2026!';
 (async () => {
-  const b = await chromium.launch({ proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } }); const errs = [];
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
   const nouvelle = async () => { const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && !/400|403/.test(m.text()) && errs.push(m.text())); await p.route('**/jspdf.umd.min.js', r => r.fulfill({ path: __dirname + '/vendor/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' })); await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200); return p; };
   const p = await nouvelle();
   await p.evaluate(async m => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: m }); await apresConnexion(r.data.user); }, MDP); await p.waitForTimeout(1500);
