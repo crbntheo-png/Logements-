@@ -225,6 +225,8 @@ details.pq summary::-webkit-details-marker { display: none; } details.pq p { mar
 .tons { gap: 6px; margin: 6px 0; }
 .parcours .etapes { list-style: none; margin: 10px 0 0; padding: 0; } .parcours .etape .note { margin: 4px 0 8px; }
 tr.pire td { background: var(--bad-soft); }
+input.auto, select.auto { background: var(--warn-soft); }
+body.lecture #app .row > button, body.lecture #app .acts, body.lecture #app .tile .row, body.lecture #app .todo li > button, body.lecture .top-acts .primary, body.lecture .top-acts [aria-label="Ajouter"], body.lecture .hero .cta, body.lecture #app .card form button, body.lecture .parcours .row { display: none !important; }
 .todo.plat { box-shadow: none; border: 1px solid var(--line); } .todo.plat li { min-height: 52px; } .money { font-variant-numeric: tabular-nums; white-space: nowrap; }
 details.pli > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
 details.pli > summary::-webkit-details-marker { display: none; }
@@ -632,6 +634,7 @@ const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
 function save() {
+  if (LECTURE && SB) { revenirAuxDonneesEnLigne(); toast("👀 Tu es en lecture seule : rien n'a été modifié."); setTimeout(render, 0); return; }
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
   if (MODE !== "partage") return;
   const changes = [];
@@ -708,7 +711,7 @@ async function ouvrirEspace(id) {
   MODE = "chargement"; render();
   if (SB_CANAL) { try { SB.removeChannel(SB_CANAL); } catch (e) {} SB_CANAL = null; }
   ESPACE = id; try { localStorage.setItem("gestion-sci-espace", id); } catch (e) {}
-  S = blank(); synced = {}; MEMBRES = null; DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+  S = blank(); synced = {}; MEMBRES = null; LECTURE = false; document.body.classList.remove("lecture"); DOCS = { etat: "vide", fichiers: [], dossiers: {} };
   const lignes = [];
   for (let de = 0; ; de += 1000) {
     const r = await SB.from("docs").select("coll, doc_id, data").eq("espace_id", id).range(de, de + 999);
@@ -726,6 +729,7 @@ async function ouvrirEspace(id) {
       if (appliquerLigne(p.new)) remoteChanged();
     }).subscribe();
   MODE = "partage"; render();
+  setTimeout(() => majIrlInsee(false), 4000);
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
@@ -930,26 +934,28 @@ async function creerEspace(f) {
   toast("Espace créé. Commence par tes biens.");
 }
 function choisirEspace() {
-  modal("Mes espaces", `<div class="full"><ul class="todo">${ESPACES.map(e => `<li>${avatar(e.nom)}<span class="tx">${esc(e.nom)}${e.id === ESPACE ? "<small>Ouvert en ce moment</small>" : ""}</span>${e.id === ESPACE ? `<span class="pill ok">✓</span>` : `<button type="button" class="small primary" onclick="closeOverlay();ouvrirEspace('${e.id}')">Ouvrir</button>`}</li>`).join("")}</ul></div>
+  if (ESPACES.length > 1) setTimeout(totalEspaces, 0);
+  modal("Mes espaces", `${ESPACES.length > 1 ? `<div class="full" id="totEsp"><p class="note">Calcul du total de tes espaces…</p></div>` : ""}<div class="full" ${ESPACES.length > 1 ? "hidden" : ""}><ul class="todo">${ESPACES.map(e => `<li>${avatar(e.nom)}<span class="tx">${esc(e.nom)}${e.id === ESPACE ? "<small>Ouvert en ce moment</small>" : ""}</span>${e.id === ESPACE ? `<span class="pill ok">✓</span>` : `<button type="button" class="small primary" onclick="closeOverlay();ouvrirEspace('${e.id}')">Ouvrir</button>`}</li>`).join("")}</ul></div>
     <div class="full row"><button type="button" onclick="closeOverlay();MODE='nouvel-espace';render()">➕ Nouvel espace</button><button type="button" class="ghost" onclick="closeOverlay();SB.auth.signOut()">Se déconnecter</button></div>
     <p class="full note">Connecté avec ${esc(SB_USER && SB_USER.email || "")}</p>`, () => true, { ok: "Fermer", lecture: true });
 }
 /* Membres de l'espace (dans Réglages) */
 let MEMBRES = null;
 async function chargerMembres() {
-  const [m, i] = await Promise.all([SB.from("membres").select("user_id, email, role").eq("espace_id", ESPACE), SB.from("invitations").select("id, email").eq("espace_id", ESPACE)]);
-  MEMBRES = { membres: m.data || [], invitations: i.data || [] };
+  const [m, i] = await Promise.all([SB.from("membres").select("user_id, email, role").eq("espace_id", ESPACE), SB.from("invitations").select("*").eq("espace_id", ESPACE)]);
+  MEMBRES = { membres: m.data || [], invitations: i.data || [] }; majRole();
   const el = document.getElementById("membres"); if (el) el.innerHTML = listeMembres();
 }
 function listeMembres() {
   if (!MEMBRES) return `<p class="note">Chargement…</p>`;
   const moi = SB_USER && SB_USER.id, proprio = MEMBRES.membres.some(x => x.user_id === moi && x.role === "proprietaire");
-  return `<ul class="todo">${MEMBRES.membres.map(x => `<li>${avatar(x.email || "?")}<span class="tx">${esc(x.email || "")}${x.user_id === moi ? " (toi)" : ""}<small>${x.role === "proprietaire" ? "Propriétaire de l'espace" : "Membre"}</small></span>${proprio && x.user_id !== moi ? `<button class="small ghost" onclick="retirerMembre('${x.user_id}')">Retirer</button>` : ""}</li>`).join("")}
-    ${MEMBRES.invitations.map(x => `<li><span class="avatar vide" aria-hidden="true">✉</span><span class="tx">${esc(x.email)}<small>Invité · rejoindra l'espace à sa première connexion</small></span><button class="small ghost" onclick="annulerInvitation('${x.id}')">Annuler</button></li>`).join("")}</ul>`;
+  return `<ul class="todo">${MEMBRES.membres.map(x => `<li>${avatar(x.email || "?")}<span class="tx">${esc(x.email || "")}${x.user_id === moi ? " (toi)" : ""}<small>${x.role === "proprietaire" ? "Propriétaire de l'espace" : x.role === "lecteur" ? "👀 Lecture seule" : "Peut modifier"}</small></span>${proprio && x.user_id !== moi ? `<button class="small" onclick="changerRole('${x.user_id}','${x.role === "lecteur" ? "membre" : "lecteur"}')">${x.role === "lecteur" ? "Peut modifier" : "Lecture seule"}</button><button class="small ghost" onclick="retirerMembre('${x.user_id}')">Retirer</button>` : ""}</li>`).join("")}
+    ${MEMBRES.invitations.map(x => `<li><span class="avatar vide" aria-hidden="true">✉</span><span class="tx">${esc(x.email)}<small>${x.role === "lecteur" ? "👀 Lecture seule · " : ""}Invité · rejoindra l'espace à sa première connexion</small></span><button class="small ghost" onclick="annulerInvitation('${x.id}')">Annuler</button></li>`).join("")}</ul>`;
 }
 async function inviter(f) {
   const email = f.email.value.trim().toLowerCase(); if (!email) return;
-  const r = await SB.from("invitations").insert({ espace_id: ESPACE, email });
+  const role = f.role ? f.role.value : "membre";
+  let r = await SB.from("invitations").insert(role === "lecteur" ? { espace_id: ESPACE, email, role } : { espace_id: ESPACE, email });
   if (r.error) { toast(/duplicate|unique/i.test(r.error.message) ? "Cette personne est déjà invitée." : "Invitation impossible : " + r.error.message); return; }
   f.reset(); toast("Invitation enregistrée. Envoie-lui le lien de l'appli : elle se connecte avec " + email + ".");
   chargerMembres();
@@ -959,9 +965,9 @@ async function annulerInvitation(id) { await SB.from("invitations").delete().eq(
 function sectionMembres() {
   setTimeout(chargerMembres, 0);
   return `<section class="card"><h2>👤 Membres de l'espace</h2>
-    <p class="note">Chaque membre voit et modifie tout cet espace, sur son propre téléphone. Pour inviter quelqu'un : entre son e-mail, puis envoie-lui le lien de l'appli.</p>
+    <p class="note">Chaque membre voit tout cet espace sur son propre téléphone. "Peut modifier" : comme toi. "Lecture seule" : il regarde les chiffres et les documents, sans rien changer ni envoyer (parfait pour un associé ou le comptable). Pour inviter quelqu'un : entre son e-mail, puis envoie-lui le lien de l'appli.</p>
     <div id="membres">${listeMembres()}</div>
-    <form class="row" style="margin-top:12px" onsubmit="event.preventDefault();inviter(this)"><input name="email" id="inv_email" type="email" required placeholder="email@exemple.fr" aria-label="E-mail de la personne à inviter" style="flex:1;min-width:200px"><button class="primary">Inviter</button></form>
+    <form class="row" style="margin-top:12px" onsubmit="event.preventDefault();inviter(this)"><input name="email" id="inv_email" type="email" required placeholder="email@exemple.fr" aria-label="E-mail de la personne à inviter" style="flex:1;min-width:200px"><select name="role" aria-label="Ce qu'elle peut faire" style="flex:1;min-width:160px"><option value="membre">Peut modifier</option><option value="lecteur">Lecture seule (associé, comptable)</option></select><button class="primary">Inviter</button></form>
     <div class="row" style="margin-top:12px"><button class="small" onclick="partagerLien()">📤 Partager le lien de l'appli</button><button class="small ghost" onclick="choisirEspace()">Mes espaces</button></div>
   </section>`;
 }
@@ -1732,7 +1738,9 @@ const ACTIONS = [
   ["⚡", "Faire le point du mois", "lancerPoint()"], ["💶", "Un loyer est arrivé", "ajoutRapide('loyer')"], ["🏦", "Importer le relevé bancaire", "importerReleve()"],
   ["🧾", "Ajouter une dépense", "editDepense()"], ["👤", "Nouveau locataire", "editBail()"], ["🏠", "Nouveau bien", "editBien()"], ["⏰", "Nouveau rappel", "editRappel()"],
   ["🗑️", "Saisir une taxe foncière", "taxeFonciere()"], ["📊", "Export pour le comptable", `exportCSV(${TODAY.getFullYear()})`], ["📄", "Bilan de l'année", `docBilanOpen(${TODAY.getFullYear()})`],
-  ["📅", "Tous les loyers du mois", "go('loyers')"], ["⚙️", "Réglages de la SCI", "go('reglages')"], ["📁", "Documents du Drive", "go('docs')"]
+  ["📅", "Tous les loyers du mois", "go('loyers')"], ["⚙️", "Réglages de la SCI", "go('reglages')"], ["📁", "Documents du Drive", "go('docs')"],
+  ["📷", "Photo d'une facture", "photoFacture()"], ["📊", "Importer mes logements depuis Excel", "importTableur()"], ["🧾", "Régulariser les charges", `regulTous(${TODAY.getFullYear() - 1})`], ["🧮", "Fichier FEC pour le comptable", `exportFEC(${TODAY.getFullYear()})`],
+  ["📆", "Ajouter les dates à mon agenda", "exportAgenda()"], ["📈", "Chercher le dernier indice IRL", "majIrlInsee(true)"], ["📖", "Petit lexique (c'est quoi ?)", "go('aide')"], ["🔔", "Notifications", "go('reglages')"], ["⚖️", "Mentions légales et confidentialité", "go('legal')"]
 ];
 function majRecherche() {
   const q = sansAccent((document.getElementById("srq") || {}).value || ""), mots = q.split(/\s+/).filter(Boolean), ok = t => mots.every(m => sansAccent(t).includes(m));
@@ -1740,6 +1748,11 @@ function majRecherche() {
   S.baux.forEach(b => { const bi = bien(b.bienId); if (!mots.length ? isActive(b) : ok(b.nom + " " + (b.email || "") + " " + bienLabel(bi))) r.push({ ico: avatar(b.nom), t: esc(b.nom), s: `${esc(bienLabel(bi))} · ${isActive(b) ? eur(loyerAt(b, CUR).hc + loyerAt(b, CUR).ch) + "/mois" : "ancien locataire"}`, f: `go('bail-${b.id}')` }); });
   if (mots.length) S.biens.forEach(bi => { if (ok(bi.nom + " " + adresseBien(bi))) r.push({ ico: `<span class="sr-i">${/maison/i.test(bi.type || "") ? "🏡" : "🏢"}</span>`, t: esc(bi.nom), s: esc(adresseBien(bi)), f: "go('biens')" }); });
   ACTIONS.forEach(([i, t, f]) => { if (!mots.length || ok(t)) r.push({ ico: `<span class="sr-i">${i}</span>`, t, s: "Action", f }); });
+  if (mots.length) {
+    S.depenses.forEach(d => { if (ok((d.libelle || "") + " " + d.categorie + " " + d.montant)) r.push({ ico: `<span class="sr-i">🧾</span>`, t: esc(d.libelle || d.categorie), s: `Dépense · ${fds(d.date)} · ${eur(d.montant)}`, f: `editDepense('${d.id}')` }); });
+    (S.fichiers || []).forEach(x => { if (ok(x.nom + " " + (x.cat || ""))) r.push({ ico: `<span class="sr-i">📄</span>`, t: esc(x.nom), s: `Document · ${esc(x.cat || "")} · ${esc(bienLabel(bien(x.bienId)))}`, f: `ouvrirDocument('${x.id}')` }); });
+    S.biens.forEach(bi => { (bi.travaux || []).forEach(t => { if (ok(t.titre + " " + (t.artisan || ""))) r.push({ ico: `<span class="sr-i">🛠</span>`, t: esc(t.titre), s: `Travaux · ${esc(bi.nom)}`, f: `editTravaux('${bi.id}','${t.id}')` }); }); (bi.candidats || []).forEach(c => { if (ok(c.nom)) r.push({ ico: `<span class="sr-i">🙋</span>`, t: esc(c.nom), s: `Candidat · ${esc(bi.nom)}`, f: `editCandidat('${bi.id}','${c.id}')` }); }); });
+  }
   if (mots.length && DOCS.etat === "pret") chercherDocs(q, "").slice(0, 8).forEach(d => r.push({ ico: `<span class="sr-i">${iconeFichier(d)}</span>`, t: esc(d.titre), s: "Drive · " + esc(d.chemin.join(" › ") || "Racine"), f: `window.open('${esc(d.lien)}','_blank')`, lien: d.lien }));
   SR = r.slice(0, 30); SRi = 0;
   document.getElementById("srres").innerHTML = SR.length ? SR.map((x, k) => `<li role="option" class="${k === 0 ? "on" : ""}" onclick="choisirRecherche(${k})">${x.ico}<span><b>${x.t}</b><small>${x.s}</small></span></li>`).join("") : `<li class="vide">Rien trouvé${DOCS.etat === "chargement" ? " · lecture du Drive en cours…" : ""}</li>`;
@@ -1762,7 +1775,11 @@ function ajoutRapide(quoi) {
     modal("💶 Quel loyer est arrivé ?", l.length ? `<div class="full"><ul class="todo">${l.map(e => `<li>${avatar(e.b.nom)}<span class="tx">${esc(e.b.nom)}<small>${fm(e.m)} · ${eur(e.reste)}${e.statut === "retard" ? " · en retard" : ""}</small></span><button type="button" class="small primary" onclick="closeOverlay();encaisser('${e.b.id}','${e.m}')">Reçu</button></li>`).join("")}</ul></div>` : `<p class="full note">Aucun loyer en attente. 🎉</p>`, () => true, { ok: "Fermer", lecture: true });
     return;
   }
-  const items = [["💶", "Un loyer est arrivé", "ajoutRapide('loyer')"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["👤", "Un locataire", "editBail()"], ["🏠", "Un bien", "editBien()"], ["⏰", "Un rappel", "editRappel()"]];
+  const h = (location.hash || "").slice(1), bid = h.startsWith("bail-") ? h.slice(5) : null, bi = h.startsWith("bien-") ? h.slice(5) : null;
+  const items = bid && bail(bid) ? [["💶", "Il a versé une somme", `verserSomme('${bid}')`], ["📄", "Un document", `ajouterDocument('${bail(bid).bienId}','${bid}')`], ["✍️", "Un avenant au bail", `avenant('${bid}')`], ["📋", "Un état des lieux", `nouvelEdl('${bid}','${edlsDuBail(bid).some(e => e.type === "entree") ? "sortie" : "entree"}')`], ["⏰", "Un rappel", "editRappel()"], ["🧾", "Une dépense", "editDepense()"]]
+    : bi && bien(bi) ? [["🛠", "Des travaux", `editTravaux('${bi}')`], ["📄", "Un document", `ajouterDocument('${bi}')`], ["🙋", "Un candidat", `editCandidat('${bi}')`], ["✍️", "L'annonce", `annonce('${bi}')`], ["👤", "Un locataire", `editBail(null,'${bi}')`], ["🧾", "Une dépense", "editDepense()"]]
+    : h === "compta" ? [["📷", "Photo d'une facture", "photoFacture()"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["🗑️", "Une taxe foncière", "taxeFonciere()"]]
+    : [["💶", "Un loyer est arrivé", "ajoutRapide('loyer')"], ["📷", "Photo d'une facture", "photoFacture()"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["👤", "Un locataire", "editBail()"], ["🏠", "Un bien", "editBien()"], ["📊", "Mes logements depuis Excel", "importTableur()"], ["⏰", "Un rappel", "editRappel()"]];
   modal("Ajouter", `<div class="full grille-add">${items.map(([i, t, f]) => `<button type="button" onclick="${f}"><span>${i}</span>${t}</button>`).join("")}</div>`, () => true, { ok: "Fermer", lecture: true });
 }
 
@@ -1823,7 +1840,7 @@ function render() {
   const app = document.getElementById("app");
   document.body.classList.toggle("sans-nav", MODE === "connexion" || MODE === "nouvel-espace" || MODE === "chargement");
   if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
-  if (MODE === "connexion") { app.innerHTML = pageConnexion(); return; }
+  if (MODE === "connexion") { app.innerHTML = location.hash === "#legal" ? pageLegal().replace('href="#reglages">← Réglages', 'href="#">← Connexion') : pageConnexion() + `<p class="note center" style="margin-top:18px"><a href="#legal">Mentions légales et confidentialité</a></p>`; return; }
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
@@ -1838,13 +1855,14 @@ function render() {
   document.querySelector(".brand").onclick = SB ? (ev => { ev.preventDefault(); choisirEspace(); }) : null;
   if (document.getElementById("brandSub").innerHTML !== sub) document.getElementById("brandSub").innerHTML = sub;
   const vide = !S.biens.length && !S.baux.length;
-  const banner = bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
+  const banner = (LECTURE ? `<div class="banner"><span>👀 <b>Lecture seule</b> : tu vois tout, tu ne modifies rien.</span></div>` : "") + bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
   else if (h.startsWith("bien-")) html = pageBien(h.slice(5));
   else if (h.startsWith("docs-")) html = pageDocsBien(decodeURIComponent(h.slice(5)));
   else if (h === "aide") html = pageAide();
+  else if (h === "legal") html = pageLegal();
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
@@ -2474,7 +2492,7 @@ function pageCompta() {
 function pageReglages() {
   const s = S.sci;
   return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div><span class="row"><a class="btn small" href="#aide">❓ Comment ça marche ?</a>${SB ? `<button class="small" onclick="ouvrirSignalement()">🐞 Signaler un problème</button>` : ""}</span></div>
-  ${SB ? sectionInstall() + sectionMembres() + sectionGmail() : ""}
+  ${SB ? sectionInstall() + sectionNotif() + sectionMembres() + sectionGmail() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
     ${sel("Tu loues", "forme", s.forme || "sci", [["sci", "Avec une SCI"], ["perso", "En nom propre (particulier)"]], "full")}
@@ -2508,12 +2526,14 @@ function pageReglages() {
     </fieldset>
     <div class="full row"><button class="primary">Enregistrer</button></div>
   </form></section>
-  <section class="card"><h2>Indice des loyers (IRL)</h2>
+  <section class="card"><h2>📅 Dans ton agenda</h2><p class="note">Loyers attendus, révisions, fins d'assurance, congés, taxe foncière, déclarations : toutes les dates des 12 prochains mois dans le calendrier de ton téléphone (iPhone, Android, Google Agenda, Outlook). À refaire quand tu ajoutes un locataire.</p><div class="row"><button class="primary" onclick="exportAgenda()">📅 Ajouter à mon agenda</button></div></section>
+  <section class="card"><h2>Indice des loyers (IRL)${cq("irl")}</h2>
     <p class="note">Les révisions de loyer se calculent toutes seules avec ces indices officiels de l'INSEE. Dernier connu : <b>${qLabel(irlCles().slice(-1)[0])} = ${fmtIrl(irlVal(irlCles().slice(-1)[0]))}</b>. Prochain : <b>${qLabel(irlProchain().k)}</b>, publié vers le ${fd(irlProchain().pub)}. Quand il sort, ajoute-le ici (valeur sur <a href="https://www.service-public.gouv.fr/particuliers/vosdroits/F13723" target="_blank" rel="noopener">service-public.gouv.fr</a>).</p>
     <div class="table-wrap" style="border:0"><table><tbody>${irlCles().slice(-6).reverse().map(k => `<tr><td>${qLabel(k)}</td><td class="num">${fmtIrl(irlVal(k))}</td><td class="sub">publié vers le ${fds(qPub(k))}</td></tr>`).join("")}</tbody></table></div>
-    <form class="row" onsubmit="event.preventDefault();ajouterIrl(this)"><input name="t" id="irl_t" aria-label="Trimestre" placeholder="T4 2026" style="max-width:120px" value="${qLabel(irlProchain().k)}"><input name="v" id="irl_v" type="number" inputmode="decimal" step="0.01" aria-label="Valeur de l'indice" placeholder="Valeur" style="max-width:120px" required><button>Ajouter l'indice</button></form>
+    <div class="row" style="margin-bottom:8px"><button class="small primary" onclick="majIrlInsee(true)">🔄 Chercher le dernier indice sur le site de l'INSEE</button></div><p class="note">L'appli le fait aussi toute seule une fois par jour.</p><form class="row" onsubmit="event.preventDefault();ajouterIrl(this)"><input name="t" id="irl_t" aria-label="Trimestre" placeholder="T4 2026" style="max-width:120px" value="${qLabel(irlProchain().k)}"><input name="v" id="irl_v" type="number" inputmode="decimal" step="0.01" aria-label="Valeur de l'indice" placeholder="Valeur" style="max-width:120px" required><button>Ajouter l'indice</button></form>
   </section>
   <section class="card"><h2>${SB ? "Sauvegarde" : "Partage avec les associés et sauvegarde"}</h2>
+    <div class="row" style="margin-bottom:8px"><button onclick="importTableur()">📊 Importer mes logements depuis Excel</button></div>
     ${SB ? `<p class="note">Tes données sont enregistrées en ligne et protégées. Tu peux aussi télécharger une copie de sécurité.</p>` : MODE === "partage" ? `<p class="note"><b>Les données sont enregistrées en ligne.</b> Pour que tes associés voient et modifient la même chose : bouton <b>Partager</b> en haut de cette page, puis invite-les avec leur e-mail en tant qu'<b>Éditeur</b>. Chacun envoie les quittances depuis son propre Gmail.</p>` : `<p class="note">Les données sont enregistrées dans ce navigateur, sur cet appareil. Pour ne rien perdre : télécharge une sauvegarde régulièrement et rouvre-la sur un autre appareil avec "Ouvrir une sauvegarde".</p>`}
     <div class="row"><button class="primary" onclick="exportJSON()">Télécharger une sauvegarde</button><button onclick="document.getElementById('importFile').click()">Ouvrir une sauvegarde</button></div>
     <p class="note">Dernière sauvegarde téléchargée : ${S.lastExport ? fd(S.lastExport.slice(0, 10)) : "jamais"}</p>
@@ -2522,7 +2542,8 @@ function pageReglages() {
     ${S.rappels.length ? `<div class="table-wrap" style="border:0"><table><tbody>${S.rappels.map(r => `<tr><td>${fds(r.date)}</td><td>${esc(r.titre)}</td><td>${r.fait ? `<span class="pill ok">Fait</span>` : `<span class="pill info">À faire</span>`}</td><td><button class="small ghost" onclick="supprRappel('${r.id}')">Supprimer</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note">Aucun rappel.</p>`}
     <div class="row"><button onclick="editRappel()">+ Rappel</button></div>
   </section>
-  <section class="card"><h2>Zone sensible</h2><div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button></div></section>`;
+  <section class="card"><h2>Zone sensible</h2><div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button>${SB ? `<button class="danger ghost" onclick="supprimerCompte()">Supprimer mon compte</button>` : ""}</div></section>
+  <p class="note center" style="margin:6px 0 20px"><a href="#legal">Mentions légales et confidentialité</a> · <a href="#aide">Comment ça marche ?</a></p>`;
 }
 
 /* ================= Formulaires ================= */
@@ -2578,6 +2599,7 @@ function editBail(id, bienId, pre) {
   if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
   if (!S.biens.length) { confirmer("Ajoutez d'abord un bien.", () => editBien()); return; }
   modal(id ? "Modifier le locataire" : "Nouveau locataire", `
+    ${id ? "" : `<div class="full row"><button type="button" onclick="remplirDepuisBail(this)">📄 Remplir depuis le bail (PDF ou photo)</button><span class="note" id="bailLu" aria-live="polite"></span></div>`}
     <fieldset><legend>Locataire</legend>
     ${fld("Nom et prénom", "nom", b.nom, "text", "", "required")}${fld("Colocataire(s) / co-titulaire(s)", "colocataires", b.colocataires)}
     ${fld("Téléphone", "tel", b.tel, "tel")}${fld("E-mail", "email", b.email, "email")}
@@ -2636,9 +2658,9 @@ function saisirPaiement(bailId, m) {
 }
 function annulerPaiement(bailId, m) { const p = S.paiements.filter(x => x.bailId === bailId && x.mois === m).pop(); if (!p) return; confirmer(`Annuler le paiement de ${eur(p.montant)} du ${fds(p.date)} ?`, () => { S.paiements = S.paiements.filter(x => x !== p); delete S.quittances[bailId + "|" + m]; save(); render(); }); }
 
-function editDepense(id) {
-  const d0 = id ? S.depenses.find(x => x.id === id) : { date: iso(TODAY), categorie: CATS[4] };
-  modal(id ? "Modifier la dépense" : "Nouvelle dépense", `
+function editDepense(id, pre) {
+  const d0 = id ? S.depenses.find(x => x.id === id) : Object.assign({ date: iso(TODAY), categorie: CATS[4] }, pre || {});
+  modal(id ? "Modifier la dépense" : "Nouvelle dépense", `${id ? "" : pre && pre.lue !== undefined ? `<p class="full note">${pre.lue ? "📷 Lu sur la facture : vérifie le montant, la date et la catégorie." : "📷 Je n'ai pas pu lire la facture : remplis à la main."}</p>` : `<div class="full row"><button type="button" onclick="closeOverlay();photoFacture()">📷 Remplir avec une photo de la facture</button></div>`}
     ${fld("Date", "date", d0.date, "date", "", "required")}${fld("Montant (€)", "montant", d0.montant, "number", "", "required")}
     ${sel("Catégorie", "categorie", d0.categorie, CATS.map(c => [c, c]))}${sel("Bien concerné", "bienId", d0.bienId || "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
     ${fld("Détail (ex : plombier fuite cuisine)", "libelle", d0.libelle, "text", "full")}
@@ -2713,7 +2735,7 @@ function showDoc(html, o = {}) {
   ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="closeOverlay()" aria-label="Fermer">✕</button><b class="doc-t">${esc(o.titre || "")}</b></div>
   <div class="row"><button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer…</span></button>` : ""}</div></div>
   <div class="paper" id="paper">${html}</div>
-  ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div></div>` : ""}</div>`;
+  ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.bailId && bail(o.bailId) && bail(o.bailId).tel ? `<button class="small" onclick="envoyerAutrement('sms')">📱 Par SMS</button><button class="small" onclick="envoyerAutrement('wa')">💬 WhatsApp</button>` : ""}${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div></div>` : ""}</div>`;
   ov.hidden = false; ov.scrollTop = 0;
   if (o.onSent && document.getElementById("dsent")) document.getElementById("dsent").onclick = () => { o.onSent(); save(); closeOverlay(); toast("Enregistré comme envoyé"); };
   if (mail) document.getElementById("dsend").onclick = ev => {
@@ -3468,6 +3490,247 @@ function tachesLegales(add, y) {
     if (occupe && /gaz|fioul|bois/.test(ch) && TODAY.getMonth() >= 8 && !fait("leg-chaud-" + bi.id + "-" + y)) add({ key: "leg-chaud-" + bi.id + "-" + y, prio: "info", date: new Date(y, 9, 1), done: true, t: `${esc(bi.nom)} : entretien annuel du chauffage`, d: `Chaudière gaz ou fioul : entretien chaque année${/bois/.test(ch) ? ", et ramonage (2 fois par an pour le bois)" : ""}, à la charge du locataire. Demande-lui l'attestation avant l'hiver.`, acts: [] });
     if (occupe && encadre(bi) && !fait("leg-enc-" + bi.id)) add({ key: "leg-enc-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : encadrement des loyers`, d: `${cq("encadrement")} ${esc(bi.ville)} plafonne les loyers. Vérifie que le loyer ne dépasse pas le loyer de référence majoré, et qu'il est écrit dans le bail.`, acts: [] });
   });
+}
+
+/* ================= Imports : tableur, bail en PDF, photo de facture ================= */
+const LIBS = {};
+function chargerLib(url, nom) {
+  if (window[nom]) return Promise.resolve(window[nom]);
+  return LIBS[url] || (LIBS[url] = new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = url; sc.onload = () => ok(window[nom]); sc.onerror = () => { delete LIBS[url]; ko(new Error("Pas de connexion internet ?")); }; document.head.appendChild(sc); }));
+}
+const libXlsx = () => chargerLib("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js", "XLSX");
+async function libPdf() { const L = await chargerLib("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js", "pdfjsLib"); L.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; return L; }
+const libOcr = () => chargerLib("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js", "Tesseract");
+function choisirFichier(accept) { return new Promise(ok => { const i = document.createElement("input"); i.type = "file"; i.accept = accept; i.onchange = () => ok(i.files[0] || null); i.click(); }); }
+async function lireTexteImage(src, info) { const T = await libOcr(); info && info("Lecture de l'image… (la première fois, ça peut prendre 30 secondes)"); const r = await T.recognize(src, "fra"); return r.data.text || ""; }
+async function lireTextePdf(file, info) {
+  const L = await libPdf(), doc = await L.getDocument({ data: await file.arrayBuffer() }).promise; let txt = "";
+  for (let i = 1; i <= Math.min(doc.numPages, 12); i++) { const p = await doc.getPage(i), c = await p.getTextContent(); txt += c.items.map(x => x.str).join(" ") + "\n"; }
+  if (txt.replace(/\s/g, "").length > 200) return txt;
+  info && info("Document scanné : lecture des 3 premières pages…"); let o = "";
+  for (let i = 1; i <= Math.min(doc.numPages, 3); i++) { const p = await doc.getPage(i), v = p.getViewport({ scale: 2 }), cv = document.createElement("canvas"); cv.width = v.width; cv.height = v.height; await p.render({ canvasContext: cv.getContext("2d"), viewport: v }).promise; o += await lireTexteImage(cv, info) + "\n"; }
+  return o;
+}
+const nombreTxt = t => { const v = +String(t).replace(/[\s  ]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", "."); return isFinite(v) ? v : NaN; };
+const MOIS_FR = ["janvier", "fevrier", "mars", "avril", "mai", "juin", "juillet", "aout", "septembre", "octobre", "novembre", "decembre"];
+function dateTxt(t) {
+  let m = /(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/.exec(t); if (m) { const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; return `${y}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`; }
+  m = /(\d{1,2})(?:er)?\s+([a-zéû]+)\s+(\d{4})/i.exec(t); if (m) { const k = MOIS_FR.indexOf(sansAccent(m[2]).toLowerCase()); if (k >= 0) return `${m[3]}-${String(k + 1).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`; }
+  return "";
+}
+const MONTANT = "(\\d{1,3}(?:[\\s  .]\\d{3})*(?:,\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)\\s*(?:€|euros?|EUR)";
+function lireBail(txt) {
+  const t = txt.replace(/\s+/g, " "), r = {}, cherche = (re) => { const m = re.exec(t); return m ? nombreTxt(m[1]) : NaN; };
+  let v = cherche(new RegExp("loyer (?:mensuel )?(?:hors charges|HC|principal|de base)?[^€\\d]{0,80}?" + MONTANT, "i")); if (v > 0) r.loyerHC = v;
+  v = cherche(new RegExp("(?:provision|forfait)[^€\\d]{0,60}?charges[^€\\d]{0,60}?" + MONTANT, "i")); if (!(v >= 0)) v = cherche(new RegExp("charges[^€\\d]{0,40}?" + MONTANT, "i")); if (v >= 0) r.charges = v;
+  v = cherche(new RegExp("d[ée]p[ôo]t de garantie[^€\\d]{0,120}?" + MONTANT, "i")); if (v > 0) r.depot = v;
+  let m = /(?:prise d'effet|prend effet le|date d'effet|à compter du|a compter du|commence le|débute le|entrée dans les lieux)[^0-9]{0,30}((?:\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})|(?:\d{1,2}(?:er)?\s+[a-zéû]+\s+\d{4}))/i.exec(t); if (m) r.dateEntree = dateTxt(m[1]);
+  m = /payable[^.]{0,60}?\b(?:le\s+)?(\d{1,2})(?:er)?\s+(?:de chaque|du) mois/i.exec(t); if (m) r.jourPaiement = +m[1];
+  const mails = (t.match(/[\w.+-]+@[\w-]+\.[\w.]+/g) || []).filter(x => x.toLowerCase() !== String(S.sci.email || "").toLowerCase()); if (mails.length) r.email = mails[mails.length - 1];
+  const tels = t.match(/(?:\+33\s?|0)[1-9](?:[\s.]?\d{2}){4}/g) || []; if (tels.length) r.tel = tels[tels.length - 1];
+  m = /(?:[Ll]es?) [Ll]ocataires?\s*(?:\(s\))?\s*:?\s*(?:M\.|Mme|Monsieur|Madame|Mlle)?\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+(?:\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]+){1,3})/.exec(t); if (m && !/SCI|Société|bailleur/i.test(m[1])) r.nom = m[1];
+  if (/meubl[ée]/i.test(t) && !/non meubl|location vide/i.test(t)) r.typeBail = "meuble";
+  return r;
+}
+async function remplirDepuisBail(btn) {
+  const f = document.getElementById("mform"), info = x => { const n = document.getElementById("bailLu"); if (n) n.textContent = x; };
+  const file = await choisirFichier("application/pdf,image/*"); if (!file) return;
+  btn.disabled = true; info("Lecture du bail…");
+  try {
+    const txt = /pdf/.test(file.type) ? await lireTextePdf(file, info) : await lireTexteImage(file, info), r = lireBail(txt), trouves = [];
+    const noms = { nom: "nom", email: "e-mail", tel: "téléphone", dateEntree: "date d'entrée", loyerHC: "loyer", charges: "charges", depot: "dépôt", jourPaiement: "jour de paiement", typeBail: "type" };
+    Object.entries(r).forEach(([k, v]) => { const el = f && f.elements[k]; if (el && v !== "" && v !== undefined && !(typeof v === "number" && !isFinite(v))) { el.value = v; el.classList.add("auto"); trouves.push(noms[k]); } });
+    info(trouves.length ? `✓ Rempli depuis le bail : ${trouves.join(", ")}. Vérifie chaque case surlignée.` : "Je n'ai rien trouvé de sûr dans ce document : remplis à la main.");
+    if (trouves.length) f.dispatchEvent(new Event("input"));
+  } catch (e) { info("Lecture impossible : " + e.message); }
+  btn.disabled = false;
+}
+const CAT_FACTURE = [[/syndic|copropri/i, "Charges de copropriété"], [/taxe fonci/i, "Taxe foncière"], [/assurance|axa|maif|macif|allianz|groupama|matmut|gmf/i, "Assurance propriétaire (PNO)"], [/plomb|electric|élec|chauffag|serrur|peint|menuis|vitr|toiture|couvreur|maçon|artisan|répar|repar|dépann|depann/i, "Travaux d'entretien / réparation"], [/edf|engie|total ?energies|eau|veolia|suez|saur|gaz/i, "Eau / électricité / gaz"], [/notaire|avocat|comptab|expert|huissier|commissaire/i, "Honoraires (comptable, notaire, avocat…)"], [/diagnost|dpe/i, "Diagnostics"], [/leboncoin|seloger|annonce|pap\b/i, "Frais de gestion / annonces"]];
+function lireFacture(txt) {
+  const lignes = txt.split("\n").map(x => x.trim()).filter(Boolean), r = {};
+  let tot = NaN; const reTot = new RegExp("(?:total\\s*(?:ttc|à payer|a payer|général|net)?|net à payer|net a payer|montant ttc|à régler|a regler)[^\\d\\n]{0,25}" + MONTANT.replace("\\s*(?:€|euros?|EUR)", "\\s*(?:€|euros?|EUR)?"), "i");
+  lignes.forEach(l => { const m = reTot.exec(l); if (m) { const v = nombreTxt(m[1]); if (v > 0) tot = v; } });
+  if (!(tot > 0)) { const all = (txt.match(/\d{1,3}(?:[\s.]\d{3})*,\d{2}/g) || []).map(nombreTxt).filter(v => v > 0 && v < 100000); if (all.length) tot = Math.max(...all); }
+  if (tot > 0) r.montant = r2(tot);
+  const d = dateTxt(txt); if (d && P(d) <= addDays(TODAY, 1) && P(d) >= addDays(TODAY, -800)) r.date = d;
+  const vend = lignes.find(l => /[a-z]{3}/i.test(l) && !/facture|devis|date|n°|client|page/i.test(l)); if (vend) r.libelle = vend.slice(0, 60);
+  const c = CAT_FACTURE.find(([re]) => re.test(txt)); if (c) r.categorie = c[1];
+  return r;
+}
+async function photoFacture() {
+  const file = await choisirFichier("image/*,application/pdf"); if (!file) return;
+  toast("Lecture de la facture… (la première fois, jusqu'à 30 secondes)");
+  try { const txt = /pdf/.test(file.type) ? await lireTextePdf(file) : await lireTexteImage(file), r = lireFacture(txt);
+    editDepense(null, Object.assign({ date: iso(TODAY) }, r, { lue: Object.keys(r).length }));
+  } catch (e) { toast("Lecture impossible : " + e.message); editDepense(); }
+}
+
+/* --- Démarrer avec un tableur (Excel, Numbers, Google Sheets, CSV) --- */
+const COLS_IMPORT = [["bien", "Logement (nom court)"], ["adresse", "Adresse"], ["cp", "Code postal"], ["ville", "Ville"], ["type", "Type (Appartement, Maison…)"], ["surface", "Surface m²"], ["meuble", "Meublé (oui/non)"], ["nom", "Locataire (nom prénom)"], ["email", "E-mail"], ["tel", "Téléphone"], ["dateEntree", "Date d'entrée"], ["loyerHC", "Loyer hors charges"], ["charges", "Charges"], ["depot", "Dépôt de garantie"], ["jourPaiement", "Payé le (jour)"]];
+async function modeleTableur() { const X = await libXlsx(), ws = X.utils.aoa_to_sheet([COLS_IMPORT.map(c => c[1]), ["Appart Centre", "3 rue de la Paix", "75002", "Paris", "Appartement", 32, "non", "Camille Martin", "camille@exemple.fr", "06 12 34 56 78", "01/09/2024", 850, 50, 850, 5]]); ws["!cols"] = COLS_IMPORT.map(() => ({ wch: 20 })); const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, "Mes logements"); X.writeFile(wb, "Modele-gestion-locative.xlsx"); }
+const RE_COLS = [[/logement|bien/, "bien"], [/adresse/, "adresse"], [/postal|^cp$/, "cp"], [/ville|commune/, "ville"], [/^type/, "type"], [/surface|m2|m²/, "surface"], [/meubl/, "meuble"], [/locataire|^nom/, "nom"], [/mail/, "email"], [/tel|phone|portable/, "tel"], [/entree|arrivee|debut/, "dateEntree"], [/loyer/, "loyerHC"], [/charge/, "charges"], [/depot|caution|garantie/, "depot"], [/jour|paye le|echeance/, "jourPaiement"]];
+function colImport(h) { const k = sansAccent(h).trim(); if (!k) return null; const ex = COLS_IMPORT.find(([, l]) => sansAccent(l) === k); if (ex) return ex[0]; const r = RE_COLS.find(([re]) => re.test(k)); return r ? r[1] : null; }
+function importTableur() {
+  modal("Démarrer avec un tableur", `<p class="full note">Tu as déjà tes logements dans Excel, Numbers ou Google Sheets ? Une ligne par logement (et son locataire s'il y en a un). L'appli crée tout d'un coup, tu vérifies avant.</p>
+    <div class="full row"><button type="button" onclick="modeleTableur()">⬇️ Télécharger le modèle</button><button type="button" class="primary" onclick="lireTableur()">📂 Choisir mon fichier</button></div><div class="full" id="impRes"></div>`, () => true, { ok: "Fermer", lecture: true });
+}
+async function lireTableur() {
+  const file = await choisirFichier(".xlsx,.xls,.ods,.csv,.numbers"); if (!file) return;
+  const out = document.getElementById("impRes"); out.innerHTML = `<p class="note">Lecture…</p>`;
+  try {
+    const X = await libXlsx(), wb = X.read(await file.arrayBuffer(), { cellDates: true }), rows = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" });
+    const hi = rows.findIndex(r => r.filter(x => colImport(x)).length >= 3); if (hi < 0) { out.innerHTML = `<p class="note">⚠️ Je ne reconnais pas les colonnes. Pars du modèle (bouton au-dessus).</p>`; return; }
+    const cols = rows[hi].map(colImport), L = rows.slice(hi + 1).map(r => { const o = {}; cols.forEach((c, i) => { if (c) o[c] = r[i]; }); return o; }).filter(o => o.bien || o.adresse || o.nom);
+    const dt = v => v instanceof Date ? iso(v) : typeof v === "number" ? iso(new Date(Math.round((v - 25569) * 864e5))) : dateTxt(String(v));
+    IMPORT = L.map(o => ({ bien: String(o.bien || o.adresse || "").trim(), adresse: String(o.adresse || "").trim(), cp: String(o.cp || "").trim(), ville: String(o.ville || "").trim(), type: String(o.type || "Appartement").trim(), surface: o.surface || "", meuble: /oui|yes|meubl|x/i.test(String(o.meuble)) ? "meuble" : "vide",
+      nom: String(o.nom || "").trim(), email: String(o.email || "").trim(), tel: String(o.tel || "").trim(), dateEntree: o.dateEntree ? dt(o.dateEntree) : "", loyerHC: nombreTxt(o.loyerHC) || "", charges: nombreTxt(o.charges) || 0, depot: nombreTxt(o.depot) || "", jourPaiement: +o.jourPaiement || 5 }));
+    const nb = new Set(IMPORT.map(x => x.bien)).size, nl = IMPORT.filter(x => x.nom).length;
+    out.innerHTML = `<p class="calc">Trouvé : <b>${nb} logement${nb > 1 ? "s" : ""}</b> et <b>${nl} locataire${nl > 1 ? "s" : ""}</b>.</p><ul class="todo plat">${IMPORT.slice(0, 30).map(x => `<li><span class="tx">${esc(x.bien)}${x.nom ? " · " + esc(x.nom) : ""}<small>${x.loyerHC ? eur(+x.loyerHC + +x.charges) + "/mois" : "vide"}${x.dateEntree ? " · depuis le " + fds(x.dateEntree) : ""}${x.nom && !x.dateEntree ? " · ⚠️ date d'entrée manquante" : ""}</small></span></li>`).join("")}</ul><div class="row" style="margin-top:10px"><button type="button" class="primary" onclick="validerImport()">Tout créer</button></div>`;
+  } catch (e) { out.innerHTML = `<p class="note">⚠️ Lecture impossible : ${esc(e.message)}</p>`; }
+}
+let IMPORT = [];
+function validerImport() {
+  avecAnnuler(() => { let nb = 0, nl = 0; const ids = {};
+    IMPORT.forEach(x => { let bi = S.biens.find(b => b.nom === x.bien) || (ids[x.bien] && bien(ids[x.bien]));
+      if (!bi) { bi = { id: uid(), nom: x.bien, type: x.type, adresse: x.adresse, cp: x.cp, ville: x.ville, surface: x.surface, meuble: x.meuble, loyerRef: x.loyerHC }; S.biens.push(bi); ids[x.bien] = bi.id; nb++; }
+      if (x.nom && x.loyerHC) { const de = x.dateEntree || iso(TODAY); S.baux.push({ id: uid(), bienId: bi.id, nom: x.nom, email: x.email, tel: x.tel, typeBail: x.meuble === "meuble" ? "meuble" : "vide", dateEntree: de, suiviDepuis: CUR, loyerHC: x.loyerHC, charges: x.charges, chargesMode: "provision", depot: x.depot, jourPaiement: x.jourPaiement, revisable: true, irlTrimestre: qLabel(irlEnVigueur(P(de))), irlValeur: irlVal(irlEnVigueur(P(de))), revisions: [] }); nl++; } });
+    if (S.demo) S.demo = false;
+    closeOverlay(); save(); render(); toast(`${nb} logement${nb > 1 ? "s" : ""} et ${nl} locataire${nl > 1 ? "s" : ""} créés · loyers suivis à partir de ce mois`); });
+}
+
+/* ================= Lecture seule (associé qui regarde, comptable) et total de tous les espaces ================= */
+let LECTURE = false;
+function majRole() {
+  const moi = SB_USER && SB_USER.id, m = MEMBRES && MEMBRES.membres.find(x => x.user_id === moi);
+  LECTURE = !!(m && m.role === "lecteur"); document.body.classList.toggle("lecture", LECTURE);
+}
+/* Si quelqu'un en lecture seule touche à quelque chose : on remet les données telles qu'elles sont en ligne */
+function revenirAuxDonneesEnLigne() {
+  COLLS.forEach(c => { S[c] = Object.keys(synced).filter(k => k.startsWith(c + "/")).map(k => JSON.parse(synced[k])); });
+  if (synced["meta/main"]) { const m = JSON.parse(synced["meta/main"]); META_KEYS.forEach(k => { if (m[k] !== undefined) S[k] = m[k]; }); }
+}
+async function changerRole(uid, role) { const r = await SB.rpc("changer_role", { e: ESPACE, u: uid, r: role }); if (r.error) { toast(r.error.message); return; } toast(role === "lecteur" ? "Cette personne peut seulement regarder" : "Cette personne peut modifier"); chargerMembres(); }
+async function totalEspaces() {
+  const el = document.getElementById("totEsp"); if (!el || !SB) return;
+  const sauve = S, res = [];
+  for (const e of ESPACES) {
+    let lignes = []; if (e.id === ESPACE) { res.push({ e, S: sauve }); continue; }
+    for (let de = 0; ; de += 1000) { const r = await SB.from("docs").select("coll, doc_id, data").eq("espace_id", e.id).in("coll", ["baux", "paiements", "biens"]).range(de, de + 999); if (r.error) break; lignes.push(...r.data); if (r.data.length < 1000) break; }
+    const t = blank(); lignes.forEach(l => { (t[l.coll] = t[l.coll] || []).push(l.data); }); res.push({ e, S: t });
+  }
+  let tot = { att: 0, rec: 0, ret: 0, logts: 0 };
+  const L = res.map(({ e, S: d }) => { S = d; const mois = S.baux.map(b => echeance(b, CUR)).filter(Boolean); const att = mois.reduce((s, x) => s + x.du, 0), rec = mois.reduce((s, x) => s + Math.min(x.paye, x.du), 0), ret = mois.filter(x => x.statut === "retard").length; const lg = S.biens.length; S = sauve; tot = { att: tot.att + att, rec: tot.rec + rec, ret: tot.ret + ret, logts: tot.logts + lg }; return { e, att, rec, ret, lg }; });
+  S = sauve;
+  el.innerHTML = `<div class="calc"><b>Tous tes espaces, ${fm(CUR)} :</b> ${eur(tot.rec)} reçus sur ${eur(tot.att)} · ${tot.logts} logement${tot.logts > 1 ? "s" : ""}${tot.ret ? ` · ${tot.ret} en retard` : ""}</div>` + `<ul class="todo plat" style="margin-top:8px">${L.map(x => `<li>${avatar(x.e.nom)}<span class="tx">${esc(x.e.nom)}<small>${eur(x.rec)} / ${eur(x.att)} · ${x.lg} logement${x.lg > 1 ? "s" : ""}${x.ret ? ` · ${x.ret} en retard` : ""}</small></span>${x.e.id === ESPACE ? `<span class="pill ok">ouvert</span>` : `<button type="button" class="small primary" onclick="closeOverlay();ouvrirEspace('${x.e.id}')">Ouvrir</button>`}</li>`).join("")}</ul>`;
+}
+
+/* ================= Notifications : alertes sur le téléphone et résumé du mois ================= */
+let NOTIF = { etat: "?", prefs: null };
+const cleVapid = () => { const s = (window.APP_SUPABASE || {}).vapid || "", b = atob(s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - s.length % 4) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function chargerNotif() {
+  if (!SB) return; let sub = null;
+  try { const reg = await navigator.serviceWorker.getRegistration(); sub = reg && reg.pushManager ? await reg.pushManager.getSubscription() : null; } catch (e) {}
+  const r = await SB.from("notif_prefs").select("*").maybeSingle();
+  NOTIF = { etat: r.error ? "indispo" : sub && Notification.permission === "granted" ? "actif" : "inactif", prefs: r.data || { push: true, resume: false } };
+  const el = document.getElementById("notifBox"); if (el) el.innerHTML = blocNotif();
+}
+function blocNotif() {
+  if (NOTIF.etat === "?") return `<p class="note">Chargement…</p>`;
+  if (NOTIF.etat === "indispo") return `<p class="note">Les notifications arrivent très bientôt (mise à jour du serveur en cours).</p>`;
+  const support = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  const iosPasInstalle = estIOS() && !estInstallee();
+  return `<ul class="todo plat">
+    <li><span class="ico" aria-hidden="true">📱</span><span class="tx">Alertes sur ce téléphone<small>Virement reçu, loyer pas arrivé 3 jours après la date, point du mois le 1er et le 5.</small></span>
+      ${NOTIF.etat === "actif" ? `<button class="small" onclick="desactiverPush()">Couper</button>` : iosPasInstalle ? `<span class="pill warn">installe d'abord l'appli</span>` : !support ? `<span class="pill">pas possible ici</span>` : `<button class="small primary" onclick="activerPush()">Activer</button>`}</li>
+    <li><span class="ico" aria-hidden="true">✉️</span><span class="tx">Résumé des loyers par e-mail<small>Le 1er et le 5 du mois, à ${esc(SB_USER && SB_USER.email || "ton adresse")}. Rien n'est envoyé aux locataires.</small></span>
+      <button class="small ${NOTIF.prefs.resume ? "" : "primary"}" onclick="prefNotif('resume',${!NOTIF.prefs.resume})">${NOTIF.prefs.resume ? "Couper" : "Activer"}</button></li></ul>
+    ${iosPasInstalle ? `<p class="note">Sur iPhone, les alertes marchent seulement une fois l'appli installée sur l'écran d'accueil (iOS 16.4 ou plus récent) : voir "Installer l'appli" plus haut.</p>` : ""}
+    ${NOTIF.etat === "actif" ? `<div class="row"><button class="small ghost" onclick="essaiNotif()">M'envoyer un essai</button></div>` : ""}`;
+}
+async function activerPush() {
+  try {
+    const perm = await Notification.requestPermission(); if (perm !== "granted") { toast("Notifications refusées : tu peux les autoriser dans les réglages du téléphone."); return; }
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cleVapid() }), j = sub.toJSON();
+    const r = await SB.from("push_abonnements").upsert({ endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, appareil: navigator.userAgent.slice(0, 200) });
+    if (r.error) throw r.error; await SB.from("notif_prefs").upsert({ push: true, resume: !!(NOTIF.prefs || {}).resume });
+    toast("✓ Alertes activées sur ce téléphone"); chargerNotif();
+  } catch (e) { toast("Activation impossible : " + (e.message || e)); }
+}
+async function desactiverPush() { try { const reg = await navigator.serviceWorker.getRegistration(), sub = reg && await reg.pushManager.getSubscription(); if (sub) { await SB.from("push_abonnements").delete().eq("endpoint", sub.endpoint); await sub.unsubscribe(); } toast("Alertes coupées sur ce téléphone"); } catch (e) {} chargerNotif(); }
+async function prefNotif(k, v) { const p = Object.assign({ push: true, resume: false }, NOTIF.prefs, { [k]: v }); delete p.user_id; delete p.maj_le; const r = await SB.from("notif_prefs").upsert(p); if (r.error) { toast(r.error.message); return; } toast(v ? "C'est activé" : "C'est coupé"); chargerNotif(); }
+async function essaiNotif() { toast("Envoi d'un essai…"); const r = await SB.functions.invoke("notifier", { body: { essai: true } }); toast(r.error ? "Essai impossible : " + r.error.message : "✓ Essai envoyé : regarde tes notifications"); }
+function sectionNotif() { setTimeout(chargerNotif, 0); return `<section class="card"><h2>🔔 Notifications</h2><p class="note">L'appli te prévient, tu n'as plus besoin de l'ouvrir pour savoir.</p><div id="notifBox">${blocNotif()}</div></section>`; }
+
+/* ================= Indice IRL mis à jour tout seul (site de l'INSEE) ================= */
+async function majIrlInsee(force) {
+  try { if (!force && localStorage.getItem("gestion-irl-vu") === iso(TODAY)) return; } catch (e) {}
+  try {
+    const r = await fetch("https://bdm.insee.fr/series/sdmx/data/SERIES_BDM/001515333?lastNObservations=8"); if (!r.ok) return;
+    const x = await r.text(), neufs = {}; let n = 0;
+    for (const m of x.matchAll(/TIME_PERIOD="(\d{4})-Q([1-4])"\s+OBS_VALUE="([\d.]+)"/g)) { const k = m[1] + "-" + m[2], v = +m[3]; if (v > 0 && !irlVal(k)) { neufs[k] = v; n++; } }
+    try { localStorage.setItem("gestion-irl-vu", iso(TODAY)); } catch (e) {}
+    if (!n) { if (force) toast("Les indices sont déjà à jour"); return; }
+    S.irlPerso = Object.assign({}, S.irlPerso, neufs);
+    if (!LECTURE && (MODE === "local" || MODE === "partage")) save();
+    render(); toast(`Nouvel indice IRL de l'INSEE : ${Object.keys(neufs).map(k => qLabel(k) + " = " + fmtIrl(neufs[k])).join(", ")}`);
+  } catch (e) { if (force) toast("Site de l'INSEE injoignable pour le moment"); }
+}
+
+/* ================= Agenda : toutes les dates importantes dans le calendrier du téléphone ================= */
+function exportAgenda() {
+  const ev = [], d8 = d => iso(d).replace(/-/g, ""), y = TODAY.getFullYear(), fin = addDays(TODAY, 400), sci = S.sci.nom || "Gestion locative";
+  const add = (d, t, desc, id) => { if (d >= addDays(TODAY, -1) && d <= fin) ev.push({ d, t, desc: desc || "", id }); };
+  S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).forEach(b => {
+    for (let k = 0, m = CUR; k < 13; k++, m = addM(m, 1)) { const e = echeance(b, m); if (e && e.du > 0) add(e.dueDate, `💶 Loyer ${nomCourt(b.nom)} (${eur(e.du)})`, `Loyer de ${fm(m)} · ${bienLabel(bien(b.bienId))}`, `loyer-${b.id}-${m}`); }
+    const rv = revInfo(b); if (rv) add(rv.anniv, `📈 Révision du loyer de ${nomCourt(b.nom)}`, "Date anniversaire du bail : la révision IRL est possible.", `rev-${b.id}`);
+    if (b.assuranceFin) add(P(b.assuranceFin), `🛡 Assurance de ${nomCourt(b.nom)} à renouveler`, "Demander la nouvelle attestation.", `ass-${b.id}`);
+    if (b.dateSortie) add(P(b.dateSortie), `🔑 Départ de ${nomCourt(b.nom)}`, "État des lieux de sortie, compteurs, clés.", `dep-${b.id}`);
+    if (isActive(b) && !b.dateSortie && b.typeBail !== "mobilite") { const du = dureeBail(b); let e2 = addMonthsDate(P(b.dateEntree), du.mois); while (e2 < TODAY) e2 = addMonthsDate(e2, du.mois); add(addMonthsDate(e2, -(b.typeBail === "vide" ? 6 : 3)), `🗓 Dernier jour pour donner congé à ${nomCourt(b.nom)}`, `Fin de période du bail le ${fd(e2)}.`, `conge-${b.id}`); }
+  });
+  S.biens.forEach(bi => { if (bi.pnoEcheance) { let e = P(bi.pnoEcheance); while (e < TODAY) e = addYears(e, 1); add(e, `🛡 Assurance PNO ${bi.nom}`, "Échéance de l'assurance propriétaire.", `pno-${bi.id}`); } if (bi.dpeValidite) add(P(bi.dpeValidite), `⚠️ DPE à refaire : ${bi.nom}`, "", `dpe-${bi.id}`); });
+  S.rappels.filter(r => !r.fait).forEach(r => add(P(r.date), `⏰ ${r.titre}`, "", `rap-${r.id}`));
+  [y, y + 1].forEach(a => { add(new Date(a, 4, 20), estPerso() ? "🏛 Déclaration des revenus fonciers" : (S.sci.regime === "IS" ? "🏛 Liasse fiscale IS" : "🏛 Déclaration 2072 de la SCI"), "", `fisc-${a}`); add(new Date(a, 9, 15), "🏛 Taxe foncière à payer", "Puis la saisir dans l'appli pour récupérer les ordures ménagères.", `tf-${a}`); if (!estPerso()) add(new Date(a, 5, 30), "🤝 Assemblée générale de la SCI", "Approuver les comptes de l'année passée.", `ag-${a}`); });
+  const esc2 = t => String(t).replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Gestion locative//FR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:" + esc2(sci),
+    ...ev.flatMap(e => ["BEGIN:VEVENT", `UID:${e.id}@gestion-locative`, `DTSTAMP:${d8(TODAY)}T080000Z`, `DTSTART;VALUE=DATE:${d8(e.d)}`, `DTEND;VALUE=DATE:${d8(addDays(e.d, 1))}`, "SUMMARY:" + esc2(e.t), "DESCRIPTION:" + esc2(e.desc + "\n" + location.origin + location.pathname), "BEGIN:VALARM", "TRIGGER:PT9H", "ACTION:DISPLAY", "DESCRIPTION:" + esc2(e.t), "END:VALARM", "END:VEVENT"]), "END:VCALENDAR"].join("\r\n");
+  download(`agenda-${slug(sci)}.ics`, ics, "text/calendar");
+  toast(`${ev.length} dates prêtes : ouvre le fichier pour les ajouter à ton agenda`);
+}
+
+/* ================= SMS et WhatsApp, depuis ton propre téléphone ================= */
+const telIntl = t => { let n = String(t || "").replace(/[^\d+]/g, ""); if (n.startsWith("00")) n = "+" + n.slice(2); if (/^0[1-9]\d{8}$/.test(n)) n = "+33" + n.slice(1); return n; };
+function lienSms(tel, txt) { return `sms:${telIntl(tel)}${estIOS() ? "&" : "?"}body=${encodeURIComponent(txt)}`; }
+function lienWhatsapp(tel, txt) { return `https://wa.me/${telIntl(tel).replace("+", "")}?text=${encodeURIComponent(txt)}`; }
+function envoyerAutrement(k) { const o = CURDOC && CURDOC.o, b = o && o.bailId && bail(o.bailId); if (!b || !b.tel) return; const txt = (document.getElementById("mailtxt") || {}).value || o.email.corps; window.open(k === "sms" ? lienSms(b.tel, txt) : lienWhatsapp(b.tel, txt), "_blank", "noopener"); }
+
+/* ================= Mentions légales, confidentialité, suppression du compte ================= */
+const EDITEUR = { nom: "", contact: "" }; // à compléter avant une mise en vente (nom ou société, e-mail de contact)
+function pageLegal() {
+  const b = (t, x) => `<section class="card aide"><h2>${t}</h2>${x}</section>`;
+  return `<div><a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>Mentions légales et confidentialité</h1><p>Ce qu'on fait de tes données, en clair.</p></div></div></div><div class="stack">
+  ${b("📌 Qui fait l'appli", `<p>${EDITEUR.nom ? `Éditeur : ${esc(EDITEUR.nom)}${EDITEUR.contact ? " · " + esc(EDITEUR.contact) : ""}.` : "Appli de gestion locative indépendante."} Pour toute question : bouton <b>?</b> en bas à droite de l'écran (une fois connecté).</p><p>Hébergement de l'appli : Cloudflare, Inc. (Cloudflare Pages). Données : Supabase, serveurs situés en Irlande (Union européenne).</p>`)}
+  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : ton compte Gmail (mot de passe d'application rangé dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane.</li></ul>`)}
+  ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
+  ${b("🤝 Qui d'autre les voit", `<p>Seuls les membres de ton espace. Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
+  ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
+  ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}
+  ${b("🍪 Cookies", `<p>Aucun cookie publicitaire ni de mesure d'audience. L'appli garde seulement sur ton appareil ce qui sert à rester connecté et à fonctionner sans réseau.</p>`)}
+  </div>`;
+}
+function supprimerCompte() {
+  modal("Supprimer mon compte", `<p class="full note">⚠️ C'est définitif. Les espaces dont tu es le <b>seul membre</b> sont effacés avec toutes leurs données et leurs documents. Les espaces partagés restent à tes associés.</p><p class="full note">Conseil : télécharge d'abord une sauvegarde (Réglages › Sauvegarde).</p>${fld('Pour confirmer, écris SUPPRIMER', "ok", "", "text", "full", 'autocomplete="off"')}`,
+    d => { if (String(d.ok).trim().toUpperCase() !== "SUPPRIMER") { toast("Écris SUPPRIMER pour confirmer."); return false; } setTimeout(effacerCompte, 50); }, { ok: "Supprimer définitivement", lecture: true });
+}
+async function effacerCompte() {
+  toast("Suppression…");
+  try {
+    const { data: mes } = await SB.from("membres").select("espace_id").eq("user_id", SB_USER.id);
+    for (const m of mes || []) { const { data: autres } = await SB.from("membres").select("user_id").eq("espace_id", m.espace_id); if ((autres || []).length > 1) continue;
+      for (const bucket of ["documents", "photos"]) { const { data: l } = await SB.storage.from(bucket).list(m.espace_id, { limit: 1000 }); if (l && l.length) await SB.storage.from(bucket).remove(l.map(f => m.espace_id + "/" + f.name)); } }
+    const r = await SB.rpc("supprimer_mon_compte"); if (r.error) throw r.error;
+    try { localStorage.clear(); } catch (e) {}
+    await SB.auth.signOut().catch(() => {}); toast("Ton compte est supprimé. Au revoir !"); setTimeout(() => location.reload(), 1500);
+  } catch (e) { toast("Suppression impossible : " + (e.message || e)); }
 }
 
 /* ================= Sauvegardes & exports ================= */

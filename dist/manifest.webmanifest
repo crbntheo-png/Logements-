@@ -8,6 +8,49 @@
  "background_color": "#f4f5f7",
  "theme_color": "#0f1b2d",
  "lang": "fr",
+ "id": "./",
+ "dir": "ltr",
+ "orientation": "any",
+ "categories": [
+  "finance",
+  "productivity",
+  "business"
+ ],
+ "shortcuts": [
+  {
+   "name": "À faire",
+   "short_name": "À faire",
+   "url": "./#afaire",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Loyers du mois",
+   "short_name": "Loyers",
+   "url": "./#loyers",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Compta",
+   "short_name": "Compta",
+   "url": "./#compta",
+   "icons": [
+    {
+     "src": "icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  }
+ ],
  "icons": [
   {
    "src": "icon-192.png",

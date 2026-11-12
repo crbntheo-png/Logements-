@@ -56,7 +56,7 @@ def main():
         shutil.rmtree(DIST)
     os.makedirs(DIST)
     html = open(os.path.join(ICI, "index.html"), encoding="utf-8").read()
-    config = {"url": env["SUPABASE_URL"], "cle": env["SUPABASE_PUBLISHABLE_KEY"]}
+    config = {"url": env["SUPABASE_URL"], "cle": env["SUPABASE_PUBLISHABLE_KEY"], "vapid": env.get("VAPID_PUBLIC", "")}
     tete = f"""<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f1b2d">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -77,6 +77,16 @@ def main():
     icone(512).save(os.path.join(DIST, "icon-512.png"))
     icone(512, marge=0.08, fond_plein=True).save(os.path.join(DIST, "icon-maskable-512.png"))
     icone(180, fond_plein=True).convert("RGB").save(os.path.join(DIST, "apple-touch-icon.png"))
+    # Écran de démarrage sur iPhone et iPad (sinon écran blanc à l'ouverture)
+    ECRANS = [(1290, 2796, 3), (1179, 2556, 3), (1284, 2778, 3), (1170, 2532, 3), (1125, 2436, 3), (1242, 2688, 3), (828, 1792, 2), (1242, 2208, 3), (750, 1334, 2), (640, 1136, 2), (1640, 2360, 2), (1668, 2388, 2), (2048, 2732, 2), (1620, 2160, 2)]
+    liens_demarrage = []
+    for (w, h, r) in ECRANS:
+        im = Image.new("RGB", (w, h), (244, 245, 247)); ic = icone(int(min(w, h) * 0.28), fond_plein=True).convert("RGBA")
+        im.paste(ic, ((w - ic.width) // 2, (h - ic.height) // 2 - h // 14), ic)
+        nom = f"demarrage-{w}x{h}.png"; im.save(os.path.join(DIST, nom), optimize=True)
+        liens_demarrage.append(f'<link rel="apple-touch-startup-image" media="(device-width: {w // r}px) and (device-height: {h // r}px) and (-webkit-device-pixel-ratio: {r}) and (orientation: portrait)" href="{nom}">')
+    html = html.replace('<link rel="apple-touch-icon" href="apple-touch-icon.png">', '<link rel="apple-touch-icon" href="apple-touch-icon.png">\n' + "\n".join(liens_demarrage), 1)
+    open(os.path.join(DIST, "index.html"), "w", encoding="utf-8").write(html)
     manifeste = {
         "name": "Gestion locative",
         "short_name": "Gestion SCI",
@@ -87,6 +97,15 @@ def main():
         "background_color": "#f4f5f7",
         "theme_color": "#0f1b2d",
         "lang": "fr",
+        "id": "./",
+        "dir": "ltr",
+        "orientation": "any",
+        "categories": ["finance", "productivity", "business"],
+        "shortcuts": [
+            {"name": "À faire", "short_name": "À faire", "url": "./#afaire", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
+            {"name": "Loyers du mois", "short_name": "Loyers", "url": "./#loyers", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
+            {"name": "Compta", "short_name": "Compta", "url": "./#compta", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]}
+        ],
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
             {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
@@ -105,6 +124,15 @@ self.addEventListener("fetch", e => {{
   if (e.request.method !== "GET" || u.origin !== location.origin) return;
   e.respondWith(fetch(e.request).then(r => {{ const c = r.clone(); caches.open(V).then(ca => ca.put(e.request, c)); return r; }})
     .catch(() => caches.match(e.request).then(r => r || caches.match("./index.html"))));
+}});
+// Notifications : loyer reçu, retard, résumé du mois
+self.addEventListener("push", e => {{
+  let d = {{}}; try {{ d = e.data ? e.data.json() : {{}}; }} catch (x) {{ d = {{ titre: "Gestion locative", texte: e.data ? e.data.text() : "" }}; }}
+  e.waitUntil(self.registration.showNotification(d.titre || "Gestion locative", {{ body: d.texte || "", icon: "icon-192.png", badge: "icon-192.png", tag: d.tag || undefined, data: {{ url: d.url || "./" }} }}));
+}});
+self.addEventListener("notificationclick", e => {{
+  e.notification.close(); const url = new URL((e.notification.data || {{}}).url || "./", self.registration.scope).href;
+  e.waitUntil(clients.matchAll({{ type: "window", includeUncontrolled: true }}).then(l => {{ const c = l.find(x => x.url.startsWith(self.registration.scope)); if (c) {{ c.navigate(url).catch(() => {{}}); return c.focus(); }} return clients.openWindow(url); }}));
 }});
 """)
     open(os.path.join(DIST, "_headers"), "w").write("/manifest.webmanifest\n  Content-Type: application/manifest+json\n/sw.js\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/\n  Cache-Control: no-cache\n")
