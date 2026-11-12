@@ -17,7 +17,7 @@ const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURICompo
   await p.evaluate(() => { S.sci.gerant = 'Jean'; S.sci.siege = '1 rue'; S.biens.push({ id: 'x', nom: 'Studio', type: 'Studio', adresse: '1 rue', cp: '35000', ville: 'Rennes', meuble: 'vide' }); S.baux.push({ id: 'y', bienId: 'x', nom: 'Paul Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save(); location.hash = ''; render(); });
   await p.waitForTimeout(500); await p.screenshot({ path: out + '/4-accueil.png', fullPage: true });
   console.log('tâches', await p.evaluate(() => taches().map(t => t.t)));
-  await p.click('text=Masquer ce guide'); await p.waitForTimeout(300); console.log('guide masqué', await p.evaluate(() => !document.querySelector('.guide')));
+  console.log('guide sur l\'accueil', await p.evaluate(() => !!document.querySelector('.guide, [class*=guide]')));
   await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });
   console.log('ERR', errs); await b.close(); srv.close();
 })().catch(e => { console.log('FATAL', e.message); process.exit(1); });
