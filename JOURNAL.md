@@ -16,11 +16,18 @@ Règle pour chaque session :
 - [ ] **Bouton « Importer depuis Google Drive »** (Google Picker, accès `drive.file`) : attend 3 infos du propriétaire (ID client OAuth, clé API, numéro du projet Google Cloud). Copier les fichiers choisis dans le bucket `documents`.
 - [ ] **E-mail de Sofiane Hesry** : introuvable (ni Gmail, ni bail lisible). Sera gardé automatiquement à la 1re saisie dans un envoi.
 - [ ] **Anciens baux Lilou Douillard et Julie Sergent** (Drive, dossier « Loyers Bails Agon ») : savoir quel lot d'Agon, puis les ranger dans les documents du bon bien.
-- [ ] **Steve Godefroy** : vérifier les 20 € saisis le 9/11, puis "Étaler le reste" sur sa carte (50 €/mois à partir de décembre).
-- [ ] **Ordures ménagères Steve et Margottet** : 2026 reçues → "Que faire ?" › "Il l'a déjà payée" ; à partir de janvier 2027 mensualisées → cocher "chaque mois", faire signer les avenants.
+- [ ] **Avenants n° 1 Steve et Margottet** (ordures dans les charges dès janvier 2027) : enregistrés dans l'appli, à envoyer et faire signer.
+- [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
 - [ ] Le propriétaire n'a pas encore branché son Gmail (Réglages › Envoyer depuis ton adresse Gmail).
 
 ## Historique
+
+### 12/11/2026 (fin de journée) — vraies données GTP INVEST mises à jour (accord de Théo)
+- Steve : les 20 € saisis à la main le 9/11 supprimés (aucun virement en face, la banque n'a que 200 € le 5/11). Manque de novembre 310 € étalé : 50 €/mois à partir de décembre, donc 560 € en décembre, 571,67 € de janvier à mai (avec les ordures), 531,67 € en juin 2027 (10 € étalés). Contrôlé : novembre en "Étalé", "il suit l'accord", plus de relance proposée.
+- Ordures ménagères 2026 marquées reçues le 12/11 : Steve 140 €, Margottet 133 € (date réelle de réception inconnue).
+- Avenant n° 1 enregistré pour les deux, à partir du loyer de janvier 2027 : charges 0 → 11,67 €/mois (Steve, 140 ÷ 12) et 0 → 11,09 €/mois (Margottet, 133 ÷ 12). Rien n'a été envoyé : les avenants sont à ouvrir depuis la fiche (Révisions et avenants › Avenant), à imprimer ou envoyer, puis à faire signer.
+- Vérifié en chargeant les vraies données dans une copie locale de l'appli (téléphone 390 × 844) : calculs et avenant OK. Pas vérifié depuis l'appli connectée.
+- Margottet n'a toujours pas payé novembre (dû le 10) : toujours en retard, rien changé.
 
 ### 12/11/2026 (après-midi) — paiement partiel étalé, ordures ménagères, avenants
 Fait (en ligne sur https://gestion-locative-sci.pages.dev, `node tests/test5.js` et `node tests/test29.js` OK en 390 × 844 clair et sombre) :
