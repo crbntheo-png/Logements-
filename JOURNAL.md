@@ -21,6 +21,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 12/11/2026 — reprise sur le Mac de Théo (Claude Code, application de bureau)
+- Fait : dépôt récupéré dans `~/Desktop/GestionSCI` (branche `ccr-6df8be48-11wmro`, à jour), `.env` créé à la racine (ignoré par Git).
+- Accès vérifiés : Supabase (requête SQL OK, 121 lignes dans `docs`), Cloudflare (jeton actif), Brevo (OK), Pennylane (OK), appli en ligne (répond).
+- Tests : Playwright installé en local (`npm install --no-save playwright@1.48.2` + `npx playwright install chromium`), `node_modules/` ajouté au `.gitignore`. `sh tests/prepare.sh` puis `node tests/test5.js` : aucune erreur, aucun débordement (39 captures, téléphone 390 × 844 clair/sombre et ordinateur).
+- Aucune modification de l'appli, donc pas de `./deploy.sh` lancé (la mise en ligne n'a pas été testée depuis ce Mac).
+- Reste : la liste « À faire » ci-dessus, inchangée.
+
 ### 12/11/2026 — session du compte principal
 État de l'appli à cette date (tout est en ligne sur https://gestion-locative-sci.pages.dev) :
 - Comptes par e-mail (code à 6 chiffres via Brevo), espaces séparés, invitations, synchro en direct.

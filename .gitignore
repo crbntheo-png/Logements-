@@ -5,3 +5,4 @@ tests/*.png
 tests/gtp.json
 tests/shots*/
 tests/vendor/
+node_modules/
