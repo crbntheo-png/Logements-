@@ -234,6 +234,9 @@ dl.lexique dt { font-weight: 750; margin-top: 12px; } dl.lexique dd { margin: 4p
 details.pq { margin-top: 6px; font-size: .84rem; } details.pq summary { cursor: pointer; color: var(--accent); font-weight: 700; list-style: none; display: inline; }
 details.pq summary::-webkit-details-marker { display: none; } details.pq p { margin: 6px 0 0; color: var(--ink-2); line-height: 1.45; }
 .tons { gap: 6px; margin: 6px 0; }
+.parcours .etapes { list-style: none; margin: 10px 0 0; padding: 0; } .parcours .etape .note { margin: 4px 0 8px; }
+tr.pire td { background: var(--bad-soft); }
+.todo.plat { box-shadow: none; border: 1px solid var(--line); } .todo.plat li { min-height: 52px; } .money { font-variant-numeric: tabular-nums; white-space: nowrap; }
 details.pli > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
 details.pli > summary::-webkit-details-marker { display: none; }
 details.pli > summary .ic { transition: transform .15s; color: var(--muted); }
@@ -1168,7 +1171,8 @@ function echeance(b, m) {
   if (m === start) from = P(b.dateEntree).getDate();
   if (b.dateSortie && m === mk(P(b.dateSortie))) to = P(b.dateSortie).getDate();
   const f = (to - from + 1) / days, L = loyerAt(b, m);
-  const hc = r2(L.hc * f), ch = r2(L.ch * f), du = r2(hc + ch);
+  const extras = (b.extras || []).filter(x => x.mois === m), exT = r2(extras.reduce((s, x) => s + (+x.montant || 0), 0));
+  const hc = r2(L.hc * f), ch = r2(L.ch * f), du = r2(hc + ch + exT);
   const j = Math.min(+b.jourPaiement || 1, days);
   const dueDate = new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, j);
   const pays = S.paiements.filter(p => p.bailId === b.id && p.mois === m);
@@ -1183,7 +1187,7 @@ function echeance(b, m) {
   if (reste > 0 && (statut === "retard" || statut === "partiel") && b.plan && +b.plan.mensualite > 0 && m <= planJusqua(b.plan)) statut = "etale";
   const retardJ = statut === "retard" ? daysBetween(dueDate, TODAY) : 0;
   const lastPay = pays.map(p => p.date).sort().pop();
-  return { b, m, hc, ch, du, paye, reste, statut, dueDate, retardJ, from, to, days, prorata: f < 1, lastPay, pays,
+  return { b, m, hc, ch, extras, exT, du, paye, reste, statut, dueDate, retardJ, from, to, days, prorata: f < 1, lastPay, pays,
     quittance: S.quittances[b.id + "|" + m], relances: S.relances.filter(r => r.bailId === b.id && r.mois === m) };
 }
 function echeancesBail(b, upTo = CUR) {
@@ -1471,12 +1475,12 @@ function taches() {
           d: `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: [] });
     }
     // 8. Régularisation annuelle des charges
-    if ((b.chargesMode || "provision") === "provision" && +b.charges > 0) {
+    if ((b.chargesMode || "provision") === "provision" && (+b.charges > 0 || (b.revisions || []).some(r => +r.charges > 0 && r.depuis <= (y - 1) + "-12"))) {
       const yy = y - 1, k = "regul-" + b.id + "-" + yy;
       const actifAnnee = P(b.dateEntree) <= new Date(yy, 11, 31) && (!b.dateSortie || P(b.dateSortie) >= new Date(yy, 0, 1));
       if (actifAnnee && !fait(k))
         add({ bailId: b.id, key: k, prio: TODAY.getMonth() >= 5 ? "soon" : "info", date: new Date(y, 5, 30), done: true, t: `Régulariser les charges ${yy} : ${esc(b.nom)}`,
-          d: `Comparer les provisions encaissées en ${yy} aux charges réelles (copropriété, taxe d'ordures ménagères, eau…), envoyer le décompte au locataire 1 mois avant la régularisation.`, acts: [] });
+          d: `Comparer les provisions encaissées en ${yy} aux charges réelles (copropriété, taxe d'ordures ménagères, eau…), envoyer le décompte au locataire 1 mois avant la régularisation.`, acts: [["Faire le décompte", `regulCharges('${b.id}',${yy})`, "primary"]] });
     }
   });
   // 9. Biens vacants, DPE, assurance PNO
@@ -1485,7 +1489,7 @@ function taches() {
       const futur = S.baux.find(b => b.bienId === bi.id && P(b.dateEntree) > TODAY);
       add({ key: "vac-" + bi.id, prio: futur ? "info" : "soon", date: TODAY, t: `${esc(bi.nom)} est vide`,
         d: futur ? `Prochain locataire : ${esc(futur.nom)} le ${fd(futur.dateEntree)}.` : "Aucun locataire. Publier une annonce, faire les diagnostics à jour, préparer le bail.",
-        acts: futur ? [] : [["Ajouter un locataire", `editBail(null,'${bi.id}')`, "primary"]] });
+        acts: futur ? [] : [["Écrire l'annonce", `annonce('${bi.id}')`, "primary"], ["Ajouter un locataire", `editBail(null,'${bi.id}')`]] });
     }
     if (bi.dpe === "G") add({ key: "dpeg-" + bi.id, prio: "urgent", date: TODAY, t: `${esc(bi.nom)} : DPE classé G`, d: "Interdit à la location pour tout nouveau bail ou renouvellement depuis le 1er janvier 2025. Travaux de rénovation à prévoir.", acts: [] });
     if (bi.dpe === "F") add({ key: "dpef-" + bi.id, prio: "info", date: TODAY, t: `${esc(bi.nom)} : DPE classé F`, d: "Sera interdit à la location à partir du 1er janvier 2028. Anticiper les travaux.", acts: [] });
@@ -1509,6 +1513,7 @@ function taches() {
     add({ bailId: b.id, key: "teom-" + tx.id + p.bailId, prio: p.demandeLe ? "info" : "soon", date: TODAY, t: `Ordures ménagères ${tx.annee} : ${esc(b.nom)} doit ${eur(p.montant)}`,
       d: `${p.jours} jours dans le logement en ${tx.annee}` + (p.demandeLe ? ` · demandé le ${fds(p.demandeLe)}` : " · pas encore demandé"),
       acts: [["Que faire ?", `teomChoix('${tx.id}','${b.id}')`, "primary"], [p.demandeLe ? "A payé" : "Demander", p.demandeLe ? `teomPaye('${tx.id}','${b.id}')` : `docTeom('${tx.id}','${b.id}')`]] }); }));
+  tachesLegales(add, y);
   // 11. Rappels perso
   S.rappels.filter(r => !r.fait).forEach(r => { const d = P(r.date); if (daysBetween(TODAY, d) <= 30) add({ key: "rap-" + r.id, prio: d < TODAY ? "urgent" : daysBetween(TODAY, d) <= 7 ? "soon" : "info", date: d, t: esc(r.titre), d: `Rappel du ${fd(d)}` + (r.bienId ? " · " + esc(bienLabel(bien(r.bienId))) : ""), acts: [["C'est fait", `rappelFait('${r.id}')`, "primary"]] }); });
   const order = { urgent: 0, soon: 1, info: 2 };
@@ -2299,6 +2304,8 @@ function pageBien(id) {
       ${bi.prixAchat ? `<dt>Prix d'achat</dt><dd>${eur(bi.prixAchat)}</dd>` : ""}
     </dl>${bi.equipements ? `<p class="note">${nl2br(bi.equipements)}</p>` : ""}${bi.notes ? `<p class="note">📝 ${nl2br(bi.notes)}</p>` : ""}</div></section>
     <section class="card"><h2>👥 Locataires</h2><ul class="todo">${[actuel, ...anciens].filter(Boolean).map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${b === actuel ? "En place" : "Parti"} · entré le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""} · ${esc(TYPES_BAIL[b.typeBail] || "")}</small></span>${b === actuel ? `<button class="small" onclick="docBailOpen('${b.id}')">Bail</button>` : ""}</li>`).join("") || `<li><span class="tx">Aucun locataire pour l'instant.</span></li>`}</ul></section>
+    ${sectionLocation(bi)}
+    ${sectionTravaux(bi)}
     ${listeDocuments(bi.id)}
     </div>`;
 }
@@ -2339,7 +2346,9 @@ function pageBail(id) {
       : `<p>Il doit <b>${eur(dette)}</b>. S'il ne peut pas tout payer d'un coup, étale-le : il paie son loyer, plus une petite somme chaque mois.</p>`}
       <div class="row"><button class="primary" onclick="verserSomme('${b.id}')">Il a versé une somme</button><button onclick="editPlan('${b.id}')">${p ? "Modifier l'étalement" : "Étaler"}</button>${p ? `<button class="ghost" onclick="docPlan('${b.id}')">Accord à signer</button>` : ""}<button class="ghost" onclick="docPointLocataire('${b.id}')">📩 Point au locataire</button></div></section>`; })()}
   ${(() => { const T = taches().filter(t => t.bailId === b.id).map(t => { const n = esc(b.nom); let tt = t.t.split(" : " + n).join("").split(n + " : ").join("").split(" de " + n).join("").split(" à " + n).join("").split(n).join("").replace(/\s+:\s*$/, "").trim(); tt = tt.charAt(0).toUpperCase() + tt.slice(1); return { ...t, t: tt, acts: (t.acts || []).filter(a => !/go\('bail-/.test(a[1])) }; }); return T.length ? `<section class="tasks"><h2 class="sec">À faire pour ${prenom(b.nom)}</h2>${T.map(taskHtml).join("")}</section>` : ""; })()}
+  ${parcoursBail(b)}
   <div class="stack">
+  ${prochainsMois(b)}
   ${sectionEdl(b)}
   ${listeDocuments(b.bienId, b.id)}
   <section><h2 style="margin-bottom:10px">Loyers mois par mois</h2>
@@ -2358,6 +2367,29 @@ function pageBail(id) {
     ${b.teomMensuel ? `<p class="note">🗑️ Ordures ménagères comprises dans les charges : ${eur(b.teomMensuel.montant)} par mois depuis ${fm(b.teomMensuel.depuis)}.</p>` : ""}
   </section>
   ${historique(b)}</div>`;
+}
+/* Les 12 prochains mois d'un locataire : ce qu'il paiera et pourquoi */
+function prochainsMois(b) {
+  if (!isActive(b) && P(b.dateEntree) <= TODAY) return "";
+  const p = planEtat(b), L = []; let reste = p && !p.fait ? p.dette : 0, prec = null;
+  const rv = revInfo(b);
+  for (let k = 0, m = CUR; k < 12; k++, m = addM(m, 1)) {
+    const e = echeance(b, m); if (!e) continue;
+    const l = loyerAt(b, m), notes = [];
+    let ratt = 0; if (p && !p.fait && m >= p.debut && reste > 0) { ratt = r2(Math.min(p.mensualite, reste)); reste = r2(reste - ratt); notes.push(`+ ${eur(ratt)} étalés`); }
+    const rev = (b.revisions || []).find(r => r.depuis === m);
+    if (rev) notes.push(rev.type === "avenant" ? `avenant n° ${rev.num}` : "révision IRL");
+    else if (prec && (l.hc !== prec.hc || l.ch !== prec.ch)) notes.push("changement");
+    if (rv && rv.statut === "pret" && moisEffet(iso(rv.anniv > TODAY ? rv.anniv : TODAY)) === m) notes.push(`révision possible : ${eur(rv.nouveau)} HC`);
+    if (e.prorata) notes.push(`prorata ${e.to - e.from + 1} j`);
+    const deja = m === CUR ? e.paye : 0;
+    L.push({ m, total: r2(e.du + ratt), hc: e.hc, ch: e.ch, notes, deja, statut: m === CUR ? e.statut : "" });
+    prec = l;
+  }
+  if (!L.length) return "";
+  return `<details class="pli card"><summary><h2>📆 Les 12 prochains mois</h2>${ic("chevR", "s")}</summary>
+    <ul class="todo plat">${L.map(x => `<li><span class="tx"><span style="text-transform:capitalize">${fm(x.m)}</span><small>${eur(x.hc)} + ${eur(x.ch)} de charges${x.notes.length ? " · " + x.notes.join(" · ") : ""}${x.deja ? ` · déjà reçu ${eur(x.deja)}` : ""}</small></span><b class="money">${eur(x.total)}</b></li>`).join("")}</ul>
+    <p class="note">Calculé avec le bail, les avenants, les révisions et l'étalement en cours. Pratique pour répondre à "je dois combien le mois prochain ?".</p></details>`;
 }
 function actionsEcheance(e) {
   const a = [], mail = peutEnvoyer() && e.b.email;
@@ -2404,7 +2436,7 @@ const CATS = ["Taxe foncière", "Charges de copropriété", "Assurance propriét
 function recettes(year) {
   const by = {};
   S.paiements.filter(p => (p.date || "").startsWith(String(year))).forEach(p => {
-    const b = bail(p.bailId); if (!b) return; const e = echeance(b, p.mois); const part = e && e.du ? e.ch / e.du : 0;
+    const b = bail(p.bailId); if (!b) return; const e = echeance(b, p.mois); const part = e && e.du > 0 ? Math.min(1, Math.max(0, (e.ch + e.exT) / e.du)) : 0;
     const k = b.bienId; by[k] = by[k] || { loyers: 0, charges: 0 };
     by[k].charges += p.montant * part; by[k].loyers += p.montant * (1 - part);
   });
@@ -2433,7 +2465,8 @@ function pageCompta() {
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
-  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button><button class="small" onclick="importerReleve()">🏦 Importer le relevé</button><button class="small" onclick="exportCSV(${y})">📊 Export comptable</button><button class="small" onclick="docBilanOpen(${y})">📄 Bilan PDF</button></div>
+  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button><button class="small" onclick="importerReleve()">🏦 Importer le relevé</button><button class="small" onclick="exportCSV(${y})">📊 Tableau Excel</button><button class="small" onclick="exportFEC(${y})">🧮 Fichier pour le comptable (FEC)</button><button class="small" onclick="docBilanOpen(${y})">📄 Bilan PDF</button><button class="small" onclick="regulTous(${y})">🧾 Régulariser les charges</button></div>
+  ${aideDeclaration(y, lignes, tot)}
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${y === TODAY.getFullYear() ? sectionBanque() : ""}
   ${sectionSorties(y)}
@@ -2550,9 +2583,10 @@ function editBien(id) {
     id ? { del: () => { if (S.baux.some(x => x.bienId === id)) { toast("Ce bien a des locataires (actuels ou anciens) : il ne peut pas être supprimé."); return; } S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ?" } : {});
 }
 
-function editBail(id, bienId) {
+function editBail(id, bienId, pre) {
   const b = id ? bail(id) : { bienId: bienId || (S.biens[0] || {}).id, typeBail: "vide", jourPaiement: 5, dateEntree: iso(TODAY), suiviDepuis: CUR, chargesMode: "provision", revisable: true };
   if (!id && b.bienId) { const bi = bien(b.bienId); if (bi) { b.typeBail = bi.meuble === "meuble" ? "meuble" : "vide"; b.loyerHC = bi.loyerRef || ""; } }
+  if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
   if (!S.biens.length) { confirmer("Ajoutez d'abord un bien.", () => editBien()); return; }
   modal(id ? "Modifier le locataire" : "Nouveau locataire", `
     <fieldset><legend>Locataire</legend>
@@ -2572,6 +2606,7 @@ function editBail(id, bienId) {
     <p class="note full" id="depotWarn"></p></fieldset>
     <fieldset><legend>Garanties</legend>
     ${fld("Garant (nom)", "garantNom", b.garantNom)}${fld("Garant (téléphone / e-mail)", "garantContact", b.garantContact)}
+    ${fld("N° de visa Visale (si garantie Visale)", "visale", b.visale)}<p class="note" style="align-self:end"><a href="https://www.visale.fr" target="_blank" rel="noopener">Vérifier un visa sur visale.fr ↗</a></p>
     ${fld("Assurance habitation valable jusqu'au", "assuranceFin", b.assuranceFin, "date")}${fld("État des lieux d'entrée fait le", "edlEntree", b.edlEntree, "date")}</fieldset>
     ${SB ? fld("Nom sur ses virements, si différent (ex : FRAVELLE ; séparer par des virgules)", "motsBanque", b.motsBanque, "text", "full") : ""}
     ${area("Clauses particulières pour ce bail (reprises dans le bail)", "clauses", b.clauses)}
@@ -2588,7 +2623,7 @@ function finBail(id) {
   const b = bail(id);
   modal("Départ du locataire", `<p class="full note">Le locataire a donné son préavis (1 mois en meublé ou en zone tendue, 3 mois sinon en location vide) ? Indiquez la date de sortie. Le dernier loyer sera calculé au prorata.</p>
     ${fld("Date de sortie (remise des clés)", "dateSortie", b.dateSortie || "", "date", "", "required")}${fld("Préavis reçu le", "preavisRecu", b.preavisRecu, "date")}`,
-    d => { Object.assign(b, d); });
+    d => { Object.assign(bail(id), d); toast("Départ noté : le parcours de départ est sur sa fiche"); });
 }
 function depotRendu(id) { const b = bail(id); modal("Dépôt de garantie rendu", `${fld("Rendu le", "depotRestitue", iso(TODAY), "date")}${fld("Montant retenu (€) si dégradations", "depotRetenu", b.depotRetenu || 0, "number")}${area("Motif des retenues (justificatifs à fournir)", "depotMotif", b.depotMotif)}`, d => Object.assign(b, d)); }
 
@@ -2679,7 +2714,7 @@ function enTeteLocataire(b) { const bi = bien(b.bienId); return `<div class="rig
 const faitA = (d = TODAY) => `<p class="right">Fait à ${esc(S.sci.ville || "……")}, le ${fd(d)}</p>`;
 const signature = () => estPerso() ? `<p class="right" style="margin-top:28px">${esc(S.sci.gerant || "Le bailleur")}<br><br><br>Signature</p>` : `<p class="right" style="margin-top:28px">Pour la ${esc(S.sci.nom || "SCI")},<br>${esc(S.sci.gerant || "le gérant")}, gérant<br><br><br>Signature</p>`;
 const periode = e => `du ${fd(new Date(+e.m.slice(0, 4), +e.m.slice(5) - 1, e.from))} au ${fd(new Date(+e.m.slice(0, 4), +e.m.slice(5) - 1, e.to))}`;
-const lignesMontants = e => `<table><tbody><tr><td>Loyer hors charges</td><td class="right">${eur(e.hc)}</td></tr><tr><td>${e.b.chargesMode === "forfait" ? "Forfait de charges" : "Provision pour charges"}</td><td class="right">${eur(e.ch)}</td></tr><tr><td><b>Total</b></td><td class="right"><b>${eur(e.du)}</b></td></tr></tbody></table>`;
+const lignesMontants = e => `<table><tbody><tr><td>Loyer hors charges</td><td class="right">${eur(e.hc)}</td></tr><tr><td>${e.b.chargesMode === "forfait" ? "Forfait de charges" : "Provision pour charges"}</td><td class="right">${eur(e.ch)}</td></tr>${(e.extras || []).map(x => `<tr><td>${esc(x.libelle)}</td><td class="right">${eur(x.montant)}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="right"><b>${eur(e.du)}</b></td></tr></tbody></table>`;
 
 /* Affichage d'un document, avec téléchargement PDF et envoi par e-mail */
 let CURDOC = null;
@@ -3214,6 +3249,236 @@ function docBilanOpen(y) {
   <h2>Dépenses par catégorie</h2><table><tbody>${Object.entries(parCat).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="right">${eur(v)}</td></tr>`).join("") || "<tr><td>Aucune dépense</td><td></td></tr>"}</tbody></table>
   ${parts ? `<h2>Répartition entre associés</h2><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)} (${a.parts} parts)</td><td class="right">${eur(res * a.parts / parts)}</td></tr>`).join("")}</tbody></table>` : ""}
   <p class="small">Document de gestion indicatif établi à partir des encaissements et des dépenses saisis. Il ne remplace pas la déclaration fiscale (2072 ou liasse IS).</p>`, { titre: "Bilan " + y, fichier: `Bilan-${slug(S.sci.nom || "SCI")}-${y}` });
+}
+
+/* ================= Régularisation des charges, pas à pas ================= */
+function joursDansAnnee(b, yy) { const a = Math.max(+P(b.dateEntree), +new Date(yy, 0, 1)), z = Math.min(+(b.dateSortie ? P(b.dateSortie) : new Date(yy, 11, 31)), +new Date(yy, 11, 31)); return z >= a ? Math.round((z - a) / 864e5) + 1 : 0; }
+function calculRegul(b, yy) {
+  let prov = 0; for (let k = 1; k <= 12; k++) { const m = yy + "-" + String(k).padStart(2, "0"), e = echeance(b, m); if (e && e.du > 0) prov += e.ch * Math.min(1, e.paye / e.du); }
+  const nbJ = daysBetween(new Date(yy, 0, 1), new Date(yy, 11, 31)) + 1, j = joursDansAnnee(b, yy), part = j / nbJ, lignes = [];
+  (S.taxes || []).filter(t => t.bienId === b.bienId && t.annee === yy).forEach(t => { const pt = t.parts.find(x => x.bailId === b.id); if (pt && pt.montant > 0 && (b.teomMensuel && yy >= +b.teomMensuel.depuis.slice(0, 4) || !pt.payeLe)) lignes.push({ l: `Taxe d'ordures ménagères ${yy}`, v: pt.montant }); });
+  S.depenses.filter(d => d.recuperable && d.bienId === b.bienId && (d.date || "").startsWith(String(yy))).forEach(d => lignes.push({ l: `${d.libelle || d.categorie} (${fds(d.date)})${part < 0.999 ? ` × ${j}/${nbJ} j` : ""}`, v: r2(+d.montant * part) }));
+  return { prov: r2(prov), lignes, j, nbJ };
+}
+function regulTous(yy) {
+  const L = S.baux.filter(b => (b.chargesMode || "provision") === "provision" && joursDansAnnee(b, yy) > 0);
+  if (!L.length) { toast(`Aucun locataire avec des provisions de charges en ${yy}.`); return; }
+  modal(`Régulariser les charges ${yy}`, `<p class="full note">${cq("regul")} Un locataire à la fois : l'appli additionne ce qu'il a payé en provisions et les charges récupérables que tu as notées.</p><ul class="todo full">${L.map(b => { const c = calculRegul(b, yy), reel = r2(c.lignes.reduce((s, x) => s + x.v, 0)), r = (b.reguls || []).find(x => x.annee === yy);
+    return `<li>${avatar(b.nom)}<span class="tx">${esc(b.nom)}<small>${r ? `fait le ${fds(r.date)} · ${r.solde >= 0 ? "il devait " + eur(r.solde) : "rendu " + eur(-r.solde)}` : `provisions ${eur(c.prov)} · charges notées ${eur(reel)}`}</small></span><button type="button" class="small ${r ? "" : "primary"}" onclick="closeOverlay();regulCharges('${b.id}',${yy})">${r ? "Revoir" : "Faire"}</button></li>`; }).join("")}</ul>`, () => true, { ok: "Fermer", lecture: true });
+}
+function regulCharges(bailId, yy) {
+  const b = bail(bailId), c = calculRegul(b, yy), mProchain = addM(CUR, 1);
+  modal(`Charges ${yy} — ${esc(nomCourt(b.nom))}`, `<p class="full note">${cq("regul")} ${c.j < c.nbJ ? `Il a occupé le logement ${c.j} jours sur ${c.nbJ} : les dépenses du logement sont comptées au prorata.` : "Il a occupé le logement toute l'année."}</p>
+    <div class="full calc"><b>Provisions qu'il a payées en ${yy} :</b> ${eur(c.prov)}</div>
+    <label class="fl full">Charges réelles récupérables, une par ligne : quoi ; montant
+      <textarea name="lignes" rows="5" placeholder="Eau ; 180&#10;Entretien chaudière ; 95">${esc(c.lignes.map(x => x.l + " ; " + String(x.v).replace(".", ",")).join("\n"))}</textarea></label>
+    <p class="full note">Tu peux ajouter ici ce que l'appli ne connaît pas : eau, entretien des parties communes, part de charges de copropriété récupérable (indiquée par le syndic)…</p>
+    <div class="full calc" id="rgCalc"></div>
+    <div class="full choix">
+      <label><input type="radio" name="suite" value="loyer" checked><span>L'ajouter (ou le déduire) sur un prochain loyer<small>Une ligne en plus sur l'avis et la quittance de ce mois-là.</small></span></label>
+      <label><input type="radio" name="suite" value="apart"><span>Il paie à part, ou je le rembourse à part<small>Juste le courrier de décompte.</small></span></label>
+    </div>
+    <div class="full choix-plus">${fld("Sur le loyer de", "mois", mProchain, "month")}</div>
+    <label class="fl chk full"><input type="checkbox" name="ajuster"> Ajuster aussi sa provision mensuelle (avenant)</label>`,
+    d => {
+      const b = bail(bailId), lignes = lireLignes(d.lignes), reel = r2(lignes.reduce((s, x) => s + x.v, 0)), solde = r2(reel - c.prov);
+      b.reguls = (b.reguls || []).filter(x => x.annee !== yy).concat([{ annee: yy, provisions: c.prov, lignes, reelles: reel, solde, suite: d.suite, mois: d.suite === "loyer" ? d.mois : "", date: iso(TODAY) }]);
+      b.extras = (b.extras || []).filter(x => x.regul !== yy);
+      if (d.suite === "loyer" && Math.abs(solde) >= 0.01) b.extras.push({ mois: d.mois, montant: solde, libelle: solde > 0 ? `Régularisation des charges ${yy}` : `Trop-perçu de charges ${yy} (déduit)`, regul: yy });
+      S.faits["regul-" + b.id + "-" + yy] = iso(TODAY);
+      toast(solde > 0 ? `Il doit ${eur(solde)} de charges ${yy}` : solde < 0 ? `Tu lui dois ${eur(-solde)}` : "Pile juste, rien à payer");
+      setTimeout(() => docRegul(b.id, yy), 60);
+      if (d.ajuster) setTimeout(() => avenant(b.id, { motif: "charges", charges: r2(Math.ceil(reel / 12 * 100) / 100), precision: `Provision ajustée sur les charges réelles ${yy} (${eur(reel)} ÷ 12).` }), 80);
+    },
+    { ok: "Valider le décompte", after: f => { const maj = () => { const reel = r2(lireLignes(f.lignes.value).reduce((s, x) => s + x.v, 0)), solde = r2(reel - c.prov);
+      document.getElementById("rgCalc").innerHTML = `Charges réelles : <b>${eur(reel)}</b> · provisions : ${eur(c.prov)} → ${solde > 0 ? `<b>il te doit ${eur(solde)}</b>` : solde < 0 ? `<b>tu lui rends ${eur(-solde)}</b>` : "<b>pile juste</b>"}`; };
+      f.addEventListener("input", maj); maj(); } });
+}
+const lireLignes = t => String(t || "").split("\n").map(l => { const k = l.lastIndexOf(";"); if (k < 0) return null; const v = +l.slice(k + 1).replace(/\s|€/g, "").replace(",", "."); return isFinite(v) && l.slice(0, k).trim() ? { l: l.slice(0, k).trim(), v: r2(v) } : null; }).filter(Boolean);
+function docRegul(bailId, yy) {
+  const b = bail(bailId), r = (b.reguls || []).find(x => x.annee === yy); if (!r) return;
+  const bi = bien(b.bienId), prenomL = String(nomCourt(b.nom)).split(/\s+/)[0];
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : régularisation des charges ${yy}</b></p>
+  <p>Madame, Monsieur,</p><p>Comme chaque année, voici le décompte des charges du logement situé ${esc(adresseBien(bi))} pour ${yy} (article 23 de la loi du 6 juillet 1989). Les justificatifs sont à votre disposition pendant 6 mois.</p>
+  <table><thead><tr><th>Charges réelles récupérables</th><th class="right">Montant</th></tr></thead><tbody>${r.lignes.map(x => `<tr><td>${esc(x.l)}</td><td class="right">${eur(x.v)}</td></tr>`).join("")}<tr><td><b>Total des charges réelles</b></td><td class="right"><b>${eur(r.reelles)}</b></td></tr><tr><td>Provisions versées en ${yy}</td><td class="right">− ${eur(r.provisions)}</td></tr><tr><td><b>${r.solde >= 0 ? "Reste à payer" : "À vous rembourser"}</b></td><td class="right"><b>${eur(Math.abs(r.solde))}</b></td></tr></tbody></table>
+  <p>${Math.abs(r.solde) < 0.01 ? "Les provisions couvrent exactement les charges : rien à payer." : r.suite === "loyer" ? (r.solde > 0 ? `Cette somme sera ajoutée au loyer de ${fm(r.mois)}.` : `Cette somme sera déduite du loyer de ${fm(r.mois)}.`) : r.solde > 0 ? "Merci de régler cette somme par virement." : "Nous vous rembourserons cette somme par virement."}</p>
+  <p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`;
+  showDoc(html, { titre: `Charges ${yy}`, fichier: `Regularisation-charges-${yy}-${slug(b.nom)}`, to: b.email, bailId: b.id,
+    email: { objet: `Régularisation des charges ${yy}`, corps: `Bonjour ${prenomL},\n\nVoici le décompte des charges ${yy} : ${eur(r.reelles)} de charges réelles pour ${eur(r.provisions)} de provisions versées. ${r.solde > 0 ? `Il reste ${eur(r.solde)} à payer` : r.solde < 0 ? `Nous vous devons ${eur(-r.solde)}` : "Rien à payer"}${r.suite === "loyer" && Math.abs(r.solde) >= 0.01 ? `, ${r.solde > 0 ? "ajoutés au" : "déduits du"} loyer de ${fm(r.mois)}` : ""}.\n\nLe détail est dans le document joint.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+}
+
+/* ================= Aide à la déclaration (2072 pour une SCI à l'IR) ================= */
+const CAT_2072 = { "Taxe foncière": "Impôts (taxe foncière hors ordures ménagères)", "Charges de copropriété": "Charges non récupérées", "Assurance propriétaire (PNO)": "Primes d'assurance", "Assurance loyers impayés": "Primes d'assurance", "Travaux d'entretien / réparation": "Travaux d'entretien, réparation, amélioration", "Travaux d'amélioration": "Travaux d'entretien, réparation, amélioration", "Intérêts d'emprunt": "Intérêts d'emprunt et assurance emprunteur", "Assurance emprunteur": "Intérêts d'emprunt et assurance emprunteur", "Frais bancaires": "Frais de gestion", "Honoraires (comptable, notaire, avocat…)": "Frais de gestion", "Diagnostics": "Frais de gestion", "Frais de gestion / annonces": "Frais de gestion", "Eau / électricité / gaz": "Charges non récupérées", "Autre": "À vérifier" };
+function aideDeclaration(y, lignes, tot) {
+  if (estPerso()) return "";
+  const deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie)), g = {};
+  deps.forEach(d => { const k = CAT_2072[d.categorie] || "À vérifier"; g[k] = (g[k] || 0) + +d.montant; });
+  const nbLoc = S.biens.length, forfait = 20 * nbLoc, regime = S.sci.regime === "IS";
+  return `<details class="pli card"><summary><h2>🏛 Pour ta déclaration ${y}${cq("2072")}</h2>${ic("chevR", "s")}</summary>
+    ${regime ? `<p class="note">SCI à l'impôt sur les sociétés : la liasse (2065) se fait en général avec l'expert-comptable. Donne-lui le fichier FEC ci-dessus.</p>` :
+    `<p class="note">Les chiffres de l'année, rangés comme sur la déclaration 2072-S (en mai). À recopier sur impots.gouv, espace professionnel. Fais-les vérifier si tu as un doute.</p>
+    <div class="table-wrap" style="border:0"><table><tbody>
+      <tr><td>Loyers bruts encaissés</td><td class="num"><b>${eur(tot.loyers)}</b></td></tr>
+      <tr><td>Charges payées par les locataires (à déclarer en recette et en dépense)</td><td class="num">${eur(tot.charges)}</td></tr>
+      <tr><td>Frais d'administration (forfait 20 € × ${nbLoc} logement${nbLoc > 1 ? "s" : ""})</td><td class="num">${eur(forfait)}</td></tr>
+      ${Object.entries(g).sort().map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${eur(v)}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="note">Chaque associé reporte ensuite sa part (colonne "Part de chaque associé" ci-dessous) sur sa déclaration 2044. Le remboursement du capital d'emprunt et l'achat du bien ne sont jamais déductibles.</p>`}
+  </details>`;
+}
+/* ================= Fichier des écritures comptables (FEC) pour le comptable ================= */
+const COMPTE_CAT = { "Taxe foncière": ["63512", "Taxes foncières"], "Charges de copropriété": ["614", "Charges locatives et de copropriété"], "Assurance propriétaire (PNO)": ["616", "Primes d'assurance"], "Assurance loyers impayés": ["616", "Primes d'assurance"], "Travaux d'entretien / réparation": ["615", "Entretien et réparations"], "Travaux d'amélioration": ["2135", "Agencements et aménagements"], "Intérêts d'emprunt": ["6611", "Intérêts des emprunts"], "Assurance emprunteur": ["616", "Primes d'assurance"], "Remboursement capital emprunt": ["164", "Emprunts"], "Échéance de prêt (capital + intérêts, à ventiler)": ["164", "Emprunts (à ventiler)"], "Achat du bien / frais d'acquisition": ["213", "Constructions"], "Frais bancaires": ["627", "Services bancaires"], "Honoraires (comptable, notaire, avocat…)": ["6226", "Honoraires"], "Diagnostics": ["6226", "Honoraires"], "Eau / électricité / gaz": ["6061", "Fournitures non stockables"], "Frais de gestion / annonces": ["6231", "Annonces et insertions"], "Autre": ["658", "Charges diverses"] };
+function exportFEC(y) {
+  const E = [], d8 = d => String(d || "").replace(/-/g, ""), n = v => r2(v).toFixed(2).replace(".", ","); let num = 0;
+  const ecr = (jr, jl, date, lib, piece, lignes) => { num++; lignes.forEach(([c, cl, deb, cre]) => E.push([jr, jl, String(num).padStart(6, "0"), d8(date), c, cl, "", "", piece, d8(date), lib, n(deb), n(cre), "", "", d8(date), "", ""])); };
+  S.paiements.filter(p => (p.date || "").startsWith(String(y))).forEach(p => { const b = bail(p.bailId); if (!b) return; const e = echeance(b, p.mois), part = e && e.du > 0 ? Math.min(1, (e.ch + e.exT) / e.du) : 0, ch = r2(p.montant * part), lo = r2(p.montant - ch);
+    ecr("BQ", "Banque", p.date, `Loyer ${p.mois} ${nomCourt(b.nom)}`, "L" + p.id, [["512", "Banque", p.montant, 0], ["706", "Loyers", 0, lo], ...(ch ? [["708", "Charges refacturées", 0, ch]] : [])]); });
+  (S.taxes || []).forEach(tx => tx.parts.filter(p => p.payeLe && p.payeLe.startsWith(String(y))).forEach(p => { const b = bail(p.bailId); ecr("BQ", "Banque", p.payeLe, `Ordures ménagères ${tx.annee} ${b ? nomCourt(b.nom) : ""}`, "T" + tx.id, [["512", "Banque", p.montant, 0], ["708", "Charges refacturées", 0, p.montant]]); }));
+  S.depenses.filter(d => (d.date || "").startsWith(String(y))).forEach(d => { const [c, cl] = COMPTE_CAT[d.categorie] || COMPTE_CAT.Autre; ecr("BQ", "Banque", d.date, `${d.libelle || d.categorie}${d.bienId ? " · " + bienLabel(bien(d.bienId)) : ""}`, "D" + d.id, [[c, cl, +d.montant, 0], ["512", "Banque", 0, +d.montant]]); });
+  E.sort((a, b) => a[3].localeCompare(b[3]));
+  const tete = ["JournalCode", "JournalLib", "EcritureNum", "EcritureDate", "CompteNum", "CompteLib", "CompAuxNum", "CompAuxLib", "PieceRef", "PieceDate", "EcritureLib", "Debit", "Credit", "EcritureLet", "DateLet", "ValidDate", "Montantdevise", "Idevise"];
+  download(`${(S.sci.siren || "000000000").replace(/\s/g, "")}FEC${y}1231.txt`, [tete, ...E].map(r => r.map(x => String(x).replace(/[\t\n]/g, " ")).join("\t")).join("\r\n"), "text/plain");
+  toast("Fichier prêt : envoie-le à ton comptable, il l'importe directement.");
+}
+
+/* ================= Parcours d'arrivée et de départ ================= */
+const faitBail = (b, k) => !!(S.faits || {})[k + "-" + b.id];
+function etapesArrivee(b) {
+  const L = edlsDuBail(b.id), e = L.find(x => x.type === "entree"), docs = S.fichiers.filter(f => f.bailId === b.id || (f.bienId === b.bienId && P(f.date) >= addDays(P(b.dateEntree), -60)));
+  const aDoc = cat => docs.some(f => f.cat === cat);
+  return [
+    { k: "arr-dossier", ok: !!(b.garantNom || b.visale) || faitBail(b, "arr-dossier"), t: "Dossier et garantie", d: `Pièces du locataire, garant ou visa Visale${cq("visale")}. Pas de garant et une assurance loyers impayés en même temps (sauf étudiant).`, btn: ["Compléter", `editBail('${b.id}')`] },
+    { k: "arr-diag", ok: aDoc("Diagnostics (DPE…)") || faitBail(b, "arr-diag"), t: "Diagnostics à joindre au bail", d: "DPE, état des risques (ERP, moins de 6 mois), électricité et gaz si l'installation a plus de 15 ans, plomb avant 1949, amiante avant 1997, surface (loi Boutin).", btn: ["Ajouter", `ajouterDocument('${b.bienId}','${b.id}','Diagnostics (DPE…)')`] },
+    { k: "arr-bail", ok: aDoc("Bail") || faitBail(b, "arr-bail"), t: "Bail signé", d: "L'appli le prépare avec toutes les mentions obligatoires. Une fois signé, range-le ici.", btn: ["Générer le bail", `docBailOpen('${b.id}')`] },
+    { k: "arr-depot", ok: !(+b.depot > 0) || faitBail(b, "arr-depot"), t: `Dépôt de garantie reçu${+b.depot > 0 ? " (" + eur(b.depot) + ")" : ""}`, d: `${cq("depot")} À encaisser à la signature, à rendre au départ.`, btn: null },
+    { k: "arr-ass", ok: !!b.assuranceFin, t: "Attestation d'assurance habitation", d: "Obligatoire dès la remise des clés.", btn: ["Je l'ai reçue", `assuranceRecue('${b.id}')`] },
+    { k: "arr-edl", ok: !!e || !!b.edlEntree, t: "État des lieux d'entrée, avec photos", d: `${cq("edl")} Pièce par pièce sur le téléphone, signé par vous deux. Sans lui, impossible de retenir quoi que ce soit au départ.`, btn: e ? ["Ouvrir", `go('edl-${e ? e.id : ""}')`] : ["Commencer", `nouvelEdl('${b.id}','entree')`] },
+    { k: "arr-cpt", ok: !!(e && (e.compteurs.elec || e.compteurs.eauFroide)) || faitBail(b, "arr-cpt"), t: "Compteurs relevés et clés remises", d: "Dans l'état des lieux. Pense à dire au locataire d'ouvrir ses contrats d'électricité, de gaz et d'internet.", btn: null }
+  ];
+}
+function etapesDepart(b) {
+  const L = edlsDuBail(b.id), s2 = L.find(x => x.type === "sortie"), ech = b.dateSortie ? echeance(b, mk(P(b.dateSortie))) : null;
+  return [
+    { k: "dep-preavis", ok: !!b.preavisRecu || faitBail(b, "dep-preavis"), t: "Préavis reçu", d: `${cq("preavis")} 3 mois en vide, 1 mois en meublé ou en zone tendue (ou pour certains motifs : mutation, perte d'emploi, santé…).`, btn: ["Indiquer", `finBail('${b.id}')`] },
+    { k: "dep-annonce", ok: S.baux.some(x => x.bienId === b.bienId && x !== b && P(x.dateEntree) >= P(b.dateSortie || iso(TODAY))) || faitBail(b, "dep-annonce"), t: "Annonce pour relouer", d: "Prête en un clic, avec les mentions obligatoires.", btn: ["Préparer l'annonce", `annonce('${b.bienId}')`] },
+    { k: "dep-edl", ok: !!s2, t: "État des lieux de sortie", d: "Comparé pièce par pièce à celui d'entrée. Relève les compteurs, récupère toutes les clés.", btn: s2 ? ["Ouvrir", `go('edl-${s2 ? s2.id : ""}')`] : ["Commencer", `nouvelEdl('${b.id}','sortie')`] },
+    { k: "dep-compare", ok: !!b.retenues || faitBail(b, "dep-compare"), t: "Comparer entrée et sortie, calculer les retenues", d: "Seulement les dégâts au-delà de l'usure normale, avec devis ou factures.", btn: ["Comparer", `comparerEdl('${b.id}')`] },
+    { k: "dep-loyer", ok: !ech || ech.statut === "paye", t: "Dernier loyer (au prorata)", d: ech ? `${eur(ech.du)} pour ${ech.to - ech.from + 1} jours en ${fm(ech.m)}.` : "Indique la date de sortie.", btn: null },
+    { k: "dep-depot", ok: !!b.depotRestitue, t: `Rendre le dépôt de garantie${+b.depot > 0 ? " (" + eur(b.depot) + ")" : ""}`, d: "1 mois après la remise des clés si tout va bien, 2 mois s'il y a des retenues. Sinon pénalité de 10 % du loyer par mois de retard.", btn: ["C'est rendu", `depotRendu('${b.id}')`] }
+  ];
+}
+function parcoursBail(b) {
+  const arr = P(b.dateEntree), recent = daysBetween(arr, TODAY) <= 75, dep = !!b.dateSortie && !b.depotRestitue && P(b.dateSortie) >= addDays(TODAY, -90);
+  const blocs = [];
+  if (dep) blocs.push(["🔑 Le départ", etapesDepart(b), "depart"]);
+  else if (recent || arr > TODAY) blocs.push(["🎉 L'arrivée", etapesArrivee(b), "arrivee"]);
+  return blocs.map(([t, E, k]) => { const n = E.filter(e => e.ok).length; if (n === E.length) return "";
+    return `<section class="card parcours"><div class="sec-head"><h2>${t} <span class="count">${n}/${E.length}</span></h2></div><div class="barre"><i style="width:${Math.round(n / E.length * 100)}%"></i></div>
+      <ol class="etapes">${E.map((e, i) => `<li class="etape ${e.ok ? "ok" : ""}"><span class="num" aria-hidden="true">${e.ok ? "✓" : i + 1}</span><div class="tx"><div class="et-h"><b>${e.t}</b></div>${e.ok ? "" : `<p class="note">${e.d}</p><div class="row">${e.btn ? `<button class="small primary" onclick="${e.btn[1]}">${e.btn[0]}</button>` : ""}<button class="small ghost" onclick="marquerFait('${e.k}-${b.id}')">✓ C'est fait</button></div>`}</div></li>`).join("")}</ol></section>`; }).join("");
+}
+
+/* ================= Comparer les états des lieux et calculer les retenues ================= */
+const RANG_ETAT = { bon: 0, usage: 1, mauvais: 2 };
+function comparerEdl(bailId) {
+  const b = bail(bailId), L = edlsDuBail(bailId), a = L.find(x => x.type === "entree"), z = L.find(x => x.type === "sortie");
+  if (!a || !z) { toast(!a ? "Il manque l'état des lieux d'entrée dans l'appli." : "Fais d'abord l'état des lieux de sortie."); return; }
+  const lib = k => (ETATS.find(x => x[0] === k) || ["", "non noté"])[1];
+  const rows = z.pieces.map(p => { const r = a.pieces.find(x => x.nom === p.nom) || {}; const pire = p.etat && r.etat && RANG_ETAT[p.etat] > RANG_ETAT[r.etat]; return { nom: p.nom, avant: lib(r.etat), apres: lib(p.etat), com: p.commentaire, pire: pire || (p.etat === "mauvais" && !r.etat) }; });
+  const conso = ["elec", "eauFroide", "eauChaude", "gaz"].map(k => [k, a.compteurs[k], z.compteurs[k]]).filter(x => x[1] && x[2]);
+  const ret = b.retenues || rows.filter(r => r.pire).map(r => ({ l: r.nom + (r.com ? " : " + r.com : ""), v: 0 }));
+  modal(`Entrée / sortie — ${esc(nomCourt(b.nom))}`, `<div class="full table-wrap" style="border:0"><table><thead><tr><th>Pièce</th><th>Entrée</th><th>Sortie</th></tr></thead><tbody>${rows.map(r => `<tr${r.pire ? ' class="pire"' : ""}><td>${esc(r.nom)}${r.com ? `<div class="sub">${esc(r.com)}</div>` : ""}</td><td>${r.avant}</td><td>${r.pire ? "⚠️ " : ""}${r.apres}</td></tr>`).join("")}</tbody></table></div>
+    ${conso.length ? `<p class="full note">Compteurs : ${conso.map(([k, x, y]) => `${({ elec: "électricité", eauFroide: "eau froide", eauChaude: "eau chaude", gaz: "gaz" })[k]} ${esc(x)} → ${esc(y)}`).join(" · ")}</p>` : ""}
+    <p class="full note">Retenues : seulement les dégâts au-delà de l'usure normale, avec un devis ou une facture. Une ligne par retenue : quoi ; montant.</p>
+    <label class="fl full">Retenues sur le dépôt<textarea name="ret" rows="4" placeholder="Trou dans le mur du séjour ; 80">${esc(ret.map(x => x.l + " ; " + (x.v ? String(x.v).replace(".", ",") : "")).join("\n"))}</textarea></label><div class="full calc" id="retCalc"></div>`,
+    d => { const b = bail(bailId), l = lireLignes(d.ret), tot = r2(l.reduce((s, x) => s + x.v, 0)); b.retenues = l; b.depotRetenu = tot; b.depotMotif = l.map(x => `${x.l} : ${eur(x.v)}`).join("\n"); toast(tot ? `${eur(tot)} retenus · ${eur(Math.max(0, (+b.depot || 0) - tot))} à rendre` : "Aucune retenue : tout le dépôt est à rendre"); setTimeout(() => docRestitution(b.id), 60); },
+    { ok: "Préparer le décompte", after: f => { const c = () => { const t = r2(lireLignes(f.ret.value).reduce((s, x) => s + x.v, 0)); document.getElementById("retCalc").innerHTML = `Dépôt ${eur(b.depot || 0)} − retenues ${eur(t)} = <b>${eur(Math.max(0, (+b.depot || 0) - t))} à rendre</b>`; }; f.addEventListener("input", c); c(); } });
+}
+function docRestitution(bailId) {
+  const b = bail(bailId), l = b.retenues || [], tot = r2(l.reduce((s, x) => s + x.v, 0)), rendu = r2(Math.max(0, (+b.depot || 0) - tot)), lim = b.dateSortie ? addMonthsDate(P(b.dateSortie), tot ? 2 : 1) : null;
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : restitution du dépôt de garantie</b></p><p>Madame, Monsieur,</p>
+  <p>Suite à votre départ du logement situé ${esc(adresseBien(bien(b.bienId)))}${b.dateSortie ? " le " + fd(b.dateSortie) : ""}, et à la comparaison des états des lieux d'entrée et de sortie, voici le décompte de votre dépôt de garantie.</p>
+  <table><tbody><tr><td>Dépôt de garantie versé</td><td class="right">${eur(b.depot || 0)}</td></tr>${l.map(x => `<tr><td>Retenue : ${esc(x.l)}</td><td class="right">− ${eur(x.v)}</td></tr>`).join("")}<tr><td><b>Montant restitué</b></td><td class="right"><b>${eur(rendu)}</b></td></tr></tbody></table>
+  <p>${tot ? "Les justificatifs (devis ou factures) sont joints ou disponibles sur simple demande. " : ""}La somme vous sera versée par virement${lim ? ` au plus tard le ${fd(lim)}` : ""}.</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`;
+  showDoc(html, { titre: "Restitution du dépôt", fichier: `Restitution-depot-${slug(b.nom)}`, to: b.email, bailId: b.id, email: { objet: "Votre dépôt de garantie", corps: `Bonjour,\n\nVoici le décompte de votre dépôt de garantie : ${eur(rendu)} vous seront rendus${tot ? ` (${eur(tot)} retenus, détail dans le document joint)` : ""}.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
+}
+
+/* ================= Logement vide : annonce et candidats ================= */
+const VILLES_ENCADREES = /\b(paris|lille|hellemmes|lomme|lyon|villeurbanne|montpellier|bordeaux|grenoble|saint-denis|aubervilliers|la courneuve|epinay|pierrefitte|saint-ouen|stains|villetaneuse|ile-saint-denis|bagnolet|bobigny|bondy|les lilas|montreuil|noisy-le-sec|pantin|le pre-saint-gervais|romainville|bayonne|biarritz|anglet|saint-jean-de-luz|hendaye)\b/;
+const encadre = bi => bi && VILLES_ENCADREES.test(sansAccent(bi.ville || "").toLowerCase().replace(/[’']/g, "-"));
+function annonce(bienId) {
+  const bi = bien(bienId), dernier = S.baux.filter(b => b.bienId === bienId).sort((a, b) => b.dateEntree.localeCompare(a.dateEntree))[0], l = dernier ? loyerAt(dernier, CUR) : { hc: +bi.loyerRef || 0, ch: 0 };
+  const meuble = bi.meuble === "meuble";
+  modal(`Annonce — ${esc(bi.nom)}`, `${fld("Loyer hors charges (€)", "hc", bi.annonce && bi.annonce.hc || l.hc, "number")}${fld("Charges (€)", "ch", bi.annonce && bi.annonce.ch || l.ch, "number")}
+    ${sel("Charges", "mode", meuble ? "forfait" : "provision", [["provision", "Provision (régularisée chaque année)"], ["forfait", "Forfait"]])}${fld("Disponible le", "dispo", bi.annonce && bi.annonce.dispo || iso(TODAY), "date")}
+    ${fld("Dépenses d'énergie estimées par an (sur le DPE)", "energie", bi.annonce && bi.annonce.energie || "", "text", "full", 'placeholder="Entre 900 € et 1 250 €"')}
+    ${area("Quelques mots sur le logement (lumière, quartier, transports…)", "plus", bi.annonce && bi.annonce.plus || "")}`,
+    d => { const bi = bien(bienId); bi.annonce = d; setTimeout(() => texteAnnonce(bienId), 60); }, { ok: "Écrire l'annonce" });
+}
+function texteAnnonce(bienId) {
+  const bi = bien(bienId), a = bi.annonce || {}, meuble = bi.meuble === "meuble", depot = r2((+a.hc || 0) * (meuble ? 2 : 1));
+  const titre = `${bi.type || "Logement"} ${meuble ? "meublé" : ""} ${bi.pieces ? bi.pieces + " pièce" + (bi.pieces > 1 ? "s" : "") : ""} ${bi.surface ? bi.surface + " m²" : ""} – ${bi.ville || ""}`.replace(/\s+/g, " ").trim();
+  const txt = [titre, "", a.plus || "", "",
+    `Loyer : ${eur(+a.hc + +a.ch)} par mois charges comprises, dont ${eur(+a.ch)} de charges (${a.mode === "forfait" ? "forfait" : "provision avec régularisation annuelle"}).`,
+    `Dépôt de garantie : ${eur(depot)}.`, "Honoraires : aucun (location entre particuliers).",
+    bi.surface ? `Surface habitable : ${bi.surface} m².` : "",
+    bi.dpe ? `Classe énergie (DPE) : ${bi.dpe}.${a.energie ? ` Montant estimé des dépenses annuelles d'énergie pour un usage standard : ${a.energie}.` : ""}` : "Classe énergie (DPE) : à compléter.",
+    encadre(bi) ? "Zone soumise à l'encadrement des loyers : loyer de référence majoré et éventuel complément de loyer à indiquer." : "",
+    a.dispo ? `Disponible le ${fd(a.dispo)}.` : "", "", bi.equipements ? "Équipements : " + bi.equipements.replace(/\n/g, ", ") : ""].filter((x, i, t) => x !== "" || t[i - 1] !== "").join("\n").trim();
+  showDoc(`<h1>${esc(titre)}</h1><p style="white-space:pre-wrap">${esc(txt)}</p>${bi.dpe && !a.energie ? `<p class="small">⚠️ Depuis 2022, l'annonce doit indiquer l'estimation des dépenses d'énergie écrite sur le DPE.</p>` : ""}`, { titre: "Annonce", fichier: `Annonce-${slug(bi.nom)}`, email: { objet: titre, corps: txt } });
+}
+function editCandidat(bienId, cid) {
+  const bi = bien(bienId), c = cid ? (bi.candidats || []).find(x => x.id === cid) : {}, PIECES = ["Pièce d'identité", "3 derniers bulletins de salaire", "Dernier avis d'imposition", "Contrat de travail ou attestation employeur", "Justificatif de domicile"];
+  modal(cid ? "Candidat" : "Nouveau candidat", `${fld("Nom", "nom", c.nom, "text", "", "required")}${fld("Téléphone", "tel", c.tel, "tel")}${fld("E-mail", "email", c.email, "email", "full")}
+    ${fld("Revenus nets par mois (€, tous les locataires)", "revenus", c.revenus, "number")}${sel("Situation", "situation", c.situation || "cdi", [["cdi", "CDI"], ["cdd", "CDD / intérim"], ["independant", "Indépendant"], ["etudiant", "Étudiant"], ["retraite", "Retraité"], ["autre", "Autre"]])}
+    ${sel("Garantie", "garantie", c.garantie || "aucune", [["aucune", "Aucune"], ["personne", "Un garant (personne)"], ["visale", "Visale"], ["autre", "Autre organisme"]])}${fld("Revenus du garant / n° de visa Visale", "garantInfo", c.garantInfo)}
+    <fieldset class="full"><legend>Pièces reçues</legend>${PIECES.map((p, i) => `<label class="fl chk full"><input type="checkbox" name="p${i}" ${(c.pieces || []).includes(p) ? "checked" : ""}> ${p}</label>`).join("")}</fieldset>
+    ${area("Notes (visite, impression…)", "notes", c.notes)}<div class="full calc" id="candCalc"></div>`,
+    d => { const bi = bien(bienId); bi.candidats = bi.candidats || []; const o = { id: cid || uid(), nom: d.nom, tel: d.tel, email: d.email, revenus: +d.revenus || 0, situation: d.situation, garantie: d.garantie, garantInfo: d.garantInfo, notes: d.notes, pieces: PIECES.filter((p, i) => d["p" + i]), date: c.date || iso(TODAY) };
+      if (cid) Object.assign(c, o); else bi.candidats.push(o); toast("Candidat enregistré"); },
+    Object.assign({ after: f => { const loyer = (+(bi.annonce || {}).hc || +bi.loyerRef || 0) + (+(bi.annonce || {}).ch || 0); const m = () => { const r = +f.revenus.value; document.getElementById("candCalc").innerHTML = loyer && r ? `${cq("taux_effort")} Taux d'effort : <b>${Math.round(loyer / r * 100)} %</b> (loyer ${eur(loyer)} / revenus ${eur(r)}) ${loyer / r <= 0.33 ? "✅" : "⚠️ au-dessus de 33 %"}` : "Indique ses revenus pour voir le taux d'effort."; }; f.addEventListener("input", m); m(); } },
+      cid ? { del: () => { const bi = bien(bienId); bi.candidats = bi.candidats.filter(x => x.id !== cid); } } : {}));
+}
+function scoreCandidat(bi, c) { const loyer = (+(bi.annonce || {}).hc || +bi.loyerRef || 0) + (+(bi.annonce || {}).ch || 0), te = loyer && c.revenus ? loyer / c.revenus : null; let s = 0; if (te !== null) s += te <= .25 ? 3 : te <= .33 ? 2 : te <= .4 ? 1 : 0; s += c.garantie === "visale" || c.garantie === "personne" ? 2 : c.garantie === "autre" ? 1 : 0; s += c.situation === "cdi" || c.situation === "retraite" ? 1 : 0; s += (c.pieces || []).length >= 5 ? 1 : 0; return { s, te }; }
+function choisirCandidat(bienId, cid) { const bi = bien(bienId), c = bi.candidats.find(x => x.id === cid); editBail(null, bienId, { nom: c.nom, tel: c.tel, email: c.email, garantNom: c.garantie === "personne" ? c.garantInfo : "", visale: c.garantie === "visale" ? c.garantInfo : "", loyerHC: (bi.annonce || {}).hc || bi.loyerRef, charges: (bi.annonce || {}).ch || 0 }); }
+function sectionLocation(bi) {
+  const vide = !bailActifDuBien(bi.id) || S.baux.some(b => b.bienId === bi.id && b.dateSortie && P(b.dateSortie) >= TODAY), C = (bi.candidats || []).map(c => ({ c, ...scoreCandidat(bi, c) })).sort((a, b) => b.s - a.s);
+  if (!vide && !C.length) return "";
+  return `<section class="card"><h2>📣 Relouer</h2><p class="note">${encadre(bi) ? `⚖️ Ville avec encadrement des loyers${cq("encadrement")} : vérifie le plafond sur le site de la préfecture avant de fixer le loyer. ` : ""}Annonce avec les mentions obligatoires, candidats comparés au même endroit.</p>
+    <div class="row"><button class="primary" onclick="annonce('${bi.id}')">✍️ ${bi.annonce ? "Revoir l'annonce" : "Écrire l'annonce"}</button><button onclick="editCandidat('${bi.id}')">+ Candidat</button><a class="btn ghost" href="https://www.visale.fr" target="_blank" rel="noopener">Visale ↗</a></div>
+    ${C.length ? `<ul class="todo plat" style="margin-top:12px">${C.map(({ c, s, te }) => `<li>${avatar(c.nom)}<span class="tx"><a href="#" onclick="event.preventDefault();editCandidat('${bi.id}','${c.id}')">${esc(c.nom)}</a><small>${te !== null ? `taux d'effort ${Math.round(te * 100)} %` : "revenus ?"} · ${({ aucune: "sans garant", personne: "garant", visale: "Visale", autre: "garantie" })[c.garantie]} · ${(c.pieces || []).length}/5 pièces · ${"★".repeat(Math.min(5, s))}${"☆".repeat(Math.max(0, 5 - s))}</small></span><button class="small primary" onclick="choisirCandidat('${bi.id}','${c.id}')">Choisir</button></li>`).join("")}</ul>` : ""}</section>`;
+}
+
+/* ================= Travaux ================= */
+const STATUTS_TRAVAUX = [["devis", "Devis demandé"], ["prevu", "Prévu"], ["encours", "En cours"], ["fini", "Fini"]];
+function editTravaux(bienId, tid) {
+  const bi = bien(bienId), t = tid ? (bi.travaux || []).find(x => x.id === tid) : { statut: "devis", date: iso(TODAY) };
+  modal(tid ? "Travaux" : "Nouveaux travaux", `${fld("Quoi ?", "titre", t.titre, "text", "full", 'required placeholder="Remplacer le chauffe-eau"')}
+    ${fld("Artisan", "artisan", t.artisan)}${fld("Téléphone / e-mail", "contact", t.contact)}
+    ${sel("Où en est-on ?", "statut", t.statut, STATUTS_TRAVAUX)}${fld("Date", "date", t.date, "date")}
+    ${fld("Montant du devis (€)", "devis", t.devis, "number")}${fld("Montant de la facture (€)", "facture", t.facture, "number")}
+    ${sel("Type", "cat", t.cat || "Travaux d'entretien / réparation", [["Travaux d'entretien / réparation", "Entretien / réparation"], ["Travaux d'amélioration", "Amélioration"]])}${fld("Garantie jusqu'au", "garantie", t.garantie, "date")}
+    ${area("Notes", "notes", t.notes)}<p class="full note">Quand tu indiques la facture, l'appli l'ajoute aussi aux dépenses de la compta.</p>`,
+    d => { const bi = bien(bienId); bi.travaux = bi.travaux || []; const o = Object.assign(tid ? t : { id: uid() }, d); if (!tid) bi.travaux.push(o);
+      if (+d.facture > 0) { const dep = S.depenses.find(x => x.travauxId === o.id); const val = { date: d.date || iso(TODAY), montant: r2(+d.facture), categorie: d.cat, bienId, libelle: `${d.titre}${d.artisan ? " · " + d.artisan : ""}`, travauxId: o.id, recuperable: false };
+        if (dep) Object.assign(dep, val); else S.depenses.push({ id: uid(), ...val }); }
+      toast(+d.facture > 0 ? "Travaux enregistrés · facture ajoutée à la compta" : "Travaux enregistrés"); },
+    tid ? { del: () => { const bi = bien(bienId); bi.travaux = bi.travaux.filter(x => x.id !== tid); } } : {});
+}
+function sectionTravaux(bi) {
+  const L = (bi.travaux || []).slice().sort((a, b) => (a.statut === "fini") - (b.statut === "fini") || String(b.date).localeCompare(String(a.date)));
+  return `<section class="card"><div class="sec-head"><h2>🛠 Travaux</h2><button class="small" onclick="editTravaux('${bi.id}')">+ Travaux</button></div>
+    ${L.length ? `<ul class="todo plat">${L.map(t => `<li><span class="ico" aria-hidden="true">${t.statut === "fini" ? "✅" : "🛠"}</span><span class="tx"><a href="#" onclick="event.preventDefault();editTravaux('${bi.id}','${t.id}')">${esc(t.titre)}</a><small>${(STATUTS_TRAVAUX.find(x => x[0] === t.statut) || ["", ""])[1]}${t.artisan ? " · " + esc(t.artisan) : ""}${+t.facture ? " · facture " + eur(t.facture) : +t.devis ? " · devis " + eur(t.devis) : ""}${t.garantie ? " · garantie jusqu'au " + fds(t.garantie) : ""}</small></span></li>`).join("")}</ul>` : `<p class="note">Devis, artisan, facture et garantie au même endroit. La facture passe toute seule dans la compta.</p>`}</section>`;
+}
+
+/* ================= Rappels légaux (logement aux normes) ================= */
+function tachesLegales(add, y) {
+  S.biens.forEach(bi => {
+    const occupe = !!bailActifDuBien(bi.id), ch = sansAccent(bi.chauffage || "").toLowerCase();
+    if (!bi.pnoEcheance && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance propriétaire (PNO)`, d: `${cq("pno")} Obligatoire en copropriété, conseillée partout. Indique sa date d'échéance dans la fiche du bien pour être prévenu.`, acts: [["Indiquer", `editBien('${bi.id}')`]] });
+    if (!fait("leg-daaf-" + bi.id)) add({ key: "leg-daaf-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : détecteur de fumée`, d: "Obligatoire dans chaque logement, installé par le propriétaire (le locataire l'entretient). À vérifier à chaque arrivée.", acts: [] });
+    if (occupe && /gaz|fioul|bois/.test(ch) && TODAY.getMonth() >= 8 && !fait("leg-chaud-" + bi.id + "-" + y)) add({ key: "leg-chaud-" + bi.id + "-" + y, prio: "info", date: new Date(y, 9, 1), done: true, t: `${esc(bi.nom)} : entretien annuel du chauffage`, d: `Chaudière gaz ou fioul : entretien chaque année${/bois/.test(ch) ? ", et ramonage (2 fois par an pour le bois)" : ""}, à la charge du locataire. Demande-lui l'attestation avant l'hiver.`, acts: [] });
+    if (occupe && encadre(bi) && !fait("leg-enc-" + bi.id)) add({ key: "leg-enc-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : encadrement des loyers`, d: `${cq("encadrement")} ${esc(bi.ville)} plafonne les loyers. Vérifie que le loyer ne dépasse pas le loyer de référence majoré, et qu'il est écrit dans le bail.`, acts: [] });
+  });
 }
 
 /* ================= Sauvegardes & exports ================= */
