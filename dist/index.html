@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -555,6 +555,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .aide-fab.charge{opacity:.5;pointer-events:none}@media(min-width:900px){.aide-fab{bottom:22px;right:22px}}
 .types-sig{display:flex;gap:6px;flex-wrap:wrap}.types-sig label{flex:1;min-width:110px}.types-sig input{position:absolute;opacity:0}.types-sig span{display:block;text-align:center;padding:10px 6px;border-radius:12px;background:var(--surface-2);font-weight:700;font-size:.85rem;cursor:pointer}.types-sig input:checked+span{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}.types-sig input:focus-visible+span{outline:2px solid var(--accent)}
 .sig-capture{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.9rem}.sig-capture img{width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:var(--surface-2)}
+.props-drive h3{margin:16px 0 6px;font-size:1rem}.props-drive .todo li{flex-wrap:wrap}.props-drive .todo li>.row{width:100%;justify-content:flex-end}.props-drive h4{margin:12px 0 2px;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -2091,8 +2092,7 @@ function pageAccueil(T) {
     ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span class="who"><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="tile-state"><i class="dot"></i>Disponible</div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">➕ Mettre un locataire</button></div></article>`).join("")}</div>
     ${anciens.length ? `<details class="anciens"><summary>${ic("chevR", "s")} Anciens locataires (${anciens.length})</summary><ul class="todo">${anciens.map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${esc(bienLabel(bien(b.bienId)))} · parti le ${fds(b.dateSortie)}</small></span>${ic("chevR", "chev")}</li>`).join("")}</ul></details>` : ""}
   </section>
-  ${echeancier()}
-  ${(S.sci.liens || []).length ? `<section><h2 class="sec">Mes autres applis</h2><div class="quick">${S.sci.liens.map(l => `<a class="qa" href="${esc(l.url)}" target="_blank" rel="noopener"><span class="qi">${esc(l.icone || "🔗")}</span>${esc(l.nom)}</a>`).join("")}</div></section>` : ""}`;
+  ${echeancier()}`;
 }
 /* Les choses à faire, regroupées et résumées en une ligne chacune */
 function aFaireCourt(T) {
@@ -2341,6 +2341,85 @@ function pageBien(id) {
     ${listeDocuments(bi.id)}
     </div>`;
 }
+/* ================= Drive : ranger tout seul et repérer ce qu'il reste à remplir =================
+   Entrée : la liste des fichiers du Drive { id, titre, type, lien, chemin: [dossiers] }.
+   Sortie : des propositions que l'utilisateur valide (rien n'est fait sans lui). */
+const REGLES_DOCS = [
+  [/\b(ETAT DES LIEUX|EDL)\b/, "État des lieux"], [/\bBAIL\b|CONTRAT DE LOCATION/, "Bail"],
+  [/\bDPE\b|DIAGNOST|AMIANTE|PLOMB|CREP|\bERP\b|ASSAINISSEMENT|AUDIT|INSTALLATION ELEC|RAPPORT ELEC|SYNTHESE/, "Diagnostics (DPE…)"],
+  [/TAXES? FONCI|AVIS.*FONCI|\bTEOM\b|ORDURES MENAGERES/, "Taxe foncière"],
+  [/ASSURANCE|\bPNO\b|\bIPID\b|CONDITIONS PARTICULIERES/, "Assurance"],
+  [/COMPROMIS|\bACTE\b|ATTESTATION (AVEC|SANS) PRIX|PRET|NOTAIRE|CADASTR|SEQUESTRE|PROC(URATION)?\b/, "Acte d'achat / prêt"],
+  [/COPRO|SYNDIC|APPEL DE FONDS/, "Copropriété"],
+  [/QUITTANCE|BULLETIN|\bBS\b|AVIS D.?IMPOSITION|PASSEPORT|IDENTITE|\bCNI\b|KBIS|JUSTIF|GARANT|ATTESTATION DE LOYER|VISALE/, "Locataire (pièces, garant…)"],
+  [/FACTURE|DEVIS|TICKET|TRAVAUX|ACOMPTE|AVOIR|LEROY|BRICO|CASTORAMA|WELDOM|VELUX|CUISINE|CHAUFFE/, "Factures et travaux"]
+];
+const MOTS_GENERIQUES = new Set(["RUE", "AVENUE", "BOULEVARD", "CHEMIN", "PLACE", "ALLEE", "IMPASSE", "DES", "DU", "DE", "LA", "LE", "LES", "SAINT", "APPARTEMENT", "APPART", "MAISON", "STUDIO", "LOGEMENT", "ETAGE", "PORTE", "BIS"]);
+const motsDe = t => normTxt(t).replace(/[^A-Z0-9]+/g, " ").split(" ").filter(m => m && !MOTS_GENERIQUES.has(m) && (m.length >= 3 || /^\d+$/.test(m)));
+function deviner(f) {
+  const titre = " " + normTxt(f.titre).replace(/[^A-Z0-9]+/g, " ") + " ", tout = " " + normTxt([...(f.chemin || []), f.titre].join(" ")).replace(/[^A-Z0-9]+/g, " ") + " ";
+  // Catégorie : d'abord le nom du fichier ; le nom du dossier seulement en secours (sauf « diagnostics », trop souvent mal nommé)
+  const r = REGLES_DOCS.find(([re]) => re.test(titre)) || REGLES_DOCS.find(([re, c]) => c !== "Diagnostics (DPE…)" && re.test(tout));
+  // Locataire reconnu par son nom (le plus fiable), sinon le bien par son adresse / son nom
+  const baux = S.baux.filter(b => { const m = motsDe(b.nom).filter(x => !/^\d+$/.test(x)); return m.length && m.some(x => x.length >= 4 && tout.includes(" " + x + " ")); });
+  let bail = baux.length === 1 ? baux[0] : null, bienId = bail ? bail.bienId : null;
+  if (!bienId) {
+    const sc = S.biens.map(bi => { const ms = [...new Set([...motsDe(bi.nom), ...motsDe(bi.adresse || "")])]; const num = ms.filter(x => /^\d+$/.test(x)), txt = ms.filter(x => !/^\d+$/.test(x));
+      const n = num.filter(x => tout.includes(" " + x + " ")).length * 2 + txt.filter(x => tout.includes(" " + x + " ")).length; return { bi, n }; }).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
+    if (sc.length && (sc.length === 1 || sc[0].n > sc[1].n)) bienId = sc[0].bi.id;
+  }
+  return { cat: r ? r[1] : null, bienId, bailId: bail ? bail.id : "" };
+}
+function analyserDrive(fichiers) {
+  const dejaLies = new Set(S.fichiers.filter(x => x.url).map(x => (x.url.match(/[-\w]{25,}/) || [""])[0]));
+  const dejaTitres = new Set(S.fichiers.map(x => x.bienId + "|" + normTxt(x.titreDrive || x.nom || "").replace(/\.[A-Z0-9]{2,4}$/, "")));
+  const ranger = [], remplir = [], vus = new Set(), aRemplir = (cle, t, d, action) => { if (!vus.has(cle) && !fait("drv-" + cle)) { vus.add(cle); remplir.push({ cle, t, d, action }); } };
+  fichiers.forEach(f => {
+    if (/folder|octet-stream|zip/.test(f.type || "") || /^\.|\.zip$/i.test(f.titre)) return;
+    const g = deviner(f), T = normTxt(f.titre);
+    if (/image/.test(f.type || "") && !g.cat) return; // photos sans indice : on ne propose rien
+    const cleT = g.bienId + "|" + T.replace(/\.[A-Z0-9]{2,4}$/, "");
+    if (g.cat && g.bienId && !dejaLies.has(f.id) && !dejaTitres.has(cleT) && !fait("drv-ign-" + f.id)) { dejaTitres.add(cleT); ranger.push({ f, ...g }); }
+    const bi = g.bienId && bien(g.bienId), b = g.bailId && bail(g.bailId);
+    const an = (T.match(/\b(20\d\d)\b/) || [])[1];
+    if (g.cat === "Taxe foncière" && bi && an && !taxeDe(bi.id, +an) && +an >= TODAY.getFullYear() - 1)
+      aRemplir("tf-" + bi.id + an, `Taxe foncière ${an} de ${esc(bi.nom)}`, `Avis trouvé dans ton Drive : « ${esc(f.titre)} ». Saisis le montant : l'appli calcule la part d'ordures ménagères de chaque locataire.`, [`Saisir`, `taxeFonciere('${bi.id}',${an})`]);
+    const dpe = T.match(/\bDPE\s*([A-G])\b|\b([A-G])\s*DPE\b/);
+    if (dpe && bi && !bi.dpe) aRemplir("dpe-" + bi.id, `Classe énergie (DPE) de ${esc(bi.nom)} : ${dpe[1] || dpe[2]} ?`, `D'après le fichier « ${esc(f.titre)} ». Le DPE est obligatoire dans le bail, et les logements F et G ont des règles de loyer particulières.`, ["Vérifier et noter", `editBien('${bi.id}')`]);
+    if (g.cat === "Assurance" && bi && !bi.pnoEcheance && /PNO|PROPRIETAIRE|CONDITIONS PARTICULIERES/.test(T))
+      aRemplir("pno-" + bi.id, `Échéance de l'assurance propriétaire de ${esc(bi.nom)}`, `Contrat trouvé : « ${esc(f.titre)} ». Note sa date d'échéance : l'appli te préviendra avant le renouvellement pour comparer les prix.`, ["Noter", `editBien('${bi.id}')`]);
+    if (g.cat === "État des lieux" && b && !b.edlEntree)
+      aRemplir("edl-" + b.id, `Date de l'état des lieux de ${esc(b.nom)}`, `État des lieux trouvé : « ${esc(f.titre)} ». Note sa date dans la fiche du locataire.`, ["Noter", `editBail('${b.id}')`]);
+    if (/ATTESTATION.*ASSURANCE.*HABITATION|ASSURANCE HABITATION.*ATTESTATION/.test(T) && b && !b.assuranceFin)
+      aRemplir("ass-" + b.id, `Assurance habitation de ${esc(b.nom)}`, `Attestation trouvée : « ${esc(f.titre)} ». Note jusqu'à quand il est assuré.`, ["Noter", `assuranceRecue('${b.id}')`]);
+    const nomBail = T.match(/^BAIL\s+(.+?)(\s+20\d\d)?(\.PDF)?$/);
+    if (nomBail && !g.bailId) { const nom = f.titre.replace(/^bail\s+/i, "").replace(/\.pdf$/i, "").replace(/\s+20\d\d$/, "");
+      aRemplir("loc-" + slug(nom), `Locataire « ${esc(nom)} » : pas encore dans l'appli`, `Bail trouvé : « ${esc(f.titre)} ». Si c'est un locataire actuel, ajoute-le ; si c'est un ancien, range simplement le bail dans le bon logement.`, ["Ajouter", "editBail()"]); }
+  });
+  return { ranger, remplir };
+}
+let PROPS = null;
+function sectionPropositionsDrive() {
+  if (!DOCS || DOCS.etat !== "pret" || !DOCS.fichiers.length || !S.biens.length) return "";
+  const a = analyserDrive(DOCS.fichiers); PROPS = a;
+  if (!a.ranger.length && !a.remplir.length) return `<section class="card"><h2>🔎 Ton Drive est à jour</h2><p class="note">Tous les documents reconnus sont rangés dans tes logements, et il n'y a rien à compléter.</p></section>`;
+  const parBien = {}; a.ranger.forEach((x, i) => (parBien[x.bienId] = parBien[x.bienId] || []).push([x, i]));
+  return `<section class="card props-drive"><h2>🔎 Ce que l'appli a trouvé dans ton Drive</h2>
+    ${a.remplir.length ? `<h3>À compléter (${a.remplir.length})</h3><ul class="todo">${a.remplir.map(x => `<li><span class="tx">${x.t}<small>${x.d}</small></span><span class="row"><button class="small primary" onclick="${x.action[1]}">${x.action[0]}</button><button class="small ghost" onclick="marquerFait('drv-${x.cle}')">Ignorer</button></span></li>`).join("")}</ul>` : ""}
+    ${a.ranger.length ? `<h3>À ranger dans tes logements (${a.ranger.length})</h3><p class="note">L'appli a deviné le logement et le type de chaque document d'après son nom et son dossier. Décoche ce qui est faux, puis range.</p>
+    <form onsubmit="event.preventDefault();rangerCoches(this)">${Object.entries(parBien).map(([bid, l]) => `<h4>${esc(bien(bid).nom)}</h4><ul class="todo">${l.map(([x, i]) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="r${i}" checked><span class="tx">${esc(x.f.titre)}<small>${esc(x.cat)}${x.bailId && bail(x.bailId) ? " · " + esc(bail(x.bailId).nom) : ""}${x.f.chemin && x.f.chemin.length ? " · dossier " + esc(x.f.chemin.join(" › ")) : ""}</small></span></label></li>`).join("")}</ul>`).join("")}
+    <div class="row"><button class="primary">Ranger les documents cochés</button></div></form>` : ""}</section>`;
+}
+function rangerCoches(f) {
+  const d = Object.fromEntries(new FormData(f).entries()), choix = PROPS.ranger.filter((x, i) => d["r" + i]);
+  PROPS.ranger.forEach((x, i) => { if (!d["r" + i]) S.faits["drv-ign-" + x.f.id] = iso(TODAY); });
+  if (!choix.length) { save(); render(); toast("Rien de coché."); return; }
+  rangerPropositions(choix);
+}
+function rangerPropositions(liste) {
+  liste.forEach(x => { if (!S.fichiers.some(y => y.url === x.f.lien)) S.fichiers.push({ id: "drv-" + x.f.id.slice(0, 24) + "-" + x.bienId, bienId: x.bienId, bailId: x.bailId || "", cat: x.cat, nom: x.f.titre.replace(/\.[a-z0-9]{2,4}$/i, ""), titreDrive: x.f.titre, url: x.f.lien, date: iso(TODAY) }); });
+  save(); render(); toast(`✓ ${liste.length} document${liste.length > 1 ? "s" : ""} rangé${liste.length > 1 ? "s" : ""}`);
+}
 function pageBiens() {
   return `<div class="head"><div><h1>Biens</h1><p>Tes logements et qui les occupe.</p></div><button class="primary" onclick="editBien()">+ Ajouter un bien</button></div>
   ${S.biens.length ? `<div class="grid">${S.biens.map(bi => {
@@ -2537,17 +2616,14 @@ function pageReglages() {
       <label class="fl full" style="grid-column:1/-1">Un associé par ligne : Nom ; nombre de parts ; e-mail
       <textarea name="associes" rows="3">${esc(s.associes.map(a => [a.nom, a.parts, a.email].filter(x => x !== undefined && x !== "").join(" ; ")).join("\n"))}</textarea></label>
     </fieldset>
-    <fieldset><legend>Mes autres applis</legend>
-      <label class="fl full" style="grid-column:1/-1">Affichées sur l'accueil. Une par ligne : Nom ; lien ; emoji (facultatif)
-      <textarea name="liens" rows="3" placeholder="Boussole Fiscale ; https://claude.ai/artifact/… ; 🧭">${esc((s.liens || []).map(l => [l.nom, l.url, l.icone].filter(Boolean).join(" ; ")).join("\n"))}</textarea></label>
-    </fieldset>
     <fieldset><legend>Carnet d'adresses</legend>
       <label class="fl full" style="grid-column:1/-1">Comptable, syndic, notaire, assureur, artisans… Un par ligne : Nom ; rôle ; e-mail
       <textarea name="contacts" rows="4" placeholder="Cabinet Dupont ; Comptable ; compta@exemple.fr">${esc((s.contacts || []).map(c => [c.nom, c.role, c.email].join(" ; ")).join("\n"))}</textarea></label>
     </fieldset>
-    <fieldset><legend>Google Drive</legend>
-      ${fld("Lien du dossier Drive de la SCI", "drive", driveRacine() ? "https://drive.google.com/drive/folders/" + driveRacine() : "", "url", "full")}
-      ${sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui (dossier « Documents générés par l'appli »)"], ["0", "Non"]], "full")}
+    <fieldset><legend>Ton dossier Google Drive</legend>
+      <p class="note full">Facultatif. Sert seulement à ouvrir ton dossier Google Drive d'un geste, depuis l'onglet <b>Docs</b>. Pour avoir le lien : ouvre le dossier dans Google Drive, touche <b>⋮</b> (ou clic droit sur le dossier), puis <b>Partager</b> › <b>Copier le lien</b>, et colle-le ici.</p>
+      ${fld("Lien de ton dossier Google Drive", "drive", driveRacine() ? "https://drive.google.com/drive/folders/" + driveRacine() : "", "url", "full", 'placeholder="https://drive.google.com/drive/folders/…"')}
+      ${SB ? "" : sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui (dossier « Documents générés par l'appli »)"], ["0", "Non"]], "full")}
     </fieldset>
     <div class="full row"><button class="primary">Enregistrer</button></div>
   </form></section>
@@ -2972,6 +3048,7 @@ function pageDocs() {
   const lien = `https://drive.google.com/drive/folders/${driveRacine()}`;
   return `<div class="head"><div><h1>Documents</h1><p>Le Drive de la SCI, rangé et cherchable. <a href="${lien}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a></p></div>
     <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
+  ${sectionPropositionsDrive()}
   <form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="Chercher : bail, Kbis, taxe, nom d'un locataire…" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>
   <div class="chips" role="group" aria-label="Filtrer par dossier">${["", ...racines].map((x, i) => `<button class="chip ${x === r ? "on" : ""}" aria-pressed="${x === r}" onclick="view.docRacine=RACINES[${i}];render()">${x ? esc(x) : "Tout"}</button>`).join("")}</div>
   ${DOCS.etat === "chargement" ? `<p class="note">⏳ Lecture du Drive… ${DOCS.n || 0} documents trouvés</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : ""}
