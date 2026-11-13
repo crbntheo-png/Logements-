@@ -592,7 +592,7 @@ const IC = {
   building: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 21v-4h6v4M8.5 7.5h.01M12 7.5h.01M15.5 7.5h.01M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>',
   folder: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h3.6l2 2h7.4A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
   chart: '<path d="M4 4v16h16"/><path d="M8 16v-3M12 16V9M16 16v-6M20 16V6"/>',
-  settings: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
+  settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
@@ -2057,15 +2057,16 @@ async function capturerEcran() {
     return d.toDataURL("image/jpeg", 0.72);
   } catch (e) { return null; }
 }
-async function ouvrirSignalement() {
+async function ouvrirSignalement(type) {
+  type = type === "idee" || type === "question" ? type : "bug";
   if (!SB) { toast("Le bouton « ? » marche dans l'appli installée (version en ligne)."); return; }
   const bt = document.getElementById("aideBtn"); if (bt) bt.classList.add("charge");
   CAPTURE = await capturerEcran(); if (bt) bt.classList.remove("charge");
   modal("Un souci ? Une idée ?", `<div class="full types-sig" role="radiogroup" aria-label="Type de message">
-      <label><input type="radio" name="type" value="bug" checked><span>🐞 Ça ne marche pas</span></label>
-      <label><input type="radio" name="type" value="idee"><span>💡 Une idée</span></label>
-      <label><input type="radio" name="type" value="question"><span>❓ Une question</span></label></div>
-    <label class="fl full">Explique en une ou deux phrases<textarea name="message" rows="4" required placeholder="Ex : quand je touche « Envoyer la quittance », rien ne se passe."></textarea></label>
+      <label><input type="radio" name="type" value="bug" ${type === "bug" ? "checked" : ""}><span>🐞 Ça ne marche pas</span></label>
+      <label><input type="radio" name="type" value="idee" ${type === "idee" ? "checked" : ""}><span>💡 Une idée</span></label>
+      <label><input type="radio" name="type" value="question" ${type === "question" ? "checked" : ""}><span>❓ Une question</span></label></div>
+    <label class="fl full">Explique en une ou deux phrases<textarea name="message" rows="4" required placeholder="${type === "idee" ? "Ex : pouvoir envoyer toutes les quittances le 1er du mois d'un seul geste." : "Ex : quand je touche &quot;Envoyer la quittance&quot;, rien ne se passe."}"></textarea></label>
     ${CAPTURE ? `<label class="full sig-capture"><input type="checkbox" name="avecCapture" checked> <span>Joindre la capture de l'écran que tu regardais</span><img src="${CAPTURE}" alt="Capture de l'écran"></label>` : ""}
     <label class="fl full">${CAPTURE ? "Ou" : ""} ajoute une photo ou une capture (facultatif)<input type="file" name="photo" accept="image/*"></label>
     <p class="full note">On reçoit aussi la page où tu étais et le modèle de ton téléphone, pour comprendre plus vite. On te répond par e-mail.</p>`,
@@ -2689,7 +2690,7 @@ function pageCompta() {
 
 function pageReglages() {
   const s = S.sci;
-  return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div><span class="row"><a class="btn small" href="#aide">❓ Comment ça marche ?</a>${SB ? `<button class="small" onclick="ouvrirSignalement()">🐞 Signaler un problème</button>` : ""}</span></div>
+  return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div><span class="row"><a class="btn small" href="#aide">❓ Comment ça marche ?</a>${SB ? `<button class="small" onclick="ouvrirSignalement('bug')">🐞 Signaler un problème</button><button class="small" onclick="ouvrirSignalement('idee')">💡 Proposer une idée</button>` : ""}</span></div>
   ${SB ? sectionInstall() + sectionNotif() + sectionMembres() + sectionGmail() : ""}
   <section class="card"><h2>La SCI</h2>
   <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
@@ -2758,7 +2759,7 @@ function modal(title, body, onSubmit, opts = {}) {
   f.addEventListener("submit", ev => { ev.preventDefault(); const d = Object.fromEntries(new FormData(f).entries()); f.querySelectorAll("input[type=checkbox]").forEach(c => d[c.name] = c.checked); if ((opts.lecture ? onSubmit(d, f) : avecAnnuler(() => onSubmit(d, f))) !== false) { closeOverlay(); save(); render(); } });
   if (opts.del) document.getElementById("mdel").onclick = () => confirmer(opts.delMsg || "Supprimer ?", () => { opts.del(); save(); render(); });
   if (opts.after) opts.after(f);
-  const first = f.querySelector("input:not([type=checkbox]),select,textarea"); if (first && matchMedia("(pointer: fine)").matches) first.focus();
+  const first = f.querySelector("input:not([type=checkbox]):not([type=radio]),select,textarea"); if (first && matchMedia("(pointer: fine)").matches) first.focus();
 }
 function closeOverlay() { const o = document.getElementById("overlay"); o.hidden = true; o.innerHTML = ""; if (pendingRender) { pendingRender = false; } render(); }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !document.getElementById("overlay").hidden) closeOverlay(); });

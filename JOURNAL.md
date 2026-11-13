@@ -24,6 +24,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 13/11/2026 (soir, suite) — roue crantée et "Proposer une idée" (demande de Théo)
+- Bouton des réglages en haut à droite : roue crantée à la place des curseurs.
+- Réglages : à côté de "🐞 Signaler un problème", nouveau bouton "💡 Proposer une idée" qui ouvre la même fenêtre avec "Une idée" déjà choisi et un exemple d'idée. Le bouton "?" flottant ouvre toujours sur "Ça ne marche pas".
+- Les fenêtres ne mettent plus le curseur sur un choix à cocher (il va dans la première case à remplir).
+- Tests : test5 OK, test28 OK (envoi simulé, rien n'est parti). En ligne (vérifié sur gestion-locative-sci.pages.dev). Pas vérifié sur ton téléphone.
+- Théo trouve qu'il y a beaucoup de choses dans les réglages ("pourquoi pas") : rien changé, piste si besoin de simplifier plus tard.
+
 ### 13/11/2026 (soir) — plus clair : états des lieux, quittances "Pas besoin", page À faire (demande de Théo)
 - **États des lieux** (fiche locataire) : un état des lieux déjà rangé en PDF dans les documents, ou une date d'entrée notée, compte comme fait. L'appli ne redemande plus l'entrée (cas de Steve et Margottet) : elle affiche "Entrée du …" avec "Ouvrir". La sortie n'est proposée que si un départ est noté ; sinon "se fera le jour du départ". Pareil sur la fiche logement et dans le bouton +.
 - **Quittances** : bouton "Pas besoin" partout où une quittance est demandée (accueil, À faire, carte du locataire, Faire le point). Le loyer reste payé, la quittance ne revient plus (clé `qno-<bail>|<mois>` dans `S.faits`, avec Annuler). Nouvelle case dans la fiche locataire : "Il n'a pas besoin de quittance chaque mois" (`sansQuittance`).
