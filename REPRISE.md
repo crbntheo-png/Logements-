@@ -99,3 +99,16 @@ Déployer la fonction Gmail : voir la commande `functions/deploy` de l'API Supab
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.
 Après chaque changement : `node tests/test5.js` au minimum, puis `./deploy.sh`.
+
+## Travailler depuis un autre compte Claude sans connecteur GitHub
+
+Le propriétaire crée un jeton GitHub limité à ce dépôt (https://github.com/settings/personal-access-tokens/new : « Only select repositories » › `crbntheo-png/Logements-`, permission **Contents : Read and write**), puis la session fait :
+
+```sh
+git clone https://x-access-token:<JETON>@github.com/crbntheo-png/Logements-.git GestionSCI
+cd GestionSCI && git checkout ccr-6df8be48-11wmro
+# … travail …
+git push origin ccr-6df8be48-11wmro
+```
+
+Le jeton va aussi dans `.env` (`GITHUB_TOKEN=`), jamais dans un fichier suivi par Git. Si le réseau bloque `github.com`, l'autoriser dans l'environnement.
