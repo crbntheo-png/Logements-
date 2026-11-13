@@ -24,6 +24,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 14/11/2026 (suite 4) — "Mettre à jour l'appli" (demande de Théo)
+- **Version** : `build.py` calcule un numéro stable (7 caractères, d'après index.html + build.py) et une date gardée tant que rien ne change ; posés dans `window.APP_VERSION` et dans `dist/version.json` (jamais en cache : en-tête `no-store`, ignoré par le service worker). Le service worker prend ce numéro (avant : un nombre au hasard à chaque fabrication).
+- **Réglages › Outils › Mettre à jour l'appli** : version actuelle, "Chercher une mise à jour" (compare avec `version.json` en ligne, puis demande au téléphone de télécharger), "Mettre à jour maintenant" (recharge ; si le téléchargement n'est pas fini, attend jusqu'à 10 s).
+- **Bandeau "🆕 Nouvelle version prête · Mettre à jour"** : dès que la nouvelle version est installée (événement `maj-prete` envoyé par le petit script de build.py), collé en haut de toutes les pages. La mise à jour automatique quand on quitte l'appli reste en place.
+- Nouveau `tests/test34.js` (vraie appli avec service worker sur un serveur local, compte de test, "fausse" version 2 publiée) : 11/11 OK. test5, test32 (9/9), test33 OK. En ligne, version 1448642.
+- Pas vérifié sur ton téléphone. Comme l'appli installée a encore l'ancienne version (sans cette rubrique), elle doit d'abord se mettre à jour une fois toute seule (quitter puis rouvrir l'appli).
+
 ### 14/11/2026 (suite 3) — grand ménage de l'affichage (demande de Théo : "encore trop brouillon")
 Constat sur téléphone avec les vraies données : tout s'affichait en grosses fiches avec étiquettes (À PAYER LE, LOYER HC…). Compta faisait 20 100 px de haut, Loyers 2 060, Biens 2 560.
 - **Listes compactes** (`.lr-list`, `ligneLoyer`, `sousTitreLoyer`, `actionsCourtes`) : une ligne par élément, montant et statut à droite, boutons seulement quand il y a quelque chose à faire. Loyers (en retard d'abord, total en bas), Biens (logement, locataire, loyer, statut ; touche = fiche), Compta (par logement : résultat + loyers/dépenses ; dépenses avec icône, libellé de banque nettoyé `libelleLisible`, 12 dernières + "Voir les autres"), mois par mois de la fiche locataire (6 derniers + "Voir les mois d'avant").

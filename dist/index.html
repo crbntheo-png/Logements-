@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "1448642", "date": "2026-11-13T17:56"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -235,6 +235,9 @@ details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { backgrou
 .biens-l .lr-main .tx small.loc { color: var(--acc, inherit); }
 .tile-head .money { font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tile-head small .dot { display: inline-block; vertical-align: middle; margin-right: 2px; }
+.maj-bandeau { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 14px; margin: 0 0 14px; border-radius: 14px; background: var(--accent-soft); color: var(--ink); font-weight: 700; box-shadow: var(--sh-2); position: sticky; top: calc(var(--head-h) + 8px); z-index: 20; border: 1px solid var(--accent); }
+.maj-bandeau button { flex-shrink: 0; }
+.maj-statut { margin: 10px 0 0; font-weight: 650; }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -2002,7 +2005,7 @@ function render0() {
   document.querySelector(".brand").onclick = SB ? (ev => { ev.preventDefault(); choisirEspace(); }) : null;
   if (document.getElementById("brandSub").innerHTML !== sub) document.getElementById("brandSub").innerHTML = sub;
   const vide = !S.biens.length && !S.baux.length;
-  const banner = (LECTURE ? `<div class="banner"><span>👀 <b>Lecture seule</b> : tu vois tout, tu ne modifies rien.</span></div>` : "") + bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
+  const banner = bandeauMaj() + (LECTURE ? `<div class="banner"><span>👀 <b>Lecture seule</b> : tu vois tout, tu ne modifies rien.</span></div>` : "") + bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
@@ -2829,6 +2832,41 @@ function pageCompta() {
   </section></div>`;
 }
 
+/* ================= Mettre à jour l'appli ================= */
+// APP_VERSION est posé par build.py ; version.json (jamais gardé en cache) donne la dernière version en ligne.
+let MAJ = { etat: window.MAJ_PRETE ? "prete" : "inconnu" };
+const versionTxt = v => v && v.id ? `${v.date ? "du " + fds(v.date.slice(0, 10)) + (v.date.length > 10 ? " à " + v.date.slice(11, 16).replace(":", " h ") : "") : ""} · n° ${v.id}` : "de développement";
+addEventListener("maj-prete", () => { MAJ.etat = "prete"; render(); });
+async function chercherMaj() {
+  if (!window.APP_VERSION) { MAJ = { etat: "ajour" }; render(); toast("Version de développement : rien à mettre à jour."); return; }
+  MAJ = { etat: "cherche" }; render();
+  try {
+    const r = await fetch("version.json?t=" + Date.now(), { cache: "no-store" });
+    const v = await r.json();
+    if (v.id === window.APP_VERSION.id) { MAJ = { etat: window.MAJ_PRETE ? "prete" : "ajour", vue: new Date() }; render(); toast("✓ Tu as la dernière version"); return; }
+    MAJ = { etat: window.MAJ_PRETE ? "prete" : "dispo", distante: v }; render();
+    // on demande au téléphone de télécharger la nouvelle version tout de suite
+    try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) {}
+  } catch (e) { MAJ = { etat: "erreur" }; render(); toast("Impossible de vérifier : pas de connexion ?"); }
+}
+async function majMaintenant() {
+  const recharger = () => location.reload();
+  if (window.MAJ_PRETE || !("serviceWorker" in navigator) || !navigator.serviceWorker.controller) { recharger(); return; }
+  // la nouvelle version se télécharge encore : on attend qu'elle soit prête (10 s au plus), puis on recharge
+  MAJ.etat = "charge"; render();
+  let fait = false; const fin = () => { if (!fait) { fait = true; recharger(); } };
+  addEventListener("maj-prete", fin, { once: true }); setTimeout(fin, 10000);
+  try { const reg = await navigator.serviceWorker.getRegistration(); if (reg) await reg.update(); } catch (e) {}
+}
+function sectionMaj() {
+  const v = window.APP_VERSION, e = MAJ.etat;
+  const statut = { inconnu: "", cherche: "⏳ Je regarde s'il existe une version plus récente…", ajour: "✅ Tu as la dernière version.", dispo: `🆕 Une nouvelle version existe${MAJ.distante ? " (" + versionTxt(MAJ.distante) + ")" : ""}.`, prete: "🆕 Une nouvelle version est prête.", charge: "⏳ Téléchargement de la nouvelle version…", erreur: "⚠️ Impossible de vérifier pour l'instant (pas de connexion ?)." }[e] || "";
+  return `<p class="note">Version actuelle : <b>${versionTxt(v)}</b></p>
+    <p class="note">L'appli se met à jour toute seule quand tu la quittes. Ici, tu peux le faire tout de suite. Tes données ne bougent pas.</p>
+    ${statut ? `<p class="maj-statut">${statut}</p>` : ""}
+    <div class="row" style="margin-top:10px">${e === "dispo" || e === "prete" ? `<button class="primary" onclick="majMaintenant()">Mettre à jour maintenant</button>` : ""}${e === "charge" ? `<button class="primary" disabled>Mise à jour…</button>` : ""}${e !== "prete" && e !== "charge" ? `<button class="${e === "dispo" ? "" : "primary"}" onclick="chercherMaj()" ${e === "cherche" ? "disabled" : ""}>Chercher une mise à jour</button>` : ""}</div>`;
+}
+const bandeauMaj = () => MAJ.etat === "prete" ? `<div class="maj-bandeau" role="status"><span>🆕 Nouvelle version prête</span><button class="small" onclick="majMaintenant()">Mettre à jour</button></div>` : "";
 /* Réglages : des rubriques repliées, une ligne chacune ; on touche pour ouvrir */
 function reglage(id) {
   view.rgl = Object.assign({}, view.rgl, { [id]: true });
@@ -2892,6 +2930,7 @@ function pageReglages() {
     <div class="row"><button class="primary" onclick="exportJSON()">Télécharger une sauvegarde</button><button onclick="document.getElementById('importFile').click()">Ouvrir une sauvegarde</button></div>
     <p class="note">Dernière sauvegarde téléchargée : ${S.lastExport ? fd(S.lastExport.slice(0, 10)) : "jamais"}</p>
 `),
+    rubrique("maj", ic("refresh"), "Mettre à jour l'appli", MAJ.etat === "prete" || MAJ.etat === "dispo" ? "🆕 Nouvelle version disponible" : "Version " + versionTxt(window.APP_VERSION), sectionMaj()),
     rubrique("rappels", "⏰", "Rappels", nbRap ? `${nbRap} à venir` : "Aucun rappel", `
     ${S.rappels.length ? `<div class="table-wrap" style="border:0"><table><tbody>${S.rappels.map(r => `<tr><td>${fds(r.date)}</td><td>${esc(r.titre)}</td><td>${r.fait ? `<span class="pill ok">Fait</span>` : `<span class="pill info">À faire</span>`}</td><td><button class="small ghost" onclick="supprRappel('${r.id}')">Supprimer</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note">Aucun rappel.</p>`}
     <div class="row"><button onclick="editRappel()">+ Rappel</button></div>
@@ -4397,7 +4436,8 @@ boot();
   const avait = !!navigator.serviceWorker.controller; let maj = false;
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").then(r => { setInterval(() => r.update().catch(() => {}), 3600000); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") r.update().catch(() => {}); }); }).catch(() => {}));
   // Nouvelle version installée : on recharge quand l'appli passe en arrière-plan (jamais pendant que tu tapes)
-  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!avait || maj) return; maj = true; const libre = () => { const o = document.getElementById("overlay"), f = document.getElementById("focus"); return (!o || o.hidden) && (!f || f.hidden); }; const go = () => { if (document.visibilityState === "hidden" && libre()) location.reload(); }; go(); document.addEventListener("visibilitychange", go); });
+  // et on prévient l'appli tout de suite (bandeau "Nouvelle version prête")
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!avait || maj) return; maj = true; window.MAJ_PRETE = true; dispatchEvent(new Event("maj-prete")); const libre = () => { const o = document.getElementById("overlay"), f = document.getElementById("focus"); return (!o || o.hidden) && (!f || f.hidden); }; const go = () => { if (document.visibilityState === "hidden" && libre()) location.reload(); }; go(); document.addEventListener("visibilitychange", go); });
 }</script>
 </body>
 </html>

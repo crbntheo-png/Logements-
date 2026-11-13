@@ -3,7 +3,7 @@
 Usage : python3 build.py
 Lit SUPABASE_URL et SUPABASE_PUBLISHABLE_KEY dans .env (la clé publishable peut être publique).
 """
-import json, os, re, shutil
+import datetime, hashlib, json, os, re, shutil
 from PIL import Image, ImageDraw
 
 ICI = os.path.dirname(os.path.abspath(__file__))
@@ -52,10 +52,18 @@ def icone(taille, marge=0.0, fond_plein=False):
 
 def main():
     env = lire_env()
+    ancienne = {}  # date de la version déjà fabriquée, gardée si rien n'a changé
+    try: ancienne = json.load(open(os.path.join(DIST, "version.json"), encoding="utf-8"))
+    except Exception: pass
     if os.path.isdir(DIST):
         shutil.rmtree(DIST)
     os.makedirs(DIST)
     html = open(os.path.join(ICI, "index.html"), encoding="utf-8").read()
+    # Numéro de version stable : il ne change que si l'appli (index.html) ou sa fabrication (build.py) change
+    source_build = open(os.path.abspath(__file__), encoding="utf-8").read()
+    vid = hashlib.sha256((html + source_build).encode("utf-8")).hexdigest()[:7]
+    vdate = ancienne.get("date") if ancienne.get("id") == vid else datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
+    VERSION = {"id": vid, "date": vdate}
     config = {"url": env["SUPABASE_URL"], "cle": env["SUPABASE_PUBLISHABLE_KEY"], "vapid": env.get("VAPID_PUBLIC", "")}
     tete = f"""<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f1b2d">
@@ -66,14 +74,15 @@ def main():
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {json.dumps(config)};</script>
+<script>window.APP_SUPABASE = {json.dumps(config)}; window.APP_VERSION = {json.dumps(VERSION)};</script>
 """
     html = html.replace('<meta name="claude:viewport-fit-sides" content="cover">', '<meta name="claude:viewport-fit-sides" content="cover">\n' + tete, 1)
     html = html.replace("</body>", """<script>if ("serviceWorker" in navigator) {
   const avait = !!navigator.serviceWorker.controller; let maj = false;
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").then(r => { setInterval(() => r.update().catch(() => {}), 3600000); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") r.update().catch(() => {}); }); }).catch(() => {}));
   // Nouvelle version installée : on recharge quand l'appli passe en arrière-plan (jamais pendant que tu tapes)
-  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!avait || maj) return; maj = true; const libre = () => { const o = document.getElementById("overlay"), f = document.getElementById("focus"); return (!o || o.hidden) && (!f || f.hidden); }; const go = () => { if (document.visibilityState === "hidden" && libre()) location.reload(); }; go(); document.addEventListener("visibilitychange", go); });
+  // et on prévient l'appli tout de suite (bandeau "Nouvelle version prête")
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!avait || maj) return; maj = true; window.MAJ_PRETE = true; dispatchEvent(new Event("maj-prete")); const libre = () => { const o = document.getElementById("overlay"), f = document.getElementById("focus"); return (!o || o.hidden) && (!f || f.hidden); }; const go = () => { if (document.visibilityState === "hidden" && libre()) location.reload(); }; go(); document.addEventListener("visibilitychange", go); });
 }</script>
 </body>""", 1)
     open(os.path.join(DIST, "index.html"), "w", encoding="utf-8").write(html)
@@ -118,7 +127,8 @@ def main():
         ],
     }
     json.dump(manifeste, open(os.path.join(DIST, "manifest.webmanifest"), "w"), ensure_ascii=False, indent=1)
-    version = str(abs(hash(html)) % 10**8)
+    version = vid
+    json.dump(VERSION, open(os.path.join(DIST, "version.json"), "w", encoding="utf-8"))
     open(os.path.join(DIST, "sw.js"), "w").write(f"""// Garde l'appli disponible même avec une connexion faible. Version {version}
 const V = "gestion-{version}";
 const FICHIERS = ["./", "./index.html", "./supabase.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
@@ -126,7 +136,7 @@ self.addEventListener("install", e => {{ e.waitUntil(caches.open(V).then(c => c.
 self.addEventListener("activate", e => {{ e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); }});
 self.addEventListener("fetch", e => {{
   const u = new URL(e.request.url);
-  if (e.request.method !== "GET" || u.origin !== location.origin) return;
+  if (e.request.method !== "GET" || u.origin !== location.origin || u.pathname.endsWith("/version.json")) return; // version.json : toujours en ligne
   // Ouverture instantanée : la copie gardée sur l'appareil d'abord, la version en ligne est rangée pour la prochaine fois
   const net = fetch(e.request).then(r => {{ if (r.ok) {{ const c = r.clone(); caches.open(V).then(ca => ca.put(e.request, c)); }} return r; }});
   e.respondWith(caches.match(e.request, {{ ignoreSearch: true }}).then(r => r || net.catch(() => caches.match("./index.html"))));
@@ -142,7 +152,7 @@ self.addEventListener("notificationclick", e => {{
   e.waitUntil(clients.matchAll({{ type: "window", includeUncontrolled: true }}).then(l => {{ const c = l.find(x => x.url.startsWith(self.registration.scope)); if (c) {{ c.navigate(url).catch(() => {{}}); return c.focus(); }} return clients.openWindow(url); }}));
 }});
 """)
-    open(os.path.join(DIST, "_headers"), "w").write("/manifest.webmanifest\n  Content-Type: application/manifest+json\n/sw.js\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/\n  Cache-Control: no-cache\n")
+    open(os.path.join(DIST, "_headers"), "w").write("/manifest.webmanifest\n  Content-Type: application/manifest+json\n/sw.js\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/version.json\n  Cache-Control: no-store\n/\n  Cache-Control: no-cache\n")
     print("dist/ prêt :", sorted(os.listdir(DIST)))
 
 
