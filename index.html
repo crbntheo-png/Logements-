@@ -240,6 +240,7 @@ details.surv[open] > summary::before { transform: rotate(90deg); }
 .tile .row > * { flex: 1 1 auto; }
 .avatar { width: 44px; height: 44px; border-radius: 14px; display: inline-grid; place-items: center; font-weight: 800; font-size: .92rem; flex: none; letter-spacing: .02em; }
 .avatar.vide { background: var(--surface-2); color: var(--muted); }
+.avatar.ancien { background: var(--surface-2); color: var(--muted); border: 1.5px dashed var(--line); }
 .cq { display: inline-grid; place-items: center; width: 20px; height: 20px; min-height: 0; padding: 0; margin-left: 5px; border-radius: 50%; border: 1.5px solid currentColor; background: transparent; color: var(--accent); font-size: .72rem; font-weight: 800; line-height: 1; vertical-align: middle; cursor: help; opacity: .8; }
 .cq:hover { opacity: 1; background: var(--accent-soft); }
 .cq-box { padding: 20px; } .cq-box h2 { font-size: 1.1rem; margin: 0; } .cq-box p { line-height: 1.55; }
@@ -2338,11 +2339,14 @@ function docEdl(id) {
 /* ================= Fiche d'un bien et ses documents ================= */
 const CATS_DOC = ["Bail", "État des lieux", "Diagnostics (DPE…)", "Assurance", "Taxe foncière", "Factures et travaux", "Acte d'achat / prêt", "Copropriété", "Locataire (pièces, garant…)", "Autre"];
 const iconeDoc = f => f.url ? "🔗" : /pdf/.test(f.type || "") ? "📄" : /image/.test(f.type || "") ? "🖼️" : "📎";
+/* "Concerne" : le logement, un locataire, ou un ancien locataire (valeur "anc:<id>") */
+const concerne = bienId => [["", "Le logement"], ...S.baux.filter(b => b.bienId === bienId).map(b => [b.id, b.nom]), ...anciensDuBien(bien(bienId) || {}).map(a => ["anc:" + a.id, a.nom + " (ancien)"])];
+const qui = v => /^anc:/.test(v || "") ? { bailId: "", ancienId: v.slice(4) } : { bailId: v || "" };
 function ajouterDocument(bienId, bailId, cat) {
   if (!SB) { toast("L'ajout de fichiers est disponible dans l'appli installée."); return; }
   const baux = S.baux.filter(b => b.bienId === bienId);
   modal("Ajouter un document", `<label class="fl full">Fichier (PDF, photo, scan…)<input type="file" name="fichier" required accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
-    ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}
+    ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", concerne(bienId))}
     ${fld("Nom affiché (facultatif)", "nom", "", "text", "full")}`,
     d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast("Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); });
 }
@@ -2352,14 +2356,14 @@ async function envoyerDocument(bienId, d, f) {
   const ext = (f.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, ""), chemin = `${ESPACE}/${bienId}/${uid()}.${ext}`;
   const r = await SB.storage.from("documents").upload(chemin, f, { contentType: f.type || "application/octet-stream" });
   if (r.error) { toast("Envoi impossible : " + r.error.message); return; }
-  S.fichiers.push({ id: uid(), bienId, bailId: d.bailId || "", cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) });
+  S.fichiers.push(Object.assign({ id: uid(), bienId, cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) }, qui(d.bailId)));
   save(); render(); toast("✓ Document ajouté");
 }
 function ajouterLienDoc(bienId, bailId, cat) {
   const baux = S.baux.filter(b => b.bienId === bienId);
   modal("Ajouter un lien (Google Drive, Dropbox…)", `${fld("Lien", "url", "", "url", "full", "required")}${fld("Nom", "nom", "", "text", "full", "required")}
-    ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", [["", "Le logement"], ...baux.map(b => [b.id, b.nom])])}`,
-    d => { if (!/^https?:\/\//i.test(d.url)) { toast("Le lien doit commencer par https://"); return false; } S.fichiers.push({ id: uid(), bienId, bailId: d.bailId || "", cat: d.cat, nom: d.nom, url: d.url, date: iso(TODAY) }); });
+    ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", concerne(bienId))}`,
+    d => { if (!/^https?:\/\//i.test(d.url)) { toast("Le lien doit commencer par https://"); return false; } S.fichiers.push(Object.assign({ id: uid(), bienId, cat: d.cat, nom: d.nom, url: d.url, date: iso(TODAY) }, qui(d.bailId))); });
 }
 async function ouvrirDocument(id) {
   const f = S.fichiers.find(x => x.id === id); if (!f) return;
@@ -2374,12 +2378,12 @@ function supprimerDocument(id) {
   confirmer(`Supprimer "${f.nom}" ?`, () => { if (f.chemin && SB) SB.storage.from("documents").remove([f.chemin]).catch(() => {}); S.fichiers = S.fichiers.filter(x => x.id !== id); save(); render(); });
 }
 const ICONES_CAT = { "Bail": "📝", "État des lieux": "📋", "Diagnostics (DPE…)": "🔎", "Assurance": "🛡️", "Taxe foncière": "🏛️", "Factures et travaux": "🧰", "Acte d'achat / prêt": "🏦", "Copropriété": "🏢", "Locataire (pièces, garant…)": "🪪", "Autre": "📎" };
-function docsGroupes(bienId, bailId) {
-  const fs = S.fichiers.filter(f => f.bienId === bienId && (!bailId || f.bailId === bailId));
-  const edls = (bailId ? edlsDuBail(bailId) : edlsDuBien(bienId)).map(e => ({ edl: e, cat: "État des lieux" }));
+function docsGroupes(bienId, bailId, ancienId) {
+  const fs = S.fichiers.filter(f => f.bienId === bienId && (ancienId ? f.ancienId === ancienId : !f.ancienId && (!bailId || f.bailId === bailId)));
+  const edls = ancienId ? [] : (bailId ? edlsDuBail(bailId) : edlsDuBien(bienId)).map(e => ({ edl: e, cat: "État des lieux" }));
   return CATS_DOC.map((c, i) => ({ c, i, l: [...fs.filter(f => (f.cat || "Autre") === c), ...edls.filter(x => x.cat === c)] })).filter(g => g.l.length);
 }
-const lienDocs = (bienId, i, bailId) => `#docs-${bienId}~${i}~${bailId || ""}`;
+const lienDocs = (bienId, i, bailId, ancienId) => `#docs-${bienId}~${i}~${bailId || ""}${ancienId ? "~" + ancienId : ""}`;
 /* Résumé compact : une tuile par type de document */
 function listeDocuments(bienId, bailId) {
   const G = docsGroupes(bienId, bailId), n = G.reduce((t, g) => t + g.l.length, 0);
@@ -2390,15 +2394,17 @@ function listeDocuments(bienId, bailId) {
 }
 /* Page dédiée : les documents d'un type (ou tous) */
 function pageDocsBien(arg) {
-  const [bienId, iStr, bailId] = arg.split("~"), i = +iStr, bi = bien(bienId); if (!bi) return `<div class="empty">Bien introuvable. <a href="#biens">Retour</a></div>`;
-  const G = docsGroupes(bienId, bailId || null), cat = CATS_DOC[i], groupes = i >= 0 ? G.filter(g => g.i === i) : G, b = bailId && bail(bailId);
+  const [bienId, iStr, bailId, ancienId] = arg.split("~"), i = +iStr, bi = bien(bienId); if (!bi) return `<div class="empty">Bien introuvable. <a href="#biens">Retour</a></div>`;
+  const anc = ancienId && (bi.anciens || []).find(x => x.id === ancienId);
+  const G = docsGroupes(bienId, bailId || null, ancienId || null), cat = CATS_DOC[i], groupes = i >= 0 ? G.filter(g => g.i === i) : G, b = bailId && bail(bailId);
   const ligne = f => f.edl ? `<li><span class="ico" aria-hidden="true">📋</span><span class="tx"><a href="#edl-${f.edl.id}">État des lieux ${f.edl.type === "entree" ? "d'entrée" : "de sortie"} — ${esc((bail(f.edl.bailId) || {}).nom || "")}</a><small>${fds(f.edl.date)} · ${nbPhotos(f.edl)} photo(s) · fait dans l'appli</small></span></li>`
     : `<li><span class="ico" aria-hidden="true">${iconeDoc(f)}</span><span class="tx"><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">${esc(f.nom)}</a><small>${f.bailId && bail(f.bailId) && !bailId ? esc(bail(f.bailId).nom) + " · " : ""}${f.url ? "lien" : tailleTxt(f.taille || 0)} · ajouté le ${fds(f.date)}</small></span><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></li>`;
   return `<div><a class="back" href="${b ? "#bail-" + b.id : "#bien-" + bi.id}">← ${esc(b ? b.nom : bi.nom)}</a>
-    <div class="head"><div><h1>${i >= 0 ? `${ICONES_CAT[cat] || ""} ${esc(cat)}` : "Tous les documents"}</h1><p>${esc(bi.nom)}${b ? " · " + esc(b.nom) : ""}</p></div></div></div>
-    ${G.length > 1 ? `<div class="chips-cat">${[`<a class="chip ${i < 0 ? "on" : ""}" href="${lienDocs(bienId, -1, bailId)}">Tous</a>`, ...G.map(g => `<a class="chip ${g.i === i ? "on" : ""}" href="${lienDocs(bienId, g.i, bailId)}">${esc(g.c.replace(/ \(.*\)$/, ""))} · ${g.l.length}</a>`)].join("")}</div>` : ""}
+    <div class="head"><div><h1>${anc ? "🕰 " + esc(anc.nom) : i >= 0 ? `${ICONES_CAT[cat] || ""} ${esc(cat)}` : "Tous les documents"}</h1><p>${esc(bi.nom)}${b ? " · " + esc(b.nom) : ""}${anc ? " · ancien locataire · " + periodeAncien(anc) : ""}</p></div>${anc && PEUT_MODIFIER() ? `<div class="row"><button class="small" onclick="editAncien('${bi.id}','${anc.id}')">Modifier</button></div>` : ""}</div></div>
+    ${anc && anc.notes ? `<section class="card"><p class="note">📝 ${nl2br(anc.notes)}</p></section>` : ""}
+    ${G.length > 1 ? `<div class="chips-cat">${[`<a class="chip ${i < 0 ? "on" : ""}" href="${lienDocs(bienId, -1, bailId, ancienId)}">Tous</a>`, ...G.map(g => `<a class="chip ${g.i === i ? "on" : ""}" href="${lienDocs(bienId, g.i, bailId, ancienId)}">${esc(g.c.replace(/ \(.*\)$/, ""))} · ${g.l.length}</a>`)].join("")}</div>` : ""}
     <section class="card docs-bien">${groupes.length ? groupes.map(g => `${i < 0 ? `<h3>${esc(g.c)}</h3>` : ""}<ul class="todo">${g.l.map(ligne).join("")}</ul>`).join("") : `<p class="note">Rien ici pour l'instant.</p>`}
-    <div class="row" style="margin-top:12px"><button class="primary" onclick="ajouterDocument('${bienId}','${bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un fichier</button><button onclick="ajouterLienDoc('${bienId}','${bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un lien</button></div></section>`;
+    <div class="row" style="margin-top:12px"><button class="primary" onclick="ajouterDocument('${bienId}','${anc ? "anc:" + anc.id : bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un fichier</button><button onclick="ajouterLienDoc('${bienId}','${anc ? "anc:" + anc.id : bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un lien</button></div></section>`;
 }
 function pageBien(id) {
   const bi = bien(id); if (!bi) return `<div class="empty">Bien introuvable. <a href="#biens">Retour</a></div>`;
@@ -2421,11 +2427,74 @@ function pageBien(id) {
       <dt>Assurance PNO</dt><dd>${bi.pnoEcheance ? "échéance " + fds(bi.pnoEcheance) : "—"}</dd>
       ${bi.prixAchat ? `<dt>Prix d'achat</dt><dd>${eur(bi.prixAchat)}</dd>` : ""}
     </dl>${bi.equipements ? `<p class="note">${nl2br(bi.equipements)}</p>` : ""}${bi.notes ? `<p class="note">📝 ${nl2br(bi.notes)}</p>` : ""}</div></section>
-    <section class="card"><h2>👥 Locataires</h2><ul class="todo">${[actuel, ...anciens].filter(Boolean).map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${b === actuel ? "En place" : "Parti"} · entré le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""} · ${esc(TYPES_BAIL[b.typeBail] || "")}</small></span>${b === actuel ? `<button class="small" onclick="docBailOpen('${b.id}')">Bail</button>` : ""}</li>`).join("") || `<li><span class="tx">Aucun locataire pour l'instant.</span></li>`}</ul></section>
+    ${sectionHistorique(bi)}
     ${sectionLocation(bi)}
     ${sectionTravaux(bi)}
     ${listeDocuments(bi.id)}
     </div>`;
+}
+/* ================= Historique du logement : anciens locataires (avant l'appli) et leurs documents =================
+   Rangés dans le logement (bi.anciens), jamais mêlés aux locataires actuels : aucun loyer n'est calculé pour eux. */
+const anciensDuBien = bi => (bi.anciens || []).slice().sort((a, b) => String(b.au || b.du || "").localeCompare(String(a.au || a.du || "")));
+const docsAncien = id => S.fichiers.filter(f => f.ancienId === id);
+const periodeAncien = a => a.du && a.au ? `${fds(a.du)} → ${fds(a.au)}` : a.au ? `parti le ${fds(a.au)}` : a.du ? `arrivé le ${fds(a.du)}` : "dates inconnues";
+function sectionHistorique(bi) {
+  const actuel = bailActifDuBien(bi.id), partis = S.baux.filter(b => b.bienId === bi.id && b !== actuel).sort((a, b) => String(b.dateSortie || "").localeCompare(String(a.dateSortie || ""))), avant = anciensDuBien(bi);
+  const li = (av, nom, lien, sous, droite = "") => `<li>${av}<span class="tx">${lien ? `<a href="${lien}">${esc(nom)}</a>` : esc(nom)}<small>${sous}</small></span>${droite}</li>`;
+  const lignes = [
+    actuel ? li(avatar(actuel.nom), actuel.nom, "#bail-" + actuel.id, `✅ En place depuis le ${fds(actuel.dateEntree)}`) : "",
+    ...partis.map(b => li(avatar(b.nom), b.nom, "#bail-" + b.id, `Parti · ${fds(b.dateEntree)} → ${b.dateSortie ? fds(b.dateSortie) : "?"}`)),
+    ...avant.map(a => { const n = docsAncien(a.id).length; return li(`<span class="avatar ancien" aria-hidden="true">${esc(initiales(a.nom))}</span>`, a.nom, lienDocs(bi.id, -1, "", a.id), `Ancien locataire · ${periodeAncien(a)} · ${n ? n + " document" + (n > 1 ? "s" : "") : "aucun document"}`, PEUT_MODIFIER() ? `<button class="small ghost" onclick="editAncien('${bi.id}','${a.id}')" aria-label="Modifier">Modifier</button>` : ""); })
+  ].filter(Boolean);
+  return `<section class="card"><h2>🕰 Historique du logement</h2>
+    ${lignes.length ? `<ul class="todo">${lignes.join("")}</ul>` : `<p class="note">Personne pour l'instant.</p>`}
+    <p class="note small">Les anciens locataires gardent leurs documents (bail, états des lieux…) à part : ils ne se mélangent pas avec ceux du locataire actuel.</p>
+    ${PEUT_MODIFIER() ? `<div class="row"><button class="small" onclick="editAncien('${bi.id}')">+ Ancien locataire</button></div>` : ""}</section>`;
+}
+const initiales = n => String(n || "?").split(/[\s–-]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join("");
+const PEUT_MODIFIER = () => !LECTURE;
+function editAncien(bienId, id, pre) {
+  const bi = bien(bienId); if (!bi) return;
+  const a = id ? (bi.anciens || []).find(x => x.id === id) : Object.assign({ id: uid(), nom: "", du: "", au: "", notes: "" }, pre || {});
+  // documents du logement qui ne sont rattachés à personne : on propose de les ranger chez lui (cochés si son nom y figure)
+  const mots = normTxt(a.nom).split(/\s+/).filter(m => m.length > 2);
+  const libres = S.fichiers.filter(f => f.bienId === bienId && !f.bailId && (!f.ancienId || f.ancienId === a.id) && !["Acte d'achat / prêt", "Diagnostics (DPE…)", "Factures et travaux", "Taxe foncière", "Assurance", "Copropriété"].includes(f.cat));
+  modal(id ? "Ancien locataire" : "Ajouter un ancien locataire", `
+    ${fld("Nom", "nom", a.nom, "text", "full", "required")}
+    ${fld("Arrivé le (si tu sais)", "du", a.du, "date")}${fld("Parti le (si tu sais)", "au", a.au, "date")}
+    ${area("Notes (dépôt rendu, litiges, contact…)", "notes", a.notes)}
+    ${libres.length ? `<fieldset class="full"><legend>Ses documents</legend><p class="note">Coche ce qui le concerne : ces documents passent dans son dossier, à part du locataire actuel.</p>
+      <ul class="todo">${libres.map(f => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="doc_${f.id}" ${f.ancienId === a.id || (mots.length && mots.some(m => normTxt(f.nom).includes(m))) ? "checked" : ""}><span class="tx">${esc(f.nom)}<small>${esc(f.cat || "")}</small></span></label></li>`).join("")}</ul></fieldset>` : ""}`,
+    d => {
+      if (!String(d.nom || "").trim()) { toast("Indique son nom."); return false; }
+      Object.assign(a, { nom: d.nom.trim(), du: d.du || "", au: d.au || "", notes: d.notes || "" });
+      bi.anciens = bi.anciens || []; if (!bi.anciens.includes(a)) bi.anciens.push(a);
+      libres.forEach(f => { if (d["doc_" + f.id]) f.ancienId = a.id; else if (f.ancienId === a.id) delete f.ancienId; });
+      toast(`✓ ${a.nom} rangé dans l'historique de ${bi.nom}`);
+    }, { del: !!id, ok: "Enregistrer" });
+  // en tapant le nom, on coche les documents où il apparaît
+  const champ = document.querySelector('#overlay input[name=nom]');
+  if (champ && !id) champ.addEventListener("input", () => { const m = normTxt(champ.value).split(/\s+/).filter(x => x.length > 2);
+    libres.forEach(f => { const c = document.querySelector(`#overlay input[name="doc_${f.id}"]`); if (c) c.checked = m.length > 0 && m.some(x => normTxt(f.nom).includes(x)); }); });
+  const del = document.getElementById("mdel");
+  if (del) del.onclick = () => confirmer(`Retirer ${a.nom} de l'historique ? Ses documents restent dans le logement.`, () => { bi.anciens = (bi.anciens || []).filter(x => x !== a); S.fichiers.forEach(f => { if (f.ancienId === a.id) delete f.ancienId; }); save(); render(); });
+}
+/* Depuis le Drive : un ancien bail trouvé -> nouvel ancien locataire dans le bon logement, avec le document */
+function ancienDepuisDrive(fid, nom, bienId) {
+  if (!estProprio()) { toast(msgProprio("ranger les documents du Drive")); return; }
+  const f = (DOCS.fichiers || []).find(x => x.id === fid); if (!f) return;
+  modal("Ranger dans l'historique", `<p class="full note">"${esc(f.titre)}" : à quel logement appartenait ${esc(nom)} ?</p>
+    ${fld("Nom de l'ancien locataire", "nom", nom, "text", "full", "required")}
+    ${sel("Logement", "bienId", bienId || "", [["", "Choisir…"], ...S.biens.map(b => [b.id, b.nom])], "full", "required")}
+    ${fld("Parti le (si tu sais)", "au", "", "date")}`,
+    d => {
+      const bi = bien(d.bienId); if (!bi) { toast("Choisis le logement."); return false; }
+      bi.anciens = bi.anciens || [];
+      let a = bi.anciens.find(x => normTxt(x.nom) === normTxt(d.nom));
+      if (!a) { a = { id: uid(), nom: d.nom.trim(), du: "", au: d.au || "", notes: "" }; bi.anciens.push(a); }
+      if (!S.fichiers.some(y => y.url === f.lien && y.ancienId === a.id)) S.fichiers.push({ id: "drv-" + f.id.slice(0, 24) + "-" + bi.id, bienId: bi.id, bailId: "", ancienId: a.id, cat: "Bail", nom: f.titre.replace(/\.[a-z0-9]{2,4}$/i, ""), titreDrive: f.titre, url: f.lien, date: iso(TODAY) });
+      toast(`✓ ${a.nom} rangé dans l'historique de ${bi.nom}`);
+    }, { ok: "Ranger" });
 }
 /* ================= Drive : ranger tout seul et repérer ce qu'il reste à remplir =================
    Entrée : la liste des fichiers du Drive { id, titre, type, lien, chemin: [dossiers] }.
@@ -2478,9 +2547,10 @@ function analyserDrive(fichiers) {
       aRemplir("edl-" + b.id, `Date de l'état des lieux de ${esc(b.nom)}`, `État des lieux trouvé : "${esc(f.titre)}". Note sa date dans la fiche du locataire.`, ["Noter", `editBail('${b.id}')`]);
     if (/ATTESTATION.*ASSURANCE.*HABITATION|ASSURANCE HABITATION.*ATTESTATION/.test(T) && b && !b.assuranceFin)
       aRemplir("ass-" + b.id, `Assurance habitation de ${esc(b.nom)}`, `Attestation trouvée : "${esc(f.titre)}". Note jusqu'à quand il est assuré.`, ["Noter", `assuranceRecue('${b.id}')`]);
-    const nomBail = T.match(/^BAIL\s+(.+?)(\s+20\d\d)?(\.PDF)?$/);
-    if (nomBail && !g.bailId) { const nom = f.titre.replace(/^bail\s+/i, "").replace(/\.pdf$/i, "").replace(/\s+20\d\d$/, "");
-      aRemplir("loc-" + slug(nom), `Locataire "${esc(nom)}" : pas encore dans l'appli`, `Bail trouvé : "${esc(f.titre)}". Si c'est un locataire actuel, ajoute-le ; si c'est un ancien, range simplement le bail dans le bon logement.`, ["Ajouter", "editBail()"]); }
+    const nomBail = T.match(/^(?:ANCIEN\s+)?BAIL\s+[-–]?\s*(.+?)(\s+20\d\d)?(\.PDF)?$/);
+    if (nomBail && !g.bailId) { const nom = f.titre.replace(/^(ancien\s+)?bail\s*[-–]?\s*/i, "").replace(/\.pdf$/i, "").replace(/\s+20\d\d$/, "");
+      if (!S.biens.some(bi => (bi.anciens || []).some(a => normTxt(a.nom) === normTxt(nom))) && !S.fichiers.some(y => y.url === f.lien && y.ancienId))
+        aRemplir("loc-" + slug(nom), `Bail de "${esc(nom)}" : un ancien locataire ?`, `Bail trouvé : "${esc(f.titre)}". Si c'est un ancien, range-le dans l'historique du logement (à part du locataire actuel). Si c'est un locataire actuel, ajoute-le dans Locataires.`, ["Ranger dans l'historique", `ancienDepuisDrive('${f.id}','${esc(nom).replace(/'/g, "\\'")}','${g.bienId || ""}')`]); }
   });
   return { ranger, remplir };
 }
@@ -2497,6 +2567,7 @@ function sectionPropositionsDrive() {
     <div class="row"><button class="primary">Ranger les documents cochés</button></div></form>` : ""}</section>`;
 }
 function rangerCoches(f) {
+  if (!estProprio()) { toast(msgProprio("ranger les documents du Drive")); return; }
   const d = Object.fromEntries(new FormData(f).entries()), choix = PROPS.ranger.filter((x, i) => d["r" + i]);
   PROPS.ranger.forEach((x, i) => { if (!d["r" + i]) S.faits["drv-ign-" + x.f.id] = iso(TODAY); });
   if (!choix.length) { save(); render(); toast("Rien de coché."); return; }
@@ -2715,16 +2786,17 @@ function pageReglages() {
       <label class="fl full" style="grid-column:1/-1">Comptable, syndic, notaire, assureur, artisans… Un par ligne : Nom ; rôle ; e-mail
       <textarea name="contacts" rows="4" placeholder="Cabinet Dupont ; Comptable ; compta@exemple.fr">${esc((s.contacts || []).map(c => [c.nom, c.role, c.email].join(" ; ")).join("\n"))}</textarea></label>
     </fieldset>
-    <fieldset><legend>Ton dossier Google Drive</legend>
+    ${estProprio() ? "" : "<!--"}<fieldset><legend>Ton dossier Google Drive</legend>
       <p class="note full">Facultatif. Le plus simple : <a href="#" onclick="event.preventDefault();reglage('drive')">connecte ton Drive</a> et choisis le dossier dans la liste. Sinon, colle ici le lien du dossier pour l'ouvrir d'un geste depuis l'onglet <b>Docs</b>. Pour avoir le lien : ouvre le dossier dans Google Drive, touche <b>⋮</b> (ou clic droit sur le dossier), puis <b>Partager</b> › <b>Copier le lien</b>, et colle-le ici.</p>
       ${fld("Lien de ton dossier Google Drive", "drive", driveRacine() ? "https://drive.google.com/drive/folders/" + driveRacine() : "", "url", "full", 'placeholder="https://drive.google.com/drive/folders/…"')}
       ${SB ? "" : sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui (dossier « Documents générés par l'appli »)"], ["0", "Non"]], "full")}
-    </fieldset>
+    </fieldset>${estProprio() ? "" : "-->"}
     <div class="full row"><button class="primary">Enregistrer</button></div>
   </form>`);
   const compte = SB ? [sci,
     rubrique("membres", "👤", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
-    rubrique("drive", "📁", "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · lecture seule` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages()),
+    estProprio() ? rubrique("drive", "📁", "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · lecture seule` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
+      : rubrique("drive", "📁", "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? `Depuis ${esc(GMAIL.adresse)}` : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
@@ -3176,6 +3248,7 @@ async function preparerGoogle() {
 }
 function connecterDrive() {
   if (!SB) { toast("La connexion au Drive marche dans l'appli installée."); return; }
+  if (!estProprio()) { toast(msgProprio("connecter le Drive de l'espace")); return; }
   if (LECTURE) { toast("En lecture seule, tu ne peux pas brancher le Drive."); return; }
   let pret = false, erreur = "";
   preparerGoogle().then(() => { pret = true; }, e => { erreur = e.message; });
@@ -3244,6 +3317,7 @@ async function indexerDriveG() {
   if (DOCS === D) render();
 }
 async function choisirDossierDrive() {
+  if (!estProprio()) { toast(msgProprio("choisir le dossier Drive de l'espace")); return; }
   toast("Je regarde tes dossiers…");
   let mes = [], partages = [];
   try {
@@ -3274,6 +3348,9 @@ function ligneDoc(f) {
 }
 function pageDocs() {
   const ouvrirDrive = driveRacine() ? `<a class="btn" href="https://drive.google.com/drive/folders/${esc(driveRacine())}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a>` : "";
+  if (!MCP && SB && !estProprio()) return `<div class="head"><div><h1>Documents</h1><p>Les documents de l'espace sont rangés dans chaque logement.</p></div></div>
+    <section class="card"><h2>📁 Le Drive de l'espace</h2><p class="note">Le Drive est géré par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>) : lui seul le connecte et range les documents, pour que tout reste au bon endroit. Tu retrouves tout dans chaque logement et chaque locataire. Il te manque un document ? Demande-lui de le ranger, ou ajoute-le toi-même depuis la fiche du logement.</p>
+    <div class="row" style="margin-top:10px"><a class="btn primary" href="#biens">Voir les logements</a>${ouvrirDrive}</div></section>`;
   if (!MCP && SB && DRIVEG.etat !== "oui") return `<div class="head"><div><h1>Documents</h1><p>Tes documents restent dans ton Google Drive. L'appli peut les lire pour te proposer où les ranger.</p></div></div>
     <section class="card drive-co"><h2>📁 Connecte ton Google Drive</h2>
     ${DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : `<p class="note">L'appli parcourt le dossier de tes locations et te propose de ranger chaque document au bon endroit (bail, diagnostics, taxe foncière…). Tu valides avant que quoi que ce soit soit rangé.</p>`}
@@ -3942,6 +4019,10 @@ function validerImport() {
 
 /* ================= Lecture seule (associé qui regarde, comptable) et total de tous les espaces ================= */
 let LECTURE = false;
+/* Le Drive de l'espace (connexion, dossier, rangement automatique) est réservé au propriétaire de l'espace */
+const estProprio = () => !SB || !!(MEMBRES && SB_USER && MEMBRES.membres.some(x => x.user_id === SB_USER.id && x.role === "proprietaire"));
+const nomProprio = () => { const m = MEMBRES && MEMBRES.membres.find(x => x.role === "proprietaire"); return m && m.email ? m.email : "le propriétaire de l'espace"; };
+const msgProprio = quoi => `Seul le propriétaire de l'espace (${nomProprio()}) peut ${quoi}. Demande-lui.`;
 function majRole() {
   const moi = SB_USER && SB_USER.id, m = MEMBRES && MEMBRES.membres.find(x => x.user_id === moi);
   LECTURE = !!(m && m.role === "lecteur"); document.body.classList.toggle("lecture", LECTURE);

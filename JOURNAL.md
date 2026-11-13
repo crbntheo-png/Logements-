@@ -17,12 +17,20 @@ Règle pour chaque session :
 - [ ] **Ordures ménagères Beauchamps 2026** : 133 € (41, Margottet – Fravelle) et 140 € (43, Steve) lus sur le décompte du notaire (scan peu lisible) : montants à confirmer (ils servent aussi au calcul mensuel 2027).
 - [ ] **Connexion Google Drive** : codée, en ligne, clés Google posées le 13/11. Reste l'essai réel avec le compte Google de Théo, et vérifier si l'appli Google est publiée (sinon reconnexion tous les 7 jours). Ancienne note : le « cerveau » `analyserDrive()` (index.html) range les fichiers et propose ce qu'il faut compléter ; il marche déjà quand la liste du Drive est connue (`DOCS.fichiers`, version Claude). Reste à brancher la connexion Google (OAuth, lecture du Drive) dans la version installée : attend 3 infos du propriétaire (ID client OAuth, clé API, numéro du projet Google Cloud).
 - [ ] **E-mail de Sofiane Hesry** : introuvable (ni Gmail, ni bail lisible). Sera gardé automatiquement à la 1re saisie dans un envoi.
-- [ ] **Anciens baux Lilou Douillard et Julie Sergent** (Drive, dossier « Loyers Bails Agon ») : savoir quel lot d'Agon, puis les ranger dans les documents du bon bien.
+- [ ] **Anciens locataires Tom Dogon (Agon RDC droite), Lilou Douillard et Julie Sergent** : à créer dans l'historique du bon logement (fiche logement › + Ancien locataire, ou Docs › proposition "Ranger dans l'historique"). Ancienne note : **Anciens baux Lilou Douillard et Julie Sergent** (Drive, dossier « Loyers Bails Agon ») : savoir quel lot d'Agon, puis les ranger dans les documents du bon bien.
 - [ ] **Avenants n° 1 Steve et Margottet** (ordures dans les charges dès janvier 2027) : enregistrés dans l'appli, à envoyer et faire signer.
 - [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
 - [ ] Le propriétaire n'a pas encore branché son Gmail (Réglages › Envoyer depuis ton adresse Gmail).
 
 ## Historique
+
+### 14/11/2026 (suite) — historique des logements et Drive réservé au propriétaire (demande de Théo)
+- Théo a connecté son Drive (crbntheo@gmail.com) et rangé 72 documents (79 → 151).
+- **Historique du logement** (fiche logement, à la place de "Locataires") : locataire en place, locataires partis, et **anciens locataires d'avant l'appli** (`bien.anciens` : nom, arrivé, parti, notes). Aucun loyer calculé pour eux. Leurs documents ont `ancienId` : ils sont à part (page `#docs-<bien>~-1~~<ancienId>`), plus mélangés aux documents du logement ni du locataire actuel. "+ Ancien locataire" : en tapant le nom, l'appli coche les documents du logement qui le mentionnent (bail, EDL, pièces). "Concerne" d'un nouveau document propose aussi les anciens.
+- **Drive** : un bail trouvé au nom d'un inconnu (y compris "Ancien bail – X") propose "Ranger dans l'historique" (choix du logement).
+- **Drive réservé au propriétaire de l'espace** : seul le propriétaire (rôle `proprietaire`, ici Théo) connecte le Drive, choisit le dossier et range les propositions. Gabriel et Pierre (membres) voient "Le Drive est géré par …" dans Docs et Réglages, sans bouton. Contrôle fait dans l'appli (pas de blocage côté base : un membre peut toujours ajouter un document à la main depuis une fiche).
+- Pas fait : Tom Dogon, Julie Sergent, Lilou Douillard ne sont pas encore créés dans les vraies données (Théo le fait dans l'appli ; Tom = Agon RDC droite, doc "Ancien bail – Tom Dogon" déjà là).
+- Tests : test33 16/16 (dont droits d'un associé), test5 OK, test30 49/49. Essai sur une copie locale des vraies données (Tom dans Agon RDC droite) OK. En ligne.
 
 ### 14/11/2026 — Google Drive branché dans l'appli installée (demande de Théo, pour lui et ses potes)
 - **Serveur** : `supabase/drive.sql` appliqué (table `drive_comptes`, clé de renouvellement Google dans le coffre `drive_<user>`, fonctions réservées au serveur) ; fonction `drive` déployée (actions config, brancher, jeton, debrancher ; vérifie la connexion). Secrets attendus : `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (pas encore posés : il faut le projet Google Cloud de Théo).

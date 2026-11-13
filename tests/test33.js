@@ -44,7 +44,7 @@ const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); if (!v) KO++;
   ok('explique ce que ça permet', /Ce que la connexion permet/.test(txt) && /Ce qu'elle ne permet pas/.test(txt) && /Rien modifier/.test(txt));
   await p.click('#overlay button.primary'); await p.waitForTimeout(800);
   const t1 = await p.evaluate(() => (document.getElementById('toast') || {}).innerText || '');
-  ok('sans clés Google : message clair (' + t1.trim().slice(0, 60) + ')', /pas encore installée|Un instant|Google/.test(t1));
+  ok('bouton Continuer : réagit (' + t1.trim().slice(0, 60) + ')', /pas encore installée|Un instant|Google|annulée/.test(t1));
   await p.evaluate(() => closeOverlay());
   // 3. Réglages : rubrique Google Drive
   await p.evaluate(() => reglage('drive')); await p.waitForTimeout(800);
@@ -67,6 +67,16 @@ const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); if (!v) KO++;
   await p.evaluate(() => document.querySelector('.props-drive form button.primary').click()); await p.waitForTimeout(800);
   ok('documents rangés dans le logement', await p.evaluate(() => S.fichiers.filter(f => f.bienId === 'bl').length >= 2));
   const sw = await p.evaluate(() => document.documentElement.scrollWidth); ok('pas de débordement (' + sw + ')', sw <= 390);
+  // 6. Un associé (membre, pas propriétaire) : pas de Drive, message clair
+  ok('propriétaire reconnu', await p.evaluate(() => estProprio()));
+  await p.evaluate(() => { MEMBRES.membres = MEMBRES.membres.map(m => m.user_id === SB_USER.id ? { ...m, role: 'membre' } : m).concat([{ user_id: 'x', email: 'proprio@exemple.fr', role: 'proprietaire' }]); location.hash = 'docs'; render(); });
+  await p.waitForTimeout(500); await p.screenshot({ path: OUT + '/7-associe-docs.png', fullPage: true });
+  ok('associé : Drive géré par le propriétaire', await p.evaluate(() => !estProprio() && /géré par le propriétaire/.test(document.body.innerText) && !/Connecter mon Google Drive/.test(document.body.innerText)));
+  await p.evaluate(() => connecterDrive()); await p.waitForTimeout(300);
+  ok('associé : connecter refusé', await p.evaluate(() => /Seul le propriétaire/.test((document.getElementById('toast') || {}).innerText || '') && document.getElementById('overlay').hidden));
+  await p.evaluate(() => reglage('drive')); await p.waitForTimeout(400);
+  ok('associé : réglages sans bouton de connexion', await p.evaluate(() => /Géré par proprio@exemple.fr/.test(document.body.innerText) && !document.querySelector('#rgl-drive button')));
+  await p.evaluate(() => { MEMBRES.membres = MEMBRES.membres.filter(m => m.user_id !== 'x').map(m => ({ ...m, role: 'proprietaire' })); });
   await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });
   console.log('appels Google simulés', appelsGoogle, 'ERREURS', errs); console.log('KO', KO);
   await b.close(); srv.close();
