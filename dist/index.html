@@ -195,6 +195,14 @@ button.small .ic { width: 16px; height: 16px; }
 
 /* Liste "À faire" courte */
 .todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-2); overflow: hidden; }
+.acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.todo li.deux { flex-wrap: wrap; }
+details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
+details.surv > summary::-webkit-details-marker { display: none; }
+details.surv > summary::before { content: "›"; font-size: 1.2em; transition: transform .15s; }
+details.surv[open] > summary::before { transform: rotate(90deg); }
+.todo li.deux .tx { flex: 1 1 60%; }
+.todo li.deux .acts-li { flex-basis: 100%; justify-content: flex-start; padding-left: 52px; }
 .todo li { display: flex; align-items: center; gap: 12px; padding: 13px 14px; min-height: 64px; }
 .todo li + li { border-top: 1px solid var(--line); }
 .todo .ico { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--surface-2); color: var(--ink-2); }
@@ -1464,6 +1472,14 @@ function revInfo(b) {
 }
 
 /* ================= Tâches automatiques ================= */
+/* Quittance utile ? (payé, pas envoyée, et pas marquée "pas besoin") */
+const qInutile = e => !!(e.b.sansQuittance || (S.faits || {})["qno-" + e.b.id + "|" + e.m]);
+const qAFaire = e => e.statut === "paye" && e.du > 0 && !e.quittance && !qInutile(e);
+function quittancePasBesoin(bid, m) {
+  avecAnnuler(() => { S.faits = S.faits || {}; const l = bid ? [{ b: bail(bid), m }] : toutesEcheances().filter(qAFaire);
+    l.forEach(e => S.faits["qno-" + e.b.id + "|" + e.m] = iso(TODAY)); save(); render();
+    toast(l.length > 1 ? `OK, pas de quittance pour ces ${l.length} loyers` : "OK, pas besoin de quittance pour ce loyer"); });
+}
 function taches() {
   const T = [], y = TODAY.getFullYear();
   const add = (o) => T.push(o);
@@ -1495,10 +1511,10 @@ function taches() {
       acts: [["Voir le locataire", `go('bail-${id}')`]] });
   });
   // 2. Quittances à envoyer (paiements reçus)
-  ech.filter(e => e.statut === "paye" && e.du > 0 && !e.quittance).forEach(e => {
+  ech.filter(qAFaire).forEach(e => {
     add({ bailId: e.b.id, key: "q-" + e.b.id + e.m, prio: "soon", date: e.dueDate, t: `Quittance à envoyer : ${esc(e.b.nom)} — ${fm(e.m)}`,
       d: `Loyer reçu${e.lastPay ? " le " + fds(e.lastPay) : ""} · ${eur(e.du)}`,
-      acts: [[peutEnvoyer() && e.b.email ? "Envoyer la quittance" : "Voir la quittance", peutEnvoyer() && e.b.email ? `envoyerQuittance('${e.b.id}','${e.m}')` : `quittance('${e.b.id}','${e.m}')`, "primary"]] });
+      acts: [[peutEnvoyer() && e.b.email ? "Envoyer la quittance" : "Voir la quittance", peutEnvoyer() && e.b.email ? `envoyerQuittance('${e.b.id}','${e.m}')` : `quittance('${e.b.id}','${e.m}')`, "primary"], ["Pas besoin", `quittancePasBesoin('${e.b.id}','${e.m}')`, "ghost"]] });
   });
   // 3. Loyers attendus sous 7 jours
   ech.filter(e => e.statut === "avenir" || e.statut === "partiel").filter(e => daysBetween(TODAY, e.dueDate) <= 7).forEach(e => {
@@ -1526,7 +1542,7 @@ function taches() {
       if ((!fin || fin <= addDays(TODAY, 30)) && !fait(k))
         add({ bailId: b.id, key: k, prio: fin && fin < TODAY || !fin ? "soon" : "info", date: fin || TODAY, done: true,
           t: `Attestation d'assurance habitation : ${esc(b.nom)}`,
-          d: (fin ? `Son assurance se termine le ${fd(fin)}. ` : "Tu n'as pas encore sa preuve d'assurance. ") + "Le locataire doit être assuré (incendie, dégât des eaux) et te le prouver chaque année avec une attestation de son assureur. Sans elle, en cas de sinistre, c'est ta propre assurance qui paie, et tu peux même résilier le bail.",
+          d: (fin ? `Son assurance se termine le ${fd(fin)}. ` : "Tu n'as pas encore son attestation d'assurance. ") + "À lui demander une fois par an.",
           acts: [["Lui demander", `docDemandeAssurance('${b.id}')`, "primary"], ["Je l'ai reçue", `assuranceRecue('${b.id}')`]] });
     }
     // 6. Départ / état des lieux / dépôt de garantie
@@ -1741,7 +1757,7 @@ let POINT = null;
 function etapesPoint() {
   const st = [], ech = toutesEcheances().filter(e => e.statut !== "paye" && e.statut !== "etale" && e.dueDate <= addDays(TODAY, 3));
   ech.sort((a, b) => a.dueDate - b.dueDate).forEach(e => st.push({ type: "loyer", id: "l" + e.b.id + e.m, bailId: e.b.id, m: e.m }));
-  if (toutesEcheances().some(e => e.statut === "paye" && e.du > 0 && !e.quittance)) st.push({ type: "quittances", id: "q" });
+  if (toutesEcheances().some(qAFaire)) st.push({ type: "quittances", id: "q" });
   S.baux.forEach(b => { const rv = revInfo(b); if (rv && rv.statut === "pret") st.push({ type: "revision", id: "r" + b.id, bailId: b.id }); });
   (S.taxes || []).forEach(tx => tx.parts.filter(p => teomATraiter(tx, p)).forEach(p => st.push({ type: "teom", id: "t" + tx.id + p.bailId, taxeId: tx.id, bailId: p.bailId })));
   taches().filter(t => t.prio !== "info" && /^(ass-|dep-|fisc-|rap-|edl-|fin-|dpe)/.test(t.key)).forEach(t => st.push({ type: "tache", id: "k" + t.key, key: t.key }));
@@ -1752,7 +1768,7 @@ function fermerPoint() { POINT = null; const el = document.getElementById("focus
 function pointSuivant(fait) { if (!POINT) return; if (fait) POINT.faites++; POINT.i++; afficherPoint(true); }
 function etapeEncoreUtile(s) {
   if (s.type === "loyer") { const e = echeance(bail(s.bailId), s.m); if (e && e.relances.some(r => r.date === iso(TODAY)) && !s.relanceVue) { s.relanceVue = true; POINT.faites++; return false; } return e && e.statut !== "paye" && !s.relanceVue; }
-  if (s.type === "quittances") return toutesEcheances().some(e => e.statut === "paye" && e.du > 0 && !e.quittance);
+  if (s.type === "quittances") return toutesEcheances().some(qAFaire);
   if (s.type === "revision") { const rv = revInfo(bail(s.bailId)); return rv && rv.statut === "pret"; }
   if (s.type === "teom") { const t = S.taxes.find(x => x.id === s.taxeId), p = t && t.parts.find(x => x.bailId === s.bailId); return p && teomATraiter(t, p); }
   if (s.type === "tache") return taches().some(t => t.key === s.key);
@@ -1784,10 +1800,10 @@ function cartePoint(s) {
       ${e.statut === "retard" ? btn("✉️ Non, le relancer", `relance('${b.id}','${s.m}')`, "danger") : ""}${passer}</div>`;
   }
   if (s.type === "quittances") {
-    const l = toutesEcheances().filter(e => e.statut === "paye" && e.du > 0 && !e.quittance), avecMail = l.filter(e => e.b.email);
+    const l = toutesEcheances().filter(qAFaire), avecMail = l.filter(e => e.b.email);
     return `<span class="pt-big">📄</span><h2>${l.length} quittance${l.length > 1 ? "s" : ""} à envoyer</h2>
       <p class="pt-d">${[...new Set(l.map(e => nomCourt(e.b.nom)))].join(", ")}${avecMail.length < l.length ? `<br>${l.length - avecMail.length} sans e-mail : à ajouter dans la fiche du locataire.` : ""}</p>
-      <div class="pt-acts">${peutEnvoyer() && avecMail.length ? btn(`Envoyer ${avecMail.length > 1 ? "les " + avecMail.length : "la quittance"}`, "pointQuittances()", "primary") : btn("Voir les loyers", "fermerPoint();go('loyers')", "primary")}${passer}</div>`;
+      <div class="pt-acts">${peutEnvoyer() && avecMail.length ? btn(`Envoyer ${avecMail.length > 1 ? "les " + avecMail.length : "la quittance"}`, "pointQuittances()", "primary") : btn("Voir les loyers", "fermerPoint();go('loyers')", "primary")}${btn("Pas besoin", "quittancePasBesoin();pointSuivant(true)", "ghost")}${passer}</div>`;
   }
   if (s.type === "revision") {
     const b = bail(s.bailId), rv = revInfo(b);
@@ -1860,7 +1876,7 @@ function ajoutRapide(quoi) {
     return;
   }
   const h = (location.hash || "").slice(1), bid = h.startsWith("bail-") ? h.slice(5) : null, bi = h.startsWith("bien-") ? h.slice(5) : null;
-  const items = bid && bail(bid) ? [["💶", "Il a versé une somme", `verserSomme('${bid}')`], ["📄", "Un document", `ajouterDocument('${bail(bid).bienId}','${bid}')`], ["✍️", "Un avenant au bail", `avenant('${bid}')`], ["📋", "Un état des lieux", `nouvelEdl('${bid}','${edlsDuBail(bid).some(e => e.type === "entree") ? "sortie" : "entree"}')`], ["⏰", "Un rappel", "editRappel()"], ["🧾", "Une dépense", "editDepense()"]]
+  const items = bid && bail(bid) ? [["💶", "Il a versé une somme", `verserSomme('${bid}')`], ["📄", "Un document", `ajouterDocument('${bail(bid).bienId}','${bid}')`], ["✍️", "Un avenant au bail", `avenant('${bid}')`], ["📋", "Un état des lieux", `nouvelEdl('${bid}','${edlsDuBail(bid).some(e => e.type === "entree") || bail(bid).edlEntree || (S.fichiers || []).some(f => f.bailId === bid && f.cat === "État des lieux") ? "sortie" : "entree"}')`], ["⏰", "Un rappel", "editRappel()"], ["🧾", "Une dépense", "editDepense()"]]
     : bi && bien(bi) ? [["🛠", "Des travaux", `editTravaux('${bi}')`], ["📄", "Un document", `ajouterDocument('${bi}')`], ["🙋", "Un candidat", `editCandidat('${bi}')`], ["✍️", "L'annonce", `annonce('${bi}')`], ["👤", "Un locataire", `editBail(null,'${bi}')`], ["🧾", "Une dépense", "editDepense()"]]
     : h === "compta" ? [["📷", "Photo d'une facture", "photoFacture()"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["🗑️", "Une taxe foncière", "taxeFonciere()"]]
     : [["💶", "Un loyer est arrivé", "ajoutRapide('loyer')"], ["📷", "Photo d'une facture", "photoFacture()"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["👤", "Un locataire", "editBail()"], ["🏠", "Un bien", "editBien()"], ["📊", "Mes logements depuis Excel", "importTableur()"], ["⏰", "Un rappel", "editRappel()"]];
@@ -2117,7 +2133,8 @@ function carteLocataire(b) {
   else if (e.statut === "paye") {
     dot = "ok"; cls = "ok";
     if (e.quittance || !(e.du > 0)) etat = "Payé · quittance envoyée";
-    else { etat = "Payé · quittance à envoyer"; act = peutEnvoyer() && b.email ? `<button class="primary" onclick="envoyerQuittance('${b.id}','${CUR}')">📄 Envoyer la quittance</button>` : `<button onclick="quittance('${b.id}','${CUR}')">📄 Voir la quittance</button>`; }
+    else if (qInutile(e)) etat = "Payé";
+    else { etat = "Payé · quittance à envoyer"; act = (peutEnvoyer() && b.email ? `<button class="primary" onclick="envoyerQuittance('${b.id}','${CUR}')">📄 Envoyer la quittance</button>` : `<button onclick="quittance('${b.id}','${CUR}')">📄 Voir la quittance</button>`) + `<button class="ghost" onclick="quittancePasBesoin('${b.id}','${CUR}')">Pas besoin</button>`; }
   } else if (e.statut === "partiel") { etat = `A payé ${eur(e.paye)} sur ${eur(e.du)} · il manque`; cls = "warn"; dot = "warn"; montant = eur(e.reste); act = `<button class="primary" onclick="encaisser('${b.id}','${CUR}')">✓ Le reste est arrivé</button><button onclick="editPlan('${b.id}')">Étaler le reste</button>`; }
   else { etat = `Attendu le ${fds(e.dueDate)}`; cls = "warn"; dot = "warn"; montant = eur(e.reste); act = `<button class="primary" onclick="encaisser('${b.id}','${CUR}')">✓ A payé</button><button class="ghost" onclick="saisirPaiement('${b.id}','${CUR}')">Autre montant</button>`; }
   return `<article class="tile ${cls}">
@@ -2138,7 +2155,7 @@ function pageAccueil(T) {
   return `<div class="greet"><h1>${salut}${S.sci.gerant ? " " + esc(String(S.sci.gerant).split(/\s+/)[0]) : ""}</h1><p>${fd(TODAY).replace(/^./, c => c.toUpperCase())} · ${items.length ? `${items.length} chose${items.length > 1 ? "s" : ""} à faire` : "tout est en ordre"}</p></div>
   ${!S.faits.guideMasque && etapesGuide().some(e => !e.ok) ? guideCompact() : ""}
   <section><div class="sec-head"><h2 class="sec">À faire ${items.length ? `<span class="count">${items.length}</span>` : ""}</h2>${items.length > 5 ? `<a class="more" href="#afaire">Tout voir ${ic("chevR", "s")}</a>` : ""}</div>
-    ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</li>`).join("")}</ul>` : `<div class="empty party">🎉 Rien à faire, tout est en ordre.</div>`}
+    ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}${i.btn2 || (i.btn && i.btn[0].length > 8) ? " deux" : ""}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn || i.btn2 ? `<span class="acts-li">${i.btn2 ? `<button class="small ghost" onclick="${i.btn2[1]}">${i.btn2[0]}</button>` : ""}${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</span>` : ""}</li>`).join("")}</ul>` : `<div class="empty party">🎉 Rien à faire, tout est en ordre.</div>`}
   </section>
   <section class="hero" aria-label="Loyers du mois">
     <p class="hero-k">Loyers de ${fm(CUR)}</p>
@@ -2163,7 +2180,7 @@ function aFaireCourt(T) {
   // les impayés sont déjà sur la carte de chaque locataire : on ne les répète pas ici
   prend(t => t.key.startsWith("imp-") || t.key.startsWith("proc-") || t.key.startsWith("vac-"));
   const q = prend(t => t.key.startsWith("q-"));
-  if (q.length) out.push({ ico: "📄", prio: "soon", t: q.length > 1 ? `${q.length} quittances à envoyer` : q[0].t.replace("Quittance à envoyer : ", "Quittance à envoyer à "), btn: peutEnvoyer() ? [q.length > 1 ? "Tout envoyer" : "Envoyer", q.length > 1 ? "envoyerToutesQuittances()" : q[0].acts[0][1]] : ["Voir", "go('loyers')"] });
+  if (q.length) out.push({ ico: "📄", prio: "soon", t: q.length > 1 ? `${q.length} quittances à envoyer` : q[0].t.replace("Quittance à envoyer : ", "Quittance à envoyer à "), btn: peutEnvoyer() ? [q.length > 1 ? "Tout envoyer" : "Envoyer", q.length > 1 ? "envoyerToutesQuittances()" : q[0].acts[0][1]] : ["Voir", "go('loyers')"], btn2: ["Pas besoin", q.length > 1 ? "quittancePasBesoin()" : q[0].acts[1][1]] });
   prend(t => t.key.startsWith("rev-") && t.acts.length).forEach(t => { const b = bail(t.bailId), rv = revInfo(b); out.push({ ico: "📈", prio: "soon", t: `Augmenter le loyer de ${prenom(b.nom)}`, s: `${eur(rv.ancien)} → ${eur(rv.nouveau)}`, btn: ["Appliquer", `revision('${b.id}')`] }); });
   prend(t => t.key.startsWith("teom-")).forEach(t => { const b = bail(t.bailId); out.push({ ico: "🗑️", prio: "soon", t: `Ordures ménagères à récupérer : ${esc(b.nom.replace(/\s*\(.*?\)/g, ""))}`, s: t.t.split(" doit ")[1] + " · demander, déjà payée, ou chaque mois", btn: t.acts[0] }); });
   const ass = prend(t => t.key.startsWith("ass-") && t.prio !== "info");
@@ -2178,7 +2195,9 @@ function aFaireCourt(T) {
 function pageAFaire(T) {
   const groups = [["urgent", "Urgent"], ["soon", "À faire bientôt"], ["info", "À surveiller"]];
   return `<div class="head"><div><h1>À faire</h1><p>Tout ce qui demande une action, pour les locataires et pour la SCI.</p></div><div class="row"><button onclick="editRappel()">+ Rappel</button></div></div>
-  <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); const vis = view.afaireTout || g.length <= 60 ? g : g.slice(0, 40); return g.length ? `<p class="group-title">${l} (${g.length})</p>` + vis.map(taskHtml).join("") + (vis.length < g.length ? `<button class="ghost small" onclick="view.afaireTout=true;render()">Voir les ${g.length - vis.length} autres</button>` : "") : ""; }).join("") : `<div class="empty">Rien à faire. Tout est à jour.</div>`}</section>`;
+  <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); const vis = view.afaireTout || g.length <= 60 ? g : g.slice(0, 40); if (!g.length) return ""; const corps = vis.map(taskHtml).join("") + (vis.length < g.length ? `<button class="ghost small" onclick="view.afaireTout=true;render()">Voir les ${g.length - vis.length} autres</button>` : "");
+    // "À surveiller" : rien d'urgent, replié pour garder la page lisible (déplié s'il n'y a rien d'autre)
+    return k === "info" && T.some(t => t.prio !== "info") ? `<details class="surv" ${view.survOuvert ? "open" : ""} ontoggle="view.survOuvert=this.open"><summary class="group-title">${l} (${g.length}) · rien d'urgent</summary>${corps}</details>` : `<p class="group-title">${l} (${g.length})</p>` + corps; }).join("") : `<div class="empty">Rien à faire. Tout est à jour.</div>`}</section>`;
 }
 
 /* ================= États des lieux & inventaire ================= */
@@ -2282,10 +2301,21 @@ function pageEdl(id) {
 }
 function sectionEdl(b) {
   const L = edlsDuBail(b.id), a = L.find(e => e.type === "entree"), s2 = L.find(e => e.type === "sortie");
-  const ligne = (e, t) => e ? `<li><span class="ico" aria-hidden="true">📋</span><span class="tx"><a href="#edl-${e.id}">${t} du ${fds(e.date)}</a><small>${e.pieces.filter(p => p.etat).length}/${e.pieces.length} pièces · ${nbPhotos(e)} photo${nbPhotos(e) > 1 ? "s" : ""}${e.inventaire ? " · inventaire" : ""}</small></span><a class="btn small" href="#edl-${e.id}">Ouvrir</a></li>` : "";
+  // Les états des lieux déjà faits sur papier (PDF rangé dans les documents) comptent aussi : on ne les redemande pas
+  const docs = (S.fichiers || []).filter(f => f.bailId === b.id && f.cat === "État des lieux"), estSortie = f => /sortie/i.test(f.nom || "");
+  const docA = a ? null : docs.find(f => !estSortie(f)), docS = s2 ? null : docs.find(estSortie);
+  const entreeFaite = !!(a || docA || b.edlEntree), sortieFaite = !!(s2 || docS);
+  const part = !!b.dateSortie;
+  const ligne = (e, t) => `<li><span class="ico" aria-hidden="true">✅</span><span class="tx"><a href="#edl-${e.id}">${t} du ${fds(e.date)}</a><small>Fait dans l'appli · ${e.pieces.filter(p => p.etat).length}/${e.pieces.length} pièces · ${nbPhotos(e)} photo${nbPhotos(e) > 1 ? "s" : ""}${e.inventaire ? " · inventaire" : ""}</small></span><a class="btn small" href="#edl-${e.id}">Ouvrir</a></li>`;
+  const ligneDoc = (f, t) => `<li><span class="ico" aria-hidden="true">✅</span><span class="tx"><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">${t}${b.edlEntree && !estSortie(f) ? ` du ${fds(b.edlEntree)}` : ""}</a><small>${esc(f.nom)}</small></span><button class="small" onclick="ouvrirDocument('${f.id}')">Ouvrir</button></li>`;
+  const lignePapier = `<li><span class="ico" aria-hidden="true">✅</span><span class="tx">Entrée du ${fds(b.edlEntree)}<small>Fait sur papier · pas de copie rangée dans l'appli</small></span><button class="small ghost" onclick="ajouterDocument('${b.bienId}','${b.id}')">Ajouter le PDF</button></li>`;
+  const lis = (a ? ligne(a, "Entrée") : docA ? ligneDoc(docA, "Entrée") : b.edlEntree ? lignePapier : "") + (s2 ? ligne(s2, "Sortie") : docS ? ligneDoc(docS, "Sortie") : "");
+  let suite = "";
+  if (!entreeFaite) suite = `<p class="note">Pas encore d'état des lieux d'entrée. Fais-le sur le téléphone, pièce par pièce, avec les photos.</p><div class="row"><button class="primary" onclick="nouvelEdl('${b.id}','entree')">+ Faire l'état des lieux d'entrée</button></div>`;
+  else if (!sortieFaite && part) suite = `<p class="note">Départ prévu le ${fds(b.dateSortie)} : l'état des lieux de sortie se compare à celui d'entrée pour calculer les retenues.</p><div class="row"><button class="primary" onclick="nouvelEdl('${b.id}','sortie')">+ Faire l'état des lieux de sortie</button></div>`;
+  else if (!sortieFaite) suite = `<p class="note small">L'état des lieux de sortie se fera le jour du départ.</p>`;
   return `<section class="card"><h2>📋 États des lieux${b.typeBail !== "vide" ? " et inventaire" : ""}</h2>
-    ${L.length ? `<ul class="todo">${ligne(a, "Entrée")}${ligne(s2, "Sortie")}</ul>` : `<p class="note">Aucun état des lieux dans l'appli${b.edlEntree ? ` (entrée faite le ${fds(b.edlEntree)}, sur papier ?)` : ""}. Fais-le directement sur le téléphone, pièce par pièce, avec les photos.</p>`}
-    <div class="row">${a ? "" : `<button class="primary" onclick="nouvelEdl('${b.id}','entree')">+ État des lieux d'entrée</button>`}${s2 ? "" : `<button ${a ? 'class="primary"' : ""} onclick="nouvelEdl('${b.id}','sortie')">+ État des lieux de sortie</button>`}</div></section>`;
+    ${lis ? `<ul class="todo">${lis}</ul>` : ""}${suite}</section>`;
 }
 async function imagesDoc(o) {
   const chemins = (o && o.photos) || []; if (!chemins.length || !SB) return [];
@@ -2490,7 +2520,7 @@ function pageBiens() {
     return `<article class="card bien"><div class="top"><span class="emoji" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span><div><h3><a href="#bien-${bi.id}">${esc(bi.nom)}</a></h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
       ${b ? `<span class="pill ok">Loué</span>` : `<span class="pill warn">Vide</span>`}</div>
       <dl>${b ? `<dt>Locataire</dt><dd><a href="#bail-${b.id}">${esc(b.nom)}</a></dd><dt>Loyer HC</dt><dd>${eur(l.hc)}</dd><dt>Charges</dt><dd>${eur(l.ch)}</dd><dt>Depuis</dt><dd>${fds(b.dateEntree)}</dd>` : `<dt>Locataire</dt><dd>—</dd>`}
-      ${(() => { const e = edlsDuBien(bi.id)[0]; return e ? `<dt>État des lieux</dt><dd><a href="#edl-${e.id}">${e.type === "entree" ? "Entrée" : "Sortie"} ${fds(e.date)} · ${nbPhotos(e)} 📷</a></dd>` : b ? `<dt>État des lieux</dt><dd><button class="small ghost" onclick="nouvelEdl('${b.id}','entree')">+ Faire</button></dd>` : ""; })()}
+      ${(() => { const e = edlsDuBien(bi.id)[0]; return e ? `<dt>État des lieux</dt><dd><a href="#edl-${e.id}">${e.type === "entree" ? "Entrée" : "Sortie"} ${fds(e.date)} · ${nbPhotos(e)} 📷</a></dd>` : b ? (() => { const f = (S.fichiers || []).find(x => x.bailId === b.id && x.cat === "État des lieux"); return f ? `<dt>État des lieux</dt><dd><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">Entrée${b.edlEntree ? " " + fds(b.edlEntree) : ""} · PDF</a></dd>` : b.edlEntree ? `<dt>État des lieux</dt><dd>Entrée ${fds(b.edlEntree)} (papier)</dd>` : `<dt>État des lieux</dt><dd><button class="small ghost" onclick="nouvelEdl('${b.id}','entree')">+ Faire</button></dd>`; })() : ""; })()}
       <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd>
       ${(() => { const r = rendement(bi); return r ? `<dt>Rentabilité brute</dt><dd><span class="pill acc">${r.brut.toFixed(1).replace(".", ",")} %</span></dd>` : bi.prixAchat ? "" : `<dt>Rentabilité</dt><dd><button class="small ghost" onclick="editBien('${bi.id}')">Ajouter le prix</button></dd>`; })()}</dl>
       <div class="row"><a class="btn small primary" href="#bien-${bi.id}">Voir la fiche${(() => { const n = S.fichiers.filter(f => f.bienId === bi.id).length; return n ? ` · ${n} doc${n > 1 ? "s" : ""}` : ""; })()}</a><button class="small" onclick="editBien('${bi.id}')">Modifier</button><button class="small" onclick="taxeFonciere('${bi.id}')">Taxe foncière</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
@@ -2568,7 +2598,8 @@ function prochainsMois(b) {
 function actionsEcheance(e) {
   const a = [], mail = peutEnvoyer() && e.b.email;
   if (e.statut !== "paye") a.push(`<button class="small primary" onclick="encaisser('${e.b.id}','${e.m}')">A payé</button>`, `<button class="small" onclick="saisirPaiement('${e.b.id}','${e.m}')">Autre montant…</button>`);
-  if (e.statut === "paye" && e.du > 0) a.push(!e.quittance && mail ? `<button class="small primary" onclick="envoyerQuittance('${e.b.id}','${e.m}')">Envoyer la quittance</button><button class="small ghost" onclick="quittance('${e.b.id}','${e.m}')">Voir</button>` : `<button class="small ${e.quittance ? "" : "primary"}" onclick="quittance('${e.b.id}','${e.m}')">Quittance</button>`);
+  if (e.statut === "paye" && e.du > 0 && !e.quittance && qInutile(e)) a.push(`<button class="small ghost" onclick="quittance('${e.b.id}','${e.m}')">Quittance</button>`);
+  else if (e.statut === "paye" && e.du > 0) a.push(!e.quittance && mail ? `<button class="small primary" onclick="envoyerQuittance('${e.b.id}','${e.m}')">Envoyer la quittance</button><button class="small ghost" onclick="quittance('${e.b.id}','${e.m}')">Voir</button>` : `<button class="small ${e.quittance ? "" : "primary"}" onclick="quittance('${e.b.id}','${e.m}')">Quittance</button>`);
   if (e.paye > 0 && e.statut !== "paye") a.push(`<button class="small" onclick="quittance('${e.b.id}','${e.m}')">Reçu partiel</button>`);
   if (e.statut === "retard") a.push(`<button class="small danger" onclick="relance('${e.b.id}','${e.m}')">Relancer</button>`);
   if (e.statut === "avenir") a.push(`<button class="small ghost" onclick="avis('${e.b.id}','${e.m}')">Avis</button>`);
@@ -2783,11 +2814,12 @@ function editBail(id, bienId, pre) {
     ${fld("Garant (nom)", "garantNom", b.garantNom)}${fld("Garant (téléphone / e-mail)", "garantContact", b.garantContact)}
     ${fld("N° de visa Visale (si garantie Visale)", "visale", b.visale)}<p class="note" style="align-self:end"><a href="https://www.visale.fr" target="_blank" rel="noopener">Vérifier un visa sur visale.fr ↗</a></p>
     ${fld("Assurance habitation valable jusqu'au", "assuranceFin", b.assuranceFin, "date")}${fld("État des lieux d'entrée fait le", "edlEntree", b.edlEntree, "date")}</fieldset>
+    <label class="fl chk full"><input type="checkbox" name="sansQuittance" ${b.sansQuittance ? "checked" : ""}> Il n'a pas besoin de quittance chaque mois (l'appli ne te le demandera plus)</label>
     ${SB ? fld("Nom sur ses virements, si différent (ex : FRAVELLE ; séparer par des virgules)", "motsBanque", b.motsBanque, "text", "full") : ""}
     ${area("Clauses particulières pour ce bail (reprises dans le bail)", "clauses", b.clauses)}
     ${area("Notes (pour vous, jamais dans le bail)", "notes", b.notes)}`,
     d => {
-      d.revisable = !!d.revisable; d.irlValeur = irlVal(qKey(d.irlTrimestre)) || b.irlValeur || "";
+      d.revisable = !!d.revisable; d.sansQuittance = !!d.sansQuittance; d.irlValeur = irlVal(qKey(d.irlTrimestre)) || b.irlValeur || "";
       if (id) Object.assign(b, d); else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); setTimeout(() => go("bail-" + nb.id)); }
     },
     Object.assign({ after: f => { let irlTouche = !!id; f.irlTrimestre.addEventListener("change", () => irlTouche = true); f.dateEntree.addEventListener("change", () => { if (!irlTouche && f.dateEntree.value) f.irlTrimestre.value = qLabel(irlEnVigueur(P(f.dateEntree.value))); }); const chk = () => { const t = f.typeBail.value, dep = +f.depot.value, hc = +f.loyerHC.value, max = t === "vide" ? hc : t === "mobilite" ? 0 : hc * 2; document.getElementById("depotWarn").textContent = dep > max + 0.001 ? `⚠ Dépôt trop élevé : maximum légal ${eur(max)} pour ce type de bail (${t === "vide" ? "1 mois de loyer HC" : t === "mobilite" ? "interdit en bail mobilité" : "2 mois de loyer HC"}).` : ""; }; f.addEventListener("input", chk); chk(); } },
@@ -3329,7 +3361,7 @@ async function envoyerQuittanceValidee(bailId, m) {
 let ENVOI_LOT = false;
 function envoyerToutesQuittances() {
   return new Promise(fin => {
-    const liste = toutesEcheances().filter(e => e.statut === "paye" && e.du > 0 && !e.quittance);
+    const liste = toutesEcheances().filter(qAFaire);
     if (!liste.length) { toast("Aucune quittance à envoyer."); return fin(0); }
     modal("Quittances à envoyer", `<p class="full note">Vérifie chaque quittance (bouton Voir), puis coche celles à envoyer. Elles partiront de ${esc(GMAIL ? GMAIL.adresse : "l'adresse de l'appli")}.</p>
       <ul class="todo full">${liste.map((e, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="q${i}" ${e.b.email ? "checked" : "disabled"}><span class="tx">${esc(e.b.nom)} — ${fm(e.m)} · ${eur(e.du)}<small>${e.b.email ? "à " + esc(e.b.email) : "⚠️ pas d'e-mail : ouvre-la pour en saisir un"}</small></span></label><button type="button" class="small" onclick="closeOverlay();quittance('${e.b.id}','${e.m}')">Voir</button></li>`).join("")}</ul>`,

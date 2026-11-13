@@ -15,7 +15,7 @@ Règle pour chaque session :
 - [ ] Mentions légales : remplir `EDITEUR` (nom, contact) avant toute mise en vente.
 - [ ] **Taxe foncière Agon 2026** : récupérer la page « détail par local » de l'avis n° 2650400237412 (impots.gouv › Espace professionnel › Consulter › Avis d'imposition), puis remplacer la répartition à parts égales (516,67 € par lot, ordures ménagères à 0) par les vrais montants. Antoine et Sofiane doivent leur part d'ordures ménagères.
 - [ ] **Ordures ménagères Beauchamps 2026** : 133 € (41, Margottet – Fravelle) et 140 € (43, Steve) lus sur le décompte du notaire (scan peu lisible) : montants à confirmer (ils servent aussi au calcul mensuel 2027).
-- [ ] **Connexion Google Drive dans l'appli installée** : le « cerveau » `analyserDrive()` (index.html) range les fichiers et propose ce qu'il faut compléter ; il marche déjà quand la liste du Drive est connue (`DOCS.fichiers`, version Claude). Reste à brancher la connexion Google (OAuth, lecture du Drive) dans la version installée : attend 3 infos du propriétaire (ID client OAuth, clé API, numéro du projet Google Cloud).
+- [ ] **Connexion Google Drive dans l'appli installée** (vérifié le 13/11 : pas encore codée, la connexion qui reste n'existe pas) : le « cerveau » `analyserDrive()` (index.html) range les fichiers et propose ce qu'il faut compléter ; il marche déjà quand la liste du Drive est connue (`DOCS.fichiers`, version Claude). Reste à brancher la connexion Google (OAuth, lecture du Drive) dans la version installée : attend 3 infos du propriétaire (ID client OAuth, clé API, numéro du projet Google Cloud).
 - [ ] **E-mail de Sofiane Hesry** : introuvable (ni Gmail, ni bail lisible). Sera gardé automatiquement à la 1re saisie dans un envoi.
 - [ ] **Anciens baux Lilou Douillard et Julie Sergent** (Drive, dossier « Loyers Bails Agon ») : savoir quel lot d'Agon, puis les ranger dans les documents du bon bien.
 - [ ] **Avenants n° 1 Steve et Margottet** (ordures dans les charges dès janvier 2027) : enregistrés dans l'appli, à envoyer et faire signer.
@@ -23,6 +23,14 @@ Règle pour chaque session :
 - [ ] Le propriétaire n'a pas encore branché son Gmail (Réglages › Envoyer depuis ton adresse Gmail).
 
 ## Historique
+
+### 13/11/2026 (soir) — plus clair : états des lieux, quittances "Pas besoin", page À faire (demande de Théo)
+- **États des lieux** (fiche locataire) : un état des lieux déjà rangé en PDF dans les documents, ou une date d'entrée notée, compte comme fait. L'appli ne redemande plus l'entrée (cas de Steve et Margottet) : elle affiche "Entrée du …" avec "Ouvrir". La sortie n'est proposée que si un départ est noté ; sinon "se fera le jour du départ". Pareil sur la fiche logement et dans le bouton +.
+- **Quittances** : bouton "Pas besoin" partout où une quittance est demandée (accueil, À faire, carte du locataire, Faire le point). Le loyer reste payé, la quittance ne revient plus (clé `qno-<bail>|<mois>` dans `S.faits`, avec Annuler). Nouvelle case dans la fiche locataire : "Il n'a pas besoin de quittance chaque mois" (`sansQuittance`).
+- **Page À faire** : "À surveiller" replié par défaut (rien d'urgent) ; texte de l'assurance habitation raccourci (le détail reste dans "Pourquoi ?"). Accueil : sur téléphone, les boutons passent sous le texte quand ils sont longs.
+- **Drive** : documents rangés vérifiés (79, tous avec un lien ; les doublons sont voulus : même PDF pour bail + état des lieux, actes partagés entre logements). Rien à nettoyer. La connexion Google Drive dans l'appli installée n'existe pas encore dans le code (aucune connexion Google trouvée, ni ici ni dans les autres projets) : toujours bloquée sur les 3 infos Google (voir "À faire").
+- Aucune donnée réelle modifiée (contrôles faits sur une copie locale des vraies données, en 390 × 844 clair et sombre). Tests : test5 OK. En ligne (vérifié sur gestion-locative-sci.pages.dev).
+- Pas vérifié : sur ton vrai téléphone connecté.
 
 ### 13/11/2026 — optimisation de la vitesse (demande de Théo : "optimiser de ouf")
 - **Calculs** : les loyers étaient recalculés des milliers de fois par écran (chaque mois relisait tous les paiements, et le suivi d'étalement relançait tout le calcul). Ajouté une mémoire de calcul pendant chaque affichage (`MEMO`, `indexBail`, `echeancesBail`/`planEtat` mémorisés, vidée à chaque `save()`), et des formats de dates préparés une fois (`F_D`, `F_M`, `cache1` pour `addM`, `dim`, `fm`). Avec 28 locataires sur 10 ans (3 640 paiements, 905 dépenses) : avant, l'appli restait bloquée plusieurs minutes ; maintenant chaque page s'affiche en moins de 0,04 s (`tests/perf.js`).
