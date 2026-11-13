@@ -181,7 +181,8 @@ details.rgl[open] > summary .chev { transform: rotate(90deg); }
 .rgl-c { padding: 14px 16px 16px; border-top: 1px solid var(--line); }
 .rgl-aide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: -4px 0 14px; }
 .rgl-aide.seul { grid-template-columns: auto; justify-content: start; }
-.rgl-aide > * { justify-content: center; text-align: center; white-space: nowrap; }
+.rgl-aide > * { justify-content: center; text-align: center; white-space: nowrap; min-width: 0; }
+@media (max-width: 380px) { .rgl-aide > * { white-space: normal; font-size: .8rem; padding-left: 6px; padding-right: 6px; } }
 details.rgl { scroll-margin-top: 76px; }
 .drive-explique ul { margin: 4px 0 10px; padding-left: 20px; line-height: 1.5; }
 .drive-explique p { margin: 8px 0 2px; }
@@ -204,7 +205,7 @@ details.rgl { scroll-margin-top: 76px; }
 details.menu-plus { position: relative; display: inline-block; }
 details.menu-plus > summary { list-style: none; cursor: pointer; }
 details.menu-plus > summary::-webkit-details-marker { display: none; }
-details.menu-plus .menu { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; min-width: 240px; background: var(--surface); border-radius: 14px; box-shadow: var(--sh-3, 0 10px 30px rgba(0,0,0,.18)); padding: 6px; display: flex; flex-direction: column; }
+details.menu-plus .menu { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; max-width: calc(100vw - 32px); min-width: 240px; background: var(--surface); border-radius: 14px; box-shadow: var(--sh-3, 0 10px 30px rgba(0,0,0,.18)); padding: 6px; display: flex; flex-direction: column; }
 details.menu-plus .menu button, details.menu-plus .menu a { justify-content: flex-start; text-align: left; background: none; box-shadow: none; border: 0; padding: 11px 12px; border-radius: 10px; width: 100%; }
 details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { background: var(--surface-2); }
 .biens-l .lr-main .tx small.loc { color: var(--acc, inherit); }
@@ -213,6 +214,19 @@ details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { backgrou
 .maj-bandeau { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 10px 14px; margin: 0 0 14px; border-radius: 14px; background: var(--accent-soft); color: var(--ink); font-weight: 700; box-shadow: var(--sh-2); position: sticky; top: calc(var(--head-h) + 8px); z-index: 20; border: 1px solid var(--accent); }
 .maj-bandeau button { flex-shrink: 0; }
 .maj-statut { margin: 10px 0 0; font-weight: 650; }
+@media (max-width: 420px) { /* petits écrans : un texte long passe à la ligne au lieu de sortir de l'écran */
+  button:not(.cq):not(.icon-btn), .btn { white-space: normal; height: auto; min-height: 40px; padding-top: 8px; padding-bottom: 8px; line-height: 1.25; max-width: 100%; text-align: center; }
+  button.small:not(.cq), .btn.small { min-height: 34px; padding-top: 6px; padding-bottom: 6px; }
+  .table-wrap table td { overflow-wrap: anywhere; }
+}
+.penny-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.penny-choix button { height: auto; min-height: 72px; flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; padding: 12px; white-space: normal; line-height: 1.25; border: 1.5px solid var(--line); background: var(--surface); }
+#overlay .penny-choix button { text-align: left; align-items: flex-start; justify-content: flex-start; }
+.penny-choix button small { color: var(--muted); font-weight: 500; font-size: .8rem; }
+.penny-choix button.on { border-color: var(--accent); background: var(--accent-soft); }
+@media (max-width: 360px) { .penny-choix { grid-template-columns: 1fr; } }
+.penny-cta { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--surface-2); line-height: 1.45; }
+.penny-cta button { display: flex; margin-top: 10px; }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -269,6 +283,8 @@ details.surv[open] > summary::before { transform: rotate(90deg); }
 .avatar.vide { background: var(--surface-2); color: var(--muted); }
 .avatar.ancien { background: var(--surface-2); color: var(--muted); border: 1.5px dashed var(--line); }
 .cq { display: inline-grid; place-items: center; width: 20px; height: 20px; min-height: 0; padding: 0; margin-left: 5px; border-radius: 50%; border: 1.5px solid currentColor; background: transparent; color: var(--accent); font-size: .72rem; font-weight: 800; line-height: 1; vertical-align: middle; cursor: help; opacity: .8; }
+.cq { position: relative; }
+.cq::after { content: ""; position: absolute; inset: -10px; } /* zone de toucher plus grande que la bulle */
 .cq:hover { opacity: 1; background: var(--accent-soft); }
 .cq-box { padding: 20px; } .cq-box h2 { font-size: 1.1rem; margin: 0; } .cq-box p { line-height: 1.55; }
 dl.lexique dt { font-weight: 750; margin-top: 12px; } dl.lexique dd { margin: 4px 0 0; color: var(--ink-2); line-height: 1.5; }
@@ -309,7 +325,7 @@ details.anciens .todo { margin-top: 10px; }
 @media (max-width: 860px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .kpi { background: var(--surface); border-radius: var(--r); padding: 16px; box-shadow: var(--sh-2); display: flex; flex-direction: column; gap: 4px; }
 .kpi span { color: var(--muted); font-size: .76rem; font-weight: 700; }
-.kpi b { font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
+.kpi b { font-size: clamp(1.05rem, 5.4vw, 1.4rem); overflow-wrap: anywhere; font-weight: 800; letter-spacing: -.02em; }
 .kpi small { color: var(--muted); font-size: .8rem; }
 .kpi.bad b { color: var(--bad); }
 
@@ -522,6 +538,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .av0 { background: #123a30; color: #7fe0c4; } :root:not([data-theme="light"]) .av1 { background: #3d2415; color: #f5b48c; } :root:not([data-theme="light"]) .av2 { background: #1d2550; color: #a9b6ff; } :root:not([data-theme="light"]) .av3 { background: #3d1a2c; color: #f4a3cb; } :root:not([data-theme="light"]) .av4 { background: #2c3312; color: #cfe07a; } :root:not([data-theme="light"]) .av5 { background: #13303d; color: #8fd2f1; } :root:not([data-theme="light"]) .av6 { background: #3a2c0f; color: #f5cd7a; } :root:not([data-theme="light"]) .av7 { background: #2a2147; color: #c7b6fb; } }
 :root[data-theme="dark"] .av0 { background: #123a30; color: #7fe0c4; } :root[data-theme="dark"] .av1 { background: #3d2415; color: #f5b48c; } :root[data-theme="dark"] .av2 { background: #1d2550; color: #a9b6ff; } :root[data-theme="dark"] .av3 { background: #3d1a2c; color: #f4a3cb; } :root[data-theme="dark"] .av4 { background: #2c3312; color: #cfe07a; } :root[data-theme="dark"] .av5 { background: #13303d; color: #8fd2f1; } :root[data-theme="dark"] .av6 { background: #3a2c0f; color: #f5cd7a; } :root[data-theme="dark"] .av7 { background: #2a2147; color: #c7b6fb; }
 .docbar { background: var(--surface); border-radius: var(--r); padding: 8px; box-shadow: var(--sh-2); flex-wrap: nowrap; }
+@media (max-width: 380px) { .docbar { flex-wrap: wrap; } .docbar .row { flex-wrap: wrap; } .docbar button { padding-left: 10px; padding-right: 10px; } }
 .docbar .row { flex-wrap: nowrap; min-width: 0; }
 .docbar .doc-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .95rem; }
 .docbar button { box-shadow: none; }
@@ -928,14 +945,73 @@ function sectionBanque() {
       <li>Reviens ici, touche <b>Importer le relevé</b> et choisis le fichier. L'appli reconnaît les loyers et les dépenses : tu vérifies, tu valides.</li></ol>
     <p class="note">Pas de bouton d'export dans ta banque ? Sélectionne les lignes du relevé à l'écran, copie-les et colle-les dans la case prévue : ça marche aussi.</p>
     <div class="row"><button class="primary" onclick="importerReleve()">🏦 Importer le relevé</button></div>
-    ${SB ? `<details style="margin-top:12px"><summary>Tu utilises Pennylane ? Tout devient automatique</summary>
-    <p class="note">L'appli lit alors ton compte toute seule, toutes les heures. Dans Pennylane : <b>Paramètres</b> › <b>Connectivité</b> › <b>Développeurs</b> › <b>Générer un token API</b> (lecture seule), puis colle-le ici. Si c'est ton comptable qui gère Pennylane, demande-lui ce jeton.</p>
-    <form class="row" onsubmit="event.preventDefault();brancherBanque(this)"><input name="jeton" required placeholder="Colle le jeton Pennylane ici" aria-label="Jeton Pennylane" autocomplete="off" style="flex:1;min-width:200px"><button class="primary" id="bq_btn">Brancher</button></form></details>` : ""}</div></details>`;
+    ${SB && estProprio() ? `<div class="penny-cta"><b>Tu utilises Pennylane ?</b> Tout devient automatique : l'appli lit ton compte toute seule, toutes les heures.<button class="small primary" onclick="assistantPennylane()">Brancher Pennylane</button></div>` : ""}</div></details>`;
   const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), ops = BANQUE.ops.slice(0, view.banqueTout ? 400 : 25);
   const lies = new Map(S.paiements.filter(p => p.tx).map(p => [String(p.tx), p]));
   return `<section class="card banque"><div class="bq-head"><div><h2>🏦 Compte bancaire</h2><p class="note">${BANQUE.comptes.map(c => esc(c.nom)).join(" · ")} · mis à jour ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0]?.maj_le || Date.now())}${BANQUE.lien.erreur ? ` · ⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p></div><b class="bq-solde">${eur(solde)}</b></div>
     <ul class="ops">${ops.map(o => { const p = lies.get(o.tx_id), b = p && bail(p.bailId); return `<li><span class="op-d">${fds(o.date).slice(0, 5)}</span><span class="tx"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span>${b ? `<small class="lien">✓ Loyer ${esc(nomCourt(b.nom))}</small>` : ""}</span><b class="${o.montant > 0 ? "pos" : "neg"}">${o.montant > 0 ? "+" : "−"}${eur(Math.abs(o.montant))}</b></li>`; }).join("")}</ul>
     <div class="row"><button class="small" onclick="actualiserBanque(this)">↻ Actualiser</button>${BANQUE.ops.length > 25 ? `<button class="small ghost" onclick="view.banqueTout=!view.banqueTout;render()">${view.banqueTout ? "Moins" : "Tout voir"}</button>` : ""}<button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div></section>`;
+}
+/* ================= Brancher Pennylane, pas à pas (pour n'importe qui) ================= */
+// Deux cas : la personne a accès à Pennylane (dirigeant ou comptable interne) ; ou c'est son comptable qui gère.
+function messageComptable() {
+  return `Bonjour,
+
+J'utilise une appli pour suivre les loyers de ${S.sci.nom || "ma SCI"}. Peux-tu me créer un jeton API Pennylane en lecture seule pour cette société ?
+
+Dans Pennylane : Paramètres > Connectivité > Développeurs > Générer un token API
+- Nom : Gestion locative
+- API V2 : Lecture seule, avec les droits "Comptes bancaires" et "Transactions"
+- Expiration : Illimitée (ou 12 mois)
+
+Le jeton ne s'affiche qu'une fois : merci de me l'envoyer (plutôt par SMS ou de vive voix que par e-mail).
+
+Merci !
+${S.sci.gerant || ""}`.trim();
+}
+function assistantPennylane(cas) {
+  if (!SB) { toast("La banque se branche dans l'appli installée."); return; }
+  if (!estProprio()) { toast(msgProprio("brancher la banque")); return; }
+  const coller = `<label class="fl full">Colle le jeton ici<textarea name="jeton" rows="3" autocomplete="off" spellcheck="false" placeholder="Le long code copié dans Pennylane" required></textarea></label>
+    <p class="full note">🔒 Le jeton est rangé dans un coffre chiffré sur le serveur. Il sert seulement à <b>lire</b> ton compte : l'appli ne peut faire ni virement, ni modification dans Pennylane.</p>`;
+  const choix = `<div class="full penny-choix">
+      <button type="button" class="${cas === "moi" ? "on" : ""}" onclick="assistantPennylane('moi')"><b>🙋 J'ai accès à Pennylane</b><small>Je suis dirigeant ou comptable de la société</small></button>
+      <button type="button" class="${cas === "comptable" ? "on" : ""}" onclick="assistantPennylane('comptable')"><b>🧑‍💼 C'est mon comptable</b><small>Je lui demande le jeton</small></button></div>`;
+  let corps = `<p class="full note">Une fois branché, l'appli lit ton compte bancaire toute seule, toutes les heures : les loyers reçus se cochent, la compta se remplit. Il faut un jeton Pennylane (un code de lecture), et 2 minutes.</p>${choix}`;
+  if (cas === "moi") corps += `<ol class="full tuto">
+      <li>Ouvre <a href="https://app.pennylane.com" target="_blank" rel="noopener">Pennylane</a>, puis <b>Paramètres</b> › <b>Connectivité</b> › <b>Développeurs</b>.</li>
+      <li>Touche <b>Générer un token API</b>. Nom : <b>Gestion locative</b>.</li>
+      <li>Dans <b>API V2</b>, choisis <b>Lecture seule</b>. Si Pennylane demande les droits un par un, coche <b>Comptes bancaires</b> et <b>Transactions</b>.</li>
+      <li>Expiration : <b>Illimitée</b> (sinon l'appli s'arrêtera à la date choisie et te préviendra).</li>
+      <li>Touche <b>Générer</b>, puis <b>copie le jeton tout de suite</b> : Pennylane ne l'affiche qu'une fois.</li></ol>
+    <p class="full note">Tu ne vois pas l'onglet <b>Développeurs</b> ? Il faut l'offre Essentiel (ou plus) et être dirigeant ou comptable dans Pennylane. Sinon, demande le jeton à ton comptable (bouton du dessus).</p>${coller}`;
+  if (cas === "comptable") corps += `<p class="full note">Voici un message tout prêt. Modifie-le si tu veux, puis envoie-le à ton comptable avec ton téléphone.</p>
+    <label class="fl full">Message<textarea id="msgCompta" rows="9">${esc(messageComptable())}</textarea></label>
+    <div class="full row"><button type="button" class="small" onclick="copierTexte(document.getElementById('msgCompta').value)">📋 Copier</button><button type="button" class="small" onclick="envoyerMsgComptable('mail')">✉️ E-mail</button><button type="button" class="small" onclick="envoyerMsgComptable('partage')">💬 SMS, WhatsApp…</button></div>
+    <p class="full note">Quand il t'envoie le jeton, reviens ici et colle-le :</p>${coller}`;
+  modal("Brancher ta banque (Pennylane)", corps, d => { if (!cas) return false; brancherPennylane(d.jeton); return false; }, { ok: cas ? "Brancher" : "Choisis une option", lecture: true });
+  const ok = document.querySelector("#mform button.primary"); if (ok && !cas) ok.disabled = true;
+}
+function envoyerMsgComptable(par) {
+  const t = (document.getElementById("msgCompta") || {}).value || messageComptable(), objet = "Jeton API Pennylane (lecture seule)";
+  // rien ne part tout seul : on ouvre ton appli de messagerie avec le texte prêt, c'est toi qui envoies
+  if (par === "partage" && navigator.share) { navigator.share({ title: objet, text: t }).catch(() => {}); return; }
+  const c = (S.sci.contacts || []).find(x => /compta/i.test(x.role || "") && x.email);
+  location.href = `mailto:${c ? encodeURIComponent(c.email) : ""}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(t)}`;
+}
+async function brancherPennylane(jeton) {
+  const bt = document.querySelector("#mform button.primary"); if (bt) { bt.disabled = true; bt.textContent = "Vérification…"; }
+  const r = await SB.rpc("banque_brancher", { e: ESPACE, jeton: jeton || "" });
+  if (r.error) { if (bt) { bt.disabled = false; bt.textContent = "Brancher"; } toast(r.error.message); return; }
+  closeOverlay(); toast(`✅ Banque branchée : ${r.data} opérations lues`); await chargerBanque(false);
+}
+function sectionBanqueReglages() {
+  if (!SB) return `<p class="note">La banque se branche dans l'appli installée.</p>`;
+  if (!estProprio()) return `<p class="note">La banque de l'espace est branchée et gérée par le propriétaire (<b>${esc(nomProprio())}</b>).</p>`;
+  if (BANQUE.lien) return `<p class="note">✅ Branchée sur Pennylane${BANQUE.comptes.length ? " : " + BANQUE.comptes.map(c => esc(c.nom)).join(", ") : ""}. Lecture toutes les heures.${BANQUE.lien.erreur ? `<br>⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p>
+    <div class="row">${BANQUE.lien.erreur ? `<button class="small primary" onclick="assistantPennylane()">Rebrancher avec un nouveau jeton</button>` : ""}<button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div>`;
+  return `<p class="note">Les loyers reçus se cochent tout seuls et la compta se remplit. Avec Pennylane, c'est automatique ; sinon, tu peux importer le relevé de ta banque une fois par mois.</p>
+    <div class="row"><button class="small primary" onclick="assistantPennylane()">Brancher Pennylane</button><button class="small" onclick="importerReleve()">🏦 Importer un relevé</button></div>`;
 }
 async function brancherBanque(f) {
   const bt = document.getElementById("bq_btn"); bt.disabled = true; bt.textContent = "Connexion…";
@@ -944,7 +1020,7 @@ async function brancherBanque(f) {
   toast(`Banque branchée : ${r.data} opérations lues`); await chargerBanque(false);
 }
 async function actualiserBanque(bt) { bt.disabled = true; bt.textContent = "Mise à jour…"; await chargerBanque(true); }
-function debrancherBanque() { confirmer("Débrancher la banque ? Les opérations affichées seront effacées de l'appli (les loyers déjà enregistrés restent).", async () => { await SB.rpc("banque_debrancher", { e: ESPACE }); BANQUE = { etat: "ok", ops: [], comptes: [], lien: null }; render(); }); }
+function debrancherBanque() { if (!estProprio()) { toast(msgProprio("débrancher la banque")); return; } confirmer("Débrancher la banque ? Les opérations affichées seront effacées de l'appli (les loyers déjà enregistrés restent).", async () => { await SB.rpc("banque_debrancher", { e: ESPACE }); BANQUE = { etat: "ok", ops: [], comptes: [], lien: null }; render(); }); }
 function appliquerLigne(l) {
   if (!l || !l.coll) return false;
   const k = l.coll + "/" + l.doc_id, j = JSON.stringify(l.data);
@@ -2888,6 +2964,7 @@ function pageReglages() {
     rubrique("membres", "👤", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
     estProprio() ? rubrique("drive", "📁", "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · lecture seule` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
       : rubrique("drive", "📁", "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
+    rubrique("banque", "🏦", "Banque", BANQUE.lien ? `Pennylane branché${BANQUE.lien.erreur ? " · ⚠️ à rebrancher" : ""}` : "Pas branchée · Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? `Depuis ${esc(GMAIL.adresse)}` : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))

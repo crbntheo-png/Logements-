@@ -24,6 +24,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 14/11/2026 (suite 5) — tous les téléphones + Pennylane en libre-service (demande de Théo)
+- **Tous les téléphones** : contrôle automatique de 11 pages et 7 fenêtres sur 5 tailles (320×568 vieil iPhone SE, 360×740 Android, 375×667 iPhone SE, 430×932 iPhone Pro Max, 844×390 paysage), rubriques ouvertes. Corrigé : menu "Plus" qui pouvait sortir à droite (aligné à droite), boutons d'aide des Réglages trop serrés, gros montants qui sortaient des cartes (taille qui s'adapte), barre des documents (quittance) coupée en 320, textes de boutons longs qui débordaient (passent à la ligne sous 420 px), bulles "?" avec une zone de toucher plus grande. Plus aucun débordement.
+- **Pennylane pour n'importe qui** (vérifié dans la doc Pennylane : offre Essentiel ou plus, onglet Développeurs visible pour dirigeant ou comptable, droits `bank_accounts:readonly` et `transactions:readonly`, expiration au choix) : assistant "Brancher ta banque" avec 2 chemins. "J'ai accès à Pennylane" = 5 étapes + coller le jeton. "C'est mon comptable" = message prêt (modifiable) à copier, envoyer par e-mail (ouvre ta messagerie, rien ne part tout seul) ou SMS/WhatsApp, puis coller le jeton reçu. Nouvelle rubrique Réglages › Banque.
+- **Serveur** (`supabase/banque2.sql`, appliqué) : brancher/débrancher la banque réservé au propriétaire de l'espace (avant : n'importe quel membre, même en lecture seule) ; le jeton est vérifié (format, accepté par Pennylane, droit de lire comptes ET opérations) avec des messages clairs ; synchro horaire : messages clairs si le jeton expire (401) ou manque de droits (403). Synchro GTP relancée après : OK, 200 opérations.
+- Nouveau `tests/test35.js` (comptes de test, faux jetons, rien envoyé) 12/12. test5, 29, 30 (49/49), 33, 34 OK. En ligne, version 07fd120.
+- Pas vérifié : avec un vrai jeton Pennylane d'une autre société ; sur un vrai téléphone.
+
 ### 14/11/2026 (suite 4) — "Mettre à jour l'appli" (demande de Théo)
 - **Version** : `build.py` calcule un numéro stable (7 caractères, d'après index.html + build.py) et une date gardée tant que rien ne change ; posés dans `window.APP_VERSION` et dans `dist/version.json` (jamais en cache : en-tête `no-store`, ignoré par le service worker). Le service worker prend ce numéro (avant : un nombre au hasard à chaque fabrication).
 - **Réglages › Outils › Mettre à jour l'appli** : version actuelle, "Chercher une mise à jour" (compare avec `version.json` en ligne, puis demande au téléphone de télécharger), "Mettre à jour maintenant" (recharge ; si le téléchargement n'est pas fini, attend jusqu'à 10 s).
