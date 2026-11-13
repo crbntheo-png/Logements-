@@ -170,6 +170,19 @@ button.small .ic { width: 16px; height: 16px; }
 
 /* Liste "À faire" courte */
 .todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-2); overflow: hidden; }
+details.rgl { padding: 0; margin-bottom: 10px; }
+details.rgl > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 14px 16px; min-height: 64px; }
+details.rgl > summary::-webkit-details-marker { display: none; }
+details.rgl > summary .tx { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+details.rgl > summary small { color: var(--muted); font-size: .85rem; }
+details.rgl > summary .chev { transition: transform .15s; color: var(--muted); flex-shrink: 0; }
+details.rgl[open] > summary .chev { transform: rotate(90deg); }
+.rgl-ico { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 20px; flex-shrink: 0; }
+.rgl-c { padding: 14px 16px 16px; border-top: 1px solid var(--line); }
+.rgl-aide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: -4px 0 14px; }
+.rgl-aide.seul { grid-template-columns: auto; justify-content: start; }
+.rgl-aide > * { justify-content: center; text-align: center; white-space: nowrap; }
+details.rgl { scroll-margin-top: 76px; }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -1081,7 +1094,7 @@ function bandeauInstall() {
   let cache = false; try { cache = localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) {}
   if (cache) return "";
   if (INSTALL) return `<div class="banner install"><span>📲 Installe l'appli sur ton téléphone pour l'ouvrir d'un geste.</span><span class="row"><button class="small primary" onclick="installer()">Installer</button><button class="small ghost" onclick="masquerInstall()">Plus tard</button></span></div>`;
-  if (estIOS() || estAndroid()) return `<div class="banner install"><span>📲 Installe l'appli sur ton écran d'accueil : c'est 30 secondes.</span><span class="row"><button class="small primary" onclick="go('reglages')">Voir comment</button><button class="small ghost" onclick="masquerInstall()">Plus tard</button></span></div>`;
+  if (estIOS() || estAndroid()) return `<div class="banner install"><span>📲 Installe l'appli sur ton écran d'accueil : c'est 30 secondes.</span><span class="row"><button class="small primary" onclick="reglage('install')">Voir comment</button><button class="small ghost" onclick="masquerInstall()">Plus tard</button></span></div>`;
   return "";
 }
 /* Tuto d'installation, mot à mot */
@@ -1815,7 +1828,7 @@ const ACTIONS = [
   ["🗑️", "Saisir une taxe foncière", "taxeFonciere()"], ["📊", "Export pour le comptable", `exportCSV(${TODAY.getFullYear()})`], ["📄", "Bilan de l'année", `docBilanOpen(${TODAY.getFullYear()})`],
   ["📅", "Tous les loyers du mois", "go('loyers')"], ["⚙️", "Réglages de la SCI", "go('reglages')"], ["📁", "Documents du Drive", "go('docs')"],
   ["📷", "Photo d'une facture", "photoFacture()"], ["📊", "Importer mes logements depuis Excel", "importTableur()"], ["🧾", "Régulariser les charges", `regulTous(${TODAY.getFullYear() - 1})`], ["🧮", "Fichier FEC pour le comptable", `exportFEC(${TODAY.getFullYear()})`],
-  ["📆", "Ajouter les dates à mon agenda", "exportAgenda()"], ["📈", "Chercher le dernier indice IRL", "majIrlInsee(true)"], ["📖", "Petit lexique (c'est quoi ?)", "go('aide')"], ["🔔", "Notifications", "go('reglages')"], ["⚖️", "Mentions légales et confidentialité", "go('legal')"]
+  ["📆", "Ajouter les dates à mon agenda", "exportAgenda()"], ["📈", "Chercher le dernier indice IRL", "majIrlInsee(true)"], ["📖", "Petit lexique (c'est quoi ?)", "go('aide')"], ["🔔", "Notifications", "reglage('notif')"], ["⚖️", "Mentions légales et confidentialité", "go('legal')"]
 ];
 function majRecherche() {
   const q = sansAccent((document.getElementById("srq") || {}).value || ""), mots = q.split(/\s+/).filter(Boolean), ok = t => mots.every(m => sansAccent(t).includes(m));
@@ -1969,16 +1982,16 @@ function etapesGuide() {
   const relOk = Object.keys(S.faits || {}).some(k => k.startsWith("rel-")) || !!(BANQUE && BANQUE.lien);
   let installOk = false; try { installOk = estInstallee() || localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) { installOk = estInstallee(); }
   const L = [
-    { ok: !!(S.sci.nom && S.sci.gerant && S.sci.siege), ico: "🏛", t: estPerso() ? "Tes infos de propriétaire" : "Les infos de ta société", pourquoi: "Ton nom, ton adresse et le signataire apparaissent sur chaque quittance, bail et courrier. Sans eux, les documents sont incomplets.", comment: "Réglages › rubrique « La SCI ». 1 minute.", btn: ["Remplir", "go('reglages')"] },
+    { ok: !!(S.sci.nom && S.sci.gerant && S.sci.siege), ico: "🏛", t: estPerso() ? "Tes infos de propriétaire" : "Les infos de ta société", pourquoi: "Ton nom, ton adresse et le signataire apparaissent sur chaque quittance, bail et courrier. Sans eux, les documents sont incomplets.", comment: "Réglages › rubrique « La SCI ». 1 minute.", btn: ["Remplir", "reglage('sci')"] },
     { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: "Un par logement : adresse, surface, meublé ou vide.", btn: ["Ajouter un logement", "editBien()"] },
     { ok: S.baux.length > 0, ico: "👤", t: "Tes locataires", pourquoi: "L'appli calcule chaque mois ce qui est dû, te dit qui est en retard, prépare quittances et relances, et te rappelle la révision du loyer (IRL) au bon moment.", comment: "Nom, e-mail, date d'entrée, loyer. L'e-mail sert à envoyer les documents.", btn: ["Ajouter un locataire", "editBail()"] },
     { ok: relOk, ico: "🏦", t: "Ta banque", pourquoi: "Les loyers reçus se cochent tout seuls et la compta se remplit avec tes dépenses : plus de pointage à la main.", comment: "Ton relevé une fois par mois (2 min), ou Pennylane si tu l'as.", btn: ["Voir comment", "go('compta')"] },
     { ok: S.fichiers.length > 0 || S.edl.length > 0, ico: "📁", t: "Tes documents", pourquoi: "Bail signé, DPE, assurance, factures : tout est rangé par logement, sur ton téléphone et celui de tes associés. Fini de chercher dans les mails.", comment: "Fiche d'un logement › Documents › Ajouter un fichier (PDF ou photo).", btn: ["Ouvrir mes logements", "go('biens')"] },
   ];
   if (SB) L.push(
-    { ok: !!GMAIL, ico: "✉️", t: "Envoyer depuis ton adresse", pourquoi: "Quittances et relances partent de ta vraie adresse e-mail et tu les retrouves dans tes « Messages envoyés ». Rien ne part sans ton accord.", comment: "Réglages › « Envoyer depuis ton adresse Gmail ». 3 minutes.", btn: ["Brancher Gmail", "go('reglages')"], option: true },
-    { ok: !!(MEMBRES && (MEMBRES.membres.length > 1 || MEMBRES.invitations.length)), ico: "🤝", t: "Inviter tes associés", pourquoi: "Chacun voit les mêmes chiffres en direct, sur son téléphone. Plus de tableur à s'envoyer.", comment: "Réglages › « Membres de l'espace » › leur e-mail.", btn: ["Inviter", "go('reglages')"], option: true },
-    { ok: installOk, ico: "📲", t: "Mettre l'appli sur ton téléphone", pourquoi: "Une icône sur l'écran d'accueil : tu l'ouvres en un geste, comme une vraie appli.", comment: "Réglages › « Installer l'appli » : le tuto pas à pas.", btn: ["Voir le tuto", "go('reglages')"], option: true });
+    { ok: !!GMAIL, ico: "✉️", t: "Envoyer depuis ton adresse", pourquoi: "Quittances et relances partent de ta vraie adresse e-mail et tu les retrouves dans tes « Messages envoyés ». Rien ne part sans ton accord.", comment: "Réglages › « Envoyer depuis ton adresse Gmail ». 3 minutes.", btn: ["Brancher Gmail", "reglage('gmail')"], option: true },
+    { ok: !!(MEMBRES && (MEMBRES.membres.length > 1 || MEMBRES.invitations.length)), ico: "🤝", t: "Inviter tes associés", pourquoi: "Chacun voit les mêmes chiffres en direct, sur son téléphone. Plus de tableur à s'envoyer.", comment: "Réglages › « Membres de l'espace » › leur e-mail.", btn: ["Inviter", "reglage('membres')"], option: true },
+    { ok: installOk, ico: "📲", t: "Mettre l'appli sur ton téléphone", pourquoi: "Une icône sur l'écran d'accueil : tu l'ouvres en un geste, comme une vraie appli.", comment: "Réglages › « Installer l'appli » : le tuto pas à pas.", btn: ["Voir le tuto", "reglage('install')"], option: true });
   // Une étape réussie une fois reste cochée (même si l'info n'est pas encore rechargée)
   let neuf = false; S.faits = S.faits || {};
   L.forEach(e => { const k = "guide-" + e.t; if (e.ok && !S.faits[k]) { S.faits[k] = iso(TODAY); neuf = true; } if (S.faits[k]) e.ok = true; });
@@ -2078,7 +2091,7 @@ function ancienneBienvenue() {
   const st = (ok, ico, t, d, btn) => `<div class="task ${ok ? "" : "info"}"><span class="ico" aria-hidden="true">${ok ? "✅" : ico}</span><div><div class="t">${t}</div><div class="d">${d}</div></div><div class="acts">${ok ? `<span class="pill ok">Fait</span>` : btn}</div></div>`;
   return `<div class="greet"><h1>Bienvenue</h1><p>Trois étapes, et l'appli s'occupe du reste : loyers, quittances, relances, révisions.</p></div>
   <section class="tasks">
-    ${st(!!(S.sci.nom && S.sci.gerant && S.sci.siege), "🏛", estPerso() ? "1. Tes infos" : "1. Les infos de la SCI", "Nom, adresse, gérant, associés. Elles apparaissent sur les quittances et les baux.", `<button class="small primary" onclick="go('reglages')">Remplir</button>`)}
+    ${st(!!(S.sci.nom && S.sci.gerant && S.sci.siege), "🏛", estPerso() ? "1. Tes infos" : "1. Les infos de la SCI", "Nom, adresse, gérant, associés. Elles apparaissent sur les quittances et les baux.", `<button class="small primary" onclick="reglage('sci')">Remplir</button>`)}
     ${st(S.biens.length > 0, "🏢", "2. Tes biens", "Un par logement : adresse, surface, meublé ou vide, DPE.", `<button class="small primary" onclick="editBien()">Ajouter un bien</button>`)}
     ${st(S.baux.length > 0, "👤", "3. Tes locataires", "Nom, e-mail, date d'entrée, loyer. L'e-mail sert à envoyer les quittances.", `<button class="small primary" onclick="editBail()">Ajouter un locataire</button>`)}
   </section>
@@ -2663,12 +2676,20 @@ function pageCompta() {
   </section></div>`;
 }
 
+/* Réglages : des rubriques repliées, une ligne chacune ; on touche pour ouvrir */
+function reglage(id) {
+  view.rgl = Object.assign({}, view.rgl, { [id]: true });
+  if (pageCourante() === "reglages") render(); else go("reglages");
+  setTimeout(() => { const el = document.getElementById("rgl-" + id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
+}
+const sansCarte = h => String(h).replace(/^\s*<section class="card[^"]*">\s*<h2>[\s\S]*?<\/h2>/, "").replace(/<\/section>\s*$/, "");
+function rubrique(id, ico, titre, resume, contenu, cls = "") {
+  const ouvert = view.rgl && view.rgl[id];
+  return `<details class="card rgl ${cls}" id="rgl-${id}" ${ouvert ? "open" : ""} ontoggle="view.rgl=Object.assign({},view.rgl,{'${id}':this.open})"><summary><span class="rgl-ico" aria-hidden="true">${ico}</span><span class="tx"><b>${titre}</b><small>${resume}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">${contenu}</div></details>`;
+}
 function pageReglages() {
-  const s = S.sci;
-  return `<div class="head"><div><h1>Réglages</h1><p>Les infos de la SCI apparaissent sur les quittances, les baux et les courriers.</p></div><span class="row"><a class="btn small" href="#aide">❓ Comment ça marche ?</a>${SB ? `<button class="small" onclick="ouvrirSignalement('bug')">🐞 Signaler un problème</button><button class="small" onclick="ouvrirSignalement('idee')">💡 Proposer une idée</button>` : ""}</span></div>
-  ${SB ? sectionInstall() + sectionNotif() + sectionMembres() + sectionGmail() : ""}
-  <section class="card"><h2>La SCI</h2>
-  <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
+  const s = S.sci, dernierIrl = irlCles().slice(-1)[0], nbRap = S.rappels.filter(r => !r.fait).length;
+  const sci = rubrique("sci", "🏛", estPerso() ? "Tes infos" : "La SCI", `${esc(s.nom || "À remplir")} · adresse, IBAN, associés, Drive`, `  <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
     ${sel("Tu loues", "forme", s.forme || "sci", [["sci", "Avec une SCI"], ["perso", "En nom propre (particulier)"]], "full")}
     ${fld("Nom de la SCI (ou ton nom)", "nom", s.nom)}${fld("N° SIREN", "siren", s.siren)}
     ${fld("Adresse du siège (ou ton adresse)", "siege", s.siege, "text", "full")}
@@ -2696,25 +2717,37 @@ function pageReglages() {
       ${SB ? "" : sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui (dossier « Documents générés par l'appli »)"], ["0", "Non"]], "full")}
     </fieldset>
     <div class="full row"><button class="primary">Enregistrer</button></div>
-  </form></section>
-  <section class="card"><h2>📅 Dans ton agenda</h2><p class="note">Loyers attendus, révisions, fins d'assurance, congés, taxe foncière, déclarations : toutes les dates des 12 prochains mois dans le calendrier de ton téléphone (iPhone, Android, Google Agenda, Outlook). À refaire quand tu ajoutes un locataire.</p><div class="row"><button class="primary" onclick="exportAgenda()">📅 Ajouter à mon agenda</button></div></section>
-  <section class="card"><h2>Indice des loyers (IRL)${cq("irl")}</h2>
+  </form>`);
+  const compte = SB ? [sci,
+    rubrique("membres", "👤", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
+    rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? `Depuis ${esc(GMAIL.adresse)}` : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
+    rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
+    rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
+  ].join("") : sci;
+  const outils = [
+    rubrique("agenda", "📅", "Dans ton agenda", "Toutes les dates des 12 prochains mois", `<p class="note">Loyers attendus, révisions, fins d'assurance, congés, taxe foncière, déclarations : toutes les dates des 12 prochains mois dans le calendrier de ton téléphone (iPhone, Android, Google Agenda, Outlook). À refaire quand tu ajoutes un locataire.</p><div class="row"><button class="primary" onclick="exportAgenda()">📅 Ajouter à mon agenda</button></div>`),
+    rubrique("irl", "📈", "Indice des loyers", `Dernier : ${qLabel(dernierIrl)} = ${fmtIrl(irlVal(dernierIrl))} · mis à jour tout seul`, `
     <p class="note">Les révisions de loyer se calculent toutes seules avec ces indices officiels de l'INSEE. Dernier connu : <b>${qLabel(irlCles().slice(-1)[0])} = ${fmtIrl(irlVal(irlCles().slice(-1)[0]))}</b>. Prochain : <b>${qLabel(irlProchain().k)}</b>, publié vers le ${fd(irlProchain().pub)}. Quand il sort, ajoute-le ici (valeur sur <a href="https://www.service-public.gouv.fr/particuliers/vosdroits/F13723" target="_blank" rel="noopener">service-public.gouv.fr</a>).</p>
     <div class="table-wrap" style="border:0"><table><tbody>${irlCles().slice(-6).reverse().map(k => `<tr><td>${qLabel(k)}</td><td class="num">${fmtIrl(irlVal(k))}</td><td class="sub">publié vers le ${fds(qPub(k))}</td></tr>`).join("")}</tbody></table></div>
     <div class="row" style="margin-bottom:8px"><button class="small primary" onclick="majIrlInsee(true)">🔄 Chercher le dernier indice sur le site de l'INSEE</button></div><p class="note">L'appli le fait aussi toute seule une fois par jour.</p><form class="row" onsubmit="event.preventDefault();ajouterIrl(this)"><input name="t" id="irl_t" aria-label="Trimestre" placeholder="T4 2026" style="max-width:120px" value="${qLabel(irlProchain().k)}"><input name="v" id="irl_v" type="number" inputmode="decimal" step="0.01" aria-label="Valeur de l'indice" placeholder="Valeur" style="max-width:120px" required><button>Ajouter l'indice</button></form>
-  </section>
-  <section class="card"><h2>${SB ? "Sauvegarde" : "Partage avec les associés et sauvegarde"}</h2>
+`),
+    rubrique("sauv", ic("download"), "Sauvegarde et import", `Copie de sécurité · dernière : ${S.lastExport ? fds(S.lastExport.slice(0, 10)) : "jamais"}`, `
     <div class="row" style="margin-bottom:8px"><button onclick="importTableur()">📊 Importer mes logements depuis Excel</button></div>
     ${SB ? `<p class="note">Tes données sont enregistrées en ligne et protégées. Tu peux aussi télécharger une copie de sécurité.</p>` : MODE === "partage" ? `<p class="note"><b>Les données sont enregistrées en ligne.</b> Pour que tes associés voient et modifient la même chose : bouton <b>Partager</b> en haut de cette page, puis invite-les avec leur e-mail en tant qu'<b>Éditeur</b>. Chacun envoie les quittances depuis son propre Gmail.</p>` : `<p class="note">Les données sont enregistrées dans ce navigateur, sur cet appareil. Pour ne rien perdre : télécharge une sauvegarde régulièrement et rouvre-la sur un autre appareil avec "Ouvrir une sauvegarde".</p>`}
     <div class="row"><button class="primary" onclick="exportJSON()">Télécharger une sauvegarde</button><button onclick="document.getElementById('importFile').click()">Ouvrir une sauvegarde</button></div>
     <p class="note">Dernière sauvegarde téléchargée : ${S.lastExport ? fd(S.lastExport.slice(0, 10)) : "jamais"}</p>
-  </section>
-  <section class="card"><h2>Rappels</h2>
+`),
+    rubrique("rappels", "⏰", "Rappels", nbRap ? `${nbRap} à venir` : "Aucun rappel", `
     ${S.rappels.length ? `<div class="table-wrap" style="border:0"><table><tbody>${S.rappels.map(r => `<tr><td>${fds(r.date)}</td><td>${esc(r.titre)}</td><td>${r.fait ? `<span class="pill ok">Fait</span>` : `<span class="pill info">À faire</span>`}</td><td><button class="small ghost" onclick="supprRappel('${r.id}')">Supprimer</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note">Aucun rappel.</p>`}
     <div class="row"><button onclick="editRappel()">+ Rappel</button></div>
-  </section>
-  <section class="card"><h2>Zone sensible</h2><div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button>${SB ? `<button class="danger ghost" onclick="supprimerCompte()">Supprimer mon compte</button>` : ""}</div></section>
-  <p class="note center" style="margin:6px 0 20px"><a href="#legal">Mentions légales et confidentialité</a> · <a href="#aide">Comment ça marche ?</a></p>`;
+`)
+  ].join("");
+  return `<div class="head"><div><h1>Réglages</h1><p>Touche une rubrique pour l'ouvrir.</p></div></div>
+  <div class="rgl-aide ${SB ? "" : "seul"}"><a class="btn small" href="#aide"><span aria-hidden="true">❓</span> Aide</a>${SB ? `<button class="small" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span aria-hidden="true">🐞</span> Un problème</button><button class="small" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span aria-hidden="true">💡</span> Une idée</button>` : ""}</div>
+  <p class="group-title">Ton compte</p>${compte}
+  <p class="group-title">Outils</p>${outils}
+  ${rubrique("zone", "⚠️", "Zone sensible", "Tout effacer, supprimer le compte", `<div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button>${SB ? `<button class="danger ghost" onclick="supprimerCompte()">Supprimer mon compte</button>` : ""}</div>`, "rgl-danger")}
+  <p class="note center" style="margin:16px 0 20px"><a href="#legal">Mentions légales et confidentialité</a></p>`;
 }
 
 /* ================= Formulaires ================= */
@@ -3111,7 +3144,7 @@ function ligneDoc(f) {
 }
 function pageDocs() {
   if (!MCP && SB) return `<div class="head"><div><h1>Documents</h1><p>Tes documents restent rangés dans ton Google Drive.</p></div></div>
-    ${driveRacine() ? `<div class="empty party">📁 <span>Ouvre le dossier Drive de ${esc(S.sci.nom || "ta SCI")}</span><a class="btn primary" href="https://drive.google.com/drive/folders/${esc(driveRacine())}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a><span class="note">Le lien se règle dans Réglages, rubrique Google Drive.</span></div>` : `<div class="empty party">📁 <span>Range tes documents dans un dossier Google Drive, puis colle son lien ici pour l'ouvrir d'un geste.</span><button class="primary" onclick="go('reglages')">Ajouter le lien du Drive</button></div>`}`;
+    ${driveRacine() ? `<div class="empty party">📁 <span>Ouvre le dossier Drive de ${esc(S.sci.nom || "ta SCI")}</span><a class="btn primary" href="https://drive.google.com/drive/folders/${esc(driveRacine())}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a><span class="note">Le lien se règle dans Réglages, rubrique Google Drive.</span></div>` : `<div class="empty party">📁 <span>Range tes documents dans un dossier Google Drive, puis colle son lien ici pour l'ouvrir d'un geste.</span><button class="primary" onclick="reglage('sci')">Ajouter le lien du Drive</button></div>`}`;
   if (!MCP) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") setTimeout(indexerDrive, 0);
   const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort(); RACINES = ["", ...racines];

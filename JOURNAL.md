@@ -24,6 +24,12 @@ Règle pour chaque session :
 
 ## Historique
 
+### 13/11/2026 (nuit) — Réglages simplifiés (demande de Théo)
+- Page Réglages refaite en rubriques repliées, une ligne chacune avec un petit résumé (on touche pour ouvrir) : "Ton compte" (La SCI, Membres, Envoi des e-mails, Notifications, Appli sur le téléphone), "Outils" (Agenda, Indice des loyers, Sauvegarde et import, Rappels), puis "Zone sensible". Rien n'a été retiré : le contenu de chaque rubrique est le même qu'avant.
+- En haut : 3 petits boutons sur une ligne : Aide, Un problème, Une idée.
+- Les boutons qui menaient aux réglages (guide, "Brancher Gmail", "Inviter", "Voir le tuto", "Remplir", Drive, Notifications) ouvrent directement la bonne rubrique (`reglage(id)`).
+- Tests : test5, test26, test30 (49/49), test31 (10/10, comptes de test) OK. Vérifié en 390 × 844 clair et sombre. En ligne (vérifié sur gestion-locative-sci.pages.dev). Pas vérifié sur ton téléphone connecté.
+
 ### 13/11/2026 (soir, suite) — roue crantée et "Proposer une idée" (demande de Théo)
 - Bouton des réglages en haut à droite : roue crantée à la place des curseurs.
 - Réglages : à côté de "🐞 Signaler un problème", nouveau bouton "💡 Proposer une idée" qui ouvre la même fenêtre avec "Une idée" déjà choisi et un exemple d'idée. Le bouton "?" flottant ouvre toujours sur "Ça ne marche pas".
