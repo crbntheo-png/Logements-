@@ -24,6 +24,16 @@ Règle pour chaque session :
 
 ## Historique
 
+### 14/11/2026 (suite 3) — grand ménage de l'affichage (demande de Théo : "encore trop brouillon")
+Constat sur téléphone avec les vraies données : tout s'affichait en grosses fiches avec étiquettes (À PAYER LE, LOYER HC…). Compta faisait 20 100 px de haut, Loyers 2 060, Biens 2 560.
+- **Listes compactes** (`.lr-list`, `ligneLoyer`, `sousTitreLoyer`, `actionsCourtes`) : une ligne par élément, montant et statut à droite, boutons seulement quand il y a quelque chose à faire. Loyers (en retard d'abord, total en bas), Biens (logement, locataire, loyer, statut ; touche = fiche), Compta (par logement : résultat + loyers/dépenses ; dépenses avec icône, libellé de banque nettoyé `libelleLisible`, 12 dernières + "Voir les autres"), mois par mois de la fiche locataire (6 derniers + "Voir les mois d'avant").
+- **Menus "Plus"** (`menuPlus`) : fiche locataire = Documents, Modifier, Plus (bail, révision, avenant, départ) ; Compta = + Dépense (et Importer si pas de banque), Plus (Excel, FEC, Bilan, Régulariser).
+- **Fiche locataire** : en haut seulement Loyer et Doit ; "Infos du bail" et "Historique" repliés ; parcours d'arrivée replié en une ligne après le 1er mois.
+- **Accueil** : locataires qui ont besoin d'une action en premier ; ceux à jour tiennent sur une ligne (plus de bouton "Rien à faire").
+- Compta sans banque : le tuto du relevé est replié en une ligne.
+- Résultat : Compta 3 600 px, Loyers 970, Biens 850, fiche locataire 2 600 (au lieu de 3 770).
+- Tests : test5, test22, test25, test26, test29 (adapté au menu Plus), test30 49/49, test33 OK ; test15 identique à avant ; perf < 0,04 s par page. Clair et sombre vérifiés. En ligne. Pas vérifié sur ton téléphone.
+
 ### 14/11/2026 (suite 2) — Tom Dogon rangé dans l'historique (accord de Théo)
 - Vraies données GTP INVEST : ancien locataire "Tom Dogon" ajouté au logement Agon · RDC droite (`anciens`, id `anc-tom-dogon`, dates inconnues), et le document "Ancien bail – Tom Dogon" rattaché à lui (`ancienId`). Il n'apparaît plus dans les documents du logement ni d'Antoine.
 - Vérifié sur une copie locale des vraies données (390 × 844) : Tom dans "Historique du logement" avec 1 document. Pas vérifié depuis l'appli connectée (rouvrir l'appli si elle était ouverte).

@@ -186,6 +186,30 @@ details.rgl { scroll-margin-top: 76px; }
 .drive-explique ul { margin: 4px 0 10px; padding-left: 20px; line-height: 1.5; }
 .drive-explique p { margin: 8px 0 2px; }
 .choix-dossier { max-height: 50vh; overflow: auto; }
+.lr-list { list-style: none; padding: 0; margin: 0 0 12px; background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-2); overflow: hidden; }
+.lr { padding: 12px 14px; border-top: 1px solid var(--line); }
+.lr:first-child { border-top: 0; }
+.lr-main { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; cursor: pointer; }
+.lr-main .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lr-main .tx b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lr-main .tx small { color: var(--muted); font-size: .84rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lr-r { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.lr-r small { color: var(--muted); font-size: .8rem; }
+.lr-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-left: 56px; }
+.lr-acts.sans-av { padding-left: 0; }
+.lr-total { display: flex; justify-content: space-between; padding: 12px 14px; background: var(--surface-2); font-weight: 750; }
+.lr .ico-cat { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+.bad-txt { color: var(--bad, #c0392b); }
+.lr-plus { width: 100%; margin-top: -4px; }
+details.menu-plus { position: relative; display: inline-block; }
+details.menu-plus > summary { list-style: none; cursor: pointer; }
+details.menu-plus > summary::-webkit-details-marker { display: none; }
+details.menu-plus .menu { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; min-width: 240px; background: var(--surface); border-radius: 14px; box-shadow: var(--sh-3, 0 10px 30px rgba(0,0,0,.18)); padding: 6px; display: flex; flex-direction: column; }
+details.menu-plus .menu button, details.menu-plus .menu a { justify-content: flex-start; text-align: left; background: none; box-shadow: none; border: 0; padding: 11px 12px; border-radius: 10px; width: 100%; }
+details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { background: var(--surface-2); }
+.biens-l .lr-main .tx small.loc { color: var(--acc, inherit); }
+.tile-head .money { font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tile-head small .dot { display: inline-block; vertical-align: middle; margin-right: 2px; }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -891,7 +915,7 @@ function validerSorties(f) {
 }
 function ignorerSortie(tx) { S.banqueVus = Object.assign({}, S.banqueVus, { [tx]: "ignore" }); save(); render(); toast("Ignorée (ce n'est pas une dépense)"); }
 function sectionBanque() {
-  if (!SB || !BANQUE.lien) return `<section class="card install-tuto"><h2>🏦 Ta banque dans l'appli</h2>
+  if (!SB || !BANQUE.lien) return `<details class="card rgl install-tuto"><summary><span class="rgl-ico" aria-hidden="true">🏦</span><span class="tx"><b>Ta banque dans l'appli</b><small>Les loyers se cochent tout seuls · comment faire</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
     <p class="note"><b>Pourquoi :</b> les loyers reçus se cochent tout seuls, les quittances sont prêtes, et la compta se remplit avec tes dépenses. Tu n'as presque plus besoin d'ouvrir l'appli de ta banque.</p>
     <h3>Le plus simple : ton relevé, une fois par mois (2 minutes)</h3>
     <ol class="tuto">
@@ -903,7 +927,7 @@ function sectionBanque() {
     <div class="row"><button class="primary" onclick="importerReleve()">🏦 Importer le relevé</button></div>
     ${SB ? `<details style="margin-top:12px"><summary>Tu utilises Pennylane ? Tout devient automatique</summary>
     <p class="note">L'appli lit alors ton compte toute seule, toutes les heures. Dans Pennylane : <b>Paramètres</b> › <b>Connectivité</b> › <b>Développeurs</b> › <b>Générer un token API</b> (lecture seule), puis colle-le ici. Si c'est ton comptable qui gère Pennylane, demande-lui ce jeton.</p>
-    <form class="row" onsubmit="event.preventDefault();brancherBanque(this)"><input name="jeton" required placeholder="Colle le jeton Pennylane ici" aria-label="Jeton Pennylane" autocomplete="off" style="flex:1;min-width:200px"><button class="primary" id="bq_btn">Brancher</button></form></details>` : ""}</section>`;
+    <form class="row" onsubmit="event.preventDefault();brancherBanque(this)"><input name="jeton" required placeholder="Colle le jeton Pennylane ici" aria-label="Jeton Pennylane" autocomplete="off" style="flex:1;min-width:200px"><button class="primary" id="bq_btn">Brancher</button></form></details>` : ""}</div></details>`;
   const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), ops = BANQUE.ops.slice(0, view.banqueTout ? 400 : 25);
   const lies = new Map(S.paiements.filter(p => p.tx).map(p => [String(p.tx), p]));
   return `<section class="card banque"><div class="bq-head"><div><h2>🏦 Compte bancaire</h2><p class="note">${BANQUE.comptes.map(c => esc(c.nom)).join(" · ")} · mis à jour ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0]?.maj_le || Date.now())}${BANQUE.lien.erreur ? ` · ⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p></div><b class="bq-solde">${eur(solde)}</b></div>
@@ -1919,7 +1943,7 @@ function historique(b) {
   if (b.dateSortie && P(b.dateSortie) <= TODAY) ev.push({ d: b.dateSortie, ico: "🔑", t: "Départ du logement" });
   if (b.depotRestitue) ev.push({ d: b.depotRestitue, ico: "↩️", t: `Dépôt de garantie rendu${+b.depotRetenu ? ` (${eur(b.depotRetenu)} retenus)` : ""}` });
   ev.sort((a, c) => String(c.d).localeCompare(String(a.d)));
-  return `<section class="card"><h2>🕓 Historique</h2><ol class="histo">${ev.slice(0, 40).map(e => `<li><span class="h-ico" aria-hidden="true">${e.ico}</span><span>${esc(e.t)}<small>${fd(e.d)}</small></span></li>`).join("")}</ol></section>`;
+  return `<details class="card rgl"><summary><span class="rgl-ico" aria-hidden="true">🕓</span><span class="tx"><b>Historique</b><small>${ev.length} événement${ev.length > 1 ? "s" : ""} · le dernier : ${esc(ev[0] ? ev[0].t : "")}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c"><ol class="histo">${ev.slice(0, 40).map(e => `<li><span class="h-ico" aria-hidden="true">${e.ico}</span><span>${esc(e.t)}<small>${fd(e.d)}</small></span></li>`).join("")}</ol></div></details>`;
 }
 
 /* ================= Navigation ================= */
@@ -2132,9 +2156,10 @@ function carteLocataire(b) {
   } else if (e.statut === "partiel") { etat = `A payé ${eur(e.paye)} sur ${eur(e.du)} · il manque`; cls = "warn"; dot = "warn"; montant = eur(e.reste); act = `<button class="primary" onclick="encaisser('${b.id}','${CUR}')">✓ Le reste est arrivé</button><button onclick="editPlan('${b.id}')">Étaler le reste</button>`; }
   else { etat = `Attendu le ${fds(e.dueDate)}`; cls = "warn"; dot = "warn"; montant = eur(e.reste); act = `<button class="primary" onclick="encaisser('${b.id}','${CUR}')">✓ A payé</button><button class="ghost" onclick="saisirPaiement('${b.id}','${CUR}')">Autre montant</button>`; }
   return `<article class="tile ${cls}">
-    <a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span class="who"><b>${esc(b.nom)}</b><small>${esc(bienLabel(bi))}</small></span>${ic("chevR", "chev")}</a>
-    <div class="tile-state"><i class="dot ${dot}" aria-hidden="true"></i>${etat}<span class="money">${montant}</span></div>
-    <div class="row">${act || `<span class="tile-ok">✓ Rien à faire</span>`}</div>
+    ${act ? `<a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span class="who"><b>${esc(b.nom)}</b><small>${esc(bienLabel(bi))}</small></span>${ic("chevR", "chev")}</a>
+    <div class="tile-state"><i class="dot ${dot}" aria-hidden="true"></i>${etat}<span class="money">${montant}</span></div>`
+    : `<a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span class="who"><b>${esc(b.nom)}</b><small><i class="dot ${dot}" aria-hidden="true"></i> ${etat} · ${esc(bienLabel(bi))}</small></span><span class="money">${montant}</span>${ic("chevR", "chev")}</a>`}
+    ${act ? `<div class="row">${act}</div>` : ""}
   </article>`;
 }
 function pageAccueil(T) {
@@ -2162,7 +2187,7 @@ function pageAccueil(T) {
   </section>
   ${carteBanqueAccueil()}
   <section><div class="sec-head"><h2 class="sec">Locataires <span class="count">${actifs.length}</span></h2><button class="small" onclick="editBail()">➕ Ajouter</button></div>
-    <div class="tiles">${actifs.map(carteLocataire).join("")}
+    <div class="tiles">${actifs.map(b => [b, ({ retard: 0, partiel: 1, etale: 2, avenir: 3, paye: 4 })[(echeance(b, CUR) || {}).statut] ?? 5]).sort((x, y) => x[1] - y[1]).map(x => carteLocataire(x[0])).join("")}
     ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span class="who"><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="tile-state"><i class="dot"></i>Disponible</div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">➕ Mettre un locataire</button></div></article>`).join("")}</div>
     ${anciens.length ? `<details class="anciens"><summary>${ic("chevR", "s")} Anciens locataires (${anciens.length})</summary><ul class="todo">${anciens.map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${esc(bienLabel(bien(b.bienId)))} · parti le ${fds(b.dateSortie)}</small></span>${ic("chevR", "chev")}</li>`).join("")}</ul></details>` : ""}
   </section>
@@ -2578,17 +2603,15 @@ function rangerPropositions(liste) {
   save(); render(); toast(`✓ ${liste.length} document${liste.length > 1 ? "s" : ""} rangé${liste.length > 1 ? "s" : ""}`);
 }
 function pageBiens() {
-  return `<div class="head"><div><h1>Biens</h1><p>Tes logements et qui les occupe.</p></div><button class="primary" onclick="editBien()">+ Ajouter un bien</button></div>
-  ${S.biens.length ? `<div class="grid">${S.biens.map(bi => {
-    const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null;
-    return `<article class="card bien"><div class="top"><span class="emoji" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span><div><h3><a href="#bien-${bi.id}">${esc(bi.nom)}</a></h3><div class="meta">${esc(bi.type || "")}${bi.surface ? " · " + esc(bi.surface) + " m²" : ""}${bi.pieces ? " · " + esc(bi.pieces) + " p." : ""} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</div><div class="meta">${esc(adresseBien(bi))}</div></div>
-      ${b ? `<span class="pill ok">Loué</span>` : `<span class="pill warn">Vide</span>`}</div>
-      <dl>${b ? `<dt>Locataire</dt><dd><a href="#bail-${b.id}">${esc(b.nom)}</a></dd><dt>Loyer HC</dt><dd>${eur(l.hc)}</dd><dt>Charges</dt><dd>${eur(l.ch)}</dd><dt>Depuis</dt><dd>${fds(b.dateEntree)}</dd>` : `<dt>Locataire</dt><dd>—</dd>`}
-      ${(() => { const e = edlsDuBien(bi.id)[0]; return e ? `<dt>État des lieux</dt><dd><a href="#edl-${e.id}">${e.type === "entree" ? "Entrée" : "Sortie"} ${fds(e.date)} · ${nbPhotos(e)} 📷</a></dd>` : b ? (() => { const f = (S.fichiers || []).find(x => x.bailId === b.id && x.cat === "État des lieux"); return f ? `<dt>État des lieux</dt><dd><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">Entrée${b.edlEntree ? " " + fds(b.edlEntree) : ""} · PDF</a></dd>` : b.edlEntree ? `<dt>État des lieux</dt><dd>Entrée ${fds(b.edlEntree)} (papier)</dd>` : `<dt>État des lieux</dt><dd><button class="small ghost" onclick="nouvelEdl('${b.id}','entree')">+ Faire</button></dd>`; })() : ""; })()}
-      <dt>DPE</dt><dd>${bi.dpe ? `<span class="pill ${bi.dpe === "G" ? "bad" : bi.dpe === "F" ? "warn" : "info"}">${esc(bi.dpe)}</span>` : "—"}</dd>
-      ${(() => { const r = rendement(bi); return r ? `<dt>Rentabilité brute</dt><dd><span class="pill acc">${r.brut.toFixed(1).replace(".", ",")} %</span></dd>` : bi.prixAchat ? "" : `<dt>Rentabilité</dt><dd><button class="small ghost" onclick="editBien('${bi.id}')">Ajouter le prix</button></dd>`; })()}</dl>
-      <div class="row"><a class="btn small primary" href="#bien-${bi.id}">Voir la fiche${(() => { const n = S.fichiers.filter(f => f.bienId === bi.id).length; return n ? ` · ${n} doc${n > 1 ? "s" : ""}` : ""; })()}</a><button class="small" onclick="editBien('${bi.id}')">Modifier</button><button class="small" onclick="taxeFonciere('${bi.id}')">Taxe foncière</button>${b ? "" : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Locataire</button>`}</div></article>`;
-  }).join("")}</div>` : `<div class="empty">Aucun bien. Ajoute ton premier logement.</div>`}`;
+  return `<div class="head"><div><h1>Biens</h1><p>Touche un logement pour tout voir : locataire, documents, historique.</p></div><button class="primary" onclick="editBien()">+ Ajouter</button></div>
+  ${S.biens.length ? `<ul class="lr-list biens-l">${S.biens.map(bi => {
+    const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null, e = b && echeance(b, CUR), nDocs = S.fichiers.filter(f => f.bienId === bi.id).length;
+    const alerte = !bi.dpe ? "DPE à noter" : bi.dpe === "G" || bi.dpe === "F" ? `DPE ${bi.dpe} : attention` : "";
+    return `<li class="lr"><div class="lr-main" onclick="go('bien-${bi.id}')" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span>
+      <span class="tx"><b>${esc(bi.nom)}</b><small>${b ? `${esc(nomCourt(b.nom))} · ${eur(l.hc + l.ch)}/mois` : "Vide · à louer"}${nDocs ? ` · ${nDocs} doc${nDocs > 1 ? "s" : ""}` : ""}${alerte ? ` · ${alerte}` : ""}</small></span>
+      <span class="lr-r">${b ? (e ? pillStatut(e) : `<span class="pill ok">Loué</span>`) : `<span class="pill warn">Vide</span>`}</span>${ic("chevR", "chev")}</div>
+      ${b ? "" : `<div class="lr-acts"><button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button></div>`}</li>`;
+  }).join("")}</ul>` : `<div class="empty">Aucun bien. Ajoute ton premier logement.</div>`}`;
 }
 
 function pageBail(id) {
@@ -2598,12 +2621,10 @@ function pageBail(id) {
   return `<div><a class="back" href="#locataires">← Accueil</a>
   <div class="profil">${avatar(b.nom)}<div><h1>${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div></div></div>
   <div class="contacts">${b.tel ? `<a class="chip" href="tel:${esc(b.tel.replace(/\s/g, ""))}">📞 ${esc(b.tel)}</a>` : ""}${b.email ? `<button class="chip" onclick="copierTexte('${esc(b.email)}')">✉️ ${esc(b.email)}</button>` : `<button class="chip" onclick="editBail('${b.id}')">✉️ Ajouter l'e-mail</button>`}</div>
-  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button><button onclick="docBailOpen('${b.id}')">Générer le bail</button><button onclick="revision('${b.id}')">📈 Réviser le loyer</button><button onclick="avenant('${b.id}')">✍️ Avenant</button><button onclick="finBail('${b.id}')">🔑 Départ</button></div>
+  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button>${menuPlus([["📝 Générer le bail", `docBailOpen('${b.id}')`], ["📈 Réviser le loyer", `revision('${b.id}')`], ["✍️ Avenant au bail", `avenant('${b.id}')`], ["🔑 Il s'en va (départ)", `finBail('${b.id}')`]])}</div>
   <div class="kpis">
     <div class="kpi"><span>Loyer actuel</span><b>${eur(l.hc + l.ch)}</b><small>${eur(l.hc)} + ${eur(l.ch)} de charges</small></div>
     ${(() => { const pe = planEtat(b), suit = pe && !pe.fait && pe.ok; return `<div class="kpi ${dette && !suit ? "bad" : ""}"><span>Doit</span><b>${eur(dette)}</b><small>${!dette ? "rien, tout est payé" : suit ? "étalé, il suit l'accord" : "loyers en retard"}</small></div>`; })()}
-    <div class="kpi"><span>Dépôt de garantie${cq("depot")}</span><b>${eur(b.depot)}</b><small>${b.depotRestitue ? "rendu le " + fds(b.depotRestitue) : "encaissé"}</small></div>
-    <div class="kpi"><span>Bail</span><b>${du.txt}</b><small>depuis le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""}</small></div>
   </div>
   ${(() => { const p = planEtat(b);
     if (!dette && !p) return "";
@@ -2620,10 +2641,12 @@ function pageBail(id) {
   ${sectionEdl(b)}
   ${listeDocuments(b.bienId, b.id)}
   <section><h2 style="margin-bottom:10px">Loyers mois par mois</h2>
-  ${ech.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Mois</th><th class="num">Dû</th><th class="num">Payé</th><th>Statut</th><th></th></tr></thead><tbody>${ech.map(e => `<tr><td class="rt-head" style="text-transform:capitalize"><b>${fm(e.m)}</b>${e.prorata ? `<div class="sub">prorata ${e.to - e.from + 1}/${e.days} j</div>` : ""}</td><td class="num" data-l="Dû">${eur(e.du)}</td><td class="num" data-l="Payé">${eur(e.paye)}</td><td data-l="Statut">${pillStatut(e)}${e.quittance ? ` <span class="pill acc">Quittance envoyée</span>` : ""}</td><td class="rt-acts"><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Pas encore d'échéance.</div>`}
+  ${ech.length ? `<ul class="lr-list">${(view.moisTout === b.id ? ech : ech.slice(0, 6)).map(e => ligneLoyer(e, true)).join("")}</ul>${ech.length > 6 && view.moisTout !== b.id ? `<button class="ghost small lr-plus" onclick="view.moisTout='${b.id}';render()">Voir les ${ech.length - 6} mois d'avant</button>` : ""}` : `<div class="empty">Pas encore d'échéance.</div>`}
   </section>
-  <section class="card"><h2>Fiche</h2>
+  <details class="card rgl" ${view.ficheOuverte === b.id ? "open" : ""} ontoggle="view.ficheOuverte=this.open?'${b.id}':''"><summary><span class="rgl-ico" aria-hidden="true">📇</span><span class="tx"><b>Infos du bail</b><small>Bail de ${du.txt} · dépôt ${eur(b.depot)} · paie le ${esc(b.jourPaiement || 1)} du mois</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
     <div class="bien"><dl>
+      <dt>Bail</dt><dd>${du.txt}, depuis le ${fds(b.dateEntree)}${b.dateSortie ? " · sortie " + fds(b.dateSortie) : ""}</dd>
+      <dt>Dépôt de garantie${cq("depot")}</dt><dd>${eur(b.depot)} · ${b.depotRestitue ? "rendu le " + fds(b.depotRestitue) : "encaissé"}</dd>
       <dt>Téléphone</dt><dd>${esc(b.tel || "—")}</dd><dt>E-mail</dt><dd>${esc(b.email || "—")}</dd>
       ${b.colocataires ? `<dt>Colocataires</dt><dd>${esc(b.colocataires)}</dd>` : ""}
       <dt>Type</dt><dd>${esc(TYPES_BAIL[b.typeBail] || "")}</dd><dt>Paiement le</dt><dd>${esc(b.jourPaiement || 1)} du mois</dd>
@@ -2633,7 +2656,7 @@ function pageBail(id) {
     </dl>${b.notes ? `<p class="note">${nl2br(b.notes)}</p>` : ""}</div>
     ${(b.revisions || []).length ? `<h3 style="margin-top:14px">Révisions et avenants</h3><ul class="note">${b.revisions.map((r, i) => r.type === "avenant" ? `<li>${fm(r.depuis)} : avenant n° ${r.num}, ${eur(r.loyerHC)} + ${eur(r.charges)} de charges <button class="small ghost" onclick="docAvenantOpen('${b.id}',${i})">Avenant</button></li>` : `<li>${fm(r.depuis)} : ${eur(r.loyerHC)} HC (IRL ${esc(r.trimestre)} ${esc(r.irlNouveau)}) <button class="small ghost" onclick="docRevisionOpen('${b.id}',${i})">Courrier</button></li>`).join("")}</ul>` : ""}
     ${b.teomMensuel ? `<p class="note">🗑️ Ordures ménagères comprises dans les charges : ${eur(b.teomMensuel.montant)} par mois depuis ${fm(b.teomMensuel.depuis)}.</p>` : ""}
-  </section>
+  </div></details>
   ${historique(b)}</div>`;
 }
 /* Les 12 prochains mois d'un locataire : ce qu'il paiera et pourquoi */
@@ -2672,16 +2695,48 @@ function actionsEcheance(e) {
 }
 
 function pageLoyers() {
-  const m = view.loyersMois, rows = S.baux.map(b => echeance(b, m)).filter(Boolean).sort((a, b) => a.dueDate - b.dueDate);
-  const tot = rows.reduce((s, e) => s + e.du, 0), paye = rows.reduce((s, e) => s + e.paye, 0);
-  return `<div class="head"><div><a class="back" href="#locataires">← Accueil</a><h1>Loyers</h1><p>Appuie sur "A payé" quand un loyer arrive : la quittance part toute seule.</p></div>
+  const m = view.loyersMois, rows = S.baux.map(b => echeance(b, m)).filter(Boolean).sort((a, b) => ({ retard: 0, partiel: 1, etale: 2, avenir: 3, paye: 4 }[a.statut] - { retard: 0, partiel: 1, etale: 2, avenir: 3, paye: 4 }[b.statut]) || a.dueDate - b.dueDate);
+  const tot = rows.reduce((s, e) => s + e.du, 0), paye = rows.reduce((s, e) => s + Math.min(e.paye, e.du), 0);
+  return `<div class="head"><div><a class="back" href="#locataires">← Accueil</a><h1>Loyers</h1><p>Touche un locataire pour voir sa fiche.</p></div>
   <div class="row"><div class="seg" role="group" aria-label="Mois"><button onclick="view.loyersMois=addM(view.loyersMois,-1);render()" aria-label="Mois précédent">‹</button><b style="text-transform:capitalize">${fm(m)}</b><button onclick="view.loyersMois=addM(view.loyersMois,1);render()" aria-label="Mois suivant">›</button></div>${m !== CUR ? `<button class="small ghost" onclick="view.loyersMois=CUR;render()">Ce mois-ci</button>` : ""}</div></div>
-  ${rows.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Locataire</th><th>À payer le</th><th class="num">Loyer HC</th><th class="num">Charges</th><th class="num">Total dû</th><th class="num">Reçu</th><th>Statut</th><th></th></tr></thead><tbody>
-  ${rows.map(e => `<tr><td class="rt-head"><a href="#bail-${e.b.id}"><b>${esc(e.b.nom)}</b></a><div class="sub">${esc(bienLabel(bien(e.b.bienId)))}</div></td><td data-l="À payer le">${fds(e.dueDate)}</td><td class="num" data-l="Loyer HC">${eur(e.hc)}</td><td class="num" data-l="Charges">${eur(e.ch)}</td><td class="num" data-l="Total dû"><b>${eur(e.du)}</b>${e.prorata ? `<div class="sub">prorata</div>` : ""}</td><td class="num" data-l="Reçu">${eur(e.paye)}${e.lastPay ? `<div class="sub">le ${fds(e.lastPay)}</div>` : ""}</td><td data-l="Statut">${pillStatut(e)}${e.quittance ? `<div class="sub">quittance envoyée</div>` : ""}</td><td class="rt-acts"><div class="row" style="justify-content:flex-end">${actionsEcheance(e)}</div></td></tr>`).join("")}
-  </tbody><tfoot><tr><td colspan="4">Total</td><td class="num" data-l="Total dû">${eur(tot)}</td><td class="num" data-l="Reçu">${eur(paye)}</td><td colspan="2" class="rt-vide"></td></tr></tfoot></table></div>` : `<div class="empty">Aucun loyer ce mois-ci.</div>`}
-  <p class="note">"A payé" = le locataire a payé le total aujourd'hui (la quittance part toute seule si son e-mail est renseigné). "Autre montant…" = paiement partiel ou à une autre date. ↺ annule le dernier paiement saisi.</p>`;
+  ${rows.length ? `<ul class="lr-list">${rows.map(e => ligneLoyer(e)).join("")}<li class="lr-total"><span>Reçu</span><span>${eur(paye)} / ${eur(tot)}</span></li></ul>` : `<div class="empty">Aucun loyer ce mois-ci.</div>`}`;
 }
 
+/* ================= Listes compactes (une ligne par élément, lisibles sur téléphone) ================= */
+const menuPlus = (items, label = "Plus") => `<details class="menu-plus" onclick="event.stopPropagation()"><summary class="btn small">${label} ▾</summary><div class="menu">${items.filter(Boolean).map(([t, f]) => `<button type="button" onclick="this.closest('details').open=false;${f}">${t}</button>`).join("")}</div></details>`;
+document.addEventListener("click", ev => { document.querySelectorAll("details.menu-plus[open]").forEach(d => { if (!d.contains(ev.target)) d.open = false; }); });
+/* Ce qui se passe pour un loyer, en mots simples */
+function sousTitreLoyer(e) {
+  if (e.statut === "paye") return `payé${e.lastPay ? " le " + fds(e.lastPay) : ""}${e.quittance ? " · quittance envoyée" : ""}`;
+  if (e.statut === "retard") return `${e.paye ? `reçu ${eur(e.paye)} · ` : ""}dû le ${fds(e.dueDate)} · ${e.retardJ} j de retard`;
+  if (e.statut === "etale") return `reçu ${eur(e.paye)} · le reste est étalé`;
+  if (e.statut === "partiel") return `reçu ${eur(e.paye)} sur ${eur(e.du)}`;
+  return `à payer le ${fds(e.dueDate)}`;
+}
+/* Les seuls boutons utiles pour un loyer (le reste est dans la fiche) */
+function actionsCourtes(e) {
+  const a = [], mail = peutEnvoyer() && e.b.email;
+  if (e.statut !== "paye" && e.statut !== "avenir") a.push(`<button class="small primary" onclick="encaisser('${e.b.id}','${e.m}')">✓ A payé</button>`, `<button class="small" onclick="saisirPaiement('${e.b.id}','${e.m}')">Autre montant</button>`);
+  if (e.statut === "avenir" && daysBetween(TODAY, e.dueDate) <= 7) a.push(`<button class="small" onclick="encaisser('${e.b.id}','${e.m}')">✓ A payé</button>`);
+  if (e.statut === "retard") a.push(`<button class="small danger" onclick="relance('${e.b.id}','${e.m}')">Relancer</button>`);
+  if (qAFaire(e)) a.push(mail ? `<button class="small primary" onclick="envoyerQuittance('${e.b.id}','${e.m}')">Envoyer la quittance</button>` : `<button class="small" onclick="quittance('${e.b.id}','${e.m}')">Quittance</button>`, `<button class="small ghost" onclick="quittancePasBesoin('${e.b.id}','${e.m}')">Pas besoin</button>`);
+  return a.join("");
+}
+function ligneLoyer(e, parMois) {
+  const titre = parMois ? `<b style="text-transform:capitalize">${fm(e.m)}</b>` : `<b>${esc(e.b.nom)}</b>`;
+  const sous = parMois ? sousTitreLoyer(e) : `${esc(bienLabel(bien(e.b.bienId)))} · ${sousTitreLoyer(e)}`;
+  const acts = parMois ? actionsEcheance(e) : actionsCourtes(e);
+  return `<li class="lr"><div class="lr-main" onclick="${parMois ? `quittance('${e.b.id}','${e.m}')` : `go('bail-${e.b.id}')`}" role="link" tabindex="0">${parMois ? "" : avatar(e.b.nom)}<span class="tx">${titre}<small>${sous}</small></span><span class="lr-r"><b>${eur(e.du)}</b>${pillStatut(e)}</span></div>${acts ? `<div class="lr-acts ${parMois ? "sans-av" : ""}" onclick="event.stopPropagation()">${acts}</div>` : ""}</li>`;
+}
+const ICO_DEP = c => /prêt|emprunt|intérêt/i.test(c || "") ? "🏦" : /assurance/i.test(c || "") ? "🛡️" : /taxe|impôt/i.test(c || "") ? "🏛" : /eau|électricité|gaz|énergie/i.test(c || "") ? "💧" : /travaux|entretien|réparation/i.test(c || "") ? "🛠" : /frais bancaires/i.test(c || "") ? "💳" : /honoraires|gestion|comptable|notaire/i.test(c || "") ? "📑" : /achat/i.test(c || "") ? "🏠" : "🧾";
+/* Un libellé de banque lisible : "PRLV SEPA SAUR50 SAPR1000…" -> "Saur50" */
+function libelleLisible(t) {
+  let x = String(t || "").replace(/\b(PRLV|SEPA|VIR|INST|CB|FACT|ECH|COMMIS|DONT TVA.*$)\b/gi, " ").replace(/\b[A-Z]*\d{6,}[A-Z0-9]*\b/g, " ").replace(/\s{2,}/g, " ").trim();
+  const vus = new Set(); x = x.split(" ").filter(w => !/^\d+$/.test(w) && !vus.has(w.toUpperCase()) && vus.add(w.toUpperCase())).join(" ");
+  if (x.length < 3) return "";
+  x = x.length > 46 ? x.slice(0, 44) + "…" : x;
+  return x === x.toUpperCase() ? x.toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase()) : x;
+}
 /* Ce qui sort du compte mais n'est pas une charge de l'année (capital remboursé, achat du bien) */
 const HORS_RESULTAT = new Set(["Remboursement capital emprunt", "Échéance de prêt (capital + intérêts, à ventiler)", "Achat du bien / frais d'acquisition"]);
 /* Classement automatique des sorties d'argent : règles de base + ce que tu as déjà classé toi-même */
@@ -2734,17 +2789,15 @@ function pageCompta() {
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
-  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button><button class="small" onclick="importerReleve()">🏦 Importer le relevé</button><button class="small" onclick="exportCSV(${y})">📊 Tableau Excel</button><button class="small" onclick="exportFEC(${y})">🧮 Fichier pour le comptable (FEC)</button><button class="small" onclick="docBilanOpen(${y})">📄 Bilan PDF</button><button class="small" onclick="regulTous(${y})">🧾 Régulariser les charges</button></div>
+  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`]], "Plus")}</div>
   ${aideDeclaration(y, lignes, tot)}
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${y === TODAY.getFullYear() ? sectionBanque() : ""}
   ${sectionSorties(y)}
   ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
-  <section><h2 style="margin-bottom:10px">Par bien</h2><div class="table-wrap"><table class="rt"><thead><tr><th>Bien</th><th class="num">Loyers</th><th class="num">Charges reçues</th><th class="num">Dépenses</th><th class="num">Résultat</th></tr></thead><tbody>
-  ${lignes.map(l => `<tr><td class="rt-head"><b>${esc(l.nom)}</b></td><td class="num" data-l="Loyers">${eur(l.loyers)}</td><td class="num" data-l="Charges reçues">${eur(l.charges)}</td><td class="num" data-l="Dépenses">${eur(l.dep)}</td><td class="num" data-l="Résultat"><b>${eur(l.res)}</b></td></tr>`).join("")}
-  </tbody><tfoot><tr><td class="rt-head">Total</td><td class="num" data-l="Loyers">${eur(tot.loyers)}</td><td class="num" data-l="Charges reçues">${eur(tot.charges)}</td><td class="num" data-l="Dépenses">${eur(tot.dep)}</td><td class="num" data-l="Résultat">${eur(tot.res)}</td></tr></tfoot></table></div></section>
-  <div class="two"><section><h2 style="margin-bottom:10px">Dépenses ${y} (${deps.length})</h2>
-  ${deps.length ? `<div class="table-wrap"><table class="rt"><thead><tr><th>Date</th><th>Quoi</th><th>Bien</th><th class="num">Montant</th><th></th></tr></thead><tbody>${deps.map(d => `<tr><td data-l="Date">${fds(d.date)}</td><td class="rt-head">${esc(d.libelle || d.categorie)}<div class="sub">${esc(d.categorie)}${d.recuperable ? " · récupérable sur le locataire" : ""}</div></td><td data-l="Bien">${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}</td><td class="num" data-l="Montant"><b>${eur(d.montant)}</b></td><td class="rt-acts"><button class="small ghost" onclick="editDepense('${d.id}')">Modifier</button></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Aucune dépense saisie pour ${y}.</div>`}
+  <section><h2 style="margin-bottom:10px">Par logement</h2><ul class="lr-list">${lignes.filter(l => l.loyers || l.charges || l.dep).map(l => `<li class="lr"><div class="lr-main"><span class="tx"><b>${esc(l.nom)}</b><small>loyers ${eur(l.loyers + l.charges)} · dépenses ${eur(l.dep)}</small></span><span class="lr-r"><b class="${l.res < 0 ? "bad-txt" : ""}">${eur(l.res)}</b><small>résultat</small></span></div></li>`).join("")}<li class="lr-total"><span>Total</span><span class="${tot.res < 0 ? "bad-txt" : ""}">${eur(tot.res)}</span></li></ul></section>
+  <div class="two"><section><h2 style="margin-bottom:10px">Dépenses ${y} <span class="count">${deps.length}</span></h2>
+  ${deps.length ? `<ul class="lr-list">${(view.depTout ? deps : deps.slice(0, 12)).map(d => `<li class="lr"><div class="lr-main" onclick="editDepense('${d.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">${ICO_DEP(d.categorie)}</span><span class="tx"><b>${esc(libelleLisible(d.libelle) || d.categorie)}</b><small>${fds(d.date)} · ${esc(d.categorie)} · ${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}</small></span><span class="lr-r"><b>${eur(d.montant)}</b></span></div></li>`).join("")}</ul>${deps.length > 12 && !view.depTout ? `<button class="ghost small lr-plus" onclick="view.depTout=true;render()">Voir les ${deps.length - 12} autres dépenses</button>` : ""}` : `<div class="empty">Aucune dépense en ${y}.</div>`}
   </section><section class="card"><h2>Part de chaque associé</h2>
   ${parts ? `<div class="table-wrap" style="border:0"><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)}<div class="sub">${a.parts} parts · ${Math.round(a.parts / parts * 1000) / 10} %</div></td><td class="num"><b>${eur(tot.res * a.parts / parts)}</b></td></tr>`).join("")}</tbody></table></div><p class="note">${S.sci.regime === "IR" ? "SCI à l'impôt sur le revenu : chaque associé déclare sa part du résultat (revenus fonciers). Le calcul fiscal exact (2072) peut différer : amortissements, travaux d'amélioration, etc." : "SCI à l'IS : l'impôt est payé par la SCI. Les associés ne sont imposés que sur les dividendes distribués."}</p>` : `<p class="note">Renseignez les associés et leurs parts dans <a href="#reglages">Réglages</a>.</p>`}
   ${Object.keys(parCat).length ? `<h3 style="margin-top:12px">Par catégorie</h3><div class="table-wrap" style="border:0"><table><tbody>${Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${eur(v)}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -3803,6 +3856,8 @@ function parcoursBail(b) {
   if (dep) blocs.push(["🔑 Le départ", etapesDepart(b), "depart"]);
   else if (recent || arr > TODAY) blocs.push(["🎉 L'arrivée", etapesArrivee(b), "arrivee"]);
   return blocs.map(([t, E, k]) => { const n = E.filter(e => e.ok).length; if (n === E.length) return "";
+    const replie = k === "arrivee" && daysBetween(arr, TODAY) > 30 && view.parcoursOuvert !== b.id;
+    if (replie) return `<section class="card parcours"><button class="ghost lr-main" style="width:100%;padding:0" onclick="view.parcoursOuvert='${b.id}';render()"><span class="tx"><b>${t} : ${n}/${E.length} fait</b><small>Il reste ${E.length - n} chose${E.length - n > 1 ? "s" : ""} à vérifier pour son arrivée</small></span>${ic("chevR", "chev")}</button></section>`;
     return `<section class="card parcours"><div class="sec-head"><h2>${t} <span class="count">${n}/${E.length}</span></h2></div><div class="barre"><i style="width:${Math.round(n / E.length * 100)}%"></i></div>
       <ol class="etapes">${E.map((e, i) => `<li class="etape ${e.ok ? "ok" : ""}"><span class="num" aria-hidden="true">${e.ok ? "✓" : i + 1}</span><div class="tx"><div class="et-h"><b>${e.t}</b></div>${e.ok ? "" : `<p class="note">${e.d}</p><div class="row">${e.btn ? `<button class="small primary" onclick="${e.btn[1]}">${e.btn[0]}</button>` : ""}<button class="small ghost" onclick="marquerFait('${e.k}-${b.id}')">✓ C'est fait</button></div>`}</div></li>`).join("")}</ol></section>`; }).join("");
 }

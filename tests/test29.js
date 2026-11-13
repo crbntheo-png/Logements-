@@ -65,7 +65,7 @@ const check = (c, msg) => (c ? ok : ko).push(msg);
 
     // 4. Avenant libre depuis la fiche (nouveau loyer convenu)
     await p.evaluate(id => location.hash = 'bail-' + id, id); await p.waitForTimeout(200);
-    await p.click('text=✍️ Avenant'); await p.waitForTimeout(200);
+    await p.click('details.menu-plus summary'); await p.click('text=✍️ Avenant au bail'); await p.waitForTimeout(200);
     await p.selectOption('#f_motif', 'loyer'); await p.fill('#f_loyerHC', '999'); await p.waitForTimeout(100);
     check(/999/.test(await p.textContent('#avCalc')) || /→/.test(await p.textContent('#avCalc')), name + ' : le total avant/après s\'affiche');
     await shot('9-avenant-libre');
