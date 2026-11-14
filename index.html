@@ -233,6 +233,15 @@ details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { backgrou
 .lot-auto { padding: 10px 0; border-top: 1px solid var(--line); }
 .lot-auto:first-child { border-top: 0; padding-top: 0; }
 .lot-auto ul { margin: 6px 0 0; padding-left: 18px; }
+#overlay .choix-dossier input[type=radio], #overlay .choix-dossier input[type=checkbox] { width: 22px; height: 22px; min-height: 0; flex: none; margin: 0; padding: 0; accent-color: var(--accent); }
+#overlay .choix-dossier .tx { flex: 1; min-width: 0; }
+#overlay .choix-dossier li { flex-shrink: 0; height: auto; min-height: 56px; align-items: center; padding-top: 10px; padding-bottom: 10px; }
+#overlay .choix-dossier label.chk { height: auto; min-height: 0; padding: 0; }
+#overlay .choix-dossier .tx small { display: block; white-space: normal; line-height: 1.35; margin-top: 2px; }
+.sugg-adr { list-style: none; margin: 4px 0 0; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--sh-2); }
+.sugg-adr button { width: 100%; justify-content: flex-start; text-align: left; background: none; height: auto; min-height: 40px; padding: 8px 10px; white-space: normal; line-height: 1.3; font-weight: 600; }
+.sugg-adr button:hover { background: var(--surface-2); }
+.outils-bien { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -2535,10 +2544,12 @@ function pageBien(id) {
       <dt>Type</dt><dd>${esc(bi.type || "—")} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</dd>
       <dt>Surface</dt><dd>${bi.surface ? esc(bi.surface) + " m²" : "—"}${bi.pieces ? " · " + esc(bi.pieces) + " pièce(s)" : ""}</dd>
       <dt>DPE</dt><dd>${bi.dpe ? esc(bi.dpe) + (bi.dpeValidite ? " (valable jusqu'au " + fds(bi.dpeValidite) + ")" : "") : "—"}</dd>
+      ${bi.risquesVerifies ? `<dt>Risques</dt><dd>vérifiés le ${fds(bi.risquesVerifies)}</dd>` : ""}
       <dt>Chauffage</dt><dd>${esc(bi.chauffage || "—")}</dd><dt>Eau chaude</dt><dd>${esc(bi.eauChaude || "—")}</dd>
       <dt>Assurance PNO</dt><dd>${bi.pnoEcheance ? "échéance " + fds(bi.pnoEcheance) : "—"}</dd>
       ${bi.prixAchat ? `<dt>Prix d'achat</dt><dd>${eur(bi.prixAchat)}</dd>` : ""}
-    </dl>${bi.equipements ? `<p class="note">${nl2br(bi.equipements)}</p>` : ""}${bi.notes ? `<p class="note">📝 ${nl2br(bi.notes)}</p>` : ""}</div></section>
+    </dl>${bi.equipements ? `<p class="note">${nl2br(bi.equipements)}</p>` : ""}${bi.notes ? `<p class="note">📝 ${nl2br(bi.notes)}</p>` : ""}</div>
+    ${LECTURE ? "" : `<div class="outils-bien"><button class="small" onclick="trouverDpe('${bi.id}')">🔎 ${bi.dpe ? "Vérifier le DPE" : "Retrouver le DPE"}</button><button class="small" onclick="etatRisques('${bi.id}')">⚠️ État des risques</button></div>`}</section>
     ${sectionHistorique(bi)}
     ${sectionLocation(bi)}
     ${sectionTravaux(bi)}
@@ -3035,12 +3046,114 @@ function confirmer(msg, yes) {
 }
 
 const ENERGIES = [["Individuel électrique", "Individuel électrique"], ["Individuel gaz", "Individuel gaz"], ["Individuel fioul", "Individuel fioul"], ["Individuel bois / granulés", "Individuel bois / granulés"], ["Pompe à chaleur", "Pompe à chaleur"], ["Collectif", "Collectif"]];
+/* ================= Services publics gratuits (sans clé, appelés depuis le téléphone) =================
+   - Adresse : Géoplateforme (IGN), https://data.geopf.fr/geocodage/search (50 requêtes/s par adresse IP)
+   - DPE : ADEME, jeu "DPE Logements existants (depuis juillet 2021)", Licence Ouverte
+   - Risques : Géorisques, API v1 ; l'ERP officiel se fait sur errial.georisques.gouv.fr (gratuit)
+   Rien n'est rempli sans que tu le valides. */
+async function chercherAdresses(q, n = 5) {
+  if (String(q || "").trim().length < 5) return [];
+  const r = await fetch("https://data.geopf.fr/geocodage/search?" + new URLSearchParams({ q, autocomplete: "1", limit: String(n), index: "address" }));
+  if (!r.ok) throw new Error("Le service d'adresses ne répond pas");
+  const j = await r.json();
+  return (j.features || []).map(f => ({ label: f.properties.label, rue: f.properties.name, cp: f.properties.postcode, ville: f.properties.city, banId: f.properties.id, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], score: f.properties.score }));
+}
+/* Adresse qui se complète en tapant (formulaire du logement) */
+function brancherAutoAdresse() {
+  const champ = document.getElementById("f_adresse"); if (!champ) return;
+  const boite = document.createElement("ul"); boite.className = "sugg-adr"; boite.hidden = true; champ.after(boite);
+  let minuteur = null, n = 0, L = [];
+  const fixe = (nom, v) => { const h = document.querySelector(`#mform input[name="${nom}"]`); if (h) h.value = v; };
+  champ.setAttribute("autocomplete", "off");
+  champ.addEventListener("input", () => {
+    fixe("banId", ""); fixe("lat", ""); fixe("lon", ""); // l'adresse a changé : on oublie la précédente
+    clearTimeout(minuteur); const q = [champ.value, (document.getElementById("f_cp") || {}).value, (document.getElementById("f_ville") || {}).value].join(" ").trim();
+    minuteur = setTimeout(async () => {
+      const k = ++n; try { L = await chercherAdresses(q); } catch (e) { L = []; }
+      if (k !== n) return;
+      boite.innerHTML = L.map((a, i) => `<li><button type="button" data-i="${i}">📍 ${esc(a.label)}</button></li>`).join("");
+      boite.hidden = !L.length;
+      boite.querySelectorAll("button").forEach(b => b.onclick = () => { const a = L[+b.dataset.i];
+        champ.value = a.rue; const cp = document.getElementById("f_cp"), vi = document.getElementById("f_ville"); if (cp) cp.value = a.cp; if (vi) vi.value = a.ville;
+        fixe("banId", a.banId); fixe("lat", a.lat); fixe("lon", a.lon); boite.hidden = true; });
+    }, 350);
+  });
+  champ.addEventListener("blur", () => setTimeout(() => boite.hidden = true, 250));
+}
+/* Position et identifiant d'adresse d'un logement (déjà notés, sinon cherchés à partir de l'adresse) */
+async function situerBien(bi) {
+  if (bi.banId && bi.lat && bi.lon) return { banId: bi.banId, lat: +bi.lat, lon: +bi.lon, label: adresseBien(bi), sur: true };
+  const L = await chercherAdresses(adresseBien(bi), 1), a = L[0];
+  return a && a.score >= 0.6 ? { ...a, sur: false } : null;
+}
+/* ----- DPE (ADEME) ----- */
+const CHAMPS_DPE = "numero_dpe,etiquette_dpe,etiquette_ges,date_etablissement_dpe,date_fin_validite_dpe,adresse_ban,complement_adresse_logement,type_batiment,surface_habitable_logement";
+async function dpeListe(qs) {
+  const r = await fetch("https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?" + new URLSearchParams({ size: "30", qs, select: CHAMPS_DPE, sort: "-date_etablissement_dpe" }));
+  if (!r.ok) throw new Error("La base des DPE de l'ADEME ne répond pas");
+  return (await r.json()).results || [];
+}
+let DPE_L = [];
+async function trouverDpe(bienId, numero) {
+  const bi = bien(bienId); if (!bi) return;
+  if (LECTURE) { toast("En lecture seule, tu ne peux rien modifier."); return; }
+  toast("Je cherche dans la base des DPE…");
+  let ou = null, L = [];
+  try {
+    if (numero) L = await dpeListe(`numero_dpe:"${String(numero).trim().toUpperCase().replace(/[^0-9A-Z]/g, "")}"`);
+    else { ou = await situerBien(bi); if (ou) L = await dpeListe(`identifiant_ban:"${ou.banId}"`); }
+  } catch (e) { toast(e.message); return; }
+  // les plus proches de la surface du logement d'abord, puis les plus récents
+  const s = +bi.surface || 0; L.sort((a, b) => (s ? Math.abs((a.surface_habitable_logement || 999) - s) - Math.abs((b.surface_habitable_logement || 999) - s) : 0) || String(b.date_etablissement_dpe).localeCompare(String(a.date_etablissement_dpe)));
+  DPE_L = L;
+  const pill = c => `<span class="pill ${c === "G" ? "bad" : c === "F" ? "warn" : "info"}">${esc(c || "?")}</span>`;
+  const ligne = (d, i) => { const fini = d.date_fin_validite_dpe && d.date_fin_validite_dpe < iso(TODAY);
+    return `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="radio" name="dpe" value="${i}" ${L.length === 1 ? "checked" : ""} required><span class="tx">${pill(d.etiquette_dpe)} énergie · ${pill(d.etiquette_ges)} climat${d.surface_habitable_logement ? ` · <b>${String(d.surface_habitable_logement).replace(".", ",")} m²</b>` : ""}
+      <small>${esc(d.type_batiment || "")}${d.complement_adresse_logement ? " · " + esc(d.complement_adresse_logement) : ""} · fait le ${fds(d.date_etablissement_dpe)} · ${fini ? "⚠️ expiré le " : "valable jusqu'au "}${fds(d.date_fin_validite_dpe)} · n° ${esc(d.numero_dpe)}</small></span></label></li>`; };
+  modal(`DPE de ${esc(bi.nom)}`, `
+    ${ou ? `<p class="full note">Adresse cherchée : <b>${esc(ou.label)}</b>${ou.sur ? "" : " (retrouvée à partir de l'adresse du logement)"}.</p>` : numero ? "" : `<p class="full note">⚠️ Adresse introuvable : complète l'adresse du logement (rue, code postal, ville), ou cherche avec le numéro du DPE.</p>`}
+    ${L.length ? `<p class="full note">${L.length > 1 ? `${L.length} DPE trouvés à cette adresse (un par logement de l'immeuble) : choisis le tien (surface, étage…).` : "1 DPE trouvé : vérifie que c'est bien le tien."}${bi.dpe ? ` Actuellement noté : <b>${esc(bi.dpe)}</b>.` : ""}</p><ul class="todo full choix-dossier">${L.map(ligne).join("")}</ul>`
+      : `<p class="full note">Aucun DPE trouvé${numero ? " avec ce numéro" : " à cette adresse"} dans la base de l'ADEME (DPE faits depuis juillet 2021).</p>`}
+    <div class="full row" style="align-items:flex-end"><label class="fl" style="flex:1">Ou cherche avec le numéro du DPE (13 caractères, en haut du document)<input id="dpe_num" placeholder="ex : 2350E1960061Z" value="${esc(numero || bi.dpeNumero || "")}"></label><button type="button" onclick="trouverDpe('${bi.id}', document.getElementById('dpe_num').value)">Chercher</button></div>
+    <p class="full note small">Source : ADEME, base publique des DPE. Rien n'est enregistré tant que tu ne choisis pas.</p>`,
+    d => { if (!DPE_L.length) return; const x = DPE_L[+d.dpe]; if (!x) { toast("Choisis ton DPE dans la liste."); return false; }
+      Object.assign(bi, { dpe: x.etiquette_dpe || "", dpeGes: x.etiquette_ges || "", dpeValidite: x.date_fin_validite_dpe || "", dpeDate: x.date_etablissement_dpe || "", dpeNumero: x.numero_dpe });
+      toast(`✓ DPE ${x.etiquette_dpe} noté pour ${bi.nom}`); },
+    { ok: L.length ? "Utiliser ce DPE" : "Fermer" });
+}
+/* ----- État des risques (Géorisques) ----- */
+async function etatRisques(bienId) {
+  const bi = bien(bienId); if (!bi) return;
+  toast("Je regarde les risques à cette adresse…");
+  let ou, d;
+  try {
+    ou = await situerBien(bi); if (!ou) { toast("Adresse introuvable : complète l'adresse du logement (rue, code postal, ville)."); return; }
+    const r = await fetch(`https://www.georisques.gouv.fr/api/v1/resultats_rapport_risque?latlon=${ou.lon},${ou.lat}`);
+    if (!r.ok) throw new Error("Géorisques ne répond pas, réessaie dans un moment.");
+    d = await r.json();
+  } catch (e) { toast(e.message); return; }
+  const liste = o => Object.values(o || {}).filter(x => x.present).map(x => x.libelle);
+  const nat = liste(d.risquesNaturels), tech = liste(d.risquesTechnologiques);
+  RISQUES_TMP = { bienId, url: d.url, date: iso(TODAY), nat, tech, adresse: (d.adresse || {}).libelle || ou.label };
+  modal(`Risques : ${esc(bi.nom)}`, `
+    <p class="full note">Adresse : <b>${esc(RISQUES_TMP.adresse)}</b> · selon Géorisques le ${fd(TODAY)}.</p>
+    <div class="full"><h3>🌊 Risques naturels</h3>${nat.length ? `<ul>${nat.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="note">Aucun signalé.</p>`}
+    <h3>🏭 Risques technologiques et pollution</h3>${tech.length ? `<ul>${tech.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="note">Aucun signalé.</p>`}</div>
+    <div class="full drive-avant" style="font-weight:500">📄 <b>À joindre au bail : l'état des risques officiel (ERP)</b>. Il est gratuit et se fait en 2 minutes sur le site de l'État, à partir de l'adresse. Il doit dater de <b>moins de 6 mois</b> à la signature. Ce résumé t'aide à vérifier ce qu'il contient, il ne le remplace pas.</div>
+    <div class="full row"><a class="btn primary" href="https://errial.georisques.gouv.fr/" target="_blank" rel="noopener">Faire l'ERP officiel ↗</a><a class="btn" href="${esc(d.url)}" target="_blank" rel="noopener">Rapport complet ↗</a></div>`,
+    () => { const x = RISQUES_TMP;
+      S.fichiers.push({ id: uid(), bienId: x.bienId, bailId: "", cat: "Diagnostics (DPE…)", nom: `Risques Géorisques du ${fds(x.date)} (${x.nat.length + x.tech.length} risque${x.nat.length + x.tech.length > 1 ? "s" : ""}) : à compléter par l'ERP officiel`, url: x.url, date: x.date });
+      x.bi = bien(x.bienId); x.bi.risquesVerifies = x.date; toast("✓ Rangé dans les documents du logement"); },
+    { ok: "Ranger ce résumé dans le logement" });
+}
+let RISQUES_TMP = null;
 function editBien(id) {
   const b = id ? bien(id) : {};
   modal(id ? "Modifier le bien" : "Nouveau bien", `
     ${fld("Nom court (ex : Appart Agon 1)", "nom", b.nom, "text", "", "required")}
     ${sel("Type", "type", b.type || "Appartement", ["Appartement", "Maison", "Studio", "Local", "Parking / garage"].map(x => [x, x]))}
-    ${fld("Adresse", "adresse", b.adresse, "text", "full")}${fld("Code postal", "cp", b.cp)}${fld("Ville", "ville", b.ville)}
+    ${fld("Adresse (tape-la : l'appli te la propose)", "adresse", b.adresse, "text", "full")}${fld("Code postal", "cp", b.cp)}${fld("Ville", "ville", b.ville)}
+    <input type="hidden" name="banId" value="${esc(b.banId || "")}"><input type="hidden" name="lat" value="${esc(b.lat || "")}"><input type="hidden" name="lon" value="${esc(b.lon || "")}">
     ${fld("Surface habitable (m²)", "surface", b.surface, "number")}${fld("Nombre de pièces", "pieces", b.pieces, "number")}
     ${sel("Loué", "meuble", b.meuble || "vide", [["vide", "Vide (non meublé)"], ["meuble", "Meublé"]])}${fld("Année de construction", "annee", b.annee, "number")}
     ${sel("Classe DPE", "dpe", b.dpe || "", [["", "—"], ...["A", "B", "C", "D", "E", "F", "G"].map(x => [x, x])])}${fld("DPE valable jusqu'au", "dpeValidite", b.dpeValidite, "date")}
@@ -3051,7 +3164,7 @@ function editBien(id) {
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
     ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}`,
     d => { if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); apresModifDrive(); },
-    id ? { del: () => { if (S.baux.some(x => x.bienId === id)) { toast("Ce bien a des locataires (actuels ou anciens) : il ne peut pas être supprimé."); return; } S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ?" } : {});
+    Object.assign({ after: () => brancherAutoAdresse() }, id ? { del: () => { if (S.baux.some(x => x.bienId === id)) { toast("Ce bien a des locataires (actuels ou anciens) : il ne peut pas être supprimé."); return; } S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ?" } : {}));
 }
 
 function editBail(id, bienId, pre) {

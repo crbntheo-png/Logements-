@@ -11,6 +11,9 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Drive** : sur ton téléphone, choisir tes dossiers (plusieurs possibles), relier chaque dossier de logement (Docs › Dossiers et logements), vérifier le 1er rangement automatique (Annuler si besoin).
+- [ ] **DPE et risques** : sur chaque logement, "Retrouver le DPE" puis "État des risques" ; faire l'ERP officiel sur errial.georisques.gouv.fr avant le prochain bail.
+- [ ] **Services payants** (Youtrust, GoCardless, Bridge/Powens, Stripe) : fiches dans l'Historique du 14/11 ; rien codé tant que Théo n'a pas ouvert de compte.
 - [ ] **Notifications** : activer les alertes sur ton téléphone (Réglages › Notifications, appli installée) et faire l'essai.
 - [ ] Mentions légales : remplir `EDITEUR` (nom, contact) avant toute mise en vente.
 - [ ] **Taxe foncière Agon 2026** : récupérer la page « détail par local » de l'avis n° 2650400237412 (impots.gouv › Espace professionnel › Consulter › Avis d'imposition), puis remplacer la répartition à parts égales (516,67 € par lot, ordures ménagères à 0) par les vrais montants. Antoine et Sofiane doivent leur part d'ordures ménagères.
@@ -23,6 +26,32 @@ Règle pour chaque session :
 - [ ] Le propriétaire n'a pas encore branché son Gmail (Réglages › Envoyer depuis ton adresse Gmail).
 
 ## Historique
+
+### 14/11/2026 (suite) — Partie 2 : intégrations (demande de Théo)
+**A. Gratuites, codées et en ligne** (toujours en proposition : rien n'est rempli sans validation). Vérifiées avant de coder : service public, gratuit, sans clé, appelable depuis le téléphone (en-tête CORS `*` contrôlé).
+- **Adresse (Géoplateforme IGN)** `https://data.geopf.fr/geocodage/search` (limite : 50 requêtes/s par adresse IP). Formulaire du logement : en tapant l'adresse, l'appli propose les adresses ; un choix remplit rue, code postal, ville et garde `banId`, `lat`, `lon` (oubliés si on retape l'adresse). Rien n'est enregistré avant "Enregistrer".
+- **DPE (ADEME)** jeu "DPE Logements existants (depuis juillet 2021)", Licence Ouverte, `data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines`. Fiche logement › "Retrouver / Vérifier le DPE" : cherche par identifiant d'adresse (`identifiant_ban`), ou par numéro de DPE (13 caractères). Plusieurs DPE à la même adresse (un par logement de l'immeuble) : liste à choisir (classe énergie et climat, surface, complément, date, validité, expiré signalé), triée par surface la plus proche. "Utiliser ce DPE" note `dpe`, `dpeGes`, `dpeValidite`, `dpeDate`, `dpeNumero`.
+- **Risques (Géorisques)** API v1 `www.georisques.gouv.fr/api/v1/resultats_rapport_risque?latlon=` (sans clé). Fiche logement › "État des risques" : liste des risques naturels et technologiques présents, lien vers le rapport complet, et bouton vers l'**ERP officiel** sur `errial.georisques.gouv.fr` (gratuit, à joindre au bail, moins de 6 mois). Le résumé n'est rangé dans les documents du logement que si on le demande ("vérifiés le …" sur la fiche). L'appli ne fabrique pas l'ERP officiel elle-même : seul le formulaire de l'État fait foi.
+- Corrigé en testant : listes à choisir (DPE, et aussi dossiers Drive) dont les lignes se tassaient et se chevauchaient quand il y en a beaucoup.
+- Nouveau `tests/test37.js` (mode local, vrais appels aux services publics avec une adresse publique neutre, clair et sombre) 24/24. Aucune donnée de GTP envoyée.
+
+**B. Avec un compte à ouvrir par Théo : PAS codé.** Prix vérifiés sur les sites officiels le 14/11/2026 (HT).
+1. **Yousign (devenu "Youtrust")** : signature en ligne des baux, avenants, états des lieux, sans imprimer ; l'appli saurait quand c'est signé et rangerait le PDF signé.
+   - Prix : appli seule dès 9 €/mois (10 signatures/mois) ; pour la brancher à l'appli il faut l'offre **API** : Plus 104 €/mois ou Pro 129 €/mois, 500 signatures/an, engagement 12 mois. Espace de test (sandbox) gratuit, sans carte bancaire (durée annoncée : 40 jours).
+   - Théo doit : créer un compte sandbox sur youtrust.com (Développeurs › "Créer un compte sandbox"), puis la clé API dans l'espace développeur ; plus tard l'offre API payante.
+   - Code : par une fonction Supabase (clé secrète, retour "signé" par webhook). Environ 1 à 2 sessions.
+2. **GoCardless** : prélèvement automatique des loyers (le locataire signe un mandat en ligne une fois, le loyer est prélevé tout seul, l'appli sait aussitôt, quittance prête, alerte si rejet). Plus besoin de surveiller la banque pour les loyers.
+   - Prix (page tarifs France) : 1 % + 0,20 € par prélèvement, plafonné à 2 € (offre Standard), pas de frais de mise en place ni d'abonnement ; nom de la SCI sur les relevés en option 50 €/mois. Pour un loyer de 500 € : 2 €.
+   - Théo doit : créer un compte GoCardless au nom de la SCI (Kbis, IBAN, pièce d'identité du gérant), puis un jeton d'accès (Développeurs › Créer un jeton) ; un compte sandbox gratuit pour l'essai.
+   - Code : fonction Supabase + webhooks (mandats, paiements, rejets). Environ 2 sessions.
+3. **Bridge ou Powens** : lire n'importe quel compte bancaire (toutes les banques françaises) sans Pennylane.
+   - Prix : **aucun tarif public** chez l'un comme chez l'autre, devis commercial obligatoire. Espace de test : Bridge a une "Demo Bank" de test, Powens un bac à sable en libre-service.
+   - Théo doit : demander un devis (bridgeapi.io ou powens.com), créer le compte développeur, récupérer l'identifiant et le secret client.
+   - Code : fonction Supabase (secret), même rangement que Pennylane aujourd'hui. Environ 2 sessions. À comparer avec l'import du relevé (gratuit) et Pennylane (déjà branché).
+4. **Stripe** : offre payante de l'appli (abonnement mensuel pour d'autres propriétaires).
+   - Prix : 1,5 % + 0,25 € par paiement par carte européenne ; prélèvement SEPA 0,35 € ; abonnements (Stripe Billing) 0,7 % du montant ; pas de frais mensuels.
+   - Théo doit : créer un compte Stripe (entreprise, IBAN), activer les paiements, récupérer la clé secrète et la clé publique (Développeurs › Clés API), décider du prix et de ce qui est payant. Et remplir le nom de l'éditeur dans les mentions légales avant toute vente.
+   - Code : Stripe Checkout + webhook dans une fonction Supabase + blocage des fonctions payantes. Environ 2 à 3 sessions.
 
 ### 14/11/2026 — Drive partie 1 : plusieurs dossiers, dossier = logement, rangement automatique (demande de Théo)
 - **Choix des dossiers** (`choisirDossierDrive`) : on coche plusieurs dossiers (Mon Drive + Partagé avec moi), on peut descendre dans un sous-dossier (› puis ← Retour), les coches restent. Enregistré dans `S.sci.driveDossiers` [{id, nom}] ; `S.sci.driveId` = le 1er (compatibilité, et un lien collé à la main remplace la liste). `indexerDriveG` lit tous les dossiers choisis et leurs sous-dossiers sans doublon ; chaque fichier garde ses dossiers (`ancetres`).
