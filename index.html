@@ -1771,6 +1771,7 @@ function taches() {
       d: `${p.jours} jours dans le logement en ${tx.annee}` + (p.demandeLe ? ` · demandé le ${fds(p.demandeLe)}` : " · pas encore demandé"),
       acts: [["Que faire ?", `teomChoix('${tx.id}','${b.id}')`, "primary"], [p.demandeLe ? "A payé" : "Demander", p.demandeLe ? `teomPaye('${tx.id}','${b.id}')` : `docTeom('${tx.id}','${b.id}')`]] }); }));
   tachesLegales(add, y);
+  { const g = tacheGmbi(); if (g) add(g); }
   // 11. Rappels perso
   S.rappels.filter(r => !r.fait).forEach(r => { const d = P(r.date); if (daysBetween(TODAY, d) <= 30) add({ key: "rap-" + r.id, prio: d < TODAY ? "urgent" : daysBetween(TODAY, d) <= 7 ? "soon" : "info", date: d, t: esc(r.titre), d: `Rappel du ${fd(d)}` + (r.bienId ? " · " + esc(bienLabel(bien(r.bienId))) : ""), acts: [["C'est fait", `rappelFait('${r.id}')`, "primary"]] }); });
   const order = { urgent: 0, soon: 1, info: 2 };
@@ -3067,6 +3068,35 @@ function revisionDebloquee(bienId, avant) {
   modal("La révision de loyer est de nouveau possible", `<p class="full">Le logement passe de <b>${esc(avant)}</b> à <b>${esc(bi.dpe)}</b> : le loyer n'est plus gelé.</p>
     <ul class="todo full">${L.map(({ b, rv }) => `<li><span class="tx"><b>${esc(nomCourt(b.nom))}</b><small>${rv && rv.statut === "pret" ? `Révision possible : ${eur(rv.ancien)} → ${eur(rv.nouveau)} par mois, à partir d'aujourd'hui (date anniversaire du ${fds(rv.anniv)})` : rv && rv.statut === "attente" ? `Révision au ${fds(rv.anniv)} : l'indice IRL n'est pas encore publié` : "Pas de révision en attente : la prochaine se fera à la date anniversaire du bail"}</small></span>${rv && rv.statut === "pret" ? `<button type="button" class="small primary" onclick="closeOverlay();revision('${b.id}')">Réviser</button>` : ""}</li>`).join("")}</ul>
     <p class="full note">La révision ne rattrape pas les mois passés : le nouveau loyer compte à partir du jour où tu la demandes au locataire. Elle n'est possible que dans l'année qui suit la date anniversaire du bail ; après, elle est perdue.</p>`, () => {}, { ok: "Compris" });
+}
+/* ================= Déclaration d'occupation (GMBI, impots.gouv) =================
+   Sources (vérifiées le 14/11/2026) : impots.gouv.fr/particulier/la-declaration-doccupation : déclarer avant le 1er juillet
+   les changements d'occupation survenus entre le 2 janvier de l'année d'avant et le 1er janvier ; FAQ officielle GMBI :
+   amende de 150 € par local (article 1770 terdecies du CGI), une personne morale passe par son espace professionnel. */
+function changementsOccupation(annee) {
+  const du = new Date(annee - 1, 0, 2), au = new Date(annee, 0, 1), dans = s => { if (!s) return false; const d = P(s); return d >= du && d <= au; };
+  const L = [];
+  S.biens.forEach(bi => {
+    const baux = S.baux.filter(b => b.bienId === bi.id);
+    baux.filter(b => dans(b.dateEntree)).forEach(b => L.push({ bi, t: "arrivée", qui: b.nom, d: b.dateEntree }));
+    baux.filter(b => dans(b.dateSortie)).forEach(b => L.push({ bi, t: "départ", qui: b.nom, d: b.dateSortie }));
+    (bi.anciens || []).filter(a => dans(a.au)).forEach(a => L.push({ bi, t: "départ", qui: a.nom, d: a.au }));
+    const occupeAu = baux.some(b => P(b.dateEntree) <= au && (!b.dateSortie || P(b.dateSortie) >= au));
+    if (!occupeAu && L.some(x => x.bi === bi && x.t === "départ")) L.push({ bi, t: "vide", qui: "", d: iso(au) });
+  });
+  return L.sort((a, b) => String(a.d).localeCompare(String(b.d)));
+}
+function tacheGmbi() {
+  const annee = TODAY.getFullYear(), debut = new Date(annee, 5, 1), limite = new Date(annee, 6, 1);
+  if (TODAY < debut) return null;                       // à partir du 1er juin
+  const key = "gmbi-" + annee; if (fait(key)) return null;
+  const L = changementsOccupation(annee); if (!L.length) return null; // aucun changement : rien à déclarer
+  const retard = TODAY >= limite, lien = estPerso() ? "https://cfspart.impots.gouv.fr/" : "https://cfspro.impots.gouv.fr/";
+  const txt = x => `${esc(x.bi.nom)} : ${x.t === "arrivée" ? `arrivée de ${esc(x.qui)} le ${fds(x.d)}` : x.t === "départ" ? `départ de ${esc(x.qui)} le ${fds(x.d)}` : `vide au 1er janvier ${annee}`}`;
+  return { key, prio: retard ? "urgent" : "soon", date: limite, done: true,
+    t: retard ? `Déclaration d'occupation ${annee} en retard (date limite : 30 juin)` : `Déclarer les changements d'occupants avant le 1er juillet`,
+    d: `Changements entre le 2 janvier ${annee - 1} et le 1er janvier ${annee}, à déclarer sur impots.gouv (${estPerso() ? "ton espace particulier" : "l'espace professionnel de la SCI"} › Biens immobiliers) :<ul>${L.map(x => `<li>${txt(x)}</li>`).join("")}</ul>`,
+    acts: [[`Ouvrir ${estPerso() ? "mon espace particulier" : "l'espace professionnel"} ↗`, `window.open('${lien}','_blank','noopener')`, "primary"]] };
 }
 /* Réglages : des rubriques repliées, une ligne chacune ; on touche pour ouvrir */
 function reglage(id) {
@@ -4765,6 +4795,7 @@ function toast(msg) {
 
 /* ================= Comprendre : lexique "C'est quoi ?", "Pourquoi ?" des tâches, tons des relances ================= */
 const LEXIQUE = {
+  gmbi: ["Déclaration d'occupation (GMBI)", "Chaque année, avant le 1er juillet, le propriétaire indique aux impôts les changements d'occupants de ses logements survenus entre le 2 janvier de l'année d'avant et le 1er janvier (arrivée, départ, logement vide). Ça se fait sur impots.gouv, service \"Gérer mes biens immobiliers\" (espace professionnel pour une SCI). Sans changement, rien à faire. Oubli ou erreur : amende de 150 € par logement (article 1770 terdecies du CGI)."],
   irl: ["Indice de référence des loyers (IRL)", "Un chiffre publié par l'INSEE chaque trimestre. Une fois par an, à la date anniversaire du bail, le loyer peut suivre son évolution. Exemple : l'indice monte de 2 %, le loyer peut monter de 2 %. L'appli fait le calcul."],
   provision: ["Provision sur charges", "Une avance que le locataire paie chaque mois pour les charges (eau, ordures ménagères, entretien…). Une fois par an, on compare avec les vraies dépenses : il paie le manque ou on lui rend le trop-perçu."],
   forfait: ["Forfait de charges", "Un montant fixe de charges, sans comparaison en fin d'année. Possible surtout en meublé et en colocation."],
@@ -4800,6 +4831,7 @@ function cestQuoi(k) {
 const sectionLexique = () => `<section class="card aide" id="lexique"><h2>📖 Petit lexique</h2><dl class="lexique">${Object.entries(LEXIQUE).sort((a, b) => a[1][0].localeCompare(b[1][0])).map(([k, [t, d]]) => `<dt>${esc(t)}</dt><dd>${d}</dd>`).join("")}</dl></section>`;
 /* "Pourquoi ?" : la règle, le risque, le gain, selon le type de tâche */
 const POURQUOI = [
+  ["gmbi-", "Avant le 1er juillet, il faut déclarer aux impôts les changements d'occupants (arrivées, départs, logements vides) de l'année passée, sur impots.gouv (Gérer mes biens immobiliers).", "Amende de 150 € par logement non déclaré ou mal déclaré (article 1770 terdecies du code général des impôts, d'après la FAQ officielle GMBI).", "Les impôts savent qui occupe le logement : pas de taxe d'habitation ou de taxe sur les logements vacants envoyée par erreur."],
   ["dpeelec-", "Depuis le 1er janvier 2026, l'électricité compte moins dans le calcul du DPE (1,9 au lieu de 2,3), et encore moins au 1er janvier 2027 (1,7). Les DPE faits depuis le 1er juillet 2021 peuvent être mis à jour gratuitement, sans nouvelle visite, sur l'Observatoire DPE-Audit de l'ADEME.", "Tu gardes une classe plus mauvaise que la vraie : loyer gelé en F ou G, et interdiction de louer qui approche (G déjà, F en 2028, E en 2034).", "Une meilleure classe en quelques minutes et sans frais : loyer de nouveau révisable, logement louable plus longtemps."],
   ["imp-", "Le loyer est dû à la date prévue au bail.", "Plus tu attends, plus le retard grossit et plus il est dur à rattraper. Après 2 mois, il faut prévenir le garant.", "Un petit rappel gentil suffit dans 9 cas sur 10."],
   ["proc-", "Plusieurs mois impayés : mise en demeure, puis commandement de payer par un commissaire de justice.", "Sans ces étapes, impossible de demander au juge la fin du bail. Les délais se comptent en mois.", "Tu protèges ta trésorerie et tes droits ; le garant ou Visale peut payer."],

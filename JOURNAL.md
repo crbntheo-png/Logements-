@@ -27,6 +27,16 @@ Règle pour chaque session :
 
 ## Historique
 
+### 14/11/2026 (message 2) — Bloc 4 : déclaration d'occupation (GMBI)
+- **Sources vérifiées** :
+  - [impots.gouv.fr, la déclaration d'occupation](https://www.impots.gouv.fr/particulier/la-declaration-doccupation) : avant le 1er juillet, déclarer les changements d'occupation survenus entre le 2 janvier de l'année d'avant et le 1er janvier, dans "Gérer mes biens immobiliers".
+  - [FAQ officielle GMBI (PDF impots.gouv)](https://www.impots.gouv.fr/sites/default/files/media/1_metier/1_particulier/EV/5_patrimoine_logement/560_travaux_habitation/faq_gmbi.pdf) : amende de 150 € par local (article 1770 terdecies du CGI), même amende en cas d'omission ou d'inexactitude ; une personne morale (SCI) adhère au service GMBI par son espace professionnel.
+  - Espaces vérifiés : cfspro.impots.gouv.fr (professionnel), cfspart.impots.gouv.fr (particulier).
+- **Tâche** (`tacheGmbi`, `changementsOccupation`) : à partir du 1er juin, "Déclarer les changements d'occupants avant le 1er juillet", avec la liste calculée (arrivées, départs y compris anciens locataires de l'historique, logement vide au 1er janvier après un départ) ; lien vers l'espace professionnel (SCI) ou particulier (`estPerso()`). Après le 1er juillet : "en retard", urgente (jusqu'à la fin de l'année). "C'est fait" (clé `gmbi-<année>`). Aucune tâche s'il n'y a eu aucun changement.
+- Lexique ("gmbi") et "Pourquoi ?" (amende 150 € par logement).
+- Nouveau `tests/test41.js` (mode local, dates simulées 20/05, 10/06, 05/07/2027) 13/13. test5, test30 49/49. En ligne.
+- Données GTP actuelles : aucun changement entre le 2/01/2025 et le 1/01/2026 dans l'appli, donc pas de tâche pour 2026 ; la 1re tâche viendra le 1er juin 2027 (arrivées d'Antoine, Emma, Sofiane en 2026).
+
 ### 14/11/2026 (message 2) — Bloc 3 : DPE électrique
 - **Sources vérifiées** :
   - [INC, inc-conso.fr](https://www.inc-conso.fr/content/1er-janvier-2026-abaissement-du-coefficient-de-conversion-de-lelectricite-des-dpe) : coefficient de l'électricité 1,9 depuis le 1er janvier 2026 (avant 2,3) ; attestation pour les DPE établis du 1er juillet 2021 au 31 décembre 2025, à télécharger sur l'Observatoire DPE-Audit de l'ADEME (observatoire-dpe-audit.ademe.fr/accueil).
