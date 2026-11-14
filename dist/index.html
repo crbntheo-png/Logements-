@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "aa3b2b6", "date": "2026-11-14T15:12"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "47b5d55", "date": "2026-11-14T15:20"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -273,6 +273,9 @@ details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { backgrou
 .q-banner { background: var(--accent-soft); }
 .badge-file { color: var(--warn); font-weight: 750; }
 .copie-hebdo { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.renta-pq { margin: -4px 0 14px; padding: 0 4px; }
+.renta-pq ul { padding-left: 18px; line-height: 1.6; }
+.tab-pret td, .tab-pret th { padding: 6px 8px; font-size: .85rem; }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -575,6 +578,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .toast-undo { background: transparent; color: var(--gold); border: 0; font-weight: 800; height: 36px; padding: 0 12px; border-radius: 10px; flex: none; }
 .toast-undo:hover { background: rgba(255,255,255,.08); }
 :root[data-theme="dark"] .toast-undo { color: #0b6b58; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast-undo { color: #0b6b58; } }
 :root[data-theme="dark"] .toast-undo:hover { background: rgba(0,0,0,.06); }
 @media (max-width: 860px) { .toast { bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom, 0px)); } }
 .loader { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 80px 0; color: var(--muted); font-weight: 650; }
@@ -736,7 +740,7 @@ const KEY = "gestion-sci-v1";
 const blank = () => ({
   version: 1, demo: false,
   sci: { nom: "", siege: "", siren: "", gerant: "", ville: "", regime: "IR", familiale: false, iban: "", telephone: "", email: "", associes: [] },
-  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: [], edl: [], fichiers: [], banqueVus: {}
+  biens: [], baux: [], paiements: [], depenses: [], quittances: {}, relances: [], faits: {}, rappels: [], irlPerso: {}, taxes: [], edl: [], fichiers: [], prets: [], banqueVus: {}
 });
 const uid = () => Math.random().toString(36).slice(2, 10);
 function loadLocal() {
@@ -747,7 +751,7 @@ let S = blank();
 
 /* Stockage : en ligne et partagé entre associés quand c'est possible (db),
    sinon dans ce navigateur. Chaque bien, bail, paiement… est un document. */
-const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl", "fichiers"];
+const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl", "fichiers", "prets"];
 const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport", "banqueVus"];
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
@@ -2614,8 +2618,10 @@ function pageBien(id) {
       <div class="kpi"><span>Occupant</span><b>${actuel ? `<a href="#bail-${actuel.id}">${esc(nomCourt(actuel.nom))}</a>` : "Vide"}</b><small>${actuel ? "depuis le " + fds(actuel.dateEntree) : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button>`}</small></div>
       <div class="kpi"><span>Loyer</span><b>${l ? eur(l.hc + l.ch) : "—"}</b><small>${l ? eur(l.hc) + " HC + " + eur(l.ch) + " de charges" : ""}</small></div>
       <div class="kpi"><span>Rentabilité brute</span><b>${r ? r.brut.toFixed(1).replace(".", ",") + " %" : "—"}</b><small>${r ? "loyers / prix d'achat" : "ajoute le prix d'achat"}</small></div>
+      ${(() => { const n = rentaNette(bi); return n ? `<div class="kpi"><span>Rentabilité nette</span><b>${n.net.toFixed(1).replace(".", ",")} %</b><small>après charges, taxe, assurances, intérêts</small></div><div class="kpi ${n.cash < 0 ? "bad" : ""}"><span>Cash-flow</span><b>${n.cash >= 0 ? "+" : ""}${eur(n.cash)}</b><small>par mois, après la mensualité du prêt</small></div>` : ""; })()}
       <div class="kpi"><span>Taxe foncière${cq("teom")}</span><b>${tf ? eur(tf.total) : "—"}</b><small>${tf ? tf.annee : `<button class="small ghost" onclick="taxeFonciere('${bi.id}')">Renseigner</button>`}</small></div>
     </div>
+    ${blocRentaNette(bi)}
     <div class="stack">
     <section class="card"><h2>🏠 Le logement</h2><div class="bien"><dl>
       <dt>Type</dt><dd>${esc(bi.type || "—")} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</dd>
@@ -2958,8 +2964,9 @@ function recettes(year) {
 }
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
+  const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
   const lignes = [...S.biens.map(b => ({ id: b.id, nom: b.nom })), { id: "", nom: "SCI (frais généraux)" }].map(x => {
-    const r = rec[x.id] || { loyers: 0, charges: 0 }, d = deps.filter(dd => (dd.bienId || "") === x.id && !HORS_RESULTAT.has(dd.categorie)).reduce((s, dd) => s + +dd.montant, 0);
+    const r = rec[x.id] || { loyers: 0, charges: 0 }, d = deps.filter(dd => (dd.bienId || "") === x.id && !HORS_RESULTAT.has(dd.categorie) && !couv.has(dd.id)).reduce((s, dd) => s + +dd.montant, 0) + interetsTableaux(y, x.id);
     return { ...x, loyers: r.loyers, charges: r.charges, dep: d, res: r.loyers + r.charges - d };
   });
   const tot = lignes.reduce((t, l) => ({ loyers: t.loyers + l.loyers, charges: t.charges + l.charges, dep: t.dep + l.dep, res: t.res + l.res }), { loyers: 0, charges: 0, dep: 0, res: 0 });
@@ -2967,15 +2974,16 @@ function pageCompta() {
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
-  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`]], "Plus")}</div>
+  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`], ["🏦 Ajouter un prêt", "editPret()"], estPerso() ? null : ["👤 Un associé a payé de sa poche", "avanceAssocie()"]], "Plus")}</div>
   ${aideDeclaration(y, lignes, tot)}
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${y === TODAY.getFullYear() ? sectionBanque() : ""}
   ${sectionSorties(y)}
   ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
+  ${sectionPrets(y)}${sectionAvances()}
   <section><h2 style="margin-bottom:10px">Par logement</h2><ul class="lr-list">${lignes.filter(l => l.loyers || l.charges || l.dep).map(l => `<li class="lr"><div class="lr-main"><span class="tx"><b>${esc(l.nom)}</b><small>loyers ${eur(l.loyers + l.charges)} · dépenses ${eur(l.dep)}</small></span><span class="lr-r"><b class="${l.res < 0 ? "bad-txt" : ""}">${eur(l.res)}</b><small>résultat</small></span></div></li>`).join("")}<li class="lr-total"><span>Total</span><span class="${tot.res < 0 ? "bad-txt" : ""}">${eur(tot.res)}</span></li></ul></section>
   <div class="two"><section><h2 style="margin-bottom:10px">Dépenses ${y} <span class="count">${deps.length}</span></h2>
-  ${deps.length ? `<ul class="lr-list">${(view.depTout ? deps : deps.slice(0, 12)).map(d => `<li class="lr"><div class="lr-main" onclick="editDepense('${d.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">${ICO_DEP(d.categorie)}</span><span class="tx"><b>${esc(libelleLisible(d.libelle) || d.categorie)}</b><small>${fds(d.date)} · ${esc(d.categorie)} · ${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}</small></span><span class="lr-r"><b>${eur(d.montant)}</b></span></div></li>`).join("")}</ul>${deps.length > 12 && !view.depTout ? `<button class="ghost small lr-plus" onclick="view.depTout=true;render()">Voir les ${deps.length - 12} autres dépenses</button>` : ""}` : `<div class="empty">Aucune dépense en ${y}.</div>`}
+  ${deps.length ? `<ul class="lr-list">${(view.depTout ? deps : deps.slice(0, 12)).map(d => `<li class="lr"><div class="lr-main" onclick="editDepense('${d.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">${ICO_DEP(d.categorie)}</span><span class="tx"><b>${esc(libelleLisible(d.libelle) || d.categorie)}</b><small>${fds(d.date)} · ${esc(d.categorie)} · ${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}${d.avancePar ? ` · payé par ${esc(d.avancePar)}${d.rembourseLe ? " (remboursé)" : ""}` : ""}${d.pretId ? " · ventilé" : ""}</small></span><span class="lr-r"><b>${eur(d.montant)}</b></span></div></li>`).join("")}</ul>${deps.length > 12 && !view.depTout ? `<button class="ghost small lr-plus" onclick="view.depTout=true;render()">Voir les ${deps.length - 12} autres dépenses</button>` : ""}` : `<div class="empty">Aucune dépense en ${y}.</div>`}
   </section><section class="card"><h2>Part de chaque associé</h2>
   ${parts ? `<div class="table-wrap" style="border:0"><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)}<div class="sub">${a.parts} parts · ${Math.round(a.parts / parts * 1000) / 10} %</div></td><td class="num"><b>${eur(tot.res * a.parts / parts)}</b></td></tr>`).join("")}</tbody></table></div><p class="note">${S.sci.regime === "IR" ? "SCI à l'impôt sur le revenu : chaque associé déclare sa part du résultat (revenus fonciers). Le calcul fiscal exact (2072) peut différer : amortissements, travaux d'amélioration, etc." : "SCI à l'IS : l'impôt est payé par la SCI. Les associés ne sont imposés que sur les dividendes distribués."}</p>` : `<p class="note">Renseignez les associés et leurs parts dans <a href="#reglages">Réglages</a>.</p>`}
   ${Object.keys(parCat).length ? `<h3 style="margin-top:12px">Par catégorie</h3><div class="table-wrap" style="border:0"><table><tbody>${Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${eur(v)}</td></tr>`).join("")}</tbody></table></div>` : ""}
@@ -3122,6 +3130,168 @@ function tacheGmbi() {
     t: retard ? `Déclaration d'occupation ${annee} en retard (date limite : 30 juin)` : `Déclarer les changements d'occupants avant le 1er juillet`,
     d: `Changements entre le 2 janvier ${annee - 1} et le 1er janvier ${annee}, à déclarer sur impots.gouv (${estPerso() ? "ton espace particulier" : "l'espace professionnel de la SCI"} › Biens immobiliers) :<ul>${L.map(x => `<li>${txt(x)}</li>`).join("")}</ul>`,
     acts: [[`Ouvrir ${estPerso() ? "mon espace particulier" : "l'espace professionnel"} ↗`, `window.open('${lien}','_blank','noopener')`, "primary"]] };
+}
+/* ================= Emprunts : tableau d'amortissement, ventilation des échéances ================= */
+const A_VENTILER = "Échéance de prêt (capital + intérêts, à ventiler)";
+/* Tableau d'amortissement : celui de la banque s'il a été importé, sinon calculé (mensualités constantes, différé possible) */
+function tableauPret(p) {
+  if (p.tableau && p.tableau.length) return p.tableau;
+  const n = Math.max(1, Math.round(+p.duree || 0)), i = (+p.taux || 0) / 1200, dif = Math.min(Math.max(0, Math.round(+p.differe || 0)), n - 1), ass = r2(+p.assurance || 0), d0 = P(p.premiere || iso(TODAY));
+  const L = []; let C = r2(+p.montant || 0);
+  for (let k = 0; k < dif; k++) { const it = r2(C * i), date = iso(addMonthsDate(d0, k));
+    if (p.differeType === "total") { C = r2(C + it); L.push({ date, interets: 0, capital: 0, assurance: ass, crd: C, differe: "total" }); } // intérêts ajoutés au capital
+    else L.push({ date, interets: it, capital: 0, assurance: ass, crd: C, differe: "partiel" }); }                                     // on ne paie que les intérêts
+  const N = n - dif, A = i ? C * i / (1 - Math.pow(1 + i, -N)) : C / N;
+  for (let k = 0; k < N; k++) { const it = r2(C * i); let cap = r2(A - it); if (k === N - 1) cap = C; C = r2(C - cap); L.push({ date: iso(addMonthsDate(d0, dif + k)), interets: it, capital: r2(cap), assurance: ass, crd: Math.max(0, C) }); }
+  return L;
+}
+const totalEch = e => r2((+e.interets || 0) + (+e.capital || 0) + (+e.assurance || 0));
+const mensualitePret = p => { const L = tableauPret(p), e = L.find(x => !x.differe && P(x.date) >= TODAY) || L.filter(x => !x.differe).pop() || L[0]; return e ? totalEch(e) : 0; };
+const crdPret = (p, d = TODAY) => { const L = tableauPret(p), passes = L.filter(x => P(x.date) <= d); return passes.length ? passes[passes.length - 1].crd : r2(+p.montant || (L[0] ? L[0].crd + L[0].capital : 0)); };
+const interetsPretAnnee = (p, y) => r2(tableauPret(p).filter(x => x.date.startsWith(String(y))).reduce((s, x) => s + (+x.interets || 0), 0));
+const pretsDe = bienId => (S.prets || []).filter(p => (p.bienId || "") === (bienId || ""));
+/* Intérêts de l'année d'après les tableaux de prêt (pour un logement, ou "" = la SCI en général) */
+const interetsTableaux = (y, bienId) => r2(pretsDe(bienId).reduce((s, p) => s + interetsPretAnnee(p, y), 0));
+/* Dépenses déjà couvertes par un tableau (ventilées, ou échéance complète classée en intérêts) : pas comptées deux fois */
+function depensesCouvertes() {
+  const set = new Set(); S.depenses.forEach(d => { if (d.pretId && d.categorie === "Intérêts d'emprunt") set.add(d.id); });
+  propositionsVentilation().forEach(x => { if (x.d.categorie === "Intérêts d'emprunt") set.add(x.d.id); });
+  return set;
+}
+function sectionPrets(y) {
+  const P2 = S.prets || [], crd = r2(P2.reduce((s, p) => s + crdPret(p), 0)), it = r2(P2.reduce((s, p) => s + interetsPretAnnee(p, y), 0)), props = propositionsVentilation();
+  return `<details class="card rgl" id="prets" ${view.pretsOuverts ? "open" : ""} ontoggle="view.pretsOuverts=this.open"><summary><span class="rgl-ico" aria-hidden="true">🏦</span><span class="tx"><b>Emprunts</b><small>${P2.length ? `${P2.length} prêt${P2.length > 1 ? "s" : ""} · reste dû ${eur(crd)} · intérêts ${y} : ${eur(it)}` : "Ajoute ton prêt : intérêts et capital calculés tout seuls"}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
+    ${props.length ? `<div class="banner q-banner"><span>🧮 <span><b>${props.length} échéance${props.length > 1 ? "s" : ""} de prêt à ventiler</b> en intérêts, capital et assurance.</span></span><button class="small primary" onclick="ventilerEcheances()">Voir et ventiler</button></div>` : ""}
+    ${P2.length ? `<ul class="lr-list">${P2.map(p => `<li class="lr"><div class="lr-main" onclick="voirTableau('${p.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">🏦</span><span class="tx"><b>${esc(p.banque || "Prêt")} · ${eur(+p.montant || 0)}</b><small>${p.tableau && p.tableau.length ? "tableau de la banque" : `${String(p.taux).replace(".", ",")} % sur ${Math.round(+p.duree / 12 * 10) / 10} ans`} · ${esc(p.bienId && bien(p.bienId) ? bien(p.bienId).nom : "la SCI")} · reste dû ${eur(crdPret(p))}</small></span><span class="lr-r"><b>${eur(mensualitePret(p))}</b><small>par mois</small></span></div></li>`).join("")}</ul>` : `<p class="note">Saisis ton prêt une fois (montant, taux, durée) : l'appli calcule chaque mois la part d'intérêts (déductible), de capital et d'assurance, le reste dû, et range tes prélèvements de banque.</p>`}
+    <div class="row"><button class="small primary" onclick="editPret()">+ Prêt</button><button class="small" onclick="importerTableauPret()">Importer le tableau de la banque (CSV)</button></div></div></details>`;
+}
+function editPret(id) {
+  const p = id ? S.prets.find(x => x.id === id) : { id: uid(), banque: "", bienId: "", montant: "", taux: "", duree: 240, premiere: iso(TODAY), assurance: 0, differe: 0, differeType: "partiel" };
+  modal(id ? "Modifier le prêt" : "Nouveau prêt", `
+    ${fld("Banque", "banque", p.banque, "text", "", "required")}${sel("Pour", "bienId", p.bienId || "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
+    ${fld("Montant emprunté (€)", "montant", p.montant, "number", "", "required")}${fld("Taux (% par an)", "taux", p.taux, "number", "", 'required step="0.001"')}
+    ${fld("Durée (mois)", "duree", p.duree, "number", "", "required")}${fld("1re échéance", "premiere", p.premiere, "date", "", "required")}
+    ${fld("Assurance emprunteur (€ par mois)", "assurance", p.assurance, "number")}${fld("Différé (mois)", "differe", p.differe, "number")}
+    ${sel("Pendant le différé", "differeType", p.differeType || "partiel", [["partiel", "On paie seulement les intérêts"], ["total", "On ne paie rien (intérêts ajoutés au prêt)"]], "full")}
+    <p class="full note" id="pret_calc"></p>
+    <p class="full note small">Taux variable, ou différé plus compliqué ? Utilise plutôt "Importer le tableau de la banque (CSV)" : l'appli reprend exactement le tableau de la banque.</p>`,
+    d => { ["montant", "taux", "duree", "assurance", "differe"].forEach(k => d[k] = +d[k] || 0);
+      if (!(d.montant > 0) || !(d.duree > 0)) { toast("Indique le montant et la durée."); return false; }
+      Object.assign(p, d); delete p.tableau; S.prets = S.prets || []; if (!S.prets.includes(p)) S.prets.push(p); view.pretsOuverts = true; toast(`✓ Prêt enregistré : ${eur(mensualitePret(p))} par mois`); },
+    Object.assign({ ok: "Enregistrer", after: f => { const maj = () => { const x = Object.fromEntries(new FormData(f).entries()); ["montant", "taux", "duree", "assurance", "differe"].forEach(k => x[k] = +x[k] || 0); const el = document.getElementById("pret_calc"); if (!el) return; if (!(x.montant > 0 && x.duree > 0)) { el.textContent = ""; return; } const L = tableauPret(x), e = L.find(r => !r.differe) || L[0], tot = r2(L.reduce((s, r) => s + r.interets, 0)); el.innerHTML = `Mensualité : <b>${eur(e.capital + e.interets)}</b>${x.assurance ? ` + ${eur(x.assurance)} d'assurance` : ""} · coût total des intérêts : ${eur(tot)}`; }; f.addEventListener("input", maj); maj(); } },
+      id ? { del: () => { S.prets = S.prets.filter(x => x.id !== id); S.depenses.forEach(d => { if (d.pretId === id) delete d.pretId; }); } } : {}));
+}
+function voirTableau(id) {
+  const p = S.prets.find(x => x.id === id), L = tableauPret(p), ans = [...new Set(L.map(x => x.date.slice(0, 4)))];
+  modal(`${esc(p.banque || "Prêt")} : tableau d'amortissement`, `<p class="full note">${p.tableau && p.tableau.length ? "Tableau importé de la banque." : `Calculé : ${eur(+p.montant)} à ${String(p.taux).replace(".", ",")} % sur ${p.duree} mois${+p.differe ? `, dont ${p.differe} mois de différé ${p.differeType === "total" ? "total" : "partiel"}` : ""}.`} Reste dû aujourd'hui : <b>${eur(crdPret(p))}</b>.</p>
+    <div class="full">${ans.map(a => { const R = L.filter(x => x.date.startsWith(a)), s = k => r2(R.reduce((t, x) => t + (+x[k] || 0), 0));
+      return `<details class="pq"><summary><b>${a}</b> · intérêts ${eur(s("interets"))} · capital ${eur(s("capital"))}${s("assurance") ? ` · assurance ${eur(s("assurance"))}` : ""}</summary><div class="table-wrap" style="border:0"><table class="tab-pret"><thead><tr><th>Date</th><th class="num">Intérêts</th><th class="num">Capital</th><th class="num">Reste dû</th></tr></thead><tbody>${R.map(x => `<tr><td>${fds(x.date)}${x.differe ? " ⏸" : ""}</td><td class="num">${eur(x.interets)}</td><td class="num">${eur(x.capital)}</td><td class="num">${eur(x.crd)}</td></tr>`).join("")}</tbody></table></div></details>`; }).join("")}</div>`,
+    () => {}, { ok: "Fermer", lecture: true });
+  const m = document.querySelector("#mform .row"); if (m && !LECTURE) m.insertAdjacentHTML("afterbegin", `<button type="button" onclick="closeOverlay();editPret('${p.id}')">Modifier</button><button type="button" onclick="closeOverlay();importerTableauPret('${p.id}')">Remplacer par le tableau de la banque</button>`);
+}
+/* Import du tableau de la banque (CSV ou copier-coller) : colonnes date, intérêts, capital (amortissement), assurance, capital restant dû */
+const nbFr = t => { const v = nombreFr(t); return isFinite(v) ? v : 0; }; // réutilise la lecture des relevés
+function lireTableauPret(texte) {
+  const lignes = String(texte || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean); if (lignes.length < 2) return [];
+  const sep = [";", "\t", ","].map(s => [s, lignes[0].split(s).length]).sort((a, b) => b[1] - a[1])[0][0];
+  const cols = lignes[0].split(sep).map(c => normTxt(c)), trouve = re => cols.findIndex(c => re.test(c));
+  const iD = trouve(/DATE|ECHEANCE/), iI = trouve(/INTER/), iA = trouve(/ASSUR/), iR = trouve(/RESTANT|CRD|CAPITAL DU|DU APRES/), iC = cols.findIndex((c, k) => k !== iR && /AMORT|CAPITAL/.test(c));
+  if (iD < 0 || iI < 0 || iC < 0) return [];
+  return lignes.slice(1).map(l => l.split(sep)).map(c => ({ date: dateFr(c[iD]) || "", interets: r2(nbFr(c[iI])), capital: r2(nbFr(c[iC])), assurance: iA >= 0 ? r2(nbFr(c[iA])) : 0, crd: iR >= 0 ? r2(nbFr(c[iR])) : 0 })).filter(x => x.date && (x.interets || x.capital));
+}
+function importerTableauPret(id) {
+  const p = id ? S.prets.find(x => x.id === id) : null;
+  modal("Tableau d'amortissement de la banque", `<p class="full note">Dans l'espace en ligne de ta banque, télécharge le tableau d'amortissement (CSV ou Excel enregistré en CSV), ou copie-colle ses lignes ici. Il faut au moins les colonnes <b>date</b>, <b>intérêts</b> et <b>capital</b> (ou amortissement) ; <b>assurance</b> et <b>capital restant dû</b> si elles y sont.</p>
+    ${p ? "" : `${fld("Banque", "banque", "", "text", "", "required")}${sel("Pour", "bienId", "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}`}
+    <label class="fl full">Fichier CSV<input type="file" id="pret_csv" accept=".csv,text/csv,text/plain"></label>
+    <label class="fl full">Ou colle les lignes<textarea name="texte" id="pret_txt" rows="5" placeholder="Date;Échéance;Intérêts;Capital;Assurance;Capital restant dû"></textarea></label>
+    <p class="full note" id="pret_apercu"></p>`,
+    d => { const L = lireTableauPret(d.texte); if (!L.length) { toast("Je n'ai pas reconnu le tableau : vérifie les colonnes date, intérêts et capital."); return false; }
+      const q = p || { id: uid(), banque: d.banque, bienId: d.bienId || "" };
+      q.tableau = L; q.montant = r2(L[0].crd + L[0].capital) || r2(L.reduce((s, x) => s + x.capital, 0)); q.premiere = L[0].date; q.duree = L.length; q.assurance = L[0].assurance || 0;
+      S.prets = S.prets || []; if (!S.prets.includes(q)) S.prets.push(q); view.pretsOuverts = true; toast(`✓ Tableau repris : ${L.length} échéances`); },
+    { ok: "Utiliser ce tableau", after: f => {
+      const ap = () => { const L = lireTableauPret(document.getElementById("pret_txt").value), el = document.getElementById("pret_apercu"); el.innerHTML = L.length ? `✓ ${L.length} échéances reconnues, du ${fds(L[0].date)} au ${fds(L[L.length - 1].date)} · 1re : intérêts ${eur(L[0].interets)}, capital ${eur(L[0].capital)}` : document.getElementById("pret_txt").value ? "⚠️ Colonnes pas reconnues (il faut date, intérêts, capital)." : ""; };
+      document.getElementById("pret_txt").addEventListener("input", ap);
+      document.getElementById("pret_csv").addEventListener("change", ev => { const fi = ev.target.files[0]; if (!fi) return; const r = new FileReader(); r.onload = () => { document.getElementById("pret_txt").value = r.result; ap(); }; r.readAsText(fi); }); } });
+}
+/* Une dépense de banque qui correspond à une échéance (même montant à 1 € près, à 12 jours près) : proposée à la ventilation */
+function propositionsVentilation() {
+  if (!(S.prets || []).length) return [];
+  const out = [], pris = new Set();
+  S.depenses.filter(d => (d.categorie === A_VENTILER || (d.categorie === "Intérêts d'emprunt" && !d.pretId)) && !d.ventileDe).forEach(d => {
+    for (const p of S.prets) { const e = tableauPret(p).find(x => !pris.has(p.id + x.date) && Math.abs(daysBetween(P(x.date), P(d.date))) <= 12 && Math.abs(totalEch(x) - +d.montant) <= 1 && (x.capital > 0 || d.categorie === A_VENTILER));
+      if (e) { pris.add(p.id + e.date); out.push({ d, p, e }); break; } }
+  });
+  return out;
+}
+function ventilerEcheances() {
+  const L = propositionsVentilation(); if (!L.length) { toast("Rien à ventiler."); return; }
+  modal(`Ventiler ${L.length} échéance${L.length > 1 ? "s" : ""} de prêt`, `<p class="full note">Chaque prélèvement de la banque est séparé d'après le tableau du prêt : <b>intérêts</b> (déductibles), <b>capital</b> (jamais déductible) et <b>assurance</b>. Décoche ce qui ne correspond pas. Rien n'est changé avant "Oui, ventiler".</p>
+    <ul class="todo full lot-q">${L.map((x, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="v${i}" checked><span class="tx"><b>${fds(x.d.date)} · ${eur(x.d.montant)}</b> · ${esc(x.p.banque || "prêt")}<small>${esc(libelleLisible(x.d.libelle) || x.d.categorie)}${x.d.categorie === "Intérêts d'emprunt" ? " · classée en intérêts mais c'est une échéance complète" : ""}<br>→ intérêts ${eur(x.e.interets)} · capital ${eur(x.e.capital)}${+x.e.assurance ? ` · assurance ${eur(x.e.assurance)}` : ""}${Math.abs(totalEch(x.e) - +x.d.montant) > 0.004 ? ` · écart d'arrondi ${eur(r2(+x.d.montant - totalEch(x.e)))} ajouté aux intérêts` : ""}</small></span></label></li>`).join("")}</ul>`,
+    d => { const choix = L.filter((x, i) => d["v" + i]); if (!choix.length) { toast("Rien de coché."); return false; }
+      choix.forEach(({ d: dep, p, e }) => {
+        const base = { date: dep.date, bienId: p.bienId || dep.bienId || "", libelle: dep.libelle || "Échéance " + (p.banque || "prêt"), recuperable: false, pretId: p.id, ventileDe: dep.id, banqueTx: dep.banqueTx };
+        const ecart = r2(+dep.montant - totalEch(e));
+        S.depenses = S.depenses.filter(x => x !== dep);
+        S.depenses.push({ id: dep.id + "-i", ...base, categorie: "Intérêts d'emprunt", montant: r2(e.interets + ecart) });
+        if (e.capital > 0) S.depenses.push({ id: dep.id + "-c", ...base, categorie: "Remboursement capital emprunt", montant: e.capital });
+        if (+e.assurance > 0) S.depenses.push({ id: dep.id + "-a", ...base, categorie: "Assurance emprunteur", montant: +e.assurance });
+      });
+      toast(`✓ ${choix.length} échéance${choix.length > 1 ? "s" : ""} ventilée${choix.length > 1 ? "s" : ""}`); },
+    { ok: `Oui, ventiler les ${L.length}` });
+}
+/* ================= Rentabilité nette et cash-flow d'un logement ================= */
+function rentaNette(bi) {
+  const b = bailActifDuBien(bi.id); if (!b || !(+bi.prixAchat > 0)) return null;
+  const l = loyerAt(b, CUR), loyers = r2(l.hc * 12), depuis = iso(addDays(TODAY, -365));
+  const deps = S.depenses.filter(d => d.bienId === bi.id && (d.date || "") >= depuis && !HORS_RESULTAT.has(d.categorie) && !d.recuperable);
+  const somme = f => r2(deps.filter(f).reduce((s, d) => s + +d.montant, 0));
+  const tx = (S.taxes || []).filter(t => t.bienId === bi.id).sort((a, c) => c.annee - a.annee)[0];
+  const tf = tx ? r2(Math.max(0, +tx.total - (+tx.teom || 0))) : somme(d => d.categorie === "Taxe foncière");
+  const assur = somme(d => /Assurance propriétaire|Assurance loyers/.test(d.categorie));
+  const prets = pretsDe(bi.id), dans12 = x => P(x.date) > TODAY && P(x.date) <= addDays(TODAY, 365);
+  const interets = prets.length ? r2(prets.reduce((s, p) => s + tableauPret(p).filter(dans12).reduce((t, x) => t + (+x.interets || 0) + (+x.assurance || 0), 0), 0)) : somme(d => /Intérêts d'emprunt|Assurance emprunteur/.test(d.categorie));
+  const autres = somme(d => !/Taxe foncière|Assurance propriétaire|Assurance loyers|Intérêts d'emprunt|Assurance emprunteur/.test(d.categorie));
+  const mensualites = r2(prets.reduce((s, p) => s + mensualitePret(p), 0));
+  const net = (loyers - autres - tf - assur - interets) / +bi.prixAchat * 100;
+  const cash = r2((loyers - autres - tf - assur) / 12 - mensualites);
+  return { net, cash, loyers, autres, tf, assur, interets, mensualites, prix: +bi.prixAchat, avecPret: prets.length > 0 };
+}
+function blocRentaNette(bi) {
+  const r = rentaNette(bi); if (!r) return "";
+  return `<details class="pq renta-pq"><summary>Pourquoi ? Comment c'est calculé</summary>
+    <p><b>Rentabilité nette</b> = (loyers hors charges − charges non récupérables − taxe foncière − assurances − intérêts) ÷ prix d'achat, sur 12 mois.</p>
+    <ul><li>Loyers hors charges : ${eur(r.loyers)} par an</li><li>Charges non récupérables (12 derniers mois) : − ${eur(r.autres)}</li><li>Taxe foncière (sans les ordures ménagères, que paie le locataire) : − ${eur(r.tf)}</li><li>Assurances (propriétaire, loyers impayés) : − ${eur(r.assur)}</li><li>Intérêts et assurance de prêt (${r.avecPret ? "12 prochains mois, d'après le tableau" : "12 derniers mois, d'après les dépenses"}) : − ${eur(r.interets)}</li><li>Prix d'achat : ${eur(r.prix)}</li></ul>
+    <p><b>Cash-flow</b> = ce qui reste chaque mois : loyers − charges − taxe foncière − assurances, divisé par 12, moins la mensualité complète du prêt (${eur(r.mensualites)} : intérêts + capital + assurance). ${r.avecPret ? "" : "Aucun prêt saisi pour ce logement (Compta › Emprunts)."} Positif : le logement te rapporte de l'argent chaque mois ; négatif : tu complètes de ta poche.</p></details>`;
+}
+/* ================= Avances des associés (SCI) ================= */
+const avancesParAssocie = () => { const g = {}; S.depenses.filter(d => d.avancePar).forEach(d => { const x = g[d.avancePar] = g[d.avancePar] || { du: 0, rendu: 0, n: 0, L: [] }; x.L.push(d); if (d.rembourseLe) x.rendu = r2(x.rendu + +d.montant); else { x.du = r2(x.du + +d.montant); x.n++; } }); return g; };
+function avanceAssocie() {
+  if (estPerso()) return;
+  const noms = (S.sci.associes || []).map(a => a.nom).filter(Boolean);
+  modal("Un associé a payé de sa poche", `<p class="full note">La dépense compte pour la SCI (compta, déclaration), et l'appli retient que la SCI doit rembourser cet associé.</p>
+    ${noms.length ? sel("Qui a payé ?", "qui", noms[0], noms.map(n => [n, n]), "full") : fld("Qui a payé ? (ajoute les associés dans Réglages › La SCI)", "qui", "", "text", "full", "required")}
+    ${fld("Combien (€)", "montant", "", "number", "", "required")}${fld("Quand ?", "date", iso(TODAY), "date", "", "required")}
+    ${fld("Pour quoi ? (ex : facture plombier)", "libelle", "", "text", "full", "required")}
+    ${sel("Catégorie", "categorie", "Travaux d'entretien / réparation", CATS.map(c => [c, c]))}${sel("Logement", "bienId", "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}`,
+    d => { d.montant = r2(+d.montant); if (!(d.montant > 0) || !String(d.qui || "").trim()) { toast("Indique qui a payé et combien."); return false; }
+      S.depenses.push({ id: uid(), date: d.date, montant: d.montant, categorie: d.categorie, bienId: d.bienId || "", libelle: d.libelle, recuperable: false, avancePar: d.qui.trim() });
+      view.avancesOuvertes = true; toast(`✓ Noté : la SCI doit ${eur(d.montant)} à ${d.qui}`); }, { ok: "Enregistrer" });
+}
+function sectionAvances() {
+  if (estPerso()) return "";
+  const g = avancesParAssocie(), noms = Object.keys(g); if (!noms.length) return "";
+  const total = r2(noms.reduce((s, n) => s + g[n].du, 0));
+  return `<details class="card rgl" id="avances" ${view.avancesOuvertes ? "open" : ""} ontoggle="view.avancesOuvertes=this.open"><summary><span class="rgl-ico" aria-hidden="true">👤</span><span class="tx"><b>Avances des associés</b><small>${total ? `La SCI doit ${eur(total)} au total` : "Tout est remboursé"}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
+    <ul class="lr-list">${noms.map(n => `<li class="lr"><div class="lr-main"><span class="tx"><b>${esc(n)}</b><small>${g[n].du ? `${g[n].n} dépense${g[n].n > 1 ? "s" : ""} payée${g[n].n > 1 ? "s" : ""} de sa poche` : "rien à rembourser"}${g[n].rendu ? ` · déjà remboursé : ${eur(g[n].rendu)}` : ""}</small></span><span class="lr-r"><b>${g[n].du ? `La SCI lui doit ${eur(g[n].du)}` : "✓ à jour"}</b></span></div>
+      ${g[n].du && !LECTURE ? `<div class="lr-acts sans-av"><button class="small" onclick="avanceRemboursee('${esc(n).replace(/'/g, "\\'")}')">Remboursé</button></div>` : ""}</li>`).join("")}</ul>
+    ${LECTURE ? "" : `<div class="row"><button class="small" onclick="avanceAssocie()">+ Un associé a payé de sa poche</button></div>`}</div></details>`;
+}
+function avanceRemboursee(nom) {
+  const L = S.depenses.filter(d => d.avancePar === nom && !d.rembourseLe), du = r2(L.reduce((s, d) => s + +d.montant, 0));
+  modal(`Remboursement de ${esc(nom)}`, `<p class="full">La SCI a remboursé <b>${eur(du)}</b> à ${esc(nom)} (${L.length} dépense${L.length > 1 ? "s" : ""}) ?</p>${fld("Remboursé le", "date", iso(TODAY), "date", "", "required")}`,
+    d => { L.forEach(x => x.rembourseLe = d.date); toast(`✓ ${nom} : remboursé`); }, { ok: "Oui, c'est remboursé" });
 }
 /* Réglages : des rubriques repliées, une ligne chacune ; on touche pour ouvrir */
 function reglage(id) {
@@ -4357,8 +4527,10 @@ function docRegul(bailId, yy) {
 const CAT_2072 = { "Taxe foncière": "Impôts (taxe foncière hors ordures ménagères)", "Charges de copropriété": "Charges non récupérées", "Assurance propriétaire (PNO)": "Primes d'assurance", "Assurance loyers impayés": "Primes d'assurance", "Travaux d'entretien / réparation": "Travaux d'entretien, réparation, amélioration", "Travaux d'amélioration": "Travaux d'entretien, réparation, amélioration", "Intérêts d'emprunt": "Intérêts d'emprunt et assurance emprunteur", "Assurance emprunteur": "Intérêts d'emprunt et assurance emprunteur", "Frais bancaires": "Frais de gestion", "Honoraires (comptable, notaire, avocat…)": "Frais de gestion", "Diagnostics": "Frais de gestion", "Frais de gestion / annonces": "Frais de gestion", "Eau / électricité / gaz": "Charges non récupérées", "Autre": "À vérifier" };
 function aideDeclaration(y, lignes, tot) {
   if (estPerso()) return "";
-  const deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie)), g = {};
+  const couv = depensesCouvertes(), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie) && !couv.has(d.id)), g = {};
   deps.forEach(d => { const k = CAT_2072[d.categorie] || "À vérifier"; g[k] = (g[k] || 0) + +d.montant; });
+  const itPrets = r2((S.prets || []).reduce((s, p) => s + interetsPretAnnee(p, y), 0));
+  if (itPrets) { const k = CAT_2072["Intérêts d'emprunt"]; g[k] = r2((g[k] || 0) + itPrets); }
   const nbLoc = S.biens.length, forfait = 20 * nbLoc, regime = S.sci.regime === "IS";
   return `<details class="pli card"><summary><h2>🏛 Pour ta déclaration ${y}${cq("2072")}</h2>${ic("chevR", "s")}</summary>
     ${regime ? `<p class="note">SCI à l'impôt sur les sociétés : la liasse (2065) se fait en général avec l'expert-comptable. Donne-lui le fichier FEC ci-dessus.</p>` :
@@ -4369,6 +4541,7 @@ function aideDeclaration(y, lignes, tot) {
       <tr><td>Frais d'administration (forfait 20 € × ${nbLoc} logement${nbLoc > 1 ? "s" : ""})</td><td class="num">${eur(forfait)}</td></tr>
       ${Object.entries(g).sort().map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${eur(v)}</td></tr>`).join("")}
     </tbody></table></div>
+    ${itPrets ? `<p class="note">Intérêts d'emprunt : ${eur(itPrets)} d'après tes tableaux de prêt (Compta › Emprunts), plus l'assurance emprunteur payée.</p>` : ""}
     <p class="note">Chaque associé reporte ensuite sa part (colonne "Part de chaque associé" ci-dessous) sur sa déclaration 2044. Le remboursement du capital d'emprunt et l'achat du bien ne sont jamais déductibles.</p>`}
   </details>`;
 }

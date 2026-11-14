@@ -5,7 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cle-cron", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const rep = (c: unknown, s = 200) => new Response(JSON.stringify(c), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
-const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl", "fichiers"];
+const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl", "fichiers", "prets"];
 const slug = (s: string) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
 const b64 = (t: string) => { const o = new TextEncoder().encode(t); let s = ""; for (let i = 0; i < o.length; i += 0x8000) s += String.fromCharCode(...o.subarray(i, i + 0x8000)); return btoa(s); };
 

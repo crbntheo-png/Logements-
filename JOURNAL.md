@@ -11,6 +11,9 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Prêts GTP** : saisir le ou les prêts (Compta › Emprunts › + Prêt, ou importer le tableau de la banque), puis "Voir et ventiler" les échéances proposées ; vérifier les 8 "ECH PRET INT" d'environ 1 540 €.
+- [ ] **Copie de sauvegarde** : Réglages › Sauvegarde et import › "M'envoyer une copie chaque semaine" (case "maintenant" cochée pour vérifier la réception et rouvrir le .txt).
+- [ ] **Espace locataire** : décider (fiche dans l'Historique du 14/11, bloc 6).
 - [ ] **Drive** : sur ton téléphone, choisir tes dossiers (plusieurs possibles), relier chaque dossier de logement (Docs › Dossiers et logements), vérifier le 1er rangement automatique (Annuler si besoin).
 - [ ] **DPE et risques** : sur chaque logement, "Retrouver le DPE" puis "État des risques" ; faire l'ERP officiel sur errial.georisques.gouv.fr avant le prochain bail.
 - [ ] **Services payants** (Youtrust, GoCardless, Bridge/Powens, Stripe) : fiches dans l'Historique du 14/11 ; rien codé tant que Théo n'a pas ouvert de compte.
@@ -26,6 +29,27 @@ Règle pour chaque session :
 - [ ] Le propriétaire n'a pas encore branché son Gmail (Réglages › Envoyer depuis ton adresse Gmail).
 
 ## Historique
+
+### 14/11/2026 (message 2) — Bloc 5 : prêts, rentabilité nette, avances des associés
+- **Prêts** (nouvelle collection `prets`, ajoutée à `COLLS`, à `blank()` et à la copie de sauvegarde du lundi) : Compta › Emprunts › "+ Prêt" (banque, logement ou SCI, montant, taux, durée en mois, 1re échéance, assurance emprunteur par mois, différé en mois : partiel = intérêts seuls, total = intérêts ajoutés au prêt). `tableauPret` calcule le tableau (mensualités constantes, dernière échéance ajustée) ; la mensualité s'affiche pendant la saisie. Taux variable ou différé compliqué : "Importer le tableau de la banque (CSV)" (fichier ou copier-coller ; colonnes date, intérêts, capital/amortissement, assurance et capital restant dû si présentes ; nombres et dates à la française) qui remplace le calcul. Vue du tableau par année (intérêts, capital, assurance, reste dû).
+- **Ventilation** (`propositionsVentilation`, `ventilerEcheances`) : une dépense "Échéance de prêt (à ventiler)" OU une dépense "Intérêts d'emprunt" qui est en fait une échéance complète, dont le montant correspond (à 1 € près, à 12 jours près) à une échéance du tableau, est **proposée** ; fenêtre avec aperçu (intérêts, capital, assurance, écart d'arrondi), cases à décocher, "Oui, ventiler les N". Chaque échéance devient 3 dépenses (`pretId`, `ventileDe`, même `banqueTx`, donc pas reproposée par la banque). Rien sans validation.
+- **Compta et 2072** : quand des prêts sont saisis, les intérêts de l'année viennent des tableaux (`interetsTableaux`), et les dépenses d'intérêts déjà couvertes (ventilées ou échéance complète reconnue) ne sont pas comptées deux fois. Note dans l'aide à la 2072.
+- ⚠️ À noter pour GTP : 8 dépenses "ECH PRET INT" d'environ 1 540 € sont classées en intérêts. Si Théo saisit son prêt et que ce sont des échéances complètes, l'appli les proposera à la ventilation (et le résultat de -16 506 € changera).
+- **Fiche logement** : "Rentabilité nette" et "Cash-flow" (`rentaNette`) à côté de la rentabilité brute, avec "Pourquoi ? Comment c'est calculé" (loyers HC sur 12 mois − charges non récupérables des 12 derniers mois − taxe foncière sans les ordures ménagères − assurances propriétaire et loyers impayés − intérêts et assurance de prêt des 12 prochains mois d'après le tableau, sinon des dépenses) ÷ prix d'achat ; cash-flow = (loyers − charges − taxe − assurances) ÷ 12 − mensualité complète.
+- **Avances des associés** (SCI seulement) : Compta › Plus › "Un associé a payé de sa poche" (qui, combien, quand, pour quoi, catégorie, logement) : la dépense compte pour la SCI (`avancePar`) ; section "Avances des associés" : "La SCI lui doit X €" par associé, bouton "Remboursé" (date, `rembourseLe`). Masqué en nom propre.
+- Corrigé : bouton "Annuler" du message illisible en mode sombre automatique (thème du téléphone).
+- Nouveau `tests/test42.js` (mode local, clair et sombre) 40/40 : 100 000 € à 3 % sur 20 ans = 554,60 €/mois, différé, saisie, CSV, ventilation, intérêts en compta et 2072, rentabilité nette et cash-flow recalculés à la main, avances. test5, test17, test23, test29, test30 49/49, test38 OK. En ligne.
+- Rien n'a été modifié dans les données réelles de GTP INVEST.
+
+### 14/11/2026 (message 2) — Bloc 6 : espace locataire (pas codé, à décider)
+Ce que ça apporte : chaque locataire a son accès (lien + code par e-mail, comme l'appli) pour voir ses quittances, son bail, ses avis d'échéance, et signaler un problème avec photo (fuite, panne). Le propriétaire reçoit la demande dans À faire.
+Ce que ça demande :
+- **Comptes** : les locataires se connectent avec le même système (code à 6 chiffres par e-mail, Supabase Auth). Nouveau rôle `locataire` dans `membres`, lié à un bail (`bail_id`), invitation depuis la fiche du locataire (aperçu + "Oui, envoyer").
+- **Sécurité Supabase (le plus important)** : aujourd'hui un membre voit TOUT l'espace (table `docs` générique). Un locataire ne doit voir que SES lignes. Il faut donc des règles d'accès (RLS) nouvelles : soit une vue/fonction serveur `espace_locataire()` qui renvoie seulement son bail, ses quittances, ses paiements et les documents marqués "visibles par le locataire" ; soit des tables séparées. Les documents (bucket `documents`) : URL signées générées côté serveur, seulement pour ses fichiers. Aucun accès aux autres locataires, à la compta, à la banque, aux associés.
+- **Signalements avec photo** : table `demandes` (bail, texte, photos dans un bucket `demandes`, statut), RLS : le locataire écrit et lit les siennes, les membres de l'espace lisent tout ; alerte (notification + À faire) chez le propriétaire.
+- **Écrans** : une petite appli à part (mêmes fichiers, mode "locataire") : Mes quittances, Mon bail, Signaler un problème, Mes demandes.
+- **Tests** : comptes de test locataire A et B, vérifier qu'aucun ne voit l'autre ni la compta (comme test9 et test31).
+- **Temps estimé** : 3 à 4 sessions (1 pour la sécurité et les fonctions serveur, 1 à 2 pour les écrans, 1 pour les tests d'isolement et le passage en ligne). Aucun service payant à ouvrir. À faire seulement si Théo veut l'ouvrir à ses locataires.
 
 ### 14/11/2026 (message 2) — Bloc 4 : déclaration d'occupation (GMBI)
 - **Sources vérifiées** :
