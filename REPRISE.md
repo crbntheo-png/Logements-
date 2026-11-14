@@ -93,13 +93,18 @@ Déployer la fonction Gmail : voir la commande `functions/deploy` de l'API Supab
 | `tests/test28.js` | Bouton « ? » de signalement avec capture d'écran |
 | `tests/test29.js` | Paiement partiel étalé, ordures ménagères (tous les choix), avenant au bail |
 | `tests/test31.js` | Vraie base : lecture seule (voir sans modifier ni envoyer), changement de rôle, préférences de notification |
-| `tests/test32.js` | Vraie base : ouverture instantanée depuis la copie de l'appareil, mise à jour en arrière-plan, hors connexion, copie effacée à la déconnexion |
+| `tests/test32.js` | Vraie base : ouverture instantanée depuis la copie de l'appareil, mise à jour en arrière-plan, hors connexion, file des modifs en attente (rien perdu ni écrasé), copie effacée à la déconnexion |
 | `tests/perf.js` | Temps d'affichage de chaque page (démo, puis `K=6 AN=2016` = 28 locataires sur 10 ans) ; `node tests/perf.js profil` liste les fonctions lentes |
 | `tests/test33.js` | Vraie base + Google simulé : connexion Drive expliquée, choix du dossier, lecture, droits d'un associé |
 | `tests/test34.js` | Mise à jour de l'appli : version, chercher, bandeau "Nouvelle version prête", rechargement (service worker) |
 | `tests/test35.js` | Vraie base : assistant Pennylane (2 chemins), faux jetons, banque réservée au propriétaire |
 | `tests/test36.js` | Vraie base + Google simulé : plusieurs dossiers, sous-dossiers, dossier = logement, rangement automatique, Annuler, pas de doublon |
 | `tests/test37.js` | Services publics (vrais appels, adresse neutre) : adresse qui se complète, DPE ADEME, Géorisques |
+| `tests/test38.js` | Quittances du mois en un geste (adresses modifiables, Pas besoin, sans e-mail = PDF) |
+| `tests/test39.js` | Vraie base : copie de sauvegarde du lundi par e-mail (aperçu seulement, aucun envoi) |
+| `tests/test40.js` | DPE électrique : tâche de mise à jour gratuite, révision proposée quand F/G passe à E |
+| `tests/test41.js` | Déclaration d'occupation (GMBI), dates simulées |
+| `tests/test42.js` | Prêts, ventilation des échéances, intérêts compta/2072, rentabilité nette, avances des associés |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.
