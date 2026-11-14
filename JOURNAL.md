@@ -269,3 +269,15 @@ Pas fait / pas vérifié :
 - Taxes foncières 2026 saisies (voir « À faire »).
 - Guide de démarrage, page « Comment ça marche ? », bouton « ? » de signalement (reçu par e-mail avec capture).
 - `REPRISE.md` et `tests/` ajoutés pour reprendre depuis une autre session.
+
+## Idées en réserve (proposées le 14/11/2026 par la session du compte principal, rien de codé)
+
+Par ordre de priorité conseillé :
+1. **Signature au doigt sur le téléphone** (état des lieux, bail, avenant, plan d'apurement) : zone de signature (canvas) pour le bailleur et le locataire, sur place ; la signature est ajoutée au PDF (jsPDF addImage), avec date, heure et nom, puis le PDF signé est rangé dans les documents du bien. Gratuit, sans compte, fin du papier pour l'état des lieux. ~1 session.
+2. **Surveillance + anti-mise en veille** : une GitHub Action planifiée chaque jour (gratuite) qui ouvre l'appli en ligne, appelle Supabase (une requête légère) et échoue si quelque chose ne répond pas → GitHub envoie un e-mail à Théo. Évite aussi la mise en pause de la base gratuite après 7 jours sans activité. ~½ session.
+3. **Trésorerie des 12 prochains mois** (Compta) : loyers attendus − échéances de prêts − taxe foncière − assurances − autres dépenses récurrentes, solde prévu mois par mois à partir du solde Pennylane ; alerte dans À faire si le compte passe sous un seuil choisi. ~1 session.
+4. **Activité entre associés** : « Gabriel a marqué le loyer d'Emma payé · il y a 2 h », « Pierre a envoyé la quittance de novembre » (colonne `maj_par` + `envois` déjà là) ; évite les doublons (deux associés qui relancent le même locataire). ~1 session.
+5. **Vue « tous mes espaces »** pour qui a une SCI et des biens en nom propre : total des loyers, retards et à faire de tous ses espaces sur un seul écran. ~1 session.
+6. **Découper `index.html`** (plus de 5 000 lignes) en plusieurs fichiers (calculs, documents, banque, écrans) : moins de conflits quand deux sessions travaillent l'une après l'autre, corrections plus sûres. ~1 session, à faire quand aucune autre session ne travaille.
+7. **Assistant « Pose ta question »** (API Claude) : réponses sur la loi et brouillons de courriers à partir des données de l'espace. Demande une clé API Anthropic (payant à l'usage, quelques centimes par question).
+8. **DossierFacile** (dossier locataire vérifié par l'État) pour les candidats : à étudier, demande une convention de partenariat avec le service.
