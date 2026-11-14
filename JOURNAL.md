@@ -27,6 +27,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 14/11/2026 (message 2) — Bloc 1 : quittances du mois en un geste
+- Accueil et À faire : dès 2 quittances, bouton "Envoyer les N quittances" (bandeau en haut de À faire).
+- Une seule fenêtre "Quittances à envoyer (N)" : une ligne par locataire et par mois (montant, logement), case à décocher, adresse e-mail modifiable, bouton "Voir" pour l'aperçu de chaque quittance ; un seul bouton "Oui, envoyer les N" (le nombre suit les coches). "⚠️ Un e-mail envoyé ne peut pas être annulé."
+- Respecte "Pas besoin" (`qno-`) et `sansQuittance` (via `qAFaire`). Sans e-mail : listés à part avec "Télécharger le PDF".
+- Une adresse corrigée dans la fenêtre est enregistrée sur la fiche du locataire, seulement si elle a vraiment été modifiée (défaut trouvé en test : quand un locataire avait 2 mois dans la liste, la 2e ligne remettait l'ancienne adresse). Chaque quittance part à l'adresse affichée sur sa ligne.
+- Nouveau `tests/test38.js` (mode local, envoi simulé, clair et sombre) 24/24. test5, test22 (aucun envoi sans validation), test25, test30 49/49 OK. En ligne.
+
 ### 14/11/2026 (suite) — Partie 2 : intégrations (demande de Théo)
 **A. Gratuites, codées et en ligne** (toujours en proposition : rien n'est rempli sans validation). Vérifiées avant de coder : service public, gratuit, sans clé, appelable depuis le téléphone (en-tête CORS `*` contrôlé).
 - **Adresse (Géoplateforme IGN)** `https://data.geopf.fr/geocodage/search` (limite : 50 requêtes/s par adresse IP). Formulaire du logement : en tapant l'adresse, l'appli propose les adresses ; un choix remplit rue, code postal, ville et garde `banId`, `lat`, `lon` (oubliés si on retape l'adresse). Rien n'est enregistré avant "Enregistrer".

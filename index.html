@@ -242,6 +242,10 @@ details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { backgrou
 .sugg-adr button { width: 100%; justify-content: flex-start; text-align: left; background: none; height: auto; min-height: 40px; padding: 8px 10px; white-space: normal; line-height: 1.3; font-weight: 600; }
 .sugg-adr button:hover { background: var(--surface-2); }
 .outils-bien { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.lot-q li.q-lot { flex-wrap: wrap; gap: 8px; }
+.lot-q .q-mail { display: flex; gap: 6px; width: 100%; padding-left: 32px; }
+.lot-q .q-mail input { flex: 1; min-width: 0; height: 38px; }
+.q-banner { background: var(--accent-soft); }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -2295,7 +2299,7 @@ function aFaireCourt(T) {
   // les impayés sont déjà sur la carte de chaque locataire : on ne les répète pas ici
   prend(t => t.key.startsWith("imp-") || t.key.startsWith("proc-") || t.key.startsWith("vac-"));
   const q = prend(t => t.key.startsWith("q-"));
-  if (q.length) out.push({ ico: "📄", prio: "soon", t: q.length > 1 ? `${q.length} quittances à envoyer` : q[0].t.replace("Quittance à envoyer : ", "Quittance à envoyer à "), btn: peutEnvoyer() ? [q.length > 1 ? "Tout envoyer" : "Envoyer", q.length > 1 ? "envoyerToutesQuittances()" : q[0].acts[0][1]] : ["Voir", "go('loyers')"], btn2: ["Pas besoin", q.length > 1 ? "quittancePasBesoin()" : q[0].acts[1][1]] });
+  if (q.length) out.push({ ico: "📄", prio: "soon", t: q.length > 1 ? `${q.length} quittances à envoyer` : q[0].t.replace("Quittance à envoyer : ", "Quittance à envoyer à "), btn: peutEnvoyer() ? [q.length > 1 ? `Envoyer les ${q.length} quittances` : "Envoyer", q.length > 1 ? "envoyerToutesQuittances()" : q[0].acts[0][1]] : ["Voir", "go('loyers')"], btn2: ["Pas besoin", q.length > 1 ? "quittancePasBesoin()" : q[0].acts[1][1]] });
   prend(t => t.key.startsWith("rev-") && t.acts.length).forEach(t => { const b = bail(t.bailId), rv = revInfo(b); out.push({ ico: "📈", prio: "soon", t: `Augmenter le loyer de ${prenom(b.nom)}`, s: `${eur(rv.ancien)} → ${eur(rv.nouveau)}`, btn: ["Appliquer", `revision('${b.id}')`] }); });
   prend(t => t.key.startsWith("teom-")).forEach(t => { const b = bail(t.bailId); out.push({ ico: "🗑️", prio: "soon", t: `Ordures ménagères à récupérer : ${esc(b.nom.replace(/\s*\(.*?\)/g, ""))}`, s: t.t.split(" doit ")[1] + " · demander, déjà payée, ou chaque mois", btn: t.acts[0] }); });
   const ass = prend(t => t.key.startsWith("ass-") && t.prio !== "info");
@@ -2310,6 +2314,7 @@ function aFaireCourt(T) {
 function pageAFaire(T) {
   const groups = [["urgent", "Urgent"], ["soon", "À faire bientôt"], ["info", "À surveiller"]];
   return `<div class="head"><div><h1>À faire</h1><p>Tout ce qui demande une action, pour les locataires et pour la SCI.</p></div><div class="row"><button onclick="editRappel()">+ Rappel</button></div></div>
+  ${(() => { const n = T.filter(t => t.key.startsWith("q-")).length; return n > 1 && peutEnvoyer() ? `<div class="banner q-banner"><span>📄 <span><b>${n} quittances à envoyer</b>, en un seul geste.</span></span><button class="small primary" onclick="envoyerToutesQuittances()">Envoyer les ${n} quittances</button></div>` : ""; })()}
   <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); const vis = view.afaireTout || g.length <= 60 ? g : g.slice(0, 40); if (!g.length) return ""; const corps = vis.map(taskHtml).join("") + (vis.length < g.length ? `<button class="ghost small" onclick="view.afaireTout=true;render()">Voir les ${g.length - vis.length} autres</button>` : "");
     // "À surveiller" : rien d'urgent, replié pour garder la page lisible (déplié s'il n'y a rien d'autre)
     return k === "info" && T.some(t => t.prio !== "info") ? `<details class="surv" ${view.survOuvert ? "open" : ""} ontoggle="view.survOuvert=this.open"><summary class="group-title">${l} (${g.length}) · rien d'urgent</summary>${corps}</details>` : `<p class="group-title">${l} (${g.length})</p>` + corps; }).join("") : `<div class="empty">Rien à faire. Tout est à jour.</div>`}</section>`;
@@ -3967,8 +3972,8 @@ const ENVOIS = new Set();
 /* Rien ne part sans validation : on ouvre l'aperçu, l'envoi se fait depuis l'aperçu */
 async function envoyerQuittance(bailId, m, silencieux) { if (!silencieux) quittance(bailId, m); return false; }
 /* Envoi après validation explicite (lot confirmé) */
-async function envoyerQuittanceValidee(bailId, m) {
-  const b = bail(bailId), d = docQuittance(bailId, m), cle = bailId + "|" + m, dest = b && b.email;
+async function envoyerQuittanceValidee(bailId, m, adresse) {
+  const b = bail(bailId), d = docQuittance(bailId, m), cle = bailId + "|" + m, dest = adresse || (b && b.email);
   if (!d || !dest) return false;
   if (ENVOIS.has(cle) || S.quittances[cle]) return !!S.quittances[cle];
   ENVOIS.add(cle);
@@ -3978,18 +3983,45 @@ async function envoyerQuittanceValidee(bailId, m) {
   return ok;
 }
 let ENVOI_LOT = false;
+/* Toutes les quittances du mois en un geste : une fenêtre, on vérifie, un seul "Oui, envoyer les N" */
 function envoyerToutesQuittances() {
   return new Promise(fin => {
-    const liste = toutesEcheances().filter(qAFaire);
+    const liste = toutesEcheances().filter(qAFaire); // respecte "Pas besoin" (qno-) et sansQuittance
     if (!liste.length) { toast("Aucune quittance à envoyer."); return fin(0); }
-    modal("Quittances à envoyer", `<p class="full note">Vérifie chaque quittance (bouton Voir), puis coche celles à envoyer. Elles partiront de ${esc(GMAIL ? GMAIL.adresse : "l'adresse de l'appli")}.</p>
-      <ul class="todo full">${liste.map((e, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="q${i}" ${e.b.email ? "checked" : "disabled"}><span class="tx">${esc(e.b.nom)} — ${fm(e.m)} · ${eur(e.du)}<small>${e.b.email ? "à " + esc(e.b.email) : "⚠️ pas d'e-mail : ouvre-la pour en saisir un"}</small></span></label><button type="button" class="small" onclick="closeOverlay();quittance('${e.b.id}','${e.m}')">Voir</button></li>`).join("")}</ul>`,
+    if (!peutEnvoyer()) { toast("Tu ne peux pas envoyer d'e-mails depuis cet espace (lecture seule)."); return fin(0); }
+    const avec = liste.filter(e => e.b.email), sans = liste.filter(e => !e.b.email), avant = avec.map(e => e.b.email);
+    const ligne = (e, i) => `<li class="q-lot"><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="q${i}" checked onchange="majBoutonQuittances()"><span class="tx"><b>${esc(nomCourt(e.b.nom))}</b> · ${fm(e.m)} · ${eur(e.du)}<small>${esc(bienLabel(bien(e.b.bienId)))}</small></span></label>
+      <div class="q-mail"><input type="email" name="m${i}" value="${esc(e.b.email)}" aria-label="Adresse e-mail de ${esc(e.b.nom)}" autocomplete="off"><button type="button" class="small ghost" onclick="quittance('${e.b.id}','${e.m}')">Voir</button></div></li>`;
+    modal(`Quittances à envoyer (${liste.length})`, `
+      <p class="full note">Vérifie la liste (tu peux décocher, corriger une adresse ou voir chaque quittance), puis valide. Elles partiront de <b>${esc(GMAIL ? GMAIL.adresse : "l'adresse de l'appli")}</b>, avec la quittance en PDF.</p>
+      ${avec.length ? `<ul class="todo full lot-q">${avec.map(ligne).join("")}</ul><p class="full note small">Une adresse corrigée ici est aussi corrigée sur la fiche du locataire.</p>` : `<p class="full note">Aucun locataire n'a d'adresse e-mail : télécharge les PDF ci-dessous.</p>`}
+      ${sans.length ? `<div class="full"><h3>Sans adresse e-mail (${sans.length})</h3><ul class="todo">${sans.map(e => `<li><span class="tx"><b>${esc(nomCourt(e.b.nom))}</b> · ${fm(e.m)} · ${eur(e.du)}<small>Ajoute son e-mail sur sa fiche, ou donne-lui le PDF</small></span><button type="button" class="small" onclick="telechargerQuittance('${e.b.id}','${e.m}')">Télécharger le PDF</button></li>`).join("")}</ul></div>` : ""}
+      ${avec.length ? `<p class="full drive-avant">⚠️ Un e-mail envoyé ne peut pas être annulé.</p>` : ""}`,
       d => {
-        const choix = liste.filter((e, i) => d["q" + i] && e.b.email); if (!choix.length) { toast("Rien de coché."); return false; }
-        setTimeout(async () => { let n = 0; toast(`Envoi de ${choix.length} quittance(s)…`); for (const e of choix) { if (await envoyerQuittanceValidee(e.b.id, e.m)) n++; else break; }
-          toast(n === choix.length ? `✓ ${n} quittance${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""}` : `${n} envoyée(s), ${choix.length - n} non envoyée(s)`); fin(n); }, 50);
-      }, { ok: "Envoyer les quittances cochées" });
+        if (!avec.length) return;
+        const choix = [];
+        for (let i = 0; i < avec.length; i++) { if (!d["q" + i]) continue; const m = String(d["m" + i] || "").trim();
+          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)) { toast(`Adresse e-mail à corriger pour ${nomCourt(avec[i].b.nom)}.`); return false; }
+          choix.push([avec[i], m]); }
+        if (!choix.length) { toast("Rien de coché."); return false; }
+        // seule une adresse vraiment modifiée est gardée sur la fiche (un locataire peut avoir plusieurs mois dans la liste)
+        choix.forEach(([e, m]) => { const i = avec.indexOf(e); if (m !== avant[i]) e.b.email = m; });
+        setTimeout(async () => { let n = 0; toast(`Envoi de ${choix.length} quittance${choix.length > 1 ? "s" : ""}…`);
+          for (const [e, m] of choix) { if (await envoyerQuittanceValidee(e.b.id, e.m, m)) n++; else break; }
+          toast(n === choix.length ? `✓ ${n} quittance${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""}` : `${n} envoyée${n > 1 ? "s" : ""}, ${choix.length - n} non envoyée${choix.length - n > 1 ? "s" : ""} (réessaie plus tard)`); fin(n); }, 50);
+      }, { ok: avec.length ? `Oui, envoyer ${avec.length > 1 ? "les " + avec.length : "la quittance"}` : "Fermer" });
   });
+}
+function majBoutonQuittances() {
+  const n = document.querySelectorAll('#mform .lot-q input[type=checkbox]:checked').length, b = document.querySelector("#mform button.primary");
+  if (b) { b.textContent = n > 1 ? `Oui, envoyer les ${n}` : n === 1 ? "Oui, envoyer la quittance" : "Rien de coché"; b.disabled = !n; }
+}
+async function telechargerQuittance(bailId, m) {
+  const d = docQuittance(bailId, m); if (!d) return;
+  let doc; try { doc = fairePdf(d.html); } catch (e) { toast(e.message); return; }
+  const name = d.o.fichier + ".pdf";
+  if (DL) { try { await DL.save({ filename: name, data: doc.output("blob") }); toast("PDF enregistré"); } catch (e) { if (e && e.code !== "declined") toast("Téléchargement impossible ici."); } }
+  else doc.save(name);
 }
 function avis(bailId, m) {
   const b = bail(bailId), e = echeance(b, m), bi = bien(b.bienId);
