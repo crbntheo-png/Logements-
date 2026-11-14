@@ -1748,6 +1748,7 @@ function taches() {
         acts: futur ? [] : [["Écrire l'annonce", `annonce('${bi.id}')`, "primary"], ["Ajouter un locataire", `editBail(null,'${bi.id}')`]] });
     }
     if (bi.dpe === "G") add({ key: "dpeg-" + bi.id, prio: "urgent", date: TODAY, t: `${esc(bi.nom)} : DPE classé G`, d: "Interdit à la location pour tout nouveau bail ou renouvellement depuis le 1er janvier 2025. Travaux de rénovation à prévoir.", acts: [] });
+    { const t = tacheDpeElec(bi); if (t) add(t); }
     if (bi.dpe === "F") add({ key: "dpef-" + bi.id, prio: "info", date: TODAY, t: `${esc(bi.nom)} : DPE classé F`, d: "Sera interdit à la location à partir du 1er janvier 2028. Anticiper les travaux.", acts: [] });
     if (bi.dpeValidite && P(bi.dpeValidite) <= addDays(TODAY, 90)) add({ key: "dpev-" + bi.id, prio: P(bi.dpeValidite) < TODAY ? "soon" : "info", date: P(bi.dpeValidite), t: `${esc(bi.nom)} : DPE à refaire`, d: `Valable jusqu'au ${fd(bi.dpeValidite)}. Obligatoire pour signer un nouveau bail.`, acts: [["Modifier le bien", `editBien('${bi.id}')`]] });
     if (bi.pnoEcheance) {
@@ -3033,6 +3034,40 @@ async function copieHebdo(action) {
     }, 50);
   }, { ok: action === "activer" ? "Oui, activer" : "Oui, envoyer" });
 }
+/* ================= DPE d'un logement chauffé à l'électricité : mise à jour gratuite =================
+   Sources (vérifiées le 14/11/2026) : INC (inc-conso.fr) : coefficient de l'électricité 1,9 depuis le 1er janvier 2026 (avant 2,3),
+   attestation pour les DPE établis du 1er juillet 2021 au 31 décembre 2025 sur l'Observatoire DPE-Audit de l'ADEME ;
+   ecologie.gouv.fr : 1,7 au 1er janvier 2027 (arrêté publié au JO le 31/08/2026), mise à jour gratuite et immédiate, sans nouvelle visite. */
+const OBS_DPE = "https://observatoire-dpe-audit.ademe.fr/accueil";
+const chauffeElec = bi => /électrique|pompe à chaleur/i.test(bi.chauffage || "");
+const dateDuDpe = bi => bi.dpeDate ? P(bi.dpeDate) : bi.dpeValidite ? addYears(P(bi.dpeValidite), -10) : null;
+function tacheDpeElec(bi) {
+  if (!chauffeElec(bi) || !/^[EFG]$/.test(bi.dpe || "")) return null;
+  const d = dateDuDpe(bi); if (!d || d < new Date(2021, 6, 1)) return null; // seuls les DPE faits depuis le 1er juillet 2021
+  const en2027 = TODAY >= new Date(2027, 0, 1), avant2026 = d <= new Date(2025, 11, 31);
+  let phase, maintenant;
+  if (!en2027) { phase = avant2026 ? "2026" : "2027"; maintenant = avant2026; }
+  else { if (d >= new Date(2027, 0, 1)) return null; phase = "2027"; maintenant = true; }
+  const key = "dpeelec-" + bi.id + "-" + phase; if (fait(key)) return null;
+  const num = bi.dpeNumero;
+  return { key, prio: maintenant ? "soon" : "info", date: maintenant ? TODAY : new Date(2027, 0, 1), done: true,
+    t: `${esc(bi.nom)} : ton DPE peut s'améliorer gratuitement`,
+    d: (maintenant ? (phase === "2026" ? "Chauffage électrique et DPE fait entre juillet 2021 et fin 2025 : depuis le 1er janvier 2026, l'électricité compte moins dans le calcul (1,9 au lieu de 2,3). " : "Depuis le 1er janvier 2027, l'électricité compte encore moins dans le calcul (1,7). ")
+        + `Une attestation mise à jour, gratuite et sans nouvelle visite, se télécharge sur l'Observatoire DPE-Audit de l'ADEME avec le numéro du DPE. La classe ${esc(bi.dpe)} peut s'améliorer.`
+      : "Chauffage électrique : au 1er janvier 2027, l'électricité comptera moins dans le calcul du DPE (1,7 au lieu de 1,9). Ce jour-là, une attestation mise à jour gratuite se téléchargera sur l'Observatoire DPE-Audit de l'ADEME.")
+      + (num ? ` Numéro du DPE : <b>${esc(num)}</b>.` : " Note d'abord le numéro du DPE (13 caractères, en haut du DPE) dans la fiche du logement."),
+    acts: [num ? ["📋 Copier le numéro", `copierTexte('${esc(num)}')`, maintenant ? "primary" : ""] : ["Noter le numéro", `editBien('${bi.id}')`, "primary"], ["Ouvrir l'Observatoire ↗", `window.open('${OBS_DPE}','_blank','noopener')`]] };
+}
+/* La classe passe de F ou G à E ou mieux : la révision de loyer qui était bloquée redevient possible.
+   Règle (service-public.fr, F1311) : à demander dans l'année qui suit la date de révision, sans effet rétroactif. */
+function revisionDebloquee(bienId, avant) {
+  const bi = bien(bienId); if (!bi || !/^[FG]$/.test(avant || "") || !/^[A-E]$/.test(bi.dpe || "")) return;
+  const baux = S.baux.filter(b => b.bienId === bienId && isActive(b)); if (!baux.length) return;
+  const L = baux.map(b => ({ b, rv: revInfo(b) }));
+  modal("La révision de loyer est de nouveau possible", `<p class="full">Le logement passe de <b>${esc(avant)}</b> à <b>${esc(bi.dpe)}</b> : le loyer n'est plus gelé.</p>
+    <ul class="todo full">${L.map(({ b, rv }) => `<li><span class="tx"><b>${esc(nomCourt(b.nom))}</b><small>${rv && rv.statut === "pret" ? `Révision possible : ${eur(rv.ancien)} → ${eur(rv.nouveau)} par mois, à partir d'aujourd'hui (date anniversaire du ${fds(rv.anniv)})` : rv && rv.statut === "attente" ? `Révision au ${fds(rv.anniv)} : l'indice IRL n'est pas encore publié` : "Pas de révision en attente : la prochaine se fera à la date anniversaire du bail"}</small></span>${rv && rv.statut === "pret" ? `<button type="button" class="small primary" onclick="closeOverlay();revision('${b.id}')">Réviser</button>` : ""}</li>`).join("")}</ul>
+    <p class="full note">La révision ne rattrape pas les mois passés : le nouveau loyer compte à partir du jour où tu la demandes au locataire. Elle n'est possible que dans l'année qui suit la date anniversaire du bail ; après, elle est perdue.</p>`, () => {}, { ok: "Compris" });
+}
 /* Réglages : des rubriques repliées, une ligne chacune ; on touche pour ouvrir */
 function reglage(id) {
   view.rgl = Object.assign({}, view.rgl, { [id]: true });
@@ -3211,6 +3246,7 @@ async function trouverDpe(bienId, numero) {
     <div class="full row" style="align-items:flex-end"><label class="fl" style="flex:1">Ou cherche avec le numéro du DPE (13 caractères, en haut du document)<input id="dpe_num" placeholder="ex : 2350E1960061Z" value="${esc(numero || bi.dpeNumero || "")}"></label><button type="button" onclick="trouverDpe('${bi.id}', document.getElementById('dpe_num').value)">Chercher</button></div>
     <p class="full note small">Source : ADEME, base publique des DPE. Rien n'est enregistré tant que tu ne choisis pas.</p>`,
     d => { if (!DPE_L.length) return; const x = DPE_L[+d.dpe]; if (!x) { toast("Choisis ton DPE dans la liste."); return false; }
+      const avantDpe = bi.dpe; setTimeout(() => revisionDebloquee(bi.id, avantDpe), 300);
       Object.assign(bi, { dpe: x.etiquette_dpe || "", dpeGes: x.etiquette_ges || "", dpeValidite: x.date_fin_validite_dpe || "", dpeDate: x.date_etablissement_dpe || "", dpeNumero: x.numero_dpe });
       toast(`✓ DPE ${x.etiquette_dpe} noté pour ${bi.nom}`); },
     { ok: L.length ? "Utiliser ce DPE" : "Fermer" });
@@ -3251,13 +3287,20 @@ function editBien(id) {
     ${fld("Surface habitable (m²)", "surface", b.surface, "number")}${fld("Nombre de pièces", "pieces", b.pieces, "number")}
     ${sel("Loué", "meuble", b.meuble || "vide", [["vide", "Vide (non meublé)"], ["meuble", "Meublé"]])}${fld("Année de construction", "annee", b.annee, "number")}
     ${sel("Classe DPE", "dpe", b.dpe || "", [["", "—"], ...["A", "B", "C", "D", "E", "F", "G"].map(x => [x, x])])}${fld("DPE valable jusqu'au", "dpeValidite", b.dpeValidite, "date")}
+    ${fld("Numéro du DPE (13 caractères, en haut du DPE)", "dpeNumero", b.dpeNumero, "text", "full", 'maxlength="13" autocapitalize="characters" spellcheck="false" placeholder="ex : 2350E1960061Z"')}
     ${fld("Échéance assurance PNO", "pnoEcheance", b.pnoEcheance, "date")}${fld("Loyer indicatif HC (€)", "loyerRef", b.loyerRef, "number")}
     ${fld("Prix d'achat, frais compris (€) — pour la rentabilité", "prixAchat", b.prixAchat, "number", "full")}
     ${sel("Chauffage", "chauffage", b.chauffage || "", [["", "—"], ...ENERGIES])}${sel("Eau chaude", "eauChaude", b.eauChaude || "", [["", "—"], ...ENERGIES])}
     ${sel("Immeuble", "regimeImm", b.regimeImm || (b.type === "Maison" ? "mono" : ""), [["", "—"], ["copro", "En copropriété"], ["mono", "Monopropriété (un seul propriétaire)"]])}
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
     ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}`,
-    d => { if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); apresModifDrive(); },
+    d => {
+      d.dpeNumero = String(d.dpeNumero || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+      if (d.dpeNumero && d.dpeNumero.length !== 13) { toast("Le numéro du DPE fait 13 caractères (lettres et chiffres)."); return false; }
+      const avantDpe = id ? b.dpe : "";
+      if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); apresModifDrive();
+      if (id) setTimeout(() => revisionDebloquee(id, avantDpe), 300);
+    },
     Object.assign({ after: () => brancherAutoAdresse() }, id ? { del: () => { if (S.baux.some(x => x.bienId === id)) { toast("Ce bien a des locataires (actuels ou anciens) : il ne peut pas être supprimé."); return; } S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ?" } : {}));
 }
 
@@ -4757,6 +4800,7 @@ function cestQuoi(k) {
 const sectionLexique = () => `<section class="card aide" id="lexique"><h2>📖 Petit lexique</h2><dl class="lexique">${Object.entries(LEXIQUE).sort((a, b) => a[1][0].localeCompare(b[1][0])).map(([k, [t, d]]) => `<dt>${esc(t)}</dt><dd>${d}</dd>`).join("")}</dl></section>`;
 /* "Pourquoi ?" : la règle, le risque, le gain, selon le type de tâche */
 const POURQUOI = [
+  ["dpeelec-", "Depuis le 1er janvier 2026, l'électricité compte moins dans le calcul du DPE (1,9 au lieu de 2,3), et encore moins au 1er janvier 2027 (1,7). Les DPE faits depuis le 1er juillet 2021 peuvent être mis à jour gratuitement, sans nouvelle visite, sur l'Observatoire DPE-Audit de l'ADEME.", "Tu gardes une classe plus mauvaise que la vraie : loyer gelé en F ou G, et interdiction de louer qui approche (G déjà, F en 2028, E en 2034).", "Une meilleure classe en quelques minutes et sans frais : loyer de nouveau révisable, logement louable plus longtemps."],
   ["imp-", "Le loyer est dû à la date prévue au bail.", "Plus tu attends, plus le retard grossit et plus il est dur à rattraper. Après 2 mois, il faut prévenir le garant.", "Un petit rappel gentil suffit dans 9 cas sur 10."],
   ["proc-", "Plusieurs mois impayés : mise en demeure, puis commandement de payer par un commissaire de justice.", "Sans ces étapes, impossible de demander au juge la fin du bail. Les délais se comptent en mois.", "Tu protèges ta trésorerie et tes droits ; le garant ou Visale peut payer."],
   ["q-", "Le locataire peut demander sa quittance gratuitement (loi du 6 juillet 1989, article 21).", "Il peut en avoir besoin pour la CAF, une banque ou un futur logement.", "Une preuve claire de chaque paiement, envoyée en un geste."],
