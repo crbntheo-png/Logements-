@@ -51,6 +51,26 @@ let ok = 0, ko = 0; const verif = (nom, c) => { c ? ok++ : ko++; console.log((c 
   const hors = await A.evaluate(() => [MODE, S.baux.length, document.querySelector('#app').innerText.includes('Léa')]);
   verif('hors connexion : données visibles ' + JSON.stringify(hors), hors[0] === 'partage' && hors[1] === 1 && hors[2]);
   await A.unroute('**/*.supabase.co/**'); await A.reload(); await A.waitForTimeout(2500);
+  // Ne rien perdre : modif faite sans réseau, appli fermée puis rouverte, ni perdue ni écrasée, puis envoyée au retour du réseau
+  await A.route('**/rest/v1/docs**', r => r.abort());
+  await A.evaluate(() => { bail('cl1').loyerHC = '777'; save(); }); await A.waitForTimeout(2500);
+  verif('hors réseau : modif gardée dans la file', await A.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('gestion-sci-file-' + ESPACE) || '{}')).includes('baux/cl1')));
+  verif('badge "1 modif en attente"', await A.evaluate(() => /1 modif en attente/.test(document.getElementById('brandSub').innerText)));
+  await A.route('**/*.supabase.co/**', r => r.abort());
+  await A.reload(); await A.waitForTimeout(2500);  // appli fermée puis rouverte, toujours sans réseau
+  verif('rouverte sans réseau : modif toujours là (777)', await A.evaluate(() => bail('cl1') && bail('cl1').loyerHC) === '777');
+  await A.unroute('**/*.supabase.co/**'); await A.unroute('**/rest/v1/docs**');
+  // pendant ce temps, la version en ligne est toujours l'ancienne (555) : à l'ouverture, elle ne doit pas écraser la modif
+  await A.reload(); await A.waitForTimeout(4000);
+  verif('rouverte avec réseau : pas écrasée par la version en ligne', await A.evaluate(() => bail('cl1').loyerHC) === '777');
+  verif('modif partie toute seule (en ligne : 777)', await A.evaluate(async id => (await SB.from('docs').select('data').match({ espace_id: id, coll: 'baux', doc_id: 'cl1' }).single()).data.data.loyerHC, esp) === '777');
+  verif('file vide et badge parti', await A.evaluate(() => !localStorage.getItem('gestion-sci-file-' + ESPACE) && !/en attente/.test(document.getElementById('brandSub').innerText)));
+  // retour du réseau sans recharger (événement online)
+  await A.route('**/rest/v1/docs**', r => r.abort());
+  await A.evaluate(() => { bail('cl1').loyerHC = '888'; save(); }); await A.waitForTimeout(2000);
+  await A.unroute('**/rest/v1/docs**');
+  await A.evaluate(() => dispatchEvent(new Event('online'))); await A.waitForTimeout(3500);
+  verif('retour du réseau : modif envoyée sans recharger', await A.evaluate(async id => (await SB.from('docs').select('data').match({ espace_id: id, coll: 'baux', doc_id: 'cl1' }).single()).data.data.loyerHC, esp) === '888' && await A.evaluate(() => !localStorage.getItem('gestion-sci-file-' + ESPACE)));
   // Nettoyage puis déconnexion : la copie est effacée
   await A.evaluate(async id => { await SB.from('espaces').delete().eq('id', id); }, esp);
   await A.evaluate(() => SB.auth.signOut()); await A.waitForTimeout(1500);
