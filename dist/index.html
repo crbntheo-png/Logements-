@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "07fd120", "date": "2026-11-13T18:10"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "e6429c4", "date": "2026-11-14T14:28"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -252,6 +252,12 @@ details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { backgrou
 @media (max-width: 360px) { .penny-choix { grid-template-columns: 1fr; } }
 .penny-cta { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--surface-2); line-height: 1.45; }
 .penny-cta button { display: flex; margin-top: 10px; }
+.drive-avant { background: var(--warn-soft); border-radius: 12px; padding: 10px 12px; font-weight: 650; line-height: 1.45; margin: 0 0 6px; }
+.fil-drive { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 650; color: var(--ink-2); }
+.choix-dossier li { gap: 6px; }
+.lot-auto { padding: 10px 0; border-top: 1px solid var(--line); }
+.lot-auto:first-child { border-top: 0; padding-top: 0; }
+.lot-auto ul { margin: 6px 0 0; padding-left: 18px; }
 .acts-li { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 .todo li.deux { flex-wrap: wrap; }
 details.surv > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -553,6 +559,8 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .toast.avec-action { pointer-events: auto; display: flex; align-items: center; gap: 14px; text-align: left; padding: 10px 10px 10px 18px; }
 .toast-undo { background: transparent; color: var(--gold); border: 0; font-weight: 800; height: 36px; padding: 0 12px; border-radius: 10px; flex: none; }
 .toast-undo:hover { background: rgba(255,255,255,.08); }
+:root[data-theme="dark"] .toast-undo { color: #0b6b58; }
+:root[data-theme="dark"] .toast-undo:hover { background: rgba(0,0,0,.06); }
 @media (max-width: 860px) { .toast { bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom, 0px)); } }
 .loader { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 80px 0; color: var(--muted); font-weight: 650; }
 .spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: tourne .8s linear infinite; }
@@ -2081,7 +2089,7 @@ function render0() {
   document.querySelector(".brand").onclick = SB ? (ev => { ev.preventDefault(); choisirEspace(); }) : null;
   if (document.getElementById("brandSub").innerHTML !== sub) document.getElementById("brandSub").innerHTML = sub;
   const vide = !S.biens.length && !S.baux.length;
-  const banner = bandeauMaj() + (LECTURE ? `<div class="banner"><span>👀 <b>Lecture seule</b> : tu vois tout, tu ne modifies rien.</span></div>` : "") + bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
+  const banner = bandeauMaj() + bandeauDrive() + (LECTURE ? `<div class="banner"><span>👀 <b>Lecture seule</b> : tu vois tout, tu ne modifies rien.</span></div>` : "") + bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
@@ -2642,17 +2650,20 @@ const MOTS_GENERIQUES = new Set(["RUE", "AVENUE", "BOULEVARD", "CHEMIN", "PLACE"
 const motsDe = t => normTxt(t).replace(/[^A-Z0-9]+/g, " ").split(" ").filter(m => m && !MOTS_GENERIQUES.has(m) && (m.length >= 3 || /^\d+$/.test(m)));
 function deviner(f) {
   const titre = " " + normTxt(f.titre).replace(/[^A-Z0-9]+/g, " ") + " ", tout = " " + normTxt([...(f.chemin || []), f.titre].join(" ")).replace(/[^A-Z0-9]+/g, " ") + " ";
+  // 1. Dossier relié à un logement (le plus proche du fichier) : le logement vient de là, avant toute devinette
+  const liens = S.sci.driveLogements || {}, dRelie = (f.ancetres || []).slice().reverse().find(id => liens[id] && bien(liens[id]));
   // Catégorie : d'abord le nom du fichier ; le nom du dossier seulement en secours (sauf « diagnostics », trop souvent mal nommé)
   const r = REGLES_DOCS.find(([re]) => re.test(titre)) || REGLES_DOCS.find(([re, c]) => c !== "Diagnostics (DPE…)" && re.test(tout));
   // Locataire reconnu par son nom (le plus fiable), sinon le bien par son adresse / son nom
-  const baux = S.baux.filter(b => { const m = motsDe(b.nom).filter(x => !/^\d+$/.test(x)); return m.length && m.some(x => x.length >= 4 && tout.includes(" " + x + " ")); });
-  let bail = baux.length === 1 ? baux[0] : null, bienId = bail ? bail.bienId : null;
+  const baux = S.baux.filter(b => (!dRelie || b.bienId === liens[dRelie]) && (() => { const m = motsDe(b.nom).filter(x => !/^\d+$/.test(x)); return m.length && m.some(x => x.length >= 4 && tout.includes(" " + x + " ")); })());
+  let bail = baux.length === 1 ? baux[0] : null, bienId = dRelie ? liens[dRelie] : bail ? bail.bienId : null;
   if (!bienId) {
     const sc = S.biens.map(bi => { const ms = [...new Set([...motsDe(bi.nom), ...motsDe(bi.adresse || "")])]; const num = ms.filter(x => /^\d+$/.test(x)), txt = ms.filter(x => !/^\d+$/.test(x));
       const n = num.filter(x => tout.includes(" " + x + " ")).length * 2 + txt.filter(x => tout.includes(" " + x + " ")).length; return { bi, n }; }).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
     if (sc.length && (sc.length === 1 || sc[0].n > sc[1].n)) bienId = sc[0].bi.id;
   }
-  return { cat: r ? r[1] : null, bienId, bailId: bail ? bail.id : "" };
+  // "sûr" = type trouvé ET logement trouvé sans égalité (ou par un dossier relié) : peut être rangé tout seul
+  return { cat: r ? r[1] : null, bienId, bailId: bail ? bail.id : "", viaDossier: !!dRelie, sur: !!(r && bienId) };
 }
 function analyserDrive(fichiers) {
   const dejaLies = new Set(S.fichiers.filter(x => x.url).map(x => (x.url.match(/[-\w]{25,}/) || [""])[0]));
@@ -3064,7 +3075,7 @@ function editBien(id) {
     ${sel("Immeuble", "regimeImm", b.regimeImm || (b.type === "Maison" ? "mono" : ""), [["", "—"], ["copro", "En copropriété"], ["mono", "Monopropriété (un seul propriétaire)"]])}
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
     ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}`,
-    d => { if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); },
+    d => { if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); apresModifDrive(); },
     id ? { del: () => { if (S.baux.some(x => x.bienId === id)) { toast("Ce bien a des locataires (actuels ou anciens) : il ne peut pas être supprimé."); return; } S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ?" } : {});
 }
 
@@ -3101,6 +3112,7 @@ function editBail(id, bienId, pre) {
     d => {
       d.revisable = !!d.revisable; d.sansQuittance = !!d.sansQuittance; d.irlValeur = irlVal(qKey(d.irlTrimestre)) || b.irlValeur || "";
       if (id) Object.assign(b, d); else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); setTimeout(() => go("bail-" + nb.id)); }
+      apresModifDrive();
     },
     Object.assign({ after: f => { let irlTouche = !!id; f.irlTrimestre.addEventListener("change", () => irlTouche = true); f.dateEntree.addEventListener("change", () => { if (!irlTouche && f.dateEntree.value) f.irlTrimestre.value = qLabel(irlEnVigueur(P(f.dateEntree.value))); }); const chk = () => { const t = f.typeBail.value, dep = +f.depot.value, hc = +f.loyerHC.value, max = t === "vide" ? hc : t === "mobilite" ? 0 : hc * 2; document.getElementById("depotWarn").textContent = dep > max + 0.001 ? `⚠ Dépôt trop élevé : maximum légal ${eur(max)} pour ce type de bail (${t === "vide" ? "1 mois de loyer HC" : t === "mobilite" ? "interdit en bail mobilité" : "2 mois de loyer HC"}).` : ""; }; f.addEventListener("input", chk); chk(); } },
       id ? { del: () => { S.baux = S.baux.filter(x => x.id !== id); S.paiements = S.paiements.filter(p => p.bailId !== id); location.hash = "locataires"; }, delMsg: "Supprimer ce locataire et tout son historique de paiements ? (Pour un départ normal, utilisez plutôt \"Départ du locataire\".)" } : {}));
@@ -3156,7 +3168,7 @@ function saveSci(f) {
   d.associes = d.associes.split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, p, e]) => ({ nom: n.trim(), parts: +(p || 0), email: (e || "").trim() }));
   d.liens = (d.liens || "").split("\n").map(l => l.split(";").map(x => x.trim())).filter(x => x[0] && /^https?:\/\//i.test(x[1] || "")).map(([nom, url, icone]) => ({ nom, url, icone: icone || "" }));
   d.contacts = (d.contacts || "").split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, r, e]) => ({ nom: n.trim(), role: (r || "").trim(), email: (e || "").trim() }));
-  const nouveauDrive = idDrive(d.drive); delete d.drive; if (nouveauDrive && nouveauDrive !== driveRacine()) { d.driveGenId = ""; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; } d.driveId = nouveauDrive || S.sci.driveId || "";
+  const nouveauDrive = idDrive(d.drive); delete d.drive; if (nouveauDrive && nouveauDrive !== driveRacine()) { d.driveGenId = ""; d.driveDossiers = [{ id: nouveauDrive, nom: "" }]; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; } d.driveId = nouveauDrive || S.sci.driveId || "";
   d.archiveDrive = d.archiveDrive !== "0";
   Object.assign(S.sci, d); save(); render(); toast("Enregistré");
 }
@@ -3416,20 +3428,22 @@ async function fnDrive(action, extra) {
 function chargerEtatDrive(user) {
   SB.from("drive_comptes").select("adresse").eq("user_id", user.id).maybeSingle().then(g => {
     DRIVEG = g.data ? { etat: "oui", adresse: g.data.adresse } : { etat: "non" };
-    if (pageCourante() === "docs" || pageCourante() === "reglages") render();
+    if (pageCourante() === "docs" || pageCourante() === "reglages" || pageCourante() === "locataires") render();
+    if (DRIVEG.etat === "oui") setTimeout(() => attendreRolePuisLire(), 1500);
   }, () => { DRIVEG = { etat: "non" }; });
 }
 const texteDrive = () => `<div class="drive-explique">
   <p><b>✅ Ce que la connexion permet</b></p>
-  <ul><li>Lire la <b>liste</b> des fichiers du dossier que tu choisis (noms, dossiers, dates).</li>
-  <li>Te <b>proposer</b> où ranger chaque document (bon logement, bon locataire, bon type) et ce qu'il manque à compléter. Tu valides avant que quoi que ce soit soit rangé.</li>
+  <ul><li>Lire la <b>liste</b> des fichiers des dossiers que tu choisis (noms, sous-dossiers, dates). Rien d'autre dans ton Drive.</li>
+  <li><b>Ranger tout seul</b> dans l'appli les documents dont elle est sûre (type et logement reconnus, ou dossier relié à un logement). Tu peux tout annuler d'un geste.</li>
+  <li>Te <b>proposer</b> les autres, et ce qu'il manque à compléter : tu valides avant qu'ils soient rangés.</li>
   <li>Ouvrir un document du Drive d'un geste depuis l'appli.</li></ul>
   <p><b>🚫 Ce qu'elle ne permet pas</b></p>
-  <ul><li><b>Rien modifier</b> : l'appli ne peut ni créer, ni renommer, ni déplacer, ni supprimer quoi que ce soit dans ton Drive (lecture seule).</li>
+  <ul><li><b>Rien modifier</b> : l'appli ne peut ni créer, ni renommer, ni déplacer, ni supprimer quoi que ce soit dans ton Drive (lecture seule). "Ranger" se fait seulement dans l'appli.</li>
   <li><b>Rien partager</b> : elle ne change aucun partage et n'envoie rien à personne.</li>
-  <li><b>Pas de copie</b> de tes fichiers : l'appli ne garde que le nom et le lien des documents que tu ranges.</li>
+  <li><b>Pas de copie</b> de tes fichiers : l'appli ne garde que le nom et le lien des documents rangés.</li>
   <li>Tes associés <b>ne voient pas ton Drive</b> : ils voient seulement les documents rangés dans l'appli, et pour les ouvrir, il faut qu'ils aient déjà accès au fichier dans Google Drive.</li></ul>
-  <p class="note">Google va te demander l'autorisation de "voir tous tes fichiers Google Drive" : c'est la seule façon pour une appli de lire une liste de fichiers. L'appli ne regarde que le dossier que tu choisis. Tant que l'appli n'est pas vérifiée par Google, un écran "Google n'a pas validé cette application" peut s'afficher : touche <b>Paramètres avancés</b>, puis <b>Accéder à l'appli</b>.</p>
+  <p class="note">Google va dire que l'appli peut "voir tous tes fichiers Google Drive" : c'est la seule autorisation qui permet de lire le contenu d'un dossier. En vrai, l'appli ne lit que les dossiers que tu choisis juste après. Tant que l'appli n'est pas vérifiée par Google, un écran "Google n'a pas validé cette application" peut s'afficher : touche <b>Paramètres avancés</b>, puis <b>Accéder à l'appli</b>.</p>
   <p class="note">Tu peux débrancher à tout moment : Réglages › Google Drive, ou depuis ton compte Google (Sécurité › Applications tierces).</p></div>`;
 function chargerGIS() {
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
@@ -3446,7 +3460,7 @@ function connecterDrive() {
   if (LECTURE) { toast("En lecture seule, tu ne peux pas brancher le Drive."); return; }
   let pret = false, erreur = "";
   preparerGoogle().then(() => { pret = true; }, e => { erreur = e.message; });
-  modal("Connecter ton Google Drive", `<div class="full">${texteDrive()}</div>`, () => {
+  modal("Connecter ton Google Drive", `<p class="full drive-avant">⚠️ Google va dire que l'appli peut voir tout ton Drive. En vrai, elle ne lira que les dossiers que tu choisis juste après.</p><div class="full">${texteDrive()}</div>`, () => {
     if (erreur) { toast(erreur); return false; }
     if (!pret) { toast("Un instant, Google se prépare…"); return false; }
     const cl = google.accounts.oauth2.initCodeClient({ client_id: GCFG.client_id, scope: SCOPE_DRIVE, ux_mode: "popup", select_account: true,
@@ -3456,9 +3470,10 @@ function connecterDrive() {
         try {
           const j = await fnDrive("brancher", { code: r.code });
           DRIVEG = { etat: "oui", adresse: j.adresse, jeton: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 };
+          if (S.sci.driveDebranche) { delete S.sci.driveDebranche; save(); }
           DOCS = { etat: "vide", fichiers: [], dossiers: {} }; closeOverlay();
           toast("✅ Drive connecté" + (j.adresse ? " : " + j.adresse : ""));
-          if (!driveRacine()) choisirDossierDrive(); else go("docs");
+          if (!dossiersDrive().length) choisirDossierDrive(); else { lectureDriveFond("connexion"); go("docs"); }
         } catch (e) { toast(e.message); }
       },
       error_callback: e => toast(e && e.type === "popup_closed" ? "Connexion annulée." : "Google n'a pas pu s'ouvrir. Autorise les fenêtres pour ce site, puis réessaie.") });
@@ -3469,6 +3484,7 @@ function connecterDrive() {
 function debrancherDrive() {
   confirmer("Débrancher ton Google Drive ? Les documents déjà rangés restent dans l'appli ; elle ne lira plus ton Drive.", async () => {
     try { await fnDrive("debrancher"); } catch (e) {}
+    S.sci.driveDebranche = true; save();
     DRIVEG = { etat: "non" }; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; render(); toast("Drive débranché");
   });
 }
@@ -3489,45 +3505,143 @@ async function driveListe(q, max = 5000) {
   }
 }
 const DOSSIER = "application/vnd.google-apps.folder";
-async function indexerDriveG() {
-  if (!driveRacine()) { DOCS = { etat: "dossier", fichiers: [], dossiers: {} }; render(); return; }
-  const D = DOCS = { etat: "chargement", fichiers: [], dossiers: {}, n: 0 }; if (pageCourante() === "docs") render();
-  const vus = new Set(), file = [{ id: driveRacine(), chemin: [] }];
+/* Les dossiers choisis : plusieurs possibles (S.sci.driveDossiers) ; l'ancien S.sci.driveId (un seul dossier) reste compris */
+const dossiersDrive = () => (S.sci.driveDossiers && S.sci.driveDossiers.length) ? S.sci.driveDossiers : (driveRacine() ? [{ id: driveRacine(), nom: "" }] : []);
+/* Lit tous les dossiers choisis et leurs sous-dossiers, sans doublon. Chaque fichier garde la liste de ses dossiers (ancetres). */
+async function indexerDriveG(silencieux) {
+  const racines = dossiersDrive();
+  if (!racines.length) { DOCS = { etat: "dossier", fichiers: [], dossiers: {} }; if (!silencieux) render(); return DOCS; }
+  const D = DOCS = { etat: "chargement", fichiers: [], dossiers: {}, n: 0 }; if (!silencieux && pageCourante() === "docs") render();
+  const vus = new Set(), explores = new Set(), file = racines.map(r => ({ id: r.id, chemin: r.nom ? [r.nom] : [], ancetres: [r.id] }));
+  racines.forEach(r => { D.dossiers[r.id] = { titre: r.nom || "Dossier choisi", chemin: r.nom ? [r.nom] : [], ancetres: [], racine: true, lien: "https://drive.google.com/drive/folders/" + r.id }; });
   try {
-    while (file.length && Object.keys(D.dossiers).length < 300) {
-      if (DOCS !== D) return; // une nouvelle lecture a commencé entre-temps
-      const lot = file.splice(0, 4);
+    while (file.length && Object.keys(D.dossiers).length < 500) {
+      if (DOCS !== D) return D; // une nouvelle lecture a commencé entre-temps
+      const lot = file.splice(0, 4).filter(f => !explores.has(f.id)); lot.forEach(f => explores.add(f.id));
       await Promise.all(lot.map(async f => {
         (await driveListe(`'${f.id}' in parents and trashed = false`)).forEach(x => {
           if (vus.has(x.id)) return; vus.add(x.id);
-          if (x.mimeType === DOSSIER) { D.dossiers[x.id] = { titre: x.name, chemin: f.chemin.concat(x.name), lien: x.webViewLink }; file.push({ id: x.id, chemin: f.chemin.concat(x.name) }); }
-          else D.fichiers.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink, modif: x.modifiedTime, taille: +x.size || 0, chemin: f.chemin, parent: f.id });
+          if (x.mimeType === DOSSIER) { if (!D.dossiers[x.id] || D.dossiers[x.id].racine) D.dossiers[x.id] = Object.assign({ titre: x.name, chemin: f.chemin.concat(x.name), lien: x.webViewLink, ancetres: f.ancetres }, D.dossiers[x.id] && D.dossiers[x.id].racine ? { racine: true } : {}); file.push({ id: x.id, chemin: f.chemin.concat(x.name), ancetres: f.ancetres.concat(x.id) }); }
+          else D.fichiers.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink, modif: x.modifiedTime, taille: +x.size || 0, chemin: f.chemin, parent: f.id, ancetres: f.ancetres });
         });
       }));
-      D.n = D.fichiers.length; if (DOCS === D && pageCourante() === "docs") render();
+      D.n = D.fichiers.length; if (!silencieux && DOCS === D && pageCourante() === "docs") render();
     }
     D.etat = "pret"; D.date = new Date();
   } catch (e) { D.etat = "erreur"; D.err = e.message; }
-  if (DOCS === D) render();
+  if (DOCS === D && (!silencieux || pageCourante() === "docs")) render();
+  return D;
 }
-async function choisirDossierDrive() {
-  if (!estProprio()) { toast(msgProprio("choisir le dossier Drive de l'espace")); return; }
-  toast("Je regarde tes dossiers…");
-  let mes = [], partages = [];
+/* Choisir un ou plusieurs dossiers ; on peut descendre dans les sous-dossiers (fil = chemin parcouru) */
+let CHOIX_DRIVE = null, CHOIX_L = [];
+async function choisirDossierDrive(fil) {
+  if (!estProprio()) { toast(msgProprio("choisir les dossiers Drive de l'espace")); return; }
+  if (!Array.isArray(fil)) { fil = []; CHOIX_DRIVE = new Map(dossiersDrive().map(d => [d.id, d.nom || "Dossier déjà choisi"])); } // nouvelle ouverture : on part de ce qui est déjà choisi
+  const ici = fil[fil.length - 1];
+  let L;
   try {
-    [mes, partages] = await Promise.all([driveListe(`'root' in parents and mimeType = '${DOSSIER}' and trashed = false`, 300), driveListe(`sharedWithMe and mimeType = '${DOSSIER}' and trashed = false`, 300)]);
+    if (!ici) { const [mes, partages] = await Promise.all([driveListe(`'root' in parents and mimeType = '${DOSSIER}' and trashed = false`, 300), driveListe(`sharedWithMe and mimeType = '${DOSSIER}' and trashed = false`, 300)]); L = [...mes.map(d => [d, "Mon Drive"]), ...partages.map(d => [d, "Partagé avec moi"])]; }
+    else L = (await driveListe(`'${ici.id}' in parents and mimeType = '${DOSSIER}' and trashed = false`, 300)).map(d => [d, ""]);
   } catch (e) { toast(e.message); return; }
-  const L = [...mes.map(d => [d, "Mon Drive"]), ...partages.map(d => [d, "Partagé avec moi"])];
-  if (!L.length) { toast("Aucun dossier trouvé dans ton Drive."); return; }
-  modal("Quel dossier contient les documents de tes locations ?", `<p class="full note">Choisis le dossier principal (celui qui contient les dossiers de tes logements, baux, factures…). L'appli lira seulement ce dossier et ses sous-dossiers.</p>
-    <ul class="todo full choix-dossier">${L.map(([d, ou], i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="radio" name="dossier" value="${i}" ${d.id === driveRacine() ? "checked" : ""} required><span class="tx">📁 ${esc(d.name)}<small>${ou}</small></span></label></li>`).join("")}</ul>`,
-    d => { const x = L[+d.dossier]; if (!x) return false; S.sci.driveId = x[0].id; S.sci.driveGenId = ""; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; setTimeout(() => go("docs")); toast("📁 Dossier choisi : " + x[0].name); }, { ok: "Choisir ce dossier" });
+  CHOIX_L = L;
+  const nb = CHOIX_DRIVE.size, filTxt = ["Mon Drive", ...fil.map(x => x.nom)].map(esc).join(" › ");
+  modal("Quels dossiers contiennent les documents de tes locations ?", `<p class="full note">Coche un ou plusieurs dossiers (par exemple le dossier de chaque logement). L'appli lira seulement ces dossiers et leurs sous-dossiers. Touche <b>›</b> pour voir ce qu'il y a dedans.</p>
+    <div class="full fil-drive">${fil.length ? `<button type="button" class="small ghost" onclick="choisirDossierDrive(CHOIX_FIL.slice(0,-1))">← Retour</button>` : ""}<span>${filTxt}</span></div>
+    ${L.length ? `<ul class="todo full choix-dossier">${L.map(([d, ou], i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" ${CHOIX_DRIVE.has(d.id) ? "checked" : ""} onchange="cocherDossier(${i}, this.checked)"><span class="tx">📁 ${esc(d.name)}${ou ? `<small>${ou}</small>` : ""}</span></label><button type="button" class="small ghost" aria-label="Ouvrir ${esc(d.name)}" onclick="choisirDossierDrive(CHOIX_FIL.concat([{ id: CHOIX_L[${i}][0].id, nom: CHOIX_L[${i}][0].name }]))">›</button></li>`).join("")}</ul>` : `<p class="full note">Pas de sous-dossier ici.</p>`}
+    <p class="full note" id="choixNb">${nb ? `${nb} dossier${nb > 1 ? "s" : ""} coché${nb > 1 ? "s" : ""} : ${[...CHOIX_DRIVE.values()].map(esc).join(", ")}` : "Aucun dossier coché pour l'instant."}</p>`,
+    () => {
+      if (!CHOIX_DRIVE.size) { toast("Coche au moins un dossier."); return false; }
+      S.sci.driveDossiers = [...CHOIX_DRIVE].map(([id, nom]) => ({ id, nom })); S.sci.driveId = S.sci.driveDossiers[0].id; S.sci.driveGenId = "";
+      const noms = S.sci.driveDossiers.map(d => d.nom).join(", "); CHOIX_DRIVE = null;
+      DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+      setTimeout(() => { lectureDriveFond("dossier"); go("docs"); }, 50);
+      toast("📁 Dossiers choisis : " + noms);
+    }, { ok: "Valider ces dossiers" });
+  window.CHOIX_FIL = fil;
 }
+function cocherDossier(i, oui) {
+  const d = CHOIX_L[i] && CHOIX_L[i][0]; if (!d) return;
+  if (oui) CHOIX_DRIVE.set(d.id, d.name); else CHOIX_DRIVE.delete(d.id);
+  const el = document.getElementById("choixNb"), nb = CHOIX_DRIVE.size;
+  if (el) el.textContent = nb ? `${nb} dossier${nb > 1 ? "s" : ""} coché${nb > 1 ? "s" : ""} : ${[...CHOIX_DRIVE.values()].join(", ")}` : "Aucun dossier coché pour l'instant.";
+}
+/* "Ce dossier = tel logement" : tout ce qui est dedans (et dans ses sous-dossiers) appartient à ce logement */
+function relierDossier(id, bienId) {
+  if (!estProprio()) { toast(msgProprio("relier les dossiers aux logements")); return; }
+  const L = Object.assign({}, S.sci.driveLogements); if (bienId) L[id] = bienId; else delete L[id];
+  S.sci.driveLogements = L; save();
+  const d = DOCS.dossiers && DOCS.dossiers[id];
+  toast(bienId ? `📁 "${d ? d.titre : "Dossier"}" = ${bien(bienId).nom}` : "Dossier détaché");
+  if (bienId) rangerAuto("dossier-relié"); else render();
+}
+function sectionDossiersLogements() {
+  if (!DOCS || DOCS.etat !== "pret" || !S.biens.length) return "";
+  const L = S.sci.driveLogements || {}, ds = Object.entries(DOCS.dossiers).map(([id, d]) => ({ id, ...d })).sort((a, b) => a.chemin.join(" › ").localeCompare(b.chemin.join(" › ")));
+  if (!ds.length) return "";
+  const nbDans = id => DOCS.fichiers.filter(f => (f.ancetres || []).includes(id)).length, nbLies = Object.keys(L).filter(id => DOCS.dossiers[id]).length;
+  const vis = view.dossiersTout ? ds : ds.filter(d => (d.ancetres || []).length <= 1).slice(0, 40);
+  return `<details class="card rgl" ${view.dossiersOuverts ? "open" : ""} ontoggle="view.dossiersOuverts=this.open"><summary><span class="rgl-ico" aria-hidden="true">📁</span><span class="tx"><b>Dossiers et logements</b><small>${nbLies ? `${nbLies} dossier${nbLies > 1 ? "s" : ""} relié${nbLies > 1 ? "s" : ""} à un logement` : "Dis quel dossier correspond à quel logement"}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
+    <p class="note">Si un dossier contient les documents d'un seul logement, relie-les : tout ce qui est dedans (et dans ses sous-dossiers) sera rangé dans ce logement, quel que soit le nom des fichiers.</p>
+    <ul class="lr-list">${vis.map(d => `<li class="lr"><div class="lr-main" style="cursor:default"><span class="tx" style="padding-left:${Math.min(3, (d.ancetres || []).length) * 12}px"><b>📁 ${esc(d.titre)}</b><small>${esc(d.chemin.slice(0, -1).join(" › ") || "dossier choisi")} · ${nbDans(d.id)} fichier${nbDans(d.id) > 1 ? "s" : ""}</small></span></div>
+      <div class="lr-acts sans-av"><label class="fl" style="flex:1">Ce dossier =<select onchange="relierDossier('${d.id}', this.value)"><option value="">pas un logement précis</option>${S.biens.map(bi => `<option value="${bi.id}" ${L[d.id] === bi.id ? "selected" : ""}>${esc(bi.nom)}</option>`).join("")}</select></label></div></li>`).join("")}</ul>
+    ${!view.dossiersTout && vis.length < ds.length ? `<button class="ghost small lr-plus" onclick="view.dossiersTout=true;render()">Voir tous les sous-dossiers (${ds.length})</button>` : ""}</div></details>`;
+}
+/* ================= Rangement automatique (seulement ce dont l'appli est sûre) ================= */
+function rangerAuto(source) {
+  if (MCP || !SB || LECTURE || !estProprio() || DRIVEG.etat !== "oui" || !DOCS || DOCS.etat !== "pret" || !S.biens.length) return 0;
+  const a = analyserDrive(DOCS.fichiers), surs = a.ranger.filter(x => x.sur && !fait("drv-noauto-" + x.f.id));
+  if (!surs.length) { if (pageCourante() === "docs") render(); return 0; }
+  const lot = "lot-" + uid(), date = new Date().toISOString();
+  surs.forEach(x => S.fichiers.push({ id: "drv-" + x.f.id.slice(0, 24) + "-" + x.bienId, bienId: x.bienId, bailId: x.bailId || "", cat: x.cat, nom: x.f.titre.replace(/\.[a-z0-9]{2,4}$/i, ""), titreDrive: x.f.titre, url: x.f.lien, date: iso(TODAY), auto: true, lot }));
+  S.sci.driveLots = [{ id: lot, date, n: surs.length, source }, ...(S.sci.driveLots || [])].slice(0, 10);
+  save(); render();
+  toastActions(`${surs.length} document${surs.length > 1 ? "s" : ""} rangé${surs.length > 1 ? "s" : ""} automatiquement`, [["Voir", "voirLots()"], ["Annuler", `annulerLot('${lot}')`]]);
+  return surs.length;
+}
+function annulerLot(id) {
+  if (!estProprio()) { toast(msgProprio("annuler un rangement")); return; }
+  const L = S.fichiers.filter(f => f.lot === id);
+  L.forEach(f => { const m = (f.url || "").match(/[-\w]{25,}/); if (m) S.faits["drv-noauto-" + m[0]] = iso(TODAY); }); // ils restent proposés, jamais rangés tout seuls
+  S.fichiers = S.fichiers.filter(f => f.lot !== id); S.sci.driveLots = (S.sci.driveLots || []).filter(l => l.id !== id);
+  save(); render(); toast(`${L.length} document${L.length > 1 ? "s" : ""} retiré${L.length > 1 ? "s" : ""}. Ils restent proposés dans Docs.`);
+}
+function voirLots() { view.lotsOuverts = true; go("docs"); setTimeout(() => { const el = document.getElementById("lots-auto"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 120); }
+function sectionLotsAuto() {
+  const lots = (S.sci.driveLots || []).map(l => ({ ...l, docs: S.fichiers.filter(f => f.lot === l.id) })).filter(l => l.docs.length);
+  if (!lots.length) return "";
+  return `<details class="card rgl" id="lots-auto" ${view.lotsOuverts ? "open" : ""} ontoggle="view.lotsOuverts=this.open"><summary><span class="rgl-ico" aria-hidden="true">🤖</span><span class="tx"><b>Derniers rangements automatiques</b><small>${lots[0].docs.length} document${lots[0].docs.length > 1 ? "s" : ""} le ${fds(lots[0].date.slice(0, 10))}${lots.length > 1 ? ` · ${lots.length} rangements` : ""}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
+    ${lots.map(l => `<div class="lot-auto"><div class="row" style="justify-content:space-between;align-items:center"><b>${fds(l.date.slice(0, 10))} à ${l.date.slice(11, 16).replace(":", " h ")} · ${l.docs.length} document${l.docs.length > 1 ? "s" : ""}</b>${estProprio() ? `<button class="small" onclick="annulerLot('${l.id}')">Annuler</button>` : ""}</div>
+      <ul class="note">${l.docs.slice(0, 30).map(f => `<li>${esc(f.nom)} → ${esc((bien(f.bienId) || {}).nom || "")} · ${esc(f.cat || "")}</li>`).join("")}${l.docs.length > 30 ? `<li>… et ${l.docs.length - 30} autres</li>` : ""}</ul></div>`).join("")}</div></details>`;
+}
+/* Lecture du Drive en fond : à l'ouverture (1 fois par 24 h au plus), après un choix de dossier, un logement ou un locataire créé ou renommé */
+async function lectureDriveFond(raison) {
+  if (MCP || !SB || LECTURE || DRIVEG.etat !== "oui" || !estProprio() || !dossiersDrive().length) return 0;
+  if (DOCS.etat === "chargement") return 0;
+  const cle = "gestion-drive-lu-" + ESPACE;
+  if (raison === "ouverture") { let t = 0; try { t = +localStorage.getItem(cle) || 0; } catch (e) {} if (Date.now() - t < 864e5) return 0; }
+  if (raison === "modif" && DOCS.etat === "pret") return rangerAuto(raison);
+  await indexerDriveG(pageCourante() !== "docs");
+  try { localStorage.setItem(cle, String(Date.now())); } catch (e) {}
+  return DOCS.etat === "pret" ? rangerAuto(raison) : 0;
+}
+function apresModifDrive() { setTimeout(() => lectureDriveFond("modif"), 400); }
+function attendreRolePuisLire(n = 0) { if (MEMBRES) { lectureDriveFond("ouverture"); return; } if (n < 15) setTimeout(() => attendreRolePuisLire(n + 1), 1000); }
+const bandeauDrive = () => SB && !MCP && pageCourante() === "locataires" && estProprio() && dossiersDrive().length && !S.sci.driveDebranche && (DRIVEG.perdu || DRIVEG.etat === "non")
+  ? `<div class="banner"><span>⚠️ <span><b>Ton Drive s'est déconnecté</b>, reconnecte-le pour que tes documents continuent de se ranger.</span></span><button class="small primary" onclick="connecterDrive()">Reconnecter</button></div>` : "";
 function sectionDriveReglages() {
-  const ok = DRIVEG.etat === "oui";
-  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}, en lecture seule.${driveRacine() ? "" : " Il reste à choisir le dossier."}</p>` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
+  const ok = DRIVEG.etat === "oui", ds = dossiersDrive();
+  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}, en lecture seule.${ds.length ? ` Dossier${ds.length > 1 ? "s" : ""} lu${ds.length > 1 ? "s" : ""} : <b>${ds.map(d => esc(d.nom || "dossier choisi")).join(", ")}</b>.` : " Il reste à choisir les dossiers."}</p>` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
     <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive()}</details>
-    <div class="row" style="margin-top:10px">${ok ? `<button class="small primary" onclick="choisirDossierDrive()">📁 ${driveRacine() ? "Changer de dossier" : "Choisir le dossier"}</button><button class="small" onclick="go('docs')">Voir ce qu'il a trouvé</button><button class="small ghost" onclick="debrancherDrive()">Débrancher</button>` : `<button class="small primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}</div>`;
+    <div class="row" style="margin-top:10px">${ok ? `<button class="small primary" onclick="choisirDossierDrive()">📁 ${ds.length ? "Changer les dossiers" : "Choisir les dossiers"}</button><button class="small" onclick="go('docs')">Voir ce qu'il a trouvé</button><button class="small ghost" onclick="debrancherDrive()">Débrancher</button>` : `<button class="small primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}</div>`;
+}
+/* Message avec plusieurs boutons (ex : Voir · Annuler) */
+function toastActions(msg, actions) {
+  let t = document.getElementById("toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; t.setAttribute("role", "status"); t.className = "toast"; document.body.appendChild(t); }
+  t.innerHTML = `<span>${esc(msg)}</span>${actions.map(([l], i) => `<button type="button" class="toast-undo" data-i="${i}">${esc(l)}</button>`).join("")}`;
+  t.classList.add("avec-action");
+  t.querySelectorAll("button").forEach(b => b.onclick = () => { t.hidden = true; new Function(actions[+b.dataset.i][1])(); });
+  t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 10000);
 }
 const sansAccent = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 function chercherDocs(q, racine) {
@@ -3550,15 +3664,16 @@ function pageDocs() {
     ${DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : `<p class="note">L'appli parcourt le dossier de tes locations et te propose de ranger chaque document au bon endroit (bail, diagnostics, taxe foncière…). Tu valides avant que quoi que ce soit soit rangé.</p>`}
     <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive()}</details>
     <div class="row" style="margin-top:12px">${DRIVEG.etat === "inconnu" ? `<button disabled>Un instant…</button>` : `<button class="primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}${ouvrirDrive}</div></section>`;
-  if (!MCP && SB && !driveRacine()) return `<div class="head"><div><h1>Documents</h1><p>✅ Drive connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""}.</p></div></div>
-    <div class="empty party">📁 <span>Choisis le dossier qui contient les documents de tes locations.</span><button class="primary" onclick="choisirDossierDrive()">Choisir le dossier</button></div>`;
+  if (!MCP && SB && !dossiersDrive().length) return `<div class="head"><div><h1>Documents</h1><p>✅ Drive connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""}.</p></div></div>
+    <div class="empty party">📁 <span>Choisis le ou les dossiers qui contiennent les documents de tes locations.</span><button class="primary" onclick="choisirDossierDrive()">Choisir les dossiers</button></div>`;
   if (!MCP && !SB) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") { DOCS.etat = "attente"; setTimeout(indexerDrive, 0); }
   const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort(); RACINES = ["", ...racines];
   const q = view.docQ || "", r = view.docRacine || "", res = chercherDocs(q, r), lim = view.docLim || 40;
   const lien = `https://drive.google.com/drive/folders/${driveRacine()}`;
   return `<div class="head"><div><h1>Documents</h1><p>Le Drive ${estPerso() ? "de tes locations" : "de la SCI"}, rangé et cherchable. <a href="${lien}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a></p></div>
-    <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button>${!MCP ? `<button class="small ghost" onclick="choisirDossierDrive()">📁 Changer de dossier</button>` : ""}</div></div>
+    <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button>${!MCP ? `<button class="small ghost" onclick="choisirDossierDrive()">📁 Changer les dossiers</button>` : ""}</div></div>
+  ${!MCP ? sectionLotsAuto() + sectionDossiersLogements() : ""}
   ${sectionPropositionsDrive()}
   <form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="Chercher : bail, Kbis, taxe, nom d'un locataire…" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>
   <div class="chips" role="group" aria-label="Filtrer par dossier">${["", ...racines].map((x, i) => `<button class="chip ${x === r ? "on" : ""}" aria-pressed="${x === r}" onclick="view.docRacine=RACINES[${i}];render()">${x ? esc(x) : "Tout"}</button>`).join("")}</div>
@@ -4328,7 +4443,7 @@ function pageLegal() {
   const b = (t, x) => `<section class="card aide"><h2>${t}</h2>${x}</section>`;
   return `<div><a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>Mentions légales et confidentialité</h1><p>Ce qu'on fait de tes données, en clair.</p></div></div></div><div class="stack">
   ${b("📌 Qui fait l'appli", `<p>${EDITEUR.nom ? `Éditeur : ${esc(EDITEUR.nom)}${EDITEUR.contact ? " · " + esc(EDITEUR.contact) : ""}.` : "Appli de gestion locative indépendante."} Pour toute question : bouton <b>?</b> en bas à droite de l'écran (une fois connecté).</p><p>Hébergement de l'appli : Cloudflare, Inc. (Cloudflare Pages). Données : Supabase, serveurs situés en Irlande (Union européenne).</p>`)}
-  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : ton compte Gmail (mot de passe d'application rangé dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane.</li><li>Si tu connectes ton Google Drive : l'autorisation de lecture (rangée dans un coffre chiffré) et ton adresse Google. L'appli lit la liste des fichiers du dossier que tu choisis, en lecture seule, et ne garde que le nom et le lien des documents que tu ranges. Elle ne copie pas tes fichiers et ne modifie rien dans ton Drive.</li></ul>`)}
+  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : ton compte Gmail (mot de passe d'application rangé dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane.</li><li>Si tu connectes ton Google Drive : l'autorisation de lecture (rangée dans un coffre chiffré) et ton adresse Google. Google parle d'un accès à tout ton Drive, mais l'appli ne lit que la liste des fichiers des dossiers que tu choisis (et de leurs sous-dossiers), en lecture seule. Elle ne garde que le nom et le lien des documents rangés (par toi, ou tout seuls quand elle est sûre du type et du logement, avec Annuler). Elle ne copie pas tes fichiers et ne modifie rien dans ton Drive.</li></ul>`)}
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p>Seuls les membres de ton espace. Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}

@@ -53,18 +53,18 @@ const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); if (!v) KO++;
   // 4. Connecté (Google simulé) : choix du dossier
   await p.evaluate(() => { fnDrive = async a => a === 'jeton' ? { access_token: 'faux', expires_in: 3600 } : { ok: true }; DRIVEG = { etat: 'oui', adresse: 'test-a@gmail.com' }; DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; location.hash = 'docs'; render(); });
   await p.waitForTimeout(800); await p.screenshot({ path: OUT + '/4-choisir.png', fullPage: true });
-  ok('demande de choisir le dossier', await p.evaluate(() => /Choisis le dossier/.test(document.body.innerText)));
+  ok('demande de choisir le dossier', await p.evaluate(() => /Choisis le ou les dossiers/.test(document.body.innerText)));
   await p.evaluate(() => choisirDossierDrive()); await p.waitForTimeout(1200);
   await p.screenshot({ path: OUT + '/5-liste-dossiers.png' });
   ok('liste Mon Drive + Partagé avec moi', await p.evaluate(() => { const t = document.getElementById('overlay').innerText; return /Locations/.test(t) && /Compta partagée/.test(t) && /Partagé avec moi/.test(t); }));
-  await p.click('#overlay input[name=dossier] >> nth=0'); await p.click('#overlay button.primary'); await p.waitForTimeout(2500);
+  await p.click('#overlay li:has-text("Locations") input[type=checkbox]'); await p.click('#overlay button.primary'); await p.waitForTimeout(2500);
   ok('dossier enregistré', await p.evaluate(() => S.sci.driveId === 'locs'));
   await p.screenshot({ path: OUT + '/6-propositions.png', fullPage: true }); console.log('DEBUG', await p.evaluate(() => JSON.stringify([DOCS.etat, DOCS.err, pageCourante(), driveRacine()])));
-  const n = await p.evaluate(() => [DOCS.etat, DOCS.fichiers.length, (PROPS && PROPS.ranger.length) || 0, document.body.innerText.includes('Bail Camille Martin')]);
-  ok('Drive lu : ' + n[1] + ' fichiers, ' + n[2] + ' à ranger', n[0] === 'pret' && n[1] === 4 && n[2] >= 2 && n[3]);
+  const n = await p.evaluate(() => [DOCS.etat, DOCS.fichiers.length, S.fichiers.filter(f => f.auto).length, document.body.innerText.includes('Bail Camille Martin')]);
+  ok('Drive lu : ' + n[1] + ' fichiers, ' + n[2] + ' rangés automatiquement', n[0] === 'pret' && n[1] === 4 && n[2] >= 2 && n[3]);
   ok('pas de "Photos vacances" (hors dossier)', await p.evaluate(() => !DOCS.fichiers.some(f => /vacances/i.test(f.chemin.join(' ')))));
   // 5. Ranger
-  await p.evaluate(() => document.querySelector('.props-drive form button.primary').click()); await p.waitForTimeout(800);
+  await p.evaluate(() => { const b = document.querySelector('.props-drive form button.primary'); if (b) b.click(); }); await p.waitForTimeout(800);
   ok('documents rangés dans le logement', await p.evaluate(() => S.fichiers.filter(f => f.bienId === 'bl').length >= 2));
   const sw = await p.evaluate(() => document.documentElement.scrollWidth); ok('pas de débordement (' + sw + ')', sw <= 390);
   // 6. Un associé (membre, pas propriétaire) : pas de Drive, message clair
