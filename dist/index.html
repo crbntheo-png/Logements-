@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "87e84b4", "date": "2026-11-16T22:42"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "3190023", "date": "2026-11-16T22:57"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -228,6 +228,7 @@ details.rgl { scroll-margin-top: 76px; }
 .doc-plus { margin-left: auto; padding: 4px 10px; font-size: 20px; color: var(--muted); }
 .actions-doc { display: flex; flex-direction: column; gap: 8px; } .actions-doc > * { width: 100%; justify-content: flex-start; text-align: left; }
 .docs-actions { margin: 4px 0 14px; flex-wrap: wrap; }
+.imp-l { max-height: 52vh; overflow: auto; } .todo li.imp-li { display: block; height: auto; min-height: 0; padding: 10px 12px; } .imp-li .tx { display: block; } .imp-li .tx b { display: block; font-weight: 600; overflow-wrap: anywhere; } .imp-li .tx small { display: block; } .imp-li select { display: block; width: 100%; margin-top: 6px; } .imp-aide p { margin: 0 0 10px; }
 .lr .ico-cat { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
 .bad-txt { color: var(--bad, #c0392b); }
 .lr-plus { width: 100%; margin-top: -4px; }
@@ -4251,9 +4252,11 @@ function pageDocs() {
     <section class="card drive-co"><h2>📁 Connecte ton Google Drive</h2>
     ${DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : `<p class="note">Tu choisis tes documents dans le sélecteur de Google (bail, diagnostics, taxe foncière…) : l'appli te propose de ranger chacun au bon endroit. Elle ne voit rien d'autre de ton Drive.</p>`}
     <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive()}</details>
-    <div class="row" style="margin-top:12px">${DRIVEG.etat === "inconnu" ? `<button disabled>Un instant…</button>` : `<button class="primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}${ouvrirDrive}</div></section>`;
+    <div class="row" style="margin-top:12px">${DRIVEG.etat === "inconnu" ? `<button disabled>Un instant…</button>` : `<button class="primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}${ouvrirDrive}</div></section>
+    <section class="card"><h2>📦 Ou tout importer d'un coup</h2><p class="note">Sans connecter ton Drive : télécharge un dossier entier (un .zip) ou choisis plein de fichiers, l'appli range chaque document dans le bon logement.</p><div class="row">${boutonImport("small")}</div></section>`;
   if (!MCP && SB && rienChoisi()) return `<div class="head"><div><h1>Documents</h1><p>✅ Drive connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""}.</p></div></div>
-    <div class="empty party">📁 <span>Coche les dossiers de tes locations dans ton Drive (plusieurs d'un coup). L'appli ne verra que ceux-là.</span><button class="primary" onclick="choisirDossierDrive()">Choisir mes dossiers</button><button class="small ghost" onclick="choisirFichiersDrive()">ou des fichiers un par un</button></div>`;
+    <div class="empty party">📁 <span>Coche les dossiers de tes locations dans ton Drive (plusieurs d'un coup). L'appli ne verra que ceux-là.</span><button class="primary" onclick="choisirDossierDrive()">Choisir mes dossiers</button><button class="small ghost" onclick="choisirFichiersDrive()">ou des fichiers un par un</button></div>
+    <section class="card"><h2>📦 Tout importer d'un coup</h2><p class="note">Télécharge un dossier entier depuis ton Drive (sous-dossiers compris) : l'appli lit tout et range chaque document dans le bon logement.</p><div class="row">${boutonImport("small")}</div></section>`;
   if (!MCP && !SB) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") { DOCS.etat = "attente"; setTimeout(indexerDrive, 0); }
   if (!MCP) return pageDocsDrive();
@@ -4270,6 +4273,83 @@ function pageDocs() {
   <div class="chips" role="group" aria-label="Filtrer par dossier">${["", ...racines].map((x, i) => `<button class="chip ${x === r ? "on" : ""}" aria-pressed="${x === r}" onclick="view.docRacine=RACINES[${i}];render()">${x ? esc(x) : "Tout"}</button>`).join("")}</div>
   ${DOCS.etat === "chargement" || DOCS.etat === "attente" ? `<p class="note">⏳ Lecture du Drive… ${DOCS.n || 0} documents trouvés</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : ""}
   <div id="docres">${listeDocs(res, lim)}</div>`;
+}
+/* ================= Importer un dossier entier : le .zip téléchargé depuis le Drive (sous-dossiers compris), ou plein de fichiers d'un coup =================
+   Google ne donne pas le contenu d'un dossier choisi (accès "fichiers choisis seulement"). Ici, aucun accès Google n'est nécessaire :
+   la personne télécharge son dossier, l'appli lit tout, devine le logement et le type, montre la liste, puis copie ce qui est validé. */
+const TYPES_IMPORT = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", txt: "text/plain" };
+const typeImport = n => TYPES_IMPORT[(String(n).split(".").pop() || "").toLowerCase()] || "";
+let IMPORT_DOS = null;
+const boutonImport = (cls = "small") => `<button class="${cls}" onclick="importerDossier()">📦 Importer un dossier entier</button>`;
+function importerDossier() {
+  if (!SB) { toast("L'import marche dans l'appli installée."); return; }
+  if (!estProprio()) { toast(msgProprio("importer les documents de l'espace")); return; }
+  if (LECTURE) { toast("En lecture seule, tu ne peux pas importer."); return; }
+  if (!S.biens.length) { toast("Ajoute d'abord tes logements : l'appli range chaque document dans le bon."); return; }
+  modal("Importer un dossier entier", `<div class="full imp-aide">
+    <p><b>💻 Sur ordinateur</b> (le plus simple) : sur <a href="https://drive.google.com" target="_blank" rel="noopener">drive.google.com</a>, fais un <b>clic droit</b> sur le dossier (par exemple "02 - GTP Invest") › <b>Télécharger</b>. Google te donne un fichier <b>.zip</b> avec tout ce qu'il contient, sous-dossiers compris. Choisis-le ci-dessous.</p>
+    <p><b>📱 Sur téléphone</b> : touche le bouton ci-dessous, va dans <b>Drive</b>, ouvre le dossier, touche longuement un fichier puis <b>Tout sélectionner</b>.</p>
+    <p class="note">L'appli lit tout, devine le logement et le type de chaque document, et te montre la liste <b>avant</b> de copier quoi que ce soit. Elle n'a besoin d'aucun accès à ton Drive pour ça.</p>
+    <label class="fl">Le .zip ou tes documents<input type="file" name="fichiers" multiple></label></div>`,
+    (d, f) => { const fs = [...f.querySelector("input[name=fichiers]").files]; if (!fs.length) { toast("Choisis le .zip ou tes documents."); return false; } lireImport(fs); return false; }, { ok: "Lire", lecture: true });
+}
+async function lireImport(fs) {
+  const L = [];
+  try {
+    for (const x of fs) {
+      if (/\.zip$/i.test(x.name) || /zip/.test(x.type || "")) {
+        toast("Ouverture du .zip…");
+        const JSZip = await chargerLib("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "JSZip");
+        const z = await JSZip.loadAsync(x);
+        z.forEach((chemin, e) => {
+          if (e.dir) return; const parts = chemin.split("/").filter(Boolean), nom = parts.pop();
+          if (!nom || /^\./.test(nom) || parts.includes("__MACOSX") || /^(desktop\.ini|thumbs\.db)$/i.test(nom)) return;
+          L.push({ titre: nom, chemin: parts, taille: (e._data && e._data.uncompressedSize) || 0, lire: () => e.async("blob") });
+        });
+      } else L.push({ titre: x.name, chemin: [], taille: x.size, lire: async () => x });
+    }
+  } catch (e) { toast("Impossible de lire ce fichier : " + (e.message || e)); return; }
+  if (!L.length) { toast("Aucun document trouvé dedans."); return; }
+  const sansExt = t => normTxt(t || "").replace(/\.[A-Z0-9]{2,5}$/, "");
+  const deja = new Set(S.fichiers.map(x => x.bienId + "|" + sansExt(x.titreDrive || x.nom)));
+  IMPORT_DOS = L.slice(0, 800).map((f, i) => {
+    f.id = "imp" + i; f.type = typeImport(f.titre);
+    const g = deviner(f);
+    return Object.assign(f, { bienDevine: g.bienId || "", bienId: g.bienId || "", bailId: g.bailId || "", cat: g.cat || "Autre", deja: !!g.bienId && deja.has(g.bienId + "|" + sansExt(f.titre)),
+      refus: !f.type ? "format non accepté" : f.taille > 20 * 1024 * 1024 ? "trop lourd (20 Mo maximum)" : "" });
+  });
+  apercuImport();
+}
+function apercuImport() {
+  const L = IMPORT_DOS, ok = f => f.bienId && !f.deja && !f.refus;
+  const opts = f => `<option value="">— ne pas importer —</option>` + S.biens.map(b => `<option value="${b.id}" ${ok(f) && b.id === f.bienId ? "selected" : ""}>${esc(b.nom)}</option>`).join("");
+  const ligne = f => `<li class="imp-li"><span class="tx"><b>${esc(f.titre)}</b><small>${f.chemin.length ? "📁 " + esc(f.chemin.slice(-2).join(" › ")) + " · " : ""}${esc(f.cat)}${f.deja ? " · déjà dans l'appli" : ""}${f.refus ? " · " + f.refus : ""}</small></span>${f.refus ? "" : `<select name="b_${f.id}" aria-label="Logement pour ${esc(f.titre)}">${opts(f)}</select>`}</li>`;
+  const rec = L.filter(ok), aut = L.filter(f => !ok(f));
+  modal(`${L.length} document${L.length > 1 ? "s" : ""} trouvé${L.length > 1 ? "s" : ""}`, `<p class="full note">Chaque document part dans le logement choisi en dessous. "— ne pas importer —" le laisse de côté. Rien n'est copié avant que tu touches <b>Importer</b>.</p>
+    ${rec.length ? `<h3 class="full">✅ Reconnus (${rec.length})</h3><ul class="todo full imp-l">${rec.map(ligne).join("")}</ul>` : ""}
+    ${aut.length ? `<h3 class="full">À choisir toi-même (${aut.length})</h3><ul class="todo full imp-l">${aut.map(ligne).join("")}</ul>` : ""}`,
+    d => {
+      const choix = L.filter(f => !f.refus && d["b_" + f.id]).map(f => Object.assign(f, { bienId: d["b_" + f.id] }));
+      if (!choix.length) { toast("Rien de choisi : choisis un logement pour au moins un document."); return false; }
+      closeOverlay(); envoyerImport(choix); return false;
+    }, { ok: "Importer" });
+}
+async function envoyerImport(L) {
+  let ok = 0, ko = 0, raison = "";
+  for (const [i, f] of L.entries()) {
+    toast(`Import ${i + 1} sur ${L.length}…`);
+    try {
+      const brut = await f.lire(); if (brut.size > 20 * 1024 * 1024) throw new Error("trop lourd");
+      const bl = brut.type === f.type ? brut : new Blob([brut], { type: f.type }); // les fichiers sortis d'un .zip n'ont pas de type : le stockage les refuserait
+      const ext = (f.titre.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin", chemin = `${ESPACE}/${f.bienId}/${uid()}.${ext}`;
+      const up = await SB.storage.from("documents").upload(chemin, bl, { contentType: f.type });
+      if (up.error) throw up.error;
+      S.fichiers.push({ id: uid(), bienId: f.bienId, bailId: f.bienId === f.bienDevine ? f.bailId : "", cat: f.cat, nom: f.titre.replace(/\.[a-z0-9]{2,5}$/i, ""), titreDrive: f.titre, chemin, type: f.type, taille: bl.size, date: iso(TODAY), importe: true });
+      ok++; if (ok % 10 === 0) save();
+    } catch (e) { ko++; raison = raison || (e && (e.message || e.error)) || String(e); }
+  }
+  IMPORT_DOS = null; save(); render();
+  toast(`✓ ${ok} document${ok > 1 ? "s" : ""} importé${ok > 1 ? "s" : ""}${ko ? ` · ${ko} impossible${ko > 1 ? "s" : ""} (${raison})` : ""}.${ok ? " Tu les retrouves dans chaque logement." : ""}`);
 }
 /* ================= Page Documents (appli installée) : un petit explorateur de ce qui est choisi dans le Drive =================
    Accueil = mes dossiers (toujours visibles, + Ajouter) ; on entre dans un dossier, on en ressort par "← Tous mes dossiers".
@@ -4289,7 +4369,9 @@ function pageDocsDrive() {
     return `<a class="back" href="#docs" onclick="event.preventDefault();view.docDossier='';view.docQ='';render()">← Tous mes dossiers</a>
     <div class="head"><div><h1>📁 ${esc(titre)}</h1><p>${n} fichier${n > 1 ? "s" : ""} visible${n > 1 ? "s" : ""} par l'appli</p></div></div>
     <div class="row docs-actions">${dcur ? `<button class="primary" onclick="choisirFichiersDrive('${dcur.id}')">+ Choisir des fichiers ici</button><a class="btn" href="https://drive.google.com/drive/folders/${esc(dcur.id)}" target="_blank" rel="noopener">Ouvrir dans Drive ↗</a><button class="ghost" onclick="retirerDossierDrive('${dcur.id}')">Retirer ce dossier</button>` : `<button class="primary" onclick="choisirFichiersDrive()">+ Choisir des fichiers</button>`}</div>
-    ${!n && !charge ? `<section class="card"><p class="note">📂 <b>Rien ici pour l'instant.</b> Google ne laisse l'appli voir que les fichiers que tu touches toi-même. Touche <b>+ Choisir des fichiers ici</b>, touche chaque fichier à garder (il passe en bleu), puis <b>Sélectionner</b>. Tu peux aussi remonter à tout ton Drive avec l'onglet <b>Mon Drive</b> en haut du sélecteur.</p></section>` : ""}
+    ${!n && !charge ? `<section class="card"><p class="note">📂 <b>Rien ici pour l'instant.</b> Google ne donne pas à l'appli le contenu d'un dossier, seulement les fichiers que tu touches toi-même.</p>
+      <p class="note"><b>Pour tout prendre d'un coup</b> (sous-dossiers compris) : télécharge le dossier depuis ton Drive et importe-le.</p><div class="row">${boutonImport("primary")}</div>
+      <p class="note">Ou touche <b>+ Choisir des fichiers ici</b>, puis chaque fichier à garder (il passe en bleu), puis <b>Sélectionner</b>.</p></section>` : ""}
     ${etat}${n > 8 ? recherche("Chercher dans ce dossier…") : ""}
     <div id="docres">${listeDocs(chercherDocsDans(q, cur), lim)}</div>`;
   }
@@ -4298,7 +4380,8 @@ function pageDocsDrive() {
     <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
   <section class="card"><div class="sec-head"><h2>📁 Mes dossiers Drive</h2></div>
     ${ds.length || seuls.length ? `<ul class="lr-list">${ds.map(d => ligneDos(d.id, "📁", d.nom || "Dossier", nbDans(d.id), !charge && !nbDans(d.id) ? "touche pour choisir les fichiers" : "")).join("")}${seuls.length ? ligneDos("_seuls", "📄", "Fichiers choisis un par un", seuls.length) : ""}</ul>` : `<p class="note">Aucun dossier pour l'instant.</p>`}
-    <div class="row" style="margin-top:12px"><button class="small primary" onclick="choisirDossierDrive()">+ Ajouter des dossiers</button><button class="small" onclick="choisirFichiersDrive()">+ Ajouter des fichiers</button></div></section>
+    <div class="row" style="margin-top:12px"><button class="small primary" onclick="choisirDossierDrive()">+ Ajouter des dossiers</button><button class="small" onclick="choisirFichiersDrive()">+ Ajouter des fichiers</button></div>
+    <p class="note" style="margin-top:12px">💡 Google ne laisse pas l'appli lire tout le contenu d'un dossier. Pour tout récupérer d'un coup (sous-dossiers compris) :</p><div class="row">${boutonImport("small")}</div></section>
   ${sectionLotsAuto() + sectionDossiersLogements()}
   ${sectionPropositionsDrive()}
   ${etat}

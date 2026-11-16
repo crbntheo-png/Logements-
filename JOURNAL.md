@@ -33,6 +33,12 @@ Règle pour chaque session :
 
 ## Historique
 
+### 17/11/2026 (0 h) — importer un dossier entier
+- Théo a choisi "02 - GTP Invest" et l'appli a lu 0 fichier. C'est la règle de Google pour l'accès "fichiers choisis seulement" (drive.file) : choisir un dossier ne donne pas son contenu. Seul l'accès à tout le Drive (drive.readonly, "restreint") le permettrait, avec l'écran rouge et un audit de sécurité payant chaque année : écarté.
+- Ajout de **📦 Importer un dossier entier** (page Docs, même sans Drive connecté) : sur ordinateur, clic droit sur le dossier dans drive.google.com › Télécharger → un .zip avec tous les sous-dossiers ; sur téléphone, plusieurs fichiers d'un coup. L'appli ouvre le .zip (JSZip 3.10.1, cdnjs), devine logement et type de chaque document (même fonction `deviner` que le Drive), montre la liste (Reconnus / À choisir toi-même, menu du logement sous chaque fichier, déjà présents et formats refusés signalés), et ne copie qu'après "Importer".
+- Corrigés en route : nom `IMPORT` déjà pris (l'appli ne démarrait plus, jamais mis en ligne), fichiers du .zip sans type refusés par le stockage, aperçu serré sur téléphone.
+- Tests : test46 (nouveau, vrai .zip avec sous-dossiers) 14/14, test45 25/25, test43 24/24, test33 OK.
+
 ### 16/11/2026 (23 h) — page Documents refaite en explorateur
 - Retour de Théo : on ne pouvait pas ajouter de dossier (bouton caché derrière "Dossiers connectés"), "Ouvrir" bloquait dans GTP Invest sans pouvoir remonter, et toucher un fichier n'offrait aucun moyen de le retirer.
 - Nouvelle page (appli installée) : carte **Mes dossiers Drive** toujours visible (nombre de fichiers par dossier, + Ajouter des dossiers / des fichiers). On entre dans un dossier (+ Choisir des fichiers ici, Ouvrir dans Drive, Retirer ce dossier avec confirmation) et on en ressort par "← Tous mes dossiers".
