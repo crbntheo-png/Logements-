@@ -39,6 +39,7 @@ Règle pour chaque session :
 - **Pennylane** : `banque_brancher` refuse désormais un jeton qui peut modifier la compta (scopes autres que `:readonly` et `exports:`). Testé avec le jeton actuel de GTP (refusé : il a des droits d'écriture ; celui déjà branché continue de marcher).
 - **Page "Mentions légales et confidentialité"** : éditeur Théo Corbin (crbntheo@gmail.com), engagement de l'hébergeur à ne jamais consulter les données sauf demande, Gmail envoi seul, banque et Drive en lecture seule.
 - Nouveau `tests/test44.js` (vraie base, Google simulé) 15/15 ; `tests/deploy_fn.sh <nom>` publie une fonction serveur. test5, test22 OK. En ligne.
+- Page publique **https://gestion-locative-sci.pages.dev/confidentialite** (fabriquée par `build.py` depuis `pageLegal()`, exigée par Google pour publier l'appli Google) + section "Tes données Google" (utilisation limitée).
 - Pas vérifié : un vrai branchement Google + envoi réel (il faut que Théo le fasse), et si l'API Gmail est activée dans le projet Google Cloud.
 
 ### 16/11/2026 (suite) — contrôle de confidentialité (session du compte principal)

@@ -153,7 +153,28 @@ self.addEventListener("notificationclick", e => {{
 }});
 """)
     open(os.path.join(DIST, "_headers"), "w").write("/manifest.webmanifest\n  Content-Type: application/manifest+json\n/sw.js\n  Cache-Control: no-cache\n/index.html\n  Cache-Control: no-cache\n/version.json\n  Cache-Control: no-store\n/\n  Cache-Control: no-cache\n")
+    page_confidentialite(open(os.path.join(ICI, "index.html"), encoding="utf-8").read())
     print("dist/ prêt :", sorted(os.listdir(DIST)))
+
+
+def page_confidentialite(src):
+    """Page publique /confidentialite (exigée par Google) : même texte que la page de l'appli (pageLegal)."""
+    import re, subprocess
+    try:
+        a = src.index("const EDITEUR"); b = src.index("function supprimerCompte")
+        js = 'const esc = s => String(s ?? "").replace(/[&<>"\']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;", "\'": "&#39;" }[c]));\n' + src[a:b] + "\nprocess.stdout.write(pageLegal());"
+        corps = subprocess.run(["node", "-e", js], capture_output=True, text=True, check=True, timeout=30).stdout
+    except Exception as e:
+        print("⚠️ page confidentialite non générée :", e); return
+    corps = re.sub(r'<a class="back"[^>]*>.*?</a>', "", corps, count=1)
+    page = f"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confidentialité · Gestion locative</title><meta name="description" content="Règles de confidentialité et mentions légales de l'appli Gestion locative.">
+<style>:root{{--bg:#f4f5f7;--card:#fff;--tx:#14181f;--mu:#5b6472;--ac:#0f6b4f}}@media (prefers-color-scheme:dark){{:root{{--bg:#0f1216;--card:#191d23;--tx:#e9edf2;--mu:#9aa4b2;--ac:#4cc79a}}}}
+body{{margin:0;background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}}main{{max-width:760px;margin:0 auto;padding:24px 16px 48px}}
+h1{{font-size:28px;margin:0 0 4px}}.head p{{color:var(--mu);margin:0 0 20px}}.card{{background:var(--card);border-radius:16px;padding:18px 20px;margin:0 0 14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}}
+h2{{font-size:18px;margin:0 0 8px}}a{{color:var(--ac)}}.note{{color:var(--tx)}}.haut{{margin:0 0 18px}}</style></head>
+<body><main><p class="haut"><a href="/">← Ouvrir l'appli</a></p>{corps}</main></body></html>"""
+    open(os.path.join(DIST, "confidentialite.html"), "w", encoding="utf-8").write(page)
 
 
 if __name__ == "__main__":
