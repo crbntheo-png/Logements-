@@ -11,6 +11,9 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Gmail (Théo)** : 1) activer l'API Gmail dans le projet Google Cloud (https://console.cloud.google.com/apis/library/gmail.googleapis.com) ; 2) Réglages › Envoi des e-mails › Continuer avec Google ; 3) supprimer l'ancien mot de passe d'application "Gestion SCI" (https://myaccount.google.com/apppasswords). Pour ouvrir l'appli aux inconnus : publier l'appli Google (https://console.cloud.google.com/auth/audience › Publier), sinon seuls les "utilisateurs test" peuvent brancher Gmail ou Drive.
+- [ ] **CAF Margottet – Fravelle** : prévenir la CAF du changement de propriétaire (l'allocation de 612 € part peut-être encore chez M. Loslier) et vérifier le loyer de novembre.
+- [ ] **Jeton Pennylane GTP** : le remplacer par un jeton en lecture seule (l'actuel peut modifier la compta).
 - [ ] **Prêts GTP** : saisir le ou les prêts (Compta › Emprunts › + Prêt, ou importer le tableau de la banque), puis "Voir et ventiler" les échéances proposées ; vérifier les 8 "ECH PRET INT" d'environ 1 540 €.
 - [ ] **Copie de sauvegarde** : Réglages › Sauvegarde et import › "M'envoyer une copie chaque semaine" (case "maintenant" cochée pour vérifier la réception et rouvrir le .txt).
 - [ ] **Espace locataire** : décider (fiche dans l'Historique du 14/11, bloc 6).
@@ -18,7 +21,6 @@ Règle pour chaque session :
 - [ ] **DPE et risques** : sur chaque logement, "Retrouver le DPE" puis "État des risques" ; faire l'ERP officiel sur errial.georisques.gouv.fr avant le prochain bail.
 - [ ] **Services payants** (Youtrust, GoCardless, Bridge/Powens, Stripe) : fiches dans l'Historique du 14/11 ; rien codé tant que Théo n'a pas ouvert de compte.
 - [ ] **Notifications** : activer les alertes sur ton téléphone (Réglages › Notifications, appli installée) et faire l'essai.
-- [ ] Mentions légales : remplir `EDITEUR` (nom, contact) avant toute mise en vente.
 - [ ] **Taxe foncière Agon 2026** : récupérer la page « détail par local » de l'avis n° 2650400237412 (impots.gouv › Espace professionnel › Consulter › Avis d'imposition), puis remplacer la répartition à parts égales (516,67 € par lot, ordures ménagères à 0) par les vrais montants. Antoine et Sofiane doivent leur part d'ordures ménagères.
 - [ ] **Ordures ménagères Beauchamps 2026** : 133 € (41, Margottet – Fravelle) et 140 € (43, Steve) lus sur le décompte du notaire (scan peu lisible) : montants à confirmer (ils servent aussi au calcul mensuel 2027).
 - [ ] **Connexion Google Drive** : codée, en ligne, clés Google posées le 13/11. Reste l'essai réel avec le compte Google de Théo, et vérifier si l'appli Google est publiée (sinon reconnexion tous les 7 jours). Ancienne note : le « cerveau » `analyserDrive()` (index.html) range les fichiers et propose ce qu'il faut compléter ; il marche déjà quand la liste du Drive est connue (`DOCS.fichiers`, version Claude). Reste à brancher la connexion Google (OAuth, lecture du Drive) dans la version installée : attend 3 infos du propriétaire (ID client OAuth, clé API, numéro du projet Google Cloud).
@@ -26,9 +28,18 @@ Règle pour chaque session :
 - [ ] **Anciens locataires Lilou Douillard et Julie Sergent** (Tom Dogon fait le 14/11) : à créer dans l'historique du bon logement (fiche logement › + Ancien locataire, ou Docs › proposition "Ranger dans l'historique"). Ancienne note : **Anciens baux Lilou Douillard et Julie Sergent** (Drive, dossier « Loyers Bails Agon ») : savoir quel lot d'Agon, puis les ranger dans les documents du bon bien.
 - [ ] **Avenants n° 1 Steve et Margottet** (ordures dans les charges dès janvier 2027) : enregistrés dans l'appli, à envoyer et faire signer.
 - [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
-- [ ] Le propriétaire n'a pas encore branché son Gmail (Réglages › Envoyer depuis ton adresse Gmail).
 
 ## Historique
+
+### 16/11/2026 (soir) — loyers de Beauchamps, confidentialité (session du compte principal, demandes de Gaby et Théo)
+- **Loyers faux corrigés dans la vraie base** (Gaby : "pas précis") : 41 Margottet – Fravelle **612 €** (au lieu de 500), 43 Steve **515 €** (au lieu de 510). Preuves : prorata du notaire (244,80 € = 612 × 12/30 ; 206 € = 515 × 12/30), bordereau CAF de janvier 2026 (612 €), quittance de février 2026 de Steve (515 €). Modifiés : `loyerHC`, l'avenant n° 1 (loyer gardé), `loyerRef` du 41, plan de Steve (dette 315 € au lieu de 310). Anciennes valeurs : 500 / 510 / 310. L'appli acceptait déjà les centimes (cases à 0,01 €).
+- ⚠️ **Margottet – Fravelle** : la CAF verse l'allocation directement au bailleur (612 € en janvier, 594 € en décembre, à M. Loslier). Si la CAF n'a pas été prévenue du changement de propriétaire, elle paie encore l'ancien : c'est sans doute pourquoi novembre n'est pas arrivé.
+- **Taxes foncières** : déjà par logement dans l'appli (Compta › Plus › Saisir une taxe foncière). Agon reste à parts égales et sans ordures ménagères : il faut le détail par local de l'avis 2026 (introuvable dans Gmail et Drive). Dès qu'il est saisi, "À faire" propose d'envoyer la demande à Antoine, Emma et Sofiane.
+- **Gmail "envoi seulement"** : le mot de passe d'application (accès à toute la boîte) est remplacé par "Continuer avec Google" avec le seul droit `gmail.send` (même client Google que le Drive). Serveur : `supabase/gmail.sql` (colonne `mode`, `gmail_google_enregistrer`, `gmail_oublier`, clé dans le coffre `gmailg_<user>`, l'ancien mot de passe est effacé au passage, `gmail_brancher` n'est plus appelable), fonction `envoyer-gmail` v7 (envoi par l'API Gmail, actions config / brancher_google / debrancher ; l'ancien mot de passe marche encore le temps de rebrancher). Appli : écran Réglages › Envoi des e-mails, tâche "Rebrancher ton Gmail avec Google" pour les comptes à l'ancienne (Théo et Maxence).
+- **Pennylane** : `banque_brancher` refuse désormais un jeton qui peut modifier la compta (scopes autres que `:readonly` et `exports:`). Testé avec le jeton actuel de GTP (refusé : il a des droits d'écriture ; celui déjà branché continue de marcher).
+- **Page "Mentions légales et confidentialité"** : éditeur Théo Corbin (crbntheo@gmail.com), engagement de l'hébergeur à ne jamais consulter les données sauf demande, Gmail envoi seul, banque et Drive en lecture seule.
+- Nouveau `tests/test44.js` (vraie base, Google simulé) 15/15 ; `tests/deploy_fn.sh <nom>` publie une fonction serveur. test5, test22 OK. En ligne.
+- Pas vérifié : un vrai branchement Google + envoi réel (il faut que Théo le fasse), et si l'API Gmail est activée dans le projet Google Cloud.
 
 ### 16/11/2026 (suite) — contrôle de confidentialité (session du compte principal)
 - Le jeton d'administration Supabase avait été remplacé : nouveau jeton `sbp_fc39…` donné par Théo, rangé dans `.env` (et dans le secret réseau de l'environnement cloud). Les autres sessions doivent mettre à jour leur `.env`.

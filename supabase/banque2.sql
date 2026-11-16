@@ -12,6 +12,11 @@ begin
     array[extensions.http_header('Authorization', 'Bearer ' || jeton)], null, null)::extensions.http_request);
   if rep.status = 401 then raise exception 'Pennylane ne reconnaît pas ce jeton : il est incomplet, expiré ou supprimé. Recopie-le en entier ou crée-en un nouveau.'; end if;
   if rep.status <> 200 then raise exception 'Pennylane a refusé le jeton (code %). Réessaie dans un instant.', rep.status; end if;
+  -- confidentialité : on refuse un jeton qui peut modifier la compta (l'appli n'a besoin que de lire la banque)
+  if exists (select 1 from jsonb_array_elements_text(coalesce((rep.content::jsonb) -> 'scopes', '[]'::jsonb)) s
+             where s not like '%:readonly' and s not like 'exports:%') then
+    raise exception 'Ce jeton peut modifier ta comptabilité. Pour ta sécurité, l''appli n''accepte qu''un jeton en lecture seule : recrée-le en choisissant "Lecture seule" (au minimum "Comptes bancaires" et "Transactions").';
+  end if;
   -- les deux droits dont l'appli a besoin
   select * into rep from extensions.http(('GET', 'https://app.pennylane.com/api/external/v2/bank_accounts',
     array[extensions.http_header('Authorization', 'Bearer ' || jeton)], null, null)::extensions.http_request);

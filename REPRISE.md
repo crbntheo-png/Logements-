@@ -18,7 +18,7 @@ Ce fichier sert à une nouvelle session Claude Code (ou à un humain) pour compr
 |---|---|---|
 | Supabase (projet `bcfcrqmpeyaoovluvhhn`) | Comptes (connexion par code e-mail), données, photos, documents, fonctions serveur | `supabase/*.sql`, `supabase/functions/` |
 | Brevo | Envoi des e-mails : codes de connexion, signalements, envois sans Gmail | clé dans le coffre (vault) Supabase |
-| Gmail (mot de passe d'application) | Envoi depuis l'adresse de chaque utilisateur | fonction `supabase/functions/envoyer-gmail` |
+| Gmail (connexion Google, droit « envoyer » seulement) | Envoi depuis l'adresse de chaque utilisateur | fonction `supabase/functions/envoyer-gmail` |
 | Pennylane | Lecture du compte bancaire de l'espace GTP INVEST, toutes les heures | `supabase/banque.sql` (tâche planifiée `banque-synchro`) |
 | Cloudflare Pages | Hébergement | `deploy.sh` |
 
@@ -77,7 +77,7 @@ python3 tests/sql.py "select 1"  # requête SQL sur Supabase (via le jeton d'adm
 ```
 
 Appliquer un fichier SQL : `python3 tests/sql.py supabase/banque.sql`.
-Déployer la fonction Gmail : voir la commande `functions/deploy` de l'API Supabase (multipart, `verify_jwt: true`).
+Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`, `notifier`, `sauvegarde`).
 
 ## Les tests (Playwright, déjà installé dans les sessions Claude Code en ligne)
 
@@ -105,6 +105,8 @@ Déployer la fonction Gmail : voir la commande `functions/deploy` de l'API Supab
 | `tests/test40.js` | DPE électrique : tâche de mise à jour gratuite, révision proposée quand F/G passe à E |
 | `tests/test41.js` | Déclaration d'occupation (GMBI), dates simulées |
 | `tests/test42.js` | Prêts, ventilation des échéances, intérêts compta/2072, rentabilité nette, avances des associés |
+| `tests/test43.js` | Vraie base + Drive simulé : « Ajouter un document » choisi dans Google Drive |
+| `tests/test44.js` | Vraie base + Google simulé : Gmail « envoi seulement », ancien mot de passe signalé, page confidentialité |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.
