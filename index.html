@@ -1271,7 +1271,7 @@ async function connecterGmail() {
     if (!GMCFG) { const r = await appelGmail({ action: "config" }, true); if (!r.ok || !r.j.pret) throw new Error("La connexion Google n'est pas installée sur le serveur."); GMCFG = r.j; }
     await chargerGIS();
   } catch (e) { fin(); toast(e.message || "Google n'a pas pu s'ouvrir."); return; }
-  const cl = google.accounts.oauth2.initCodeClient({ client_id: GMCFG.client_id, scope: GMCFG.scope, ux_mode: "popup", select_account: true, include_granted_scopes: false,
+  const cl = google.accounts.oauth2.initCodeClient({ client_id: GMCFG.client_id, scope: GMCFG.scope, ux_mode: "popup", select_account: true, include_granted_scopes: false, prompt: "consent",
     callback: async r => {
       if (!r || !r.code) { fin(); toast("Connexion annulée."); return; }
       toast("Branchement de ton Gmail…");
@@ -3990,7 +3990,7 @@ function connecterDrive() {
   modal("Connecter ton Google Drive", `<div class="full">${texteDrive()}</div>`, () => {
     if (erreur) { toast(erreur); return false; }
     if (!pret) { toast("Un instant, Google se prépare…"); return false; }
-    const cl = google.accounts.oauth2.initCodeClient({ client_id: GCFG.client_id, scope: SCOPE_DRIVE, ux_mode: "popup", select_account: true, include_granted_scopes: false,
+    const cl = google.accounts.oauth2.initCodeClient({ client_id: GCFG.client_id, scope: SCOPE_DRIVE, ux_mode: "popup", select_account: true, include_granted_scopes: false, prompt: "consent",
       callback: async r => {
         if (!r || !r.code) { toast("Connexion annulée."); return; }
         toast("Connexion au Drive…");
