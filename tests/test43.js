@@ -47,7 +47,26 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.evaluate(() => choisisDrive().length) === 5, 'pas de doublon dans la liste des fichiers choisis');
   t(await p.evaluate(() => DOCS.etat === 'pret' && DOCS.fichiers.length === 5), 'page Docs : les fichiers choisis sont analysés');
   await p.evaluate(() => { closeOverlay(); S.sci.driveChoisis = []; save(); DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; go('docs'); render(); }); await p.waitForTimeout(800); await p.screenshot({ path: __dirname + '/b43-docs.png' });
-  t(await p.isVisible('button:has-text("Choisir mes documents")'), 'sans fichier choisi : bouton « Choisir mes documents »');
+  t(await p.isVisible('button:has-text("Choisir mes dossiers")'), 'sans rien de choisi : bouton « Choisir mes dossiers »');
+  // Dossiers entiers : on en coche 2 d'un coup ; Google montre le contenu de l'un, rien pour l'autre
+  await p.route('https://www.googleapis.com/drive/v3/files?**', r => { const q = new URL(r.request().url()).searchParams.get('q');
+    const L = /'dosA' in parents/.test(q) ? [{ id: 'a1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf' }, { id: 'sub', name: 'Diagnostics', mimeType: 'application/vnd.google-apps.folder' }] : /'sub' in parents/.test(q) ? [{ id: 'a2', name: 'DPE studio 2026.pdf', mimeType: 'application/pdf' }] : [];
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify({ files: L }) }); });
+  await p.evaluate(() => { window.__picker = [{ id: 'dosA', name: 'Studio Rennes', mimeType: 'application/vnd.google-apps.folder' }, { id: 'dosB', name: 'Compta', mimeType: 'application/vnd.google-apps.folder' }]; window.__args = null;
+    const o = window.ouvrirPicker; window.ouvrirPicker = async (...a) => { window.__args = a; return o(...a); }; });
+  await p.evaluate(() => choisirDossierDrive()); await p.waitForTimeout(2500);
+  t(await p.evaluate(() => window.__args && window.__args[2] === true), 'sélecteur ouvert en mode « dossiers », plusieurs possibles');
+  t(await p.evaluate(() => dossiersChoisis().map(d => d.nom).join(',')) === 'Studio Rennes,Compta', '2 dossiers cochés d\u2019un coup');
+  t(await p.evaluate(() => DOCS.etat === 'pret' && DOCS.fichiers.length === 2 && DOCS.fichiers.some(f => f.chemin.join('/') === 'Studio Rennes/Diagnostics')), 'contenu lu, sous-dossiers compris');
+  await p.evaluate(() => render()); await p.waitForTimeout(400); await p.screenshot({ path: __dirname + '/b43-dossiers.png', fullPage: true });
+  t(await p.isVisible('text=Autoriser la lecture des dossiers'), 'dossier sans contenu visible : proposition claire');
+  // revenir dessus : voir la liste, ajouter, retirer
+  await p.click('button:has-text("Dossiers connectés")'); await p.waitForTimeout(300);
+  t(await p.isVisible('text=+ Ajouter des dossiers') && await p.isVisible('li:has-text("Compta") button:has-text("Retirer")'), 'liste des dossiers connectés avec + et Retirer');
+  await p.click('li:has-text("Compta") button:has-text("Retirer")'); await p.waitForTimeout(1500);
+  t(await p.evaluate(() => dossiersChoisis().length === 1 && !(DOCS.vides || []).length), 'dossier retiré, plus d\u2019alerte');
+  await p.evaluate(() => { window.__picker = [{ id: 'dosA', name: 'Studio Rennes', mimeType: 'application/vnd.google-apps.folder' }]; }); await p.evaluate(() => choisirDossierDrive()); await p.waitForTimeout(800);
+  t(await p.evaluate(() => dossiersChoisis().length === 1), 'pas de doublon en recochant le même dossier');
   await p.evaluate(() => reglage('drive')); await p.waitForTimeout(400);
   t((await p.textContent('body')).includes('Voir le reste de ton Drive'), 'explication : l\u2019appli ne voit pas le reste du Drive');
   await p.evaluate(async () => { const c = S.fichiers.filter(f => f.chemin).map(f => f.chemin); await SB.storage.from('documents').remove(c); await SB.from('espaces').delete().eq('id', ESPACE); });

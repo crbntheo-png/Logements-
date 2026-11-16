@@ -53,7 +53,7 @@ const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); if (!v) KO++;
   // 4. Connecté (Google simulé) : choix du dossier
   await p.evaluate(() => { fnDrive = async a => a === 'jeton' ? { access_token: 'faux', expires_in: 3600 } : { ok: true }; DRIVEG = { etat: 'oui', adresse: 'test-a@gmail.com' }; DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; location.hash = 'docs'; render(); });
   await p.waitForTimeout(800); await p.screenshot({ path: OUT + '/4-choisir.png', fullPage: true });
-  ok('demande de choisir les documents', await p.evaluate(() => /Choisis dans ton Drive les documents/.test(document.body.innerText)));
+  ok('demande de cocher les dossiers', await p.evaluate(() => /Coche les dossiers de tes locations/.test(document.body.innerText)));
   // sélecteur officiel de Google (simulé) : la personne coche ses fichiers, l'appli ne reçoit que ceux-là
   await p.evaluate(() => { window.ouvrirPicker = async () => [
     { id: 'b1', name: 'Bail Camille Martin.pdf', mimeType: 'application/pdf', size: 2000 }, { id: 'd1', name: 'DPE Studio Lyon.pdf', mimeType: 'application/pdf', size: 900 },

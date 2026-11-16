@@ -32,6 +32,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 16/11/2026 (nuit, suite) — Drive : cocher des dossiers entiers (demande de Théo après essai sur son téléphone)
+- Le sélecteur Google marche en vrai chez Théo (sans clé d'API). Mais cocher fichier par fichier n'est pas pratique : on coche maintenant **des dossiers entiers, plusieurs d'un coup** (`choisirDossierDrive` → sélecteur en mode dossiers), et l'appli lit leur contenu et leurs sous-dossiers (`S.sci.driveDossiers`). Les fichiers un par un restent possibles (`choisirFichiersDrive`).
+- **Revenir dessus** : liste "Ce que l'appli peut lire dans ton Drive" (`blocConnecte`, Docs › Dossiers connectés et Réglages › Google Drive) avec "+ Ajouter des dossiers", "+ Des fichiers" et "Retirer".
+- Incertain chez Google : avec l'accès limité (`drive.file`), un dossier coché donne-t-il accès à son contenu ? Si Google ne montre rien, carte "Google ne montre pas l'intérieur de ce dossier" avec "Autoriser la lecture des dossiers" (`connecterDrive(true)`, droit `drive.readonly` ; l'appli ne lit toujours que les dossiers cochés). À observer au premier essai de Théo.
+- "Dossiers et logements" (dossier = logement) revient avec les dossiers cochés.
+- test43 22/22 (dossiers, sous-dossiers, alerte, liste, retirer, doublons), test33 OK, test5, 26, 44 OK. En ligne.
+
 ### 16/11/2026 (nuit) — plus aucun e-mail par l'appli, connexion Google, Drive par le sélecteur Google (session du compte principal, demande de Théo)
 - **Plus aucun e-mail envoyé par un serveur commun (Brevo)**, sauf les codes de connexion de secours (voir plus bas). Chacun envoie depuis **son** Gmail branché (droit "envoyer" seulement) :
   - documents, quittances, relances : `peutEnvoyer()` exige un Gmail branché ; sans Gmail, l'aperçu propose Partager / Ouvrir ma messagerie / SMS / WhatsApp + "Déjà envoyé autrement", et un lien "branche ton Gmail". `envoyerViaServeur` supprimé ; RPC `envoyer_mail` fermée à tous (`supabase/sans_brevo.sql`).
