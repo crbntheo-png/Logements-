@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestion locative · Appli pour propriétaires et SCI</title>
+<meta name="description" content="Gestion locative : loyers, quittances, relances, baux, états des lieux et compta pour les propriétaires et les SCI familiales. Envoi des e-mails depuis votre propre Gmail.">
+<link rel="icon" href="icon-192.png">
+<style>
+:root { --bg: #f4f5f7; --card: #fff; --tx: #14181f; --mu: #5b6472; --ac: #0b7a64; --ac-ink: #fff; --soft: #e2f3ee; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0f1216; --card: #191d23; --tx: #e9edf2; --mu: #9aa4b2; --ac: #3cc6a2; --ac-ink: #04241c; --soft: #123329; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--tx); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 820px; margin: 0 auto; padding: 32px 16px 56px; }
+header { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+header img { width: 56px; height: 56px; border-radius: 14px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; }
+.lead { color: var(--mu); font-size: 18px; margin: 10px 0 22px; }
+.cta { display: inline-block; background: var(--ac); color: var(--ac-ink); text-decoration: none; font-weight: 600; padding: 12px 22px; border-radius: 999px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: 28px 0; }
+.card { background: var(--card); border-radius: 16px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.card h2 { font-size: 17px; margin: 0 0 6px; }
+.card p { margin: 0; color: var(--mu); }
+.google { background: var(--soft); border-radius: 16px; padding: 18px 20px; }
+.google h2 { font-size: 18px; margin: 0 0 8px; }
+.google ul { margin: 0; padding-left: 20px; }
+footer { margin-top: 32px; color: var(--mu); font-size: 14px; }
+a { color: var(--ac); }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="icon-192.png" alt=""><div><h1>Gestion locative</h1></div></header>
+  <p class="lead">L'appli des propriétaires et des SCI familiales : suivre les loyers, envoyer les quittances, relancer gentiment, tenir la compta, sans tableur.</p>
+  <a class="cta" href="/">Ouvrir l'appli</a>
+
+  <div class="grid">
+    <div class="card"><h2>💶 Loyers</h2><p>Chaque mois, l'appli sait qui a payé, qui est en retard, et propose les relances. Les virements de la banque se cochent tout seuls.</p></div>
+    <div class="card"><h2>📄 Quittances et courriers</h2><p>Quittances, avis d'échéance, révision de loyer, ordures ménagères : prêts en PDF, envoyés seulement après votre validation.</p></div>
+    <div class="card"><h2>🏠 Logements et baux</h2><p>Baux, avenants, états des lieux avec photos, diagnostics, documents rangés par logement.</p></div>
+    <div class="card"><h2>📊 Compta de la SCI</h2><p>Dépenses, emprunts, taxe foncière, résultat de l'année et aide à la déclaration.</p></div>
+    <div class="card"><h2>👥 À plusieurs</h2><p>Les associés partagent le même espace, chacun avec son accès. Personne d'autre ne voit vos données.</p></div>
+    <div class="card"><h2>📱 Sur le téléphone</h2><p>S'installe comme une appli, marche même avec une connexion faible.</p></div>
+  </div>
+
+  <section class="google">
+    <h2>🔐 Ce que l'appli fait avec votre compte Google</h2>
+    <ul>
+      <li><b>Se connecter avec Google</b> : seulement votre nom et votre adresse e-mail, pour ouvrir votre compte.</li>
+      <li><b>Gmail (facultatif)</b> : uniquement le droit d'<b>envoyer</b>. Les quittances et relances que vous avez validées partent de votre propre adresse. L'appli ne peut ni lire, ni supprimer vos e-mails.</li>
+      <li><b>Google Drive (facultatif)</b> : uniquement les fichiers que vous choisissez vous-même dans le sélecteur de Google, pour les ranger dans le bon logement. L'appli ne voit pas le reste de votre Drive et n'y modifie rien.</li>
+      <li>Les données Google ne sont ni vendues, ni transmises, ni utilisées pour de la publicité ou pour entraîner une intelligence artificielle. Vous pouvez tout débrancher à tout moment.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><a href="/confidentialite">Règles de confidentialité et mentions légales</a> · Éditeur : Théo Corbin · <a href="mailto:crbntheo@gmail.com">crbntheo@gmail.com</a></p>
+  </footer>
+</main>
+</body>
+</html>

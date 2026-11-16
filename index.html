@@ -2137,7 +2137,7 @@ function render0() {
   const app = document.getElementById("app");
   document.body.classList.toggle("sans-nav", MODE === "connexion" || MODE === "nouvel-espace" || MODE === "chargement");
   if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
-  if (MODE === "connexion") { app.innerHTML = location.hash === "#legal" ? pageLegal().replace('href="#reglages">← Réglages', 'href="#">← Connexion') : pageConnexion() + `<p class="note center" style="margin-top:18px"><a href="#legal">Mentions légales et confidentialité</a></p>`; if (document.getElementById("gbtn")) setTimeout(boutonGoogle, 0); return; }
+  if (MODE === "connexion") { app.innerHTML = location.hash === "#legal" ? pageLegal().replace('href="#reglages">← Réglages', 'href="#">← Connexion') : pageConnexion() + `<p class="note center" style="margin-top:18px"><a href="/presentation">Découvrir l'appli</a> · <a href="#legal">Mentions légales et confidentialité</a></p>`; if (document.getElementById("gbtn")) setTimeout(boutonGoogle, 0); return; }
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
