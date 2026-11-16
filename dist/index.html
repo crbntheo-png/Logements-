@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "47b5d55", "date": "2026-11-14T15:20"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "cc9f05b", "date": "2026-11-16T08:40"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -652,6 +652,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .types-sig{display:flex;gap:6px;flex-wrap:wrap}.types-sig label{flex:1;min-width:110px}.types-sig input{position:absolute;opacity:0}.types-sig span{display:block;text-align:center;padding:10px 6px;border-radius:12px;background:var(--surface-2);font-weight:700;font-size:.85rem;cursor:pointer}.types-sig input:checked+span{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}.types-sig input:focus-visible+span{outline:2px solid var(--accent)}
 .sig-capture{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.9rem}.sig-capture img{width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:var(--surface-2)}
 .props-drive h3{margin:16px 0 6px;font-size:1rem}.props-drive .todo li{flex-wrap:wrap}.props-drive .todo li>.row{width:100%;justify-content:flex-end}.props-drive h4{margin:12px 0 2px;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.btn-drive{width:100%;justify-content:center;padding:14px}.pick-drive{max-height:46vh;overflow:auto}.pick-dos{all:unset;cursor:pointer;display:flex;justify-content:space-between;align-items:center;width:100%;padding:4px 0;font-weight:600}.pick-dos:focus-visible{outline:2px solid var(--accent);border-radius:8px}
 </style>
 </head>
 <body>
@@ -2547,10 +2548,80 @@ const qui = v => /^anc:/.test(v || "") ? { bailId: "", ancienId: v.slice(4) } : 
 function ajouterDocument(bienId, bailId, cat) {
   if (!SB) { toast("L'ajout de fichiers est disponible dans l'appli installée."); return; }
   const baux = S.baux.filter(b => b.bienId === bienId);
-  modal("Ajouter un document", `<label class="fl full">Fichier (PDF, photo, scan…)<input type="file" name="fichier" required accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
+  const drv = estProprio() && DRIVEG.etat === "oui";
+  modal("Ajouter un document", `${drv ? `<div class="full"><button type="button" class="primary btn-drive" onclick="choisirFichierDrive({bienId:'${bienId}',bailId:document.querySelector('#overlay [name=bailId]').value,cat:document.querySelector('#overlay [name=cat]').value})">📁 Choisir dans mon Google Drive</button></div>`
+      : estProprio() && SB ? `<p class="full note">Tes documents sont dans Google Drive ? <a href="#" onclick="event.preventDefault();closeOverlay();connecterDrive()">Connecte ton Drive</a> pour les choisir directement.</p>` : ""}
+    <label class="fl full">${drv ? "Ou depuis ton téléphone (photo, PDF, scan…)" : "Fichier (PDF, photo, scan…)"}<input type="file" name="fichier" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
     ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", concerne(bienId))}
     ${fld("Nom affiché (facultatif)", "nom", "", "text", "full")}`,
-    d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast("Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); });
+    d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast(drv ? "Choisis un fichier dans ton Drive ou sur ton téléphone." : "Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); });
+}
+/* Choisir des fichiers dans le Google Drive (dossiers, sous-dossiers, recherche) puis les copier dans l'appli */
+let PICK = null;
+const qDrive = t => String(t).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+async function choisirFichierDrive(ctx, fil, q) {
+  if (ctx) PICK = { ctx, sel: new Map(), cat: ctx.cat || "Bail", bailId: ctx.bailId || "" };
+  if (!PICK) return;
+  fil = fil || []; q = (q || "").trim(); PICK.fil = fil; PICK.q = q;
+  const ici = fil[fil.length - 1]; let L = [];
+  toast(q ? "Recherche dans ton Drive…" : "Lecture de ton Drive…");
+  try {
+    if (q) L = (await driveListe(`name contains '${qDrive(q)}' and mimeType != '${DOSSIER}' and trashed = false`, 60));
+    else if (!ici) {
+      const choisis = dossiersDrive().map(d => ({ id: d.id, name: d.nom || "Dossier choisi", mimeType: DOSSIER, choisi: true }));
+      const [mes, partages] = await Promise.all([driveListe(`'root' in parents and trashed = false`, 300), driveListe(`sharedWithMe and mimeType = '${DOSSIER}' and trashed = false`, 100)]);
+      const vus = new Set(choisis.map(d => d.id)); L = [...choisis, ...mes.filter(x => !vus.has(x.id)), ...partages.filter(x => !vus.has(x.id))];
+    } else L = await driveListe(`'${ici.id}' in parents and trashed = false`, 500);
+  } catch (e) { toast(e.message); return; }
+  PICK.L = L;
+  const doss = L.filter(x => x.mimeType === DOSSIER), fics = L.filter(x => x.mimeType !== DOSSIER), bienId = PICK.ctx.bienId;
+  const ico = x => /pdf/.test(x.mimeType) ? "📄" : /image/.test(x.mimeType) ? "🖼️" : /document|word/.test(x.mimeType) ? "📝" : /sheet|excel/.test(x.mimeType) ? "📊" : "📎";
+  const nbSel = () => PICK.sel.size;
+  modal("Choisir dans ton Google Drive", `<div class="full row" style="gap:6px"><input id="pickQ" type="search" value="${esc(q)}" placeholder="Chercher : bail, DPE, facture, un nom…" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){event.preventDefault();choisirFichierDrive(null,[],this.value)}" aria-label="Chercher dans ton Drive"><button type="button" class="small" onclick="choisirFichierDrive(null,[],document.getElementById('pickQ').value)">Chercher</button></div>
+    <div class="full fil-drive">${fil.length || q ? `<button type="button" class="small ghost" onclick="choisirFichierDrive(null,PICK.fil.slice(0,-1))">← Retour</button>` : ""}<span>${q ? "Résultats pour « " + esc(q) + " »" : ["Mon Drive", ...fil.map(x => x.nom)].map(esc).join(" › ")}</span></div>
+    <ul class="todo full pick-drive">${doss.map((x, i) => `<li><button type="button" class="pick-dos" onclick="choisirFichierDrive(null,PICK.fil.concat([{id:PICK.L.filter(y=>y.mimeType===DOSSIER)[${i}].id,nom:PICK.L.filter(y=>y.mimeType===DOSSIER)[${i}].name}]))"><span>📁 ${esc(x.name)}${x.choisi ? ` <span class="pill info">tes documents</span>` : ""}</span><span aria-hidden="true">›</span></button></li>`).join("")}
+      ${fics.map(x => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" ${PICK.sel.has(x.id) ? "checked" : ""} onchange="cocherFichierDrive('${x.id}',this.checked)"><span class="tx">${ico(x)} ${esc(x.name)}<small>${x.modifiedTime ? "modifié le " + fds(x.modifiedTime.slice(0, 10)) : ""}${x.size ? " · " + tailleTxt(+x.size) : ""}${S.fichiers.some(f => f.driveId === x.id && f.bienId === bienId) ? " · déjà ajouté" : ""}</small></span></label></li>`).join("")}
+      ${!doss.length && !fics.length ? `<li><span class="tx">${q ? "Aucun fichier trouvé." : "Ce dossier est vide."}</span></li>` : ""}</ul>
+    ${sel("Catégorie", "cat", PICK.cat, CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", PICK.bailId, concerne(bienId))}
+    <p class="full note" id="pickNb">${nbSel() ? nbSel() + " fichier" + (nbSel() > 1 ? "s" : "") + " choisi" + (nbSel() > 1 ? "s" : "") : "Coche un ou plusieurs fichiers. Touche un dossier pour l'ouvrir."}</p>`,
+    d => {
+      if (!PICK.sel.size) { toast("Coche au moins un fichier."); return false; }
+      const liste = [...PICK.sel.values()], ctx2 = { bienId, cat: d.cat, bailId: d.bailId }; PICK = null;
+      importerDepuisDrive(liste, ctx2);
+    }, { ok: "Ajouter les fichiers choisis" });
+  const f = document.getElementById("mform"); if (f) f.addEventListener("change", ev => { if (ev.target.name === "cat") PICK && (PICK.cat = ev.target.value); if (ev.target.name === "bailId") PICK && (PICK.bailId = ev.target.value); });
+}
+function cocherFichierDrive(id, oui) {
+  const x = PICK && PICK.L.find(y => y.id === id); if (!x) return;
+  if (oui) PICK.sel.set(id, x); else PICK.sel.delete(id);
+  const el = document.getElementById("pickNb"), n = PICK.sel.size;
+  if (el) el.textContent = n ? `${n} fichier${n > 1 ? "s" : ""} choisi${n > 1 ? "s" : ""}` : "Coche un ou plusieurs fichiers. Touche un dossier pour l'ouvrir.";
+}
+async function importerDepuisDrive(liste, ctx) {
+  let ok = 0, liens = 0, deja = 0;
+  toast(`Ajout de ${liste.length} fichier${liste.length > 1 ? "s" : ""}…`);
+  for (const x of liste) {
+    if (S.fichiers.some(f => f.driveId === x.id && f.bienId === ctx.bienId)) { deja++; continue; }
+    const base = Object.assign({ id: uid(), bienId: ctx.bienId, cat: ctx.cat, nom: x.name.replace(/\.[a-z0-9]{2,5}$/i, ""), driveId: x.id, titreDrive: x.name, date: iso(TODAY) }, qui(ctx.bailId));
+    try {
+      const natif = /^application\/vnd\.google-apps\./.test(x.mimeType);
+      if (!natif && +x.size > 20 * 1024 * 1024) throw new Error("trop lourd");
+      const u = natif ? `https://www.googleapis.com/drive/v3/files/${x.id}/export?mimeType=application/pdf` : `https://www.googleapis.com/drive/v3/files/${x.id}?alt=media&supportsAllDrives=true`;
+      const r = await fetch(u, { headers: { Authorization: "Bearer " + await jetonDrive() } });
+      if (!r.ok) throw new Error("Drive " + r.status);
+      const blob = await r.blob(); if (blob.size > 20 * 1024 * 1024) throw new Error("trop lourd");
+      const type = natif ? "application/pdf" : (x.mimeType || blob.type || "application/octet-stream"), ext = natif ? "pdf" : ((x.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin");
+      const chemin = `${ESPACE}/${ctx.bienId}/${uid()}.${ext}`;
+      const up = await SB.storage.from("documents").upload(chemin, blob, { contentType: type });
+      if (up.error) throw up.error;
+      S.fichiers.push(Object.assign(base, { chemin, type, taille: blob.size })); ok++;
+    } catch (e) {
+      // impossible de copier (trop lourd, format refusé…) : on garde au moins le lien vers le Drive
+      S.fichiers.push(Object.assign(base, { url: x.webViewLink || `https://drive.google.com/file/d/${x.id}/view` })); liens++;
+    }
+  }
+  save(); render();
+  toast([ok ? `✓ ${ok} fichier${ok > 1 ? "s" : ""} ajouté${ok > 1 ? "s" : ""}` : "", liens ? `${liens} gardé${liens > 1 ? "s" : ""} en lien vers le Drive (trop lourd ou format spécial)` : "", deja ? `${deja} déjà présent${deja > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ") || "Rien à ajouter");
 }
 async function envoyerDocument(bienId, d, f) {
   if (f.size > 20 * 1024 * 1024) { toast("Fichier trop lourd (20 Mo maximum)."); return; }

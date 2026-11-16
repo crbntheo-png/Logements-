@@ -30,6 +30,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 16/11/2026 — « Ajouter un document » : choisir dans Google Drive (session du compte principal, demande de Théo)
+- Fenêtre « Ajouter un document » : bouton **📁 Choisir dans mon Google Drive** (propriétaire, Drive connecté) ; sinon lien « Connecte ton Drive ». Le choix sur le téléphone reste en dessous.
+- Navigateur Drive (`choisirFichierDrive`) : dossiers choisis en premier (« tes documents »), Mon Drive, partagés avec moi, sous-dossiers (› / ← Retour), recherche par nom, plusieurs fichiers cochés, catégorie et locataire.
+- `importerDepuisDrive` : chaque fichier est **copié** dans le bucket `documents` (les associés l'ouvrent sans accès au Drive) ; documents Google (Docs, Sheets) convertis en PDF ; si trop lourd (> 20 Mo) ou refusé par Drive, gardé en lien ; pas de doublon (`driveId`).
+- Nouveau `tests/test43.js` (vraie base, comptes de test, Drive simulé) 12/12. test5 et test22 OK. En ligne.
+- Pas vérifié : un vrai choix dans le Drive de Théo depuis son téléphone.
+
 ### 14/11/2026 (message 2) — Bloc 5 : prêts, rentabilité nette, avances des associés
 - **Prêts** (nouvelle collection `prets`, ajoutée à `COLLS`, à `blank()` et à la copie de sauvegarde du lundi) : Compta › Emprunts › "+ Prêt" (banque, logement ou SCI, montant, taux, durée en mois, 1re échéance, assurance emprunteur par mois, différé en mois : partiel = intérêts seuls, total = intérêts ajoutés au prêt). `tableauPret` calcule le tableau (mensualités constantes, dernière échéance ajustée) ; la mensualité s'affiche pendant la saisie. Taux variable ou différé compliqué : "Importer le tableau de la banque (CSV)" (fichier ou copier-coller ; colonnes date, intérêts, capital/amortissement, assurance et capital restant dû si présentes ; nombres et dates à la française) qui remplace le calcul. Vue du tableau par année (intérêts, capital, assurance, reste dû).
 - **Ventilation** (`propositionsVentilation`, `ventilerEcheances`) : une dépense "Échéance de prêt (à ventiler)" OU une dépense "Intérêts d'emprunt" qui est en fait une échéance complète, dont le montant correspond (à 1 € près, à 12 jours près) à une échéance du tableau, est **proposée** ; fenêtre avec aperçu (intérêts, capital, assurance, écart d'arrondi), cases à décocher, "Oui, ventiler les N". Chaque échéance devient 3 dépenses (`pretId`, `ventileDe`, même `banqueTx`, donc pas reproposée par la banque). Rien sans validation.

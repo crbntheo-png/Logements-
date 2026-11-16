@@ -1,0 +1,52 @@
+// « Ajouter un document » : choisir dans Google Drive (Drive simulé), copie dans l'appli, lien de secours
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const DIST = path.join(__dirname, '..', 'dist');
+const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
+let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK ' : 'KO ') + m); };
+(async () => {
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
+  p.on('pageerror', e => errs.push(e.message));
+  await p.route('https://www.googleapis.com/drive/v3/files/**', r => { const u = r.request().url();
+    if (u.includes('/export?')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4 export' });
+    if (u.includes('gros')) return r.fulfill({ status: 403, body: '{}' });
+    return r.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4 fichier' }); });
+  await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
+  await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
+  await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test Drive docs'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
+  await p.evaluate(() => { S.biens.push({ id: 'b1', nom: 'Studio', type: 'Studio', adresse: '1 rue', cp: '35000', ville: 'Rennes', meuble: 'vide' }); S.baux.push({ id: 'l1', bienId: 'b1', nom: 'Jean Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save();
+    DRIVEG = { etat: 'oui', adresse: 'moi@gmail.com', jeton: 'faux', exp: Date.now() + 3600e3 };
+    window.driveListe = async q => q.includes("name contains") ? [{ id: 'f9', name: 'DPE studio.pdf', mimeType: 'application/pdf', size: '1200' }]
+      : q.includes("'root'") ? [{ id: 'd1', name: 'Mes locations', mimeType: 'application/vnd.google-apps.folder' }, { id: 'f0', name: 'Note.txt', mimeType: 'text/plain', size: '10' }]
+      : q.includes("sharedWithMe") ? [] : [{ id: 'f1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf', size: '2000', modifiedTime: '2026-10-01T10:00:00Z' }, { id: 'f2', name: 'Etat des lieux', mimeType: 'application/vnd.google-apps.document' }, { id: 'gros', name: 'Scan énorme.pdf', mimeType: 'application/pdf', size: '1000' }]; });
+  await p.evaluate(() => ajouterDocument('b1', 'l1', 'Bail')); await p.waitForTimeout(300);
+  t(await p.isVisible('text=Choisir dans mon Google Drive'), 'bouton « Choisir dans mon Google Drive »');
+  await p.screenshot({ path: __dirname + '/b43-ajout.png' });
+  await p.click('text=Choisir dans mon Google Drive'); await p.waitForTimeout(500);
+  t(await p.isVisible('text=Mes locations'), 'dossiers du Drive affichés');
+  await p.click('text=Mes locations'); await p.waitForTimeout(500);
+  t(await p.isVisible('text=Bail Jean Test.pdf'), 'fichiers du sous-dossier affichés');
+  await p.screenshot({ path: __dirname + '/b43-drive.png' });
+  for (const n of ['Bail Jean Test.pdf', 'Etat des lieux', 'Scan énorme.pdf']) await p.locator('li', { hasText: n }).locator('input[type=checkbox]').check();
+  t((await p.textContent('#pickNb')).includes('3 fichiers'), 'compteur 3 fichiers');
+  await p.fill('#pickQ', 'DPE'); await p.press('#pickQ', 'Enter'); await p.waitForTimeout(500);
+  t(await p.isVisible('text=DPE studio.pdf'), 'recherche dans le Drive');
+  await p.locator('li', { hasText: 'DPE studio.pdf' }).locator('input[type=checkbox]').check();
+  await p.selectOption('#overlay select[name=cat]', 'Diagnostics (DPE…)');
+  await p.click('#overlay button.primary >> nth=-1'); await p.waitForTimeout(5000);
+  const F = await p.evaluate(() => S.fichiers.map(f => ({ nom: f.nom, cat: f.cat, bail: f.bailId, copie: !!f.chemin, lien: !!f.url, type: f.type })));
+  console.log(JSON.stringify(F));
+  t(F.length === 4, '4 documents ajoutés');
+  t(F.filter(f => f.copie).length === 3 && F.filter(f => f.lien).length === 1, '3 copiés dans l’appli, 1 gardé en lien (refusé par Drive)');
+  t(F.some(f => f.nom === 'Etat des lieux' && f.type === 'application/pdf'), 'document Google converti en PDF');
+  t(F.every(f => f.cat === 'Diagnostics (DPE…)' && f.bail === 'l1'), 'catégorie et locataire appliqués');
+  const ch = await p.evaluate(() => S.fichiers.find(f => f.chemin).chemin);
+  t(await p.evaluate(async c => !(await SB.storage.from('documents').createSignedUrl(c, 60)).error, ch), 'fichier copié ouvrable');
+  await p.evaluate(() => importerDepuisDrive([{ id: 'f1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf', size: '2000' }], { bienId: 'b1', cat: 'Bail', bailId: '' })); await p.waitForTimeout(800);
+  t(await p.evaluate(() => S.fichiers.length) === 4, 'pas de doublon si on rajoute le même fichier');
+  await p.evaluate(async () => { const c = S.fichiers.filter(f => f.chemin).map(f => f.chemin); await SB.storage.from('documents').remove(c); await SB.from('espaces').delete().eq('id', ESPACE); });
+  t(!errs.length, 'aucune erreur ' + errs.join(' | '));
+  console.log(`${ok}/${ok + ko}`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);
+})().catch(e => { console.log('FATAL', e.message); process.exit(1); });
