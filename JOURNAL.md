@@ -11,6 +11,7 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Domaine sci-gestion-locative.com (Théo, ce soir)** : 1) Search Console › propriété "Domaine" `sci-gestion-locative.com` ; 2) client OAuth : ajouter les origines https://sci-gestion-locative.com et https://www.sci-gestion-locative.com ; 3) tester la connexion Google sur https://sci-gestion-locative.com ; 4) Branding : page d'accueil https://sci-gestion-locative.com/presentation, confidentialité https://sci-gestion-locative.com/confidentialite, domaine autorisé `sci-gestion-locative.com`, puis "J'ai corrigé les problèmes". Ensuite (Claude) : renvoyer automatiquement pages.dev vers le nouveau domaine, puis retirer pages.dev chez Google.
 - [ ] **Google (Théo), dans cet ordre** : 1) https://console.cloud.google.com/auth/branding (nom, e-mail, page d'accueil, https://gestion-locative-sci.pages.dev/confidentialite, domaine autorisé `gestion-locative-sci.pages.dev`) ; 2) https://console.cloud.google.com/auth/audience › Publier ; 3) activer https://console.cloud.google.com/apis/library/gmail.googleapis.com et https://console.cloud.google.com/apis/library/picker.googleapis.com ; 4) dans l'appli : se connecter avec Google, brancher Gmail, Débrancher puis Connecter le Drive, "Choisir mes documents". Ensuite : retirer le code de connexion par e-mail (dernier envoi Brevo) et le crochet `envoyer_code_auth`.
 - [ ] **Gmail (Théo)** : 1) activer l'API Gmail dans le projet Google Cloud (https://console.cloud.google.com/apis/library/gmail.googleapis.com) ; 2) Réglages › Envoi des e-mails › Continuer avec Google ; 3) supprimer l'ancien mot de passe d'application "Gestion SCI" (https://myaccount.google.com/apppasswords). Pour ouvrir l'appli aux inconnus : publier l'appli Google (https://console.cloud.google.com/auth/audience › Publier), sinon seuls les "utilisateurs test" peuvent brancher Gmail ou Drive.
 - [ ] **CAF Margottet – Fravelle** : prévenir la CAF du changement de propriétaire (l'allocation de 612 € part peut-être encore chez M. Loslier) et vérifier le loyer de novembre.
@@ -31,6 +32,12 @@ Règle pour chaque session :
 - [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
 
 ## Historique
+
+### 16/11/2026 (22 h) — nom de domaine à soi
+- Google refuse une page d'accueil sur une adresse partagée (`pages.dev`). Théo a acheté **sci-gestion-locative.com** chez Cloudflare (`gestion-locative-sci.com` était pris) et créé les 2 CNAME (`@` et `www` vers `gestion-locative-sci.pages.dev`).
+- Domaine rattaché au projet Pages (API) : actif. Vérifié en se faisant passer pour Googlebot : `/`, `/presentation`, `/confidentialite`, le fichier de preuve Google et `/robots.txt` répondent 200 sur les deux adresses.
+- Supabase : `site_url` = https://sci-gestion-locative.com, nouvelles adresses ajoutées à la liste autorisée (anciennes gardées). Secret `APP_URL` et adresse par défaut de `notifier` passés au nouveau domaine (redéployé, verify_jwt false).
+- L'ancienne adresse pages.dev marche toujours.
 
 ### 16/11/2026 (21 h) — premiers essais réels de Google : ça marche
 - Théo s'est connecté avec **Continuer avec Google** (20:00 UTC, compte rattaché au même utilisateur : fournisseurs email + google), a rebranché **Gmail avec Google** (20:01) et a **envoyé une attestation de loyer depuis son Gmail** (20:03, table `envois`). Tout le chemin Google est donc vérifié en vrai.

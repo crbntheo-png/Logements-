@@ -6,7 +6,7 @@ import webpush from "npm:web-push@3.6.7";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cle-cron", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const rep = (c: unknown, s = 200) => new Response(JSON.stringify(c), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
-const APP = Deno.env.get("APP_URL") || "https://gestion-locative-sci.pages.dev";
+const APP = Deno.env.get("APP_URL") || "https://sci-gestion-locative.com";
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const eur = (n: number) => r2(n).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
