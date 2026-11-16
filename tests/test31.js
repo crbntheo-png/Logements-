@@ -21,7 +21,7 @@ const connexion = async email => { const r = await req(null, '/auth/v1/token?gra
     check(Array.isArray(modif.j) && modif.j.length === 0, 'le lecteur ne peut pas modifier');
     // Liste de destinataires vide : même si le contrôle échouait, aucun e-mail ne peut partir
     const mail = await req(B.access_token, '/rest/v1/rpc/envoyer_mail', { method: 'POST', body: JSON.stringify({ espace: esp, a: [], objet: 'test', texte: 'test' }) });
-    check(mail.s >= 400 && /lecture seule/.test(JSON.stringify(mail.j)), 'le lecteur ne peut pas envoyer d\'e-mail (' + mail.s + ')');
+    check(mail.s >= 400, 'envoi par le serveur fermé à tous, lecteur compris (' + mail.s + ')');
     const cr = await req(B.access_token, '/rest/v1/rpc/changer_role', { method: 'POST', body: JSON.stringify({ e: esp, u: B.user.id, r: 'membre' }) });
     check(cr.s >= 400, 'le lecteur ne peut pas changer son propre rôle');
     await req(A.access_token, '/rest/v1/rpc/changer_role', { method: 'POST', body: JSON.stringify({ e: esp, u: B.user.id, r: 'membre' }) });

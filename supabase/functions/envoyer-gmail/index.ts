@@ -56,7 +56,9 @@ Deno.serve(async (req) => {
     const { data: s } = await admin.rpc("gmail_secret", { u: u.user.id });
 
     if (c.action === "debrancher") {
-      if (s?.rt) await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(s.rt), { method: "POST" }).catch(() => {});
+      // Retirer l'accès chez Google retire toute l'autorisation de l'appli (Drive compris) : seulement si le Drive n'est pas branché
+      const { data: dr } = await admin.from("drive_comptes").select("user_id").eq("user_id", u.user.id).maybeSingle();
+      if (s?.rt && !dr) await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(s.rt), { method: "POST" }).catch(() => {});
       await admin.rpc("gmail_oublier", { u: u.user.id });
       return rep({ ok: true });
     }

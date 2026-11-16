@@ -1,4 +1,4 @@
-// « Ajouter un document » : choisir dans Google Drive (Drive simulé), copie dans l'appli, lien de secours
+// Drive par le sélecteur officiel de Google (simulé) : « Ajouter un document », « Choisir mes documents », rangement, droit limité aux fichiers choisis
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const DIST = path.join(__dirname, '..', 'dist');
@@ -18,22 +18,16 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test Drive docs'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
   await p.evaluate(() => { S.biens.push({ id: 'b1', nom: 'Studio', type: 'Studio', adresse: '1 rue', cp: '35000', ville: 'Rennes', meuble: 'vide' }); S.baux.push({ id: 'l1', bienId: 'b1', nom: 'Jean Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save();
     DRIVEG = { etat: 'oui', adresse: 'moi@gmail.com', jeton: 'faux', exp: Date.now() + 3600e3 };
-    window.driveListe = async q => q.includes("name contains") ? [{ id: 'f9', name: 'DPE studio.pdf', mimeType: 'application/pdf', size: '1200' }]
-      : q.includes("'root'") ? [{ id: 'd1', name: 'Mes locations', mimeType: 'application/vnd.google-apps.folder' }, { id: 'f0', name: 'Note.txt', mimeType: 'text/plain', size: '10' }]
-      : q.includes("sharedWithMe") ? [] : [{ id: 'f1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf', size: '2000', modifiedTime: '2026-10-01T10:00:00Z' }, { id: 'f2', name: 'Etat des lieux', mimeType: 'application/vnd.google-apps.document' }, { id: 'gros', name: 'Scan énorme.pdf', mimeType: 'application/pdf', size: '1000' }]; });
+    window.__picker = [];
+    window.ouvrirPicker = async titre => { window.__titres = (window.__titres || []).concat(titre); return window.__picker; }; });
+  t(await p.evaluate(() => SCOPE_DRIVE) === 'openid email https://www.googleapis.com/auth/drive.file', 'Google ne donne accès qu\u2019aux fichiers choisis (drive.file)');
   await p.evaluate(() => ajouterDocument('b1', 'l1', 'Bail')); await p.waitForTimeout(300);
   t(await p.isVisible('text=Choisir dans mon Google Drive'), 'bouton « Choisir dans mon Google Drive »');
   await p.screenshot({ path: __dirname + '/b43-ajout.png' });
-  await p.click('text=Choisir dans mon Google Drive'); await p.waitForTimeout(500);
-  t(await p.isVisible('text=Mes locations'), 'dossiers du Drive affichés');
-  await p.click('text=Mes locations'); await p.waitForTimeout(500);
-  t(await p.isVisible('text=Bail Jean Test.pdf'), 'fichiers du sous-dossier affichés');
+  await p.evaluate(() => { window.__picker = [{ id: 'f1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf', size: 2000, webViewLink: 'https://drive.google.com/file/d/f1/view' }, { id: 'f2', name: 'Etat des lieux', mimeType: 'application/vnd.google-apps.document', size: 0 }, { id: 'gros', name: 'Scan énorme.pdf', mimeType: 'application/pdf', size: 1000 }, { id: 'f9', name: 'DPE studio.pdf', mimeType: 'application/pdf', size: 1200 }]; });
+  await p.click('text=Choisir dans mon Google Drive'); await p.waitForTimeout(600);
+  t(await p.isVisible('text=4 fichiers choisis'), 'sélecteur Google ouvert, 4 fichiers choisis');
   await p.screenshot({ path: __dirname + '/b43-drive.png' });
-  for (const n of ['Bail Jean Test.pdf', 'Etat des lieux', 'Scan énorme.pdf']) await p.locator('li', { hasText: n }).locator('input[type=checkbox]').check();
-  t((await p.textContent('#pickNb')).includes('3 fichiers'), 'compteur 3 fichiers');
-  await p.fill('#pickQ', 'DPE'); await p.press('#pickQ', 'Enter'); await p.waitForTimeout(500);
-  t(await p.isVisible('text=DPE studio.pdf'), 'recherche dans le Drive');
-  await p.locator('li', { hasText: 'DPE studio.pdf' }).locator('input[type=checkbox]').check();
   await p.selectOption('#overlay select[name=cat]', 'Diagnostics (DPE…)');
   await p.click('#overlay button.primary >> nth=-1'); await p.waitForTimeout(5000);
   const F = await p.evaluate(() => S.fichiers.map(f => ({ nom: f.nom, cat: f.cat, bail: f.bailId, copie: !!f.chemin, lien: !!f.url, type: f.type })));
@@ -46,6 +40,16 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.evaluate(async c => !(await SB.storage.from('documents').createSignedUrl(c, 60)).error, ch), 'fichier copié ouvrable');
   await p.evaluate(() => importerDepuisDrive([{ id: 'f1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf', size: '2000' }], { bienId: 'b1', cat: 'Bail', bailId: '' })); await p.waitForTimeout(800);
   t(await p.evaluate(() => S.fichiers.length) === 4, 'pas de doublon si on rajoute le même fichier');
+  t(await p.evaluate(() => choisisDrive().length) === 4, 'les fichiers choisis sont mémorisés (seuls connus de l\u2019appli)');
+  // « Choisir mes documents » (page Docs) puis rangement automatique
+  await p.evaluate(() => { window.__picker = [{ id: 'f20', name: 'Quittance Jean Test octobre 2026.pdf', mimeType: 'application/pdf', size: 900 }, { id: 'f1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf', size: 2000 }]; });
+  await p.evaluate(() => choisirDossierDrive()); await p.waitForTimeout(1500);
+  t(await p.evaluate(() => choisisDrive().length) === 5, 'pas de doublon dans la liste des fichiers choisis');
+  t(await p.evaluate(() => DOCS.etat === 'pret' && DOCS.fichiers.length === 5), 'page Docs : les fichiers choisis sont analysés');
+  await p.evaluate(() => { closeOverlay(); S.sci.driveChoisis = []; save(); DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; go('docs'); render(); }); await p.waitForTimeout(800); await p.screenshot({ path: __dirname + '/b43-docs.png' });
+  t(await p.isVisible('button:has-text("Choisir mes documents")'), 'sans fichier choisi : bouton « Choisir mes documents »');
+  await p.evaluate(() => reglage('drive')); await p.waitForTimeout(400);
+  t((await p.textContent('body')).includes('Voir le reste de ton Drive'), 'explication : l\u2019appli ne voit pas le reste du Drive');
   await p.evaluate(async () => { const c = S.fichiers.filter(f => f.chemin).map(f => f.chemin); await SB.storage.from('documents').remove(c); await SB.from('espaces').delete().eq('id', ESPACE); });
   t(!errs.length, 'aucune erreur ' + errs.join(' | '));
   console.log(`${ok}/${ok + ko}`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);

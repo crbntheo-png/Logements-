@@ -17,7 +17,7 @@ Ce fichier sert à une nouvelle session Claude Code (ou à un humain) pour compr
 | Brique | Rôle | Où |
 |---|---|---|
 | Supabase (projet `bcfcrqmpeyaoovluvhhn`) | Comptes (connexion par code e-mail), données, photos, documents, fonctions serveur | `supabase/*.sql`, `supabase/functions/` |
-| Brevo | Envoi des e-mails : codes de connexion, signalements, envois sans Gmail | clé dans le coffre (vault) Supabase |
+| Brevo | Seulement les codes de connexion de secours (tout le reste part du Gmail de chacun) | clé dans le coffre (vault) Supabase |
 | Gmail (connexion Google, droit « envoyer » seulement) | Envoi depuis l'adresse de chaque utilisateur | fonction `supabase/functions/envoyer-gmail` |
 | Pennylane | Lecture du compte bancaire de l'espace GTP INVEST, toutes les heures | `supabase/banque.sql` (tâche planifiée `banque-synchro`) |
 | Cloudflare Pages | Hébergement | `deploy.sh` |
@@ -34,6 +34,8 @@ L'espace réel de la SCI : **GTP INVEST**, id `1be09613-be2e-49f7-85ca-583ebecc7
 ### Règles importantes (voulues par le propriétaire)
 
 - **Aucun e-mail ne part sans validation** : aperçu, destinataire modifiable, puis bandeau « Oui, envoyer ».
+- **L'appli n'envoie jamais d'e-mail par un serveur commun** : seulement depuis le Gmail branché de chacun (droit « envoyer » seulement).
+- **Drive** : droit `drive.file` uniquement (sélecteur Google), jamais la lecture de tout le Drive.
 - Les dépenses lues dans la banque sont **proposées**, jamais enregistrées sans validation.
 - Textes en français simple, tutoiement, guillemets droits.
 - Mobile d'abord : tester en 390 × 844.
@@ -95,17 +97,16 @@ Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`
 | `tests/test31.js` | Vraie base : lecture seule (voir sans modifier ni envoyer), changement de rôle, préférences de notification |
 | `tests/test32.js` | Vraie base : ouverture instantanée depuis la copie de l'appareil, mise à jour en arrière-plan, hors connexion, file des modifs en attente (rien perdu ni écrasé), copie effacée à la déconnexion |
 | `tests/perf.js` | Temps d'affichage de chaque page (démo, puis `K=6 AN=2016` = 28 locataires sur 10 ans) ; `node tests/perf.js profil` liste les fonctions lentes |
-| `tests/test33.js` | Vraie base + Google simulé : connexion Drive expliquée, choix du dossier, lecture, droits d'un associé |
+| `tests/test33.js` | Vraie base + Google simulé : connexion Drive expliquée, sélecteur Google, rangement, droits d'un associé |
 | `tests/test34.js` | Mise à jour de l'appli : version, chercher, bandeau "Nouvelle version prête", rechargement (service worker) |
 | `tests/test35.js` | Vraie base : assistant Pennylane (2 chemins), faux jetons, banque réservée au propriétaire |
-| `tests/test36.js` | Vraie base + Google simulé : plusieurs dossiers, sous-dossiers, dossier = logement, rangement automatique, Annuler, pas de doublon |
 | `tests/test37.js` | Services publics (vrais appels, adresse neutre) : adresse qui se complète, DPE ADEME, Géorisques |
 | `tests/test38.js` | Quittances du mois en un geste (adresses modifiables, Pas besoin, sans e-mail = PDF) |
 | `tests/test39.js` | Vraie base : copie de sauvegarde du lundi par e-mail (aperçu seulement, aucun envoi) |
 | `tests/test40.js` | DPE électrique : tâche de mise à jour gratuite, révision proposée quand F/G passe à E |
 | `tests/test41.js` | Déclaration d'occupation (GMBI), dates simulées |
 | `tests/test42.js` | Prêts, ventilation des échéances, intérêts compta/2072, rentabilité nette, avances des associés |
-| `tests/test43.js` | Vraie base + Drive simulé : « Ajouter un document » choisi dans Google Drive |
+| `tests/test43.js` | Vraie base + sélecteur Google simulé : « Ajouter un document », « Choisir mes documents », droit drive.file |
 | `tests/test44.js` | Vraie base + Google simulé : Gmail « envoi seulement », ancien mot de passe signalé, page confidentialité |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 

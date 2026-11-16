@@ -11,6 +11,7 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Google (Théo), dans cet ordre** : 1) https://console.cloud.google.com/auth/branding (nom, e-mail, page d'accueil, https://gestion-locative-sci.pages.dev/confidentialite, domaine autorisé `gestion-locative-sci.pages.dev`) ; 2) https://console.cloud.google.com/auth/audience › Publier ; 3) activer https://console.cloud.google.com/apis/library/gmail.googleapis.com et https://console.cloud.google.com/apis/library/picker.googleapis.com ; 4) dans l'appli : se connecter avec Google, brancher Gmail, Débrancher puis Connecter le Drive, "Choisir mes documents". Ensuite : retirer le code de connexion par e-mail (dernier envoi Brevo) et le crochet `envoyer_code_auth`.
 - [ ] **Gmail (Théo)** : 1) activer l'API Gmail dans le projet Google Cloud (https://console.cloud.google.com/apis/library/gmail.googleapis.com) ; 2) Réglages › Envoi des e-mails › Continuer avec Google ; 3) supprimer l'ancien mot de passe d'application "Gestion SCI" (https://myaccount.google.com/apppasswords). Pour ouvrir l'appli aux inconnus : publier l'appli Google (https://console.cloud.google.com/auth/audience › Publier), sinon seuls les "utilisateurs test" peuvent brancher Gmail ou Drive.
 - [ ] **CAF Margottet – Fravelle** : prévenir la CAF du changement de propriétaire (l'allocation de 612 € part peut-être encore chez M. Loslier) et vérifier le loyer de novembre.
 - [ ] **Jeton Pennylane GTP** : le remplacer par un jeton en lecture seule (l'actuel peut modifier la compta).
@@ -30,6 +31,17 @@ Règle pour chaque session :
 - [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
 
 ## Historique
+
+### 16/11/2026 (nuit) — plus aucun e-mail par l'appli, connexion Google, Drive par le sélecteur Google (session du compte principal, demande de Théo)
+- **Plus aucun e-mail envoyé par un serveur commun (Brevo)**, sauf les codes de connexion de secours (voir plus bas). Chacun envoie depuis **son** Gmail branché (droit "envoyer" seulement) :
+  - documents, quittances, relances : `peutEnvoyer()` exige un Gmail branché ; sans Gmail, l'aperçu propose Partager / Ouvrir ma messagerie / SMS / WhatsApp + "Déjà envoyé autrement", et un lien "branche ton Gmail". `envoyerViaServeur` supprimé ; RPC `envoyer_mail` fermée à tous (`supabase/sans_brevo.sql`).
+  - résumé des loyers (1er et 5) et copie de sauvegarde du lundi : partent du Gmail de la personne, vers elle-même (fonctions `notifier` v4 et `sauvegarde` v5, helper `envoyerParGmail`). Sans Gmail : alerte sur le téléphone seulement / copie en pause.
+  - signalements (bouton ?) : gardés dans la table ; alerte au Gmail et au téléphone de l'administrateur (`admin_destinataire()`, notifier `{signalement}`).
+  - ⚠️ `notifier` et `sauvegarde` doivent rester en `verify_jwt=false` (appelées par les tâches planifiées) : `tests/deploy_fn.sh` le fait tout seul.
+- **Connexion "Continuer avec Google"** (jeton d'identité Google vérifié par Supabase, `signInWithIdToken` + nonce ; fournisseur Google activé côté Supabase avec l'ID client). Le code par e-mail reste en lien de secours ("Pas de compte Google ?") : c'est le **seul** envoi restant via Brevo. Le retirer quand la connexion Google est confirmée.
+- **Drive par le sélecteur officiel de Google** : droit `drive.file` au lieu de `drive.readonly` (plus d'audit de sécurité Google, plus d'écran "accès à tout le Drive"). L'appli ne connaît que les fichiers cochés (`S.sci.driveChoisis` : nom, type, lien). "Choisir mes documents" (Docs, Réglages) et "Ajouter un document › Choisir dans mon Google Drive" ouvrent le sélecteur (`ouvrirPicker`, `GOOGLE_PROJET` = 502656965437). Analyse et rangement automatique inchangés, sur les fichiers choisis. Fini : lecture des dossiers, "dossier = logement". Ancienne connexion (lecture de tout le Drive) signalée dans Réglages (Débrancher puis Connecter). Débrancher le Drive ou Gmail ne retire plus l'autorisation Google si l'autre est branché (sinon les deux sautaient).
+- Tests : test43 réécrit (sélecteur simulé) 15/15, test33 adapté 14/14, test36 (dossiers) supprimé, test31 (envoi serveur fermé) OK, test44 15/15 ; test5, 22, 26, 29, 38 OK. 25 tests coupent le vrai bouton Google (injoignable depuis la machine de test). Espaces de test restés supprimés. En ligne.
+- Pas vérifié en vrai (Google injoignable d'ici) : la connexion Google, le sélecteur Google, un envoi Gmail réel. Le sélecteur peut demander une clé d'API Google (`window.APP_GOOGLE_API_KEY`, pas encore posée) : à ajouter si Google la réclame.
 
 ### 16/11/2026 (soir) — loyers de Beauchamps, confidentialité (session du compte principal, demandes de Gaby et Théo)
 - **Loyers faux corrigés dans la vraie base** (Gaby : "pas précis") : 41 Margottet – Fravelle **612 €** (au lieu de 500), 43 Steve **515 €** (au lieu de 510). Preuves : prorata du notaire (244,80 € = 612 × 12/30 ; 206 € = 515 × 12/30), bordereau CAF de janvier 2026 (612 €), quittance de février 2026 de Steve (515 €). Modifiés : `loyerHC`, l'avenant n° 1 (loyer gardé), `loyerRef` du 41, plan de Steve (dette 315 € au lieu de 310). Anciennes valeurs : 500 / 510 / 310. L'appli acceptait déjà les centimes (cases à 0,01 €).

@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "03b414d", "date": "2026-11-16T17:59"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "dcd3bea", "date": "2026-11-16T18:10"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1296,7 +1296,7 @@ async function connecterGmail() {
     if (!GMCFG) { const r = await appelGmail({ action: "config" }, true); if (!r.ok || !r.j.pret) throw new Error("La connexion Google n'est pas installée sur le serveur."); GMCFG = r.j; }
     await chargerGIS();
   } catch (e) { fin(); toast(e.message || "Google n'a pas pu s'ouvrir."); return; }
-  const cl = google.accounts.oauth2.initCodeClient({ client_id: GMCFG.client_id, scope: GMCFG.scope, ux_mode: "popup", select_account: true,
+  const cl = google.accounts.oauth2.initCodeClient({ client_id: GMCFG.client_id, scope: GMCFG.scope, ux_mode: "popup", select_account: true, include_granted_scopes: false,
     callback: async r => {
       if (!r || !r.code) { fin(); toast("Connexion annulée."); return; }
       toast("Branchement de ton Gmail…");
@@ -2580,46 +2580,20 @@ function ajouterDocument(bienId, bailId, cat) {
     ${fld("Nom affiché (facultatif)", "nom", "", "text", "full")}`,
     d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast(drv ? "Choisis un fichier dans ton Drive ou sur ton téléphone." : "Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); });
 }
-/* Choisir des fichiers dans le Google Drive (dossiers, sous-dossiers, recherche) puis les copier dans l'appli */
-let PICK = null;
+/* Choisir des fichiers avec le sélecteur officiel de Google, puis les copier dans l'appli.
+   L'appli ne reçoit l'accès qu'aux fichiers cochés dans le sélecteur (droit "drive.file"), rien d'autre du Drive. */
 const qDrive = t => String(t).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-async function choisirFichierDrive(ctx, fil, q) {
-  if (ctx) PICK = { ctx, sel: new Map(), cat: ctx.cat || "Bail", bailId: ctx.bailId || "" };
-  if (!PICK) return;
-  fil = fil || []; q = (q || "").trim(); PICK.fil = fil; PICK.q = q;
-  const ici = fil[fil.length - 1]; let L = [];
-  toast(q ? "Recherche dans ton Drive…" : "Lecture de ton Drive…");
-  try {
-    if (q) L = (await driveListe(`name contains '${qDrive(q)}' and mimeType != '${DOSSIER}' and trashed = false`, 60));
-    else if (!ici) {
-      const choisis = dossiersDrive().map(d => ({ id: d.id, name: d.nom || "Dossier choisi", mimeType: DOSSIER, choisi: true }));
-      const [mes, partages] = await Promise.all([driveListe(`'root' in parents and trashed = false`, 300), driveListe(`sharedWithMe and mimeType = '${DOSSIER}' and trashed = false`, 100)]);
-      const vus = new Set(choisis.map(d => d.id)); L = [...choisis, ...mes.filter(x => !vus.has(x.id)), ...partages.filter(x => !vus.has(x.id))];
-    } else L = await driveListe(`'${ici.id}' in parents and trashed = false`, 500);
-  } catch (e) { toast(e.message); return; }
-  PICK.L = L;
-  const doss = L.filter(x => x.mimeType === DOSSIER), fics = L.filter(x => x.mimeType !== DOSSIER), bienId = PICK.ctx.bienId;
-  const ico = x => /pdf/.test(x.mimeType) ? "📄" : /image/.test(x.mimeType) ? "🖼️" : /document|word/.test(x.mimeType) ? "📝" : /sheet|excel/.test(x.mimeType) ? "📊" : "📎";
-  const nbSel = () => PICK.sel.size;
-  modal("Choisir dans ton Google Drive", `<div class="full row" style="gap:6px"><input id="pickQ" type="search" value="${esc(q)}" placeholder="Chercher : bail, DPE, facture, un nom…" style="flex:1;min-width:0" onkeydown="if(event.key==='Enter'){event.preventDefault();choisirFichierDrive(null,[],this.value)}" aria-label="Chercher dans ton Drive"><button type="button" class="small" onclick="choisirFichierDrive(null,[],document.getElementById('pickQ').value)">Chercher</button></div>
-    <div class="full fil-drive">${fil.length || q ? `<button type="button" class="small ghost" onclick="choisirFichierDrive(null,PICK.fil.slice(0,-1))">← Retour</button>` : ""}<span>${q ? "Résultats pour « " + esc(q) + " »" : ["Mon Drive", ...fil.map(x => x.nom)].map(esc).join(" › ")}</span></div>
-    <ul class="todo full pick-drive">${doss.map((x, i) => `<li><button type="button" class="pick-dos" onclick="choisirFichierDrive(null,PICK.fil.concat([{id:PICK.L.filter(y=>y.mimeType===DOSSIER)[${i}].id,nom:PICK.L.filter(y=>y.mimeType===DOSSIER)[${i}].name}]))"><span>📁 ${esc(x.name)}${x.choisi ? ` <span class="pill info">tes documents</span>` : ""}</span><span aria-hidden="true">›</span></button></li>`).join("")}
-      ${fics.map(x => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" ${PICK.sel.has(x.id) ? "checked" : ""} onchange="cocherFichierDrive('${x.id}',this.checked)"><span class="tx">${ico(x)} ${esc(x.name)}<small>${x.modifiedTime ? "modifié le " + fds(x.modifiedTime.slice(0, 10)) : ""}${x.size ? " · " + tailleTxt(+x.size) : ""}${S.fichiers.some(f => f.driveId === x.id && f.bienId === bienId) ? " · déjà ajouté" : ""}</small></span></label></li>`).join("")}
-      ${!doss.length && !fics.length ? `<li><span class="tx">${q ? "Aucun fichier trouvé." : "Ce dossier est vide."}</span></li>` : ""}</ul>
-    ${sel("Catégorie", "cat", PICK.cat, CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", PICK.bailId, concerne(bienId))}
-    <p class="full note" id="pickNb">${nbSel() ? nbSel() + " fichier" + (nbSel() > 1 ? "s" : "") + " choisi" + (nbSel() > 1 ? "s" : "") : "Coche un ou plusieurs fichiers. Touche un dossier pour l'ouvrir."}</p>`,
-    d => {
-      if (!PICK.sel.size) { toast("Coche au moins un fichier."); return false; }
-      const liste = [...PICK.sel.values()], ctx2 = { bienId, cat: d.cat, bailId: d.bailId }; PICK = null;
-      importerDepuisDrive(liste, ctx2);
-    }, { ok: "Ajouter les fichiers choisis" });
-  const f = document.getElementById("mform"); if (f) f.addEventListener("change", ev => { if (ev.target.name === "cat") PICK && (PICK.cat = ev.target.value); if (ev.target.name === "bailId") PICK && (PICK.bailId = ev.target.value); });
-}
-function cocherFichierDrive(id, oui) {
-  const x = PICK && PICK.L.find(y => y.id === id); if (!x) return;
-  if (oui) PICK.sel.set(id, x); else PICK.sel.delete(id);
-  const el = document.getElementById("pickNb"), n = PICK.sel.size;
-  if (el) el.textContent = n ? `${n} fichier${n > 1 ? "s" : ""} choisi${n > 1 ? "s" : ""}` : "Coche un ou plusieurs fichiers. Touche un dossier pour l'ouvrir.";
+async function choisirFichierDrive(ctx) {
+  if (!ctx) return;
+  closeOverlay();
+  let liste; try { liste = await ouvrirPicker("Choisis les documents à ajouter"); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
+  if (!liste.length) return;
+  memoriserChoisis(liste);
+  const bienId = ctx.bienId;
+  modal(`${liste.length} fichier${liste.length > 1 ? "s" : ""} choisi${liste.length > 1 ? "s" : ""}`, `<ul class="todo full pick-drive">${liste.map(x => `<li><span class="tx">${/pdf/.test(x.mimeType) ? "📄" : /image/.test(x.mimeType) ? "🖼️" : "📎"} ${esc(x.name)}</span></li>`).join("")}</ul>
+    ${sel("Catégorie", "cat", ctx.cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", ctx.bailId || "", concerne(bienId))}
+    <p class="full note">Ils sont copiés dans l'appli : tes associés pourront les ouvrir sans accès à ton Drive.</p>`,
+    d => { importerDepuisDrive(liste, { bienId, cat: d.cat, bailId: d.bailId }); }, { ok: "Ajouter" });
 }
 async function importerDepuisDrive(liste, ctx) {
   let ok = 0, liens = 0, deja = 0;
@@ -3425,7 +3399,7 @@ function pageReglages() {
       <textarea name="contacts" rows="4" placeholder="Cabinet Dupont ; Comptable ; compta@exemple.fr">${esc((s.contacts || []).map(c => [c.nom, c.role, c.email].join(" ; ")).join("\n"))}</textarea></label>
     </fieldset>
     ${estProprio() ? "" : "<!--"}<fieldset><legend>Ton dossier Google Drive</legend>
-      <p class="note full">Facultatif. Le plus simple : <a href="#" onclick="event.preventDefault();reglage('drive')">connecte ton Drive</a> et choisis le dossier dans la liste. Sinon, colle ici le lien du dossier pour l'ouvrir d'un geste depuis l'onglet <b>Docs</b>. Pour avoir le lien : ouvre le dossier dans Google Drive, touche <b>⋮</b> (ou clic droit sur le dossier), puis <b>Partager</b> › <b>Copier le lien</b>, et colle-le ici.</p>
+      <p class="note full">Facultatif. Le plus simple : <a href="#" onclick="event.preventDefault();reglage('drive')">connecte ton Drive</a> et choisis tes documents. Sinon, colle ici le lien du dossier pour l'ouvrir d'un geste depuis l'onglet <b>Docs</b>. Pour avoir le lien : ouvre le dossier dans Google Drive, touche <b>⋮</b> (ou clic droit sur le dossier), puis <b>Partager</b> › <b>Copier le lien</b>, et colle-le ici.</p>
       ${fld("Lien de ton dossier Google Drive", "drive", driveRacine() ? "https://drive.google.com/drive/folders/" + driveRacine() : "", "url", "full", 'placeholder="https://drive.google.com/drive/folders/…"')}
       ${SB ? "" : sel("Ranger chaque document généré dans le Drive", "archiveDrive", s.archiveDrive === false ? "0" : "1", [["1", "Oui (dossier « Documents générés par l'appli »)"], ["0", "Non"]], "full")}
     </fieldset>${estProprio() ? "" : "-->"}
@@ -3433,7 +3407,7 @@ function pageReglages() {
   </form>`);
   const compte = SB ? [sci,
     rubrique("membres", "👤", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
-    estProprio() ? rubrique("drive", "📁", "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · lecture seule` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
+    estProprio() ? rubrique("drive", "📁", "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · seulement les fichiers choisis` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
       : rubrique("drive", "📁", "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
     rubrique("banque", "🏦", "Banque", BANQUE.lien ? `Pennylane branché${BANQUE.lien.erreur ? " · ⚠️ à rebrancher" : ""}` : "Pas branchée · Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
@@ -3963,7 +3937,39 @@ async function indexerDrive() {
 /* ================= Google Drive branché dans l'appli installée (lecture seule) ================= */
 // La connexion est gardée sur le serveur (fonction "drive") : elle ne se perd pas en fermant l'appli.
 let DRIVEG = { etat: "inconnu" }, GCFG = null;
-const SCOPE_DRIVE = "openid email https://www.googleapis.com/auth/drive.readonly";
+const SCOPE_DRIVE = "openid email https://www.googleapis.com/auth/drive.file"; // seulement les fichiers choisis dans le sélecteur Google
+const GOOGLE_PROJET = "502656965437"; // numéro du projet Google Cloud (début de l'identifiant client)
+function chargerPicker() {
+  if (window.google && google.picker) return Promise.resolve();
+  return new Promise((ok, ko) => { const go = () => gapi.load("picker", { callback: ok, onerror: ko }); if (window.gapi) return go(); const sc = document.createElement("script"); sc.src = "https://apis.google.com/js/api.js"; sc.onload = go; sc.onerror = () => ko(new Error("Google ne répond pas.")); document.head.appendChild(sc); });
+}
+/* Sélecteur officiel de Google : la personne coche ses fichiers, l'appli ne reçoit que ceux-là */
+async function ouvrirPicker(titre, multi = true) {
+  if (DRIVEG.etat !== "oui") { connecterDrive(); throw new Error("Connecte d'abord ton Drive."); }
+  const jeton = await jetonDrive(); await chargerPicker();
+  return new Promise(fin => {
+    const P2 = google.picker;
+    const mon = new P2.DocsView(P2.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(false).setParent("root").setMode(P2.DocsViewMode.LIST);
+    const partages = new P2.DocsView(P2.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(false).setOwnedByMe(false).setMode(P2.DocsViewMode.LIST);
+    const recents = new P2.DocsView(P2.ViewId.RECENTLY_PICKED);
+    let b = new P2.PickerBuilder().addView(mon).addView(partages).addView(recents).setOAuthToken(jeton).setAppId(GOOGLE_PROJET).setLocale("fr").setTitle(titre).setOrigin(location.origin)
+      .setCallback(d => {
+        if (d[P2.Response.ACTION] === P2.Action.PICKED) fin((d[P2.Response.DOCUMENTS] || []).map(x => ({ id: x.id, name: x.name, mimeType: x.mimeType, size: +x.sizeBytes || 0, webViewLink: x.url, modifiedTime: x.lastEditedUtc ? new Date(x.lastEditedUtc).toISOString() : "", parent: x.parentId || "" })));
+        else if (d[P2.Response.ACTION] === P2.Action.CANCEL) fin([]);
+      });
+    if (multi) b = b.enableFeature(P2.Feature.MULTISELECT_ENABLED);
+    if (window.APP_GOOGLE_API_KEY) b = b.setDeveloperKey(window.APP_GOOGLE_API_KEY);
+    b.build().setVisible(true);
+  });
+}
+/* Liste des fichiers que le propriétaire a choisis (nom, type, lien) : c'est tout ce que l'appli connaît du Drive */
+const choisisDrive = () => S.sci.driveChoisis || [];
+function memoriserChoisis(liste) {
+  const L = choisisDrive().slice(), ids = new Set(L.map(f => f.id));
+  liste.forEach(x => { if (!ids.has(x.id)) { ids.add(x.id); L.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink || `https://drive.google.com/file/d/${x.id}/view`, modif: x.modifiedTime || "", taille: x.size || 0, parent: x.parent || "" }); } });
+  S.sci.driveChoisis = L; save();
+}
+function oublierChoisi(id) { S.sci.driveChoisis = choisisDrive().filter(f => f.id !== id); save(); DOCS = { etat: "vide", fichiers: [], dossiers: {} }; lectureDriveFond("dossier"); }
 async function fnDrive(action, extra) {
   const s = (await SB.auth.getSession()).data.session;
   const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/drive", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s && s.access_token) }, body: JSON.stringify(Object.assign({ action }, extra || {})) });
@@ -3976,20 +3982,18 @@ function chargerEtatDrive(user) {
     DRIVEG = g.data ? { etat: "oui", adresse: g.data.adresse } : { etat: "non" };
     if (pageCourante() === "docs" || pageCourante() === "reglages" || pageCourante() === "locataires") render();
     if (DRIVEG.etat === "oui") setTimeout(() => attendreRolePuisLire(), 1500);
+    if (DRIVEG.etat === "oui") jetonDrive().then(() => { if (DRIVEG.large && pageCourante() === "reglages") render(); }, () => {});
   }, () => { DRIVEG = { etat: "non" }; });
 }
 const texteDrive = () => `<div class="drive-explique">
   <p><b>✅ Ce que la connexion permet</b></p>
-  <ul><li>Lire la <b>liste</b> des fichiers des dossiers que tu choisis (noms, sous-dossiers, dates). Rien d'autre dans ton Drive.</li>
-  <li><b>Ranger tout seul</b> dans l'appli les documents dont elle est sûre (type et logement reconnus, ou dossier relié à un logement). Tu peux tout annuler d'un geste.</li>
-  <li>Te <b>proposer</b> les autres, et ce qu'il manque à compléter : tu valides avant qu'ils soient rangés.</li>
-  <li>Ouvrir un document du Drive d'un geste depuis l'appli.</li></ul>
+  <ul><li>Ouvrir le <b>sélecteur de Google</b> : tu coches toi-même les documents (bail, DPE, factures…). L'appli ne reçoit l'accès <b>qu'à ces fichiers-là</b>, jamais au reste de ton Drive.</li>
+  <li><b>Ranger tout seul</b> dans l'appli ceux dont elle est sûre (type et logement reconnus), et te <b>proposer</b> les autres et ce qu'il manque à compléter. Tu peux tout annuler d'un geste.</li>
+  <li>Copier un document choisi dans l'appli, pour que tes associés l'ouvrent sans accès à ton Drive.</li></ul>
   <p><b>🚫 Ce qu'elle ne permet pas</b></p>
-  <ul><li><b>Rien modifier</b> : l'appli ne peut ni créer, ni renommer, ni déplacer, ni supprimer quoi que ce soit dans ton Drive (lecture seule). "Ranger" se fait seulement dans l'appli.</li>
-  <li><b>Rien partager</b> : elle ne change aucun partage et n'envoie rien à personne.</li>
-  <li><b>Pas de copie</b> de tes fichiers : l'appli ne garde que le nom et le lien des documents rangés.</li>
-  <li>Tes associés <b>ne voient pas ton Drive</b> : ils voient seulement les documents rangés dans l'appli, et pour les ouvrir, il faut qu'ils aient déjà accès au fichier dans Google Drive.</li></ul>
-  <p class="note">Google va dire que l'appli peut "voir tous tes fichiers Google Drive" : c'est la seule autorisation qui permet de lire le contenu d'un dossier. En vrai, l'appli ne lit que les dossiers que tu choisis juste après. Tant que l'appli n'est pas vérifiée par Google, un écran "Google n'a pas validé cette application" peut s'afficher : touche <b>Paramètres avancés</b>, puis <b>Accéder à l'appli</b>.</p>
+  <ul><li><b>Voir le reste de ton Drive</b> : ni tes autres fichiers, ni le contenu de tes dossiers.</li>
+  <li><b>Rien modifier, rien partager</b> : elle ne renomme, ne déplace, ne supprime et ne partage rien dans ton Drive.</li></ul>
+  <p class="note">Tant que l'appli n'est pas vérifiée par Google, un écran "Google n'a pas validé cette application" peut s'afficher : touche <b>Paramètres avancés</b>, puis <b>Accéder à l'appli</b>.</p>
   <p class="note">Tu peux débrancher à tout moment : Réglages › Google Drive, ou depuis ton compte Google (Sécurité › Applications tierces).</p></div>`;
 function chargerGIS() {
   if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
@@ -4006,10 +4010,10 @@ function connecterDrive() {
   if (LECTURE) { toast("En lecture seule, tu ne peux pas brancher le Drive."); return; }
   let pret = false, erreur = "";
   preparerGoogle().then(() => { pret = true; }, e => { erreur = e.message; });
-  modal("Connecter ton Google Drive", `<p class="full drive-avant">⚠️ Google va dire que l'appli peut voir tout ton Drive. En vrai, elle ne lira que les dossiers que tu choisis juste après.</p><div class="full">${texteDrive()}</div>`, () => {
+  modal("Connecter ton Google Drive", `<div class="full">${texteDrive()}</div>`, () => {
     if (erreur) { toast(erreur); return false; }
     if (!pret) { toast("Un instant, Google se prépare…"); return false; }
-    const cl = google.accounts.oauth2.initCodeClient({ client_id: GCFG.client_id, scope: SCOPE_DRIVE, ux_mode: "popup", select_account: true,
+    const cl = google.accounts.oauth2.initCodeClient({ client_id: GCFG.client_id, scope: SCOPE_DRIVE, ux_mode: "popup", select_account: true, include_granted_scopes: false,
       callback: async r => {
         if (!r || !r.code) { toast("Connexion annulée."); return; }
         toast("Connexion au Drive…");
@@ -4019,7 +4023,7 @@ function connecterDrive() {
           if (S.sci.driveDebranche) { delete S.sci.driveDebranche; save(); }
           DOCS = { etat: "vide", fichiers: [], dossiers: {} }; closeOverlay();
           toast("✅ Drive connecté" + (j.adresse ? " : " + j.adresse : ""));
-          if (!dossiersDrive().length) choisirDossierDrive(); else { lectureDriveFond("connexion"); go("docs"); }
+          if (!choisisDrive().length) choisirDossierDrive(); else { lectureDriveFond("connexion"); go("docs"); }
         } catch (e) { toast(e.message); }
       },
       error_callback: e => toast(e && e.type === "popup_closed" ? "Connexion annulée." : "Google n'a pas pu s'ouvrir. Autorise les fenêtres pour ce site, puis réessaie.") });
@@ -4036,7 +4040,7 @@ function debrancherDrive() {
 }
 async function jetonDrive() {
   if (DRIVEG.jeton && Date.now() < DRIVEG.exp - 60000) return DRIVEG.jeton;
-  try { const j = await fnDrive("jeton"); DRIVEG.jeton = j.access_token; DRIVEG.exp = Date.now() + (j.expires_in || 3600) * 1000; return j.access_token; }
+  try { const j = await fnDrive("jeton"); DRIVEG.jeton = j.access_token; DRIVEG.exp = Date.now() + (j.expires_in || 3600) * 1000; DRIVEG.large = /drive\.readonly|auth\/drive( |$)/.test(j.scope || ""); return j.access_token; }
   catch (e) { if (/reconnecter/.test(e.message)) { DRIVEG = { etat: "non", perdu: true }; render(); throw new Error("La connexion à ton Drive s'est arrêtée : reconnecte-la."); } throw e; }
 }
 async function driveListe(q, max = 5000) {
@@ -4053,63 +4057,24 @@ async function driveListe(q, max = 5000) {
 const DOSSIER = "application/vnd.google-apps.folder";
 /* Les dossiers choisis : plusieurs possibles (S.sci.driveDossiers) ; l'ancien S.sci.driveId (un seul dossier) reste compris */
 const dossiersDrive = () => (S.sci.driveDossiers && S.sci.driveDossiers.length) ? S.sci.driveDossiers : (driveRacine() ? [{ id: driveRacine(), nom: "" }] : []);
-/* Lit tous les dossiers choisis et leurs sous-dossiers, sans doublon. Chaque fichier garde la liste de ses dossiers (ancetres). */
+/* Les documents connus = ceux choisis dans le sélecteur Google (aucune lecture des dossiers) */
 async function indexerDriveG(silencieux) {
-  const racines = dossiersDrive();
-  if (!racines.length) { DOCS = { etat: "dossier", fichiers: [], dossiers: {} }; if (!silencieux) render(); return DOCS; }
-  const D = DOCS = { etat: "chargement", fichiers: [], dossiers: {}, n: 0 }; if (!silencieux && pageCourante() === "docs") render();
-  const vus = new Set(), explores = new Set(), file = racines.map(r => ({ id: r.id, chemin: r.nom ? [r.nom] : [], ancetres: [r.id] }));
-  racines.forEach(r => { D.dossiers[r.id] = { titre: r.nom || "Dossier choisi", chemin: r.nom ? [r.nom] : [], ancetres: [], racine: true, lien: "https://drive.google.com/drive/folders/" + r.id }; });
-  try {
-    while (file.length && Object.keys(D.dossiers).length < 500) {
-      if (DOCS !== D) return D; // une nouvelle lecture a commencé entre-temps
-      const lot = file.splice(0, 4).filter(f => !explores.has(f.id)); lot.forEach(f => explores.add(f.id));
-      await Promise.all(lot.map(async f => {
-        (await driveListe(`'${f.id}' in parents and trashed = false`)).forEach(x => {
-          if (vus.has(x.id)) return; vus.add(x.id);
-          if (x.mimeType === DOSSIER) { if (!D.dossiers[x.id] || D.dossiers[x.id].racine) D.dossiers[x.id] = Object.assign({ titre: x.name, chemin: f.chemin.concat(x.name), lien: x.webViewLink, ancetres: f.ancetres }, D.dossiers[x.id] && D.dossiers[x.id].racine ? { racine: true } : {}); file.push({ id: x.id, chemin: f.chemin.concat(x.name), ancetres: f.ancetres.concat(x.id) }); }
-          else D.fichiers.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink, modif: x.modifiedTime, taille: +x.size || 0, chemin: f.chemin, parent: f.id, ancetres: f.ancetres });
-        });
-      }));
-      D.n = D.fichiers.length; if (!silencieux && DOCS === D && pageCourante() === "docs") render();
-    }
-    D.etat = "pret"; D.date = new Date();
-  } catch (e) { D.etat = "erreur"; D.err = e.message; }
-  if (DOCS === D && (!silencieux || pageCourante() === "docs")) render();
-  return D;
+  const L = choisisDrive();
+  if (!L.length) { DOCS = { etat: "dossier", fichiers: [], dossiers: {} }; if (!silencieux) render(); return DOCS; }
+  DOCS = { etat: "pret", date: new Date(), dossiers: {}, n: L.length, fichiers: L.map(f => ({ ...f, chemin: [], ancetres: [] })) };
+  if (!silencieux || pageCourante() === "docs") render();
+  return DOCS;
 }
-/* Choisir un ou plusieurs dossiers ; on peut descendre dans les sous-dossiers (fil = chemin parcouru) */
-let CHOIX_DRIVE = null, CHOIX_L = [];
-async function choisirDossierDrive(fil) {
-  if (!estProprio()) { toast(msgProprio("choisir les dossiers Drive de l'espace")); return; }
-  if (!Array.isArray(fil)) { fil = []; CHOIX_DRIVE = new Map(dossiersDrive().map(d => [d.id, d.nom || "Dossier déjà choisi"])); } // nouvelle ouverture : on part de ce qui est déjà choisi
-  const ici = fil[fil.length - 1];
-  let L;
-  try {
-    if (!ici) { const [mes, partages] = await Promise.all([driveListe(`'root' in parents and mimeType = '${DOSSIER}' and trashed = false`, 300), driveListe(`sharedWithMe and mimeType = '${DOSSIER}' and trashed = false`, 300)]); L = [...mes.map(d => [d, "Mon Drive"]), ...partages.map(d => [d, "Partagé avec moi"])]; }
-    else L = (await driveListe(`'${ici.id}' in parents and mimeType = '${DOSSIER}' and trashed = false`, 300)).map(d => [d, ""]);
-  } catch (e) { toast(e.message); return; }
-  CHOIX_L = L;
-  const nb = CHOIX_DRIVE.size, filTxt = ["Mon Drive", ...fil.map(x => x.nom)].map(esc).join(" › ");
-  modal("Quels dossiers contiennent les documents de tes locations ?", `<p class="full note">Coche un ou plusieurs dossiers (par exemple le dossier de chaque logement). L'appli lira seulement ces dossiers et leurs sous-dossiers. Touche <b>›</b> pour voir ce qu'il y a dedans.</p>
-    <div class="full fil-drive">${fil.length ? `<button type="button" class="small ghost" onclick="choisirDossierDrive(CHOIX_FIL.slice(0,-1))">← Retour</button>` : ""}<span>${filTxt}</span></div>
-    ${L.length ? `<ul class="todo full choix-dossier">${L.map(([d, ou], i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" ${CHOIX_DRIVE.has(d.id) ? "checked" : ""} onchange="cocherDossier(${i}, this.checked)"><span class="tx">📁 ${esc(d.name)}${ou ? `<small>${ou}</small>` : ""}</span></label><button type="button" class="small ghost" aria-label="Ouvrir ${esc(d.name)}" onclick="choisirDossierDrive(CHOIX_FIL.concat([{ id: CHOIX_L[${i}][0].id, nom: CHOIX_L[${i}][0].name }]))">›</button></li>`).join("")}</ul>` : `<p class="full note">Pas de sous-dossier ici.</p>`}
-    <p class="full note" id="choixNb">${nb ? `${nb} dossier${nb > 1 ? "s" : ""} coché${nb > 1 ? "s" : ""} : ${[...CHOIX_DRIVE.values()].map(esc).join(", ")}` : "Aucun dossier coché pour l'instant."}</p>`,
-    () => {
-      if (!CHOIX_DRIVE.size) { toast("Coche au moins un dossier."); return false; }
-      S.sci.driveDossiers = [...CHOIX_DRIVE].map(([id, nom]) => ({ id, nom })); S.sci.driveId = S.sci.driveDossiers[0].id; S.sci.driveGenId = "";
-      const noms = S.sci.driveDossiers.map(d => d.nom).join(", "); CHOIX_DRIVE = null;
-      DOCS = { etat: "vide", fichiers: [], dossiers: {} };
-      setTimeout(() => { lectureDriveFond("dossier"); go("docs"); }, 50);
-      toast("📁 Dossiers choisis : " + noms);
-    }, { ok: "Valider ces dossiers" });
-  window.CHOIX_FIL = fil;
-}
-function cocherDossier(i, oui) {
-  const d = CHOIX_L[i] && CHOIX_L[i][0]; if (!d) return;
-  if (oui) CHOIX_DRIVE.set(d.id, d.name); else CHOIX_DRIVE.delete(d.id);
-  const el = document.getElementById("choixNb"), nb = CHOIX_DRIVE.size;
-  if (el) el.textContent = nb ? `${nb} dossier${nb > 1 ? "s" : ""} coché${nb > 1 ? "s" : ""} : ${[...CHOIX_DRIVE.values()].join(", ")}` : "Aucun dossier coché pour l'instant.";
+/* Choisir ses documents (remplace l'ancien choix de dossiers) */
+async function choisirDossierDrive() {
+  if (!estProprio()) { toast(msgProprio("choisir les documents Drive de l'espace")); return; }
+  closeOverlay();
+  let liste; try { liste = await ouvrirPicker("Choisis les documents de tes locations (bail, DPE, factures…)"); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
+  if (!liste.length) return;
+  const avant = choisisDrive().length; memoriserChoisis(liste);
+  toast(`📁 ${choisisDrive().length - avant} document${choisisDrive().length - avant > 1 ? "s" : ""} ajouté${choisisDrive().length - avant > 1 ? "s" : ""} à la liste`);
+  DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+  setTimeout(() => { lectureDriveFond("dossier"); go("docs"); }, 50);
 }
 /* "Ce dossier = tel logement" : tout ce qui est dedans (et dans ses sous-dossiers) appartient à ce logement */
 function relierDossier(id, bienId) {
@@ -4161,7 +4126,7 @@ function sectionLotsAuto() {
 }
 /* Lecture du Drive en fond : à l'ouverture (1 fois par 24 h au plus), après un choix de dossier, un logement ou un locataire créé ou renommé */
 async function lectureDriveFond(raison) {
-  if (MCP || !SB || LECTURE || DRIVEG.etat !== "oui" || !estProprio() || !dossiersDrive().length) return 0;
+  if (MCP || !SB || LECTURE || DRIVEG.etat !== "oui" || !estProprio() || !choisisDrive().length) return 0;
   if (DOCS.etat === "chargement") return 0;
   const cle = "gestion-drive-lu-" + ESPACE;
   if (raison === "ouverture") { let t = 0; try { t = +localStorage.getItem(cle) || 0; } catch (e) {} if (Date.now() - t < 864e5) return 0; }
@@ -4172,13 +4137,13 @@ async function lectureDriveFond(raison) {
 }
 function apresModifDrive() { setTimeout(() => lectureDriveFond("modif"), 400); }
 function attendreRolePuisLire(n = 0) { if (MEMBRES) { lectureDriveFond("ouverture"); return; } if (n < 15) setTimeout(() => attendreRolePuisLire(n + 1), 1000); }
-const bandeauDrive = () => SB && !MCP && pageCourante() === "locataires" && estProprio() && dossiersDrive().length && !S.sci.driveDebranche && (DRIVEG.perdu || DRIVEG.etat === "non")
+const bandeauDrive = () => SB && !MCP && pageCourante() === "locataires" && estProprio() && choisisDrive().length && !S.sci.driveDebranche && (DRIVEG.perdu || DRIVEG.etat === "non")
   ? `<div class="banner"><span>⚠️ <span><b>Ton Drive s'est déconnecté</b>, reconnecte-le pour que tes documents continuent de se ranger.</span></span><button class="small primary" onclick="connecterDrive()">Reconnecter</button></div>` : "";
 function sectionDriveReglages() {
-  const ok = DRIVEG.etat === "oui", ds = dossiersDrive();
-  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}, en lecture seule.${ds.length ? ` Dossier${ds.length > 1 ? "s" : ""} lu${ds.length > 1 ? "s" : ""} : <b>${ds.map(d => esc(d.nom || "dossier choisi")).join(", ")}</b>.` : " Il reste à choisir les dossiers."}</p>` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
+  const ok = DRIVEG.etat === "oui", n = choisisDrive().length;
+  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}. L'appli voit seulement les ${n ? `<b>${n} document${n > 1 ? "s" : ""}</b> que tu as choisi${n > 1 ? "s" : ""}` : "documents que tu choisis (aucun pour l'instant)"}.</p>${DRIVEG.large ? `<p class="drive-avant">⚠️ Ton Drive est encore branché avec l'ancien accès (lecture de tout le Drive). Touche <b>Débrancher</b> puis <b>Connecter</b> pour ne donner accès qu'aux fichiers choisis.</p>` : ""}` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
     <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive()}</details>
-    <div class="row" style="margin-top:10px">${ok ? `<button class="small primary" onclick="choisirDossierDrive()">📁 ${ds.length ? "Changer les dossiers" : "Choisir les dossiers"}</button><button class="small" onclick="go('docs')">Voir ce qu'il a trouvé</button><button class="small ghost" onclick="debrancherDrive()">Débrancher</button>` : `<button class="small primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}</div>`;
+    <div class="row" style="margin-top:10px">${ok ? `<button class="small primary" onclick="choisirDossierDrive()">📁 ${n ? "Ajouter des documents" : "Choisir mes documents"}</button><button class="small" onclick="go('docs')">Voir ce qu'il a trouvé</button><button class="small ghost" onclick="debrancherDrive()">Débrancher</button>` : `<button class="small primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}</div>`;
 }
 /* Message avec plusieurs boutons (ex : Voir · Annuler) */
 function toastActions(msg, actions) {
@@ -4198,27 +4163,27 @@ function chercherDocs(q, racine) {
 const iconeFichier = f => /pdf/.test(f.type) ? "📕" : /image/.test(f.type) ? "🖼️" : /spreadsheet|excel|csv/.test(f.type) ? "📊" : /zip/.test(f.type) ? "🗜️" : /document|word/.test(f.type) ? "📝" : "📄";
 const tailleTxt = n => !n ? "" : n > 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1e3)) + " Ko";
 function ligneDoc(f) {
-  return `<li><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><a href="${esc(f.lien)}" target="_blank" rel="noopener">${esc(f.titre)}</a><small>${esc(f.chemin.join(" › ") || "Racine")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}${f.taille ? " · " + tailleTxt(f.taille) : ""}</small></span><button class="small" onclick="envoyerFichier('${f.id}')">Envoyer</button></li>`;
+  return `<li><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><a href="${esc(f.lien)}" target="_blank" rel="noopener">${esc(f.titre)}</a><small>${esc(f.chemin.join(" › ") || "Ton Drive")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}${f.taille ? " · " + tailleTxt(f.taille) : ""}</small></span><button class="small" onclick="envoyerFichier('${f.id}')">Envoyer</button></li>`;
 }
 function pageDocs() {
   const ouvrirDrive = driveRacine() ? `<a class="btn" href="https://drive.google.com/drive/folders/${esc(driveRacine())}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a>` : "";
   if (!MCP && SB && !estProprio()) return `<div class="head"><div><h1>Documents</h1><p>Les documents de l'espace sont rangés dans chaque logement.</p></div></div>
     <section class="card"><h2>📁 Le Drive de l'espace</h2><p class="note">Le Drive est géré par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>) : lui seul le connecte et range les documents, pour que tout reste au bon endroit. Tu retrouves tout dans chaque logement et chaque locataire. Il te manque un document ? Demande-lui de le ranger, ou ajoute-le toi-même depuis la fiche du logement.</p>
     <div class="row" style="margin-top:10px"><a class="btn primary" href="#biens">Voir les logements</a>${ouvrirDrive}</div></section>`;
-  if (!MCP && SB && DRIVEG.etat !== "oui") return `<div class="head"><div><h1>Documents</h1><p>Tes documents restent dans ton Google Drive. L'appli peut les lire pour te proposer où les ranger.</p></div></div>
+  if (!MCP && SB && DRIVEG.etat !== "oui") return `<div class="head"><div><h1>Documents</h1><p>Tes documents restent dans ton Google Drive. L'appli lit seulement ceux que tu choisis, pour te proposer où les ranger.</p></div></div>
     <section class="card drive-co"><h2>📁 Connecte ton Google Drive</h2>
-    ${DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : `<p class="note">L'appli parcourt le dossier de tes locations et te propose de ranger chaque document au bon endroit (bail, diagnostics, taxe foncière…). Tu valides avant que quoi que ce soit soit rangé.</p>`}
+    ${DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : `<p class="note">Tu choisis tes documents dans le sélecteur de Google (bail, diagnostics, taxe foncière…) : l'appli te propose de ranger chacun au bon endroit. Elle ne voit rien d'autre de ton Drive.</p>`}
     <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive()}</details>
     <div class="row" style="margin-top:12px">${DRIVEG.etat === "inconnu" ? `<button disabled>Un instant…</button>` : `<button class="primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}${ouvrirDrive}</div></section>`;
-  if (!MCP && SB && !dossiersDrive().length) return `<div class="head"><div><h1>Documents</h1><p>✅ Drive connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""}.</p></div></div>
-    <div class="empty party">📁 <span>Choisis le ou les dossiers qui contiennent les documents de tes locations.</span><button class="primary" onclick="choisirDossierDrive()">Choisir les dossiers</button></div>`;
+  if (!MCP && SB && !choisisDrive().length) return `<div class="head"><div><h1>Documents</h1><p>✅ Drive connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""}.</p></div></div>
+    <div class="empty party">📁 <span>Choisis dans ton Drive les documents de tes locations (bail, DPE, factures…). L'appli ne verra que ceux-là.</span><button class="primary" onclick="choisirDossierDrive()">Choisir mes documents</button></div>`;
   if (!MCP && !SB) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") { DOCS.etat = "attente"; setTimeout(indexerDrive, 0); }
   const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort(); RACINES = ["", ...racines];
   const q = view.docQ || "", r = view.docRacine || "", res = chercherDocs(q, r), lim = view.docLim || 40;
   const lien = `https://drive.google.com/drive/folders/${driveRacine()}`;
   return `<div class="head"><div><h1>Documents</h1><p>Le Drive ${estPerso() ? "de tes locations" : "de la SCI"}, rangé et cherchable. <a href="${lien}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a></p></div>
-    <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button>${!MCP ? `<button class="small ghost" onclick="choisirDossierDrive()">📁 Changer les dossiers</button>` : ""}</div></div>
+    <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button>${!MCP ? `<button class="small ghost" onclick="choisirDossierDrive()">📁 Ajouter des documents</button>` : ""}</div></div>
   ${!MCP ? sectionLotsAuto() + sectionDossiersLogements() : ""}
   ${sectionPropositionsDrive()}
   <form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="Chercher : bail, Kbis, taxe, nom d'un locataire…" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>
@@ -5019,10 +4984,10 @@ function pageLegal() {
   const b = (t, x) => `<section class="card aide"><h2>${t}</h2>${x}</section>`;
   return `<div><a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>Mentions légales et confidentialité</h1><p>Ce qu'on fait de tes données, en clair.</p></div></div></div><div class="stack">
   ${b("📌 Qui fait l'appli", `<p>${EDITEUR.nom ? `Éditeur : ${esc(EDITEUR.nom)}${EDITEUR.contact ? " · " + esc(EDITEUR.contact) : ""}.` : "Appli de gestion locative indépendante."} Pour toute question : bouton <b>?</b> en bas à droite de l'écran (une fois connecté).</p><p>Hébergement de l'appli : Cloudflare, Inc. (Cloudflare Pages). Données : Supabase, serveurs situés en Irlande (Union européenne).</p>`)}
-  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : l'autorisation d'<b>envoyer</b> depuis ton Gmail (Google ne donne pas le droit de lire tes e-mails ; rangée dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane (clé en lecture seule, rangée dans un coffre chiffré : l'appli refuse une clé qui pourrait modifier ta compta).</li><li>Si tu connectes ton Google Drive : l'autorisation de lecture (rangée dans un coffre chiffré) et ton adresse Google. Google parle d'un accès à tout ton Drive, mais l'appli ne lit que la liste des fichiers des dossiers que tu choisis (et de leurs sous-dossiers), en lecture seule. Elle ne garde que le nom et le lien des documents rangés (par toi, ou tout seuls quand elle est sûre du type et du logement, avec Annuler). Elle ne copie pas tes fichiers et ne modifie rien dans ton Drive.</li></ul>`)}
+  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : l'autorisation d'<b>envoyer</b> depuis ton Gmail (Google ne donne pas le droit de lire tes e-mails ; rangée dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane (clé en lecture seule, rangée dans un coffre chiffré : l'appli refuse une clé qui pourrait modifier ta compta).</li><li>Si tu connectes ton Google Drive : l'autorisation (rangée dans un coffre chiffré), ton adresse Google, et le nom et le lien des seuls fichiers que tu choisis dans le sélecteur de Google. L'appli ne voit pas le reste de ton Drive et n'y modifie rien. Les documents que tu ajoutes à un logement sont copiés dans l'appli pour tes associés.</li></ul>`)}
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
-  ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, ton Drive en lecture seule.</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
-  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lister les fichiers des dossiers Drive que tu choisis (lecture seule). Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
+  ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne voit de ton Drive que les fichiers que tu choisis.</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
+  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les fichiers Drive que tu choisis dans le sélecteur de Google. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
   ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}
   ${b("🍪 Cookies", `<p>Aucun cookie publicitaire ni de mesure d'audience. L'appli garde seulement sur ton appareil ce qui sert à rester connecté et à fonctionner sans réseau.</p>`)}

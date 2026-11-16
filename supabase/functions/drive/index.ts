@@ -1,4 +1,4 @@
-// Connexion Google Drive en lecture seule, gardée sur le serveur.
+// Connexion Google Drive gardée sur le serveur. Droit "drive.file" : seulement les fichiers choisis dans le sélecteur de Google.
 // L'appli n'a jamais la clé de renouvellement : elle demande ici un jeton valable 1 heure, puis lit le Drive elle-même.
 // Secrets : GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -41,12 +41,14 @@ Deno.serve(async (req) => {
         if (j.error === "invalid_grant") await admin.rpc("drive_oublier", { u: moi });
         return rep({ erreur: "reconnecter" }, 400);
       }
-      return rep({ ok: true, access_token: j.access_token, expires_in: j.expires_in || 3600 });
+      return rep({ ok: true, access_token: j.access_token, expires_in: j.expires_in || 3600, scope: j.scope || "" });
     }
 
     if (c.action === "debrancher") {
       const { data: rt } = await admin.rpc("drive_secret", { u: moi });
-      if (rt) await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(rt), { method: "POST" }).catch(() => {});
+      // Retirer l'accès chez Google retire toute l'autorisation de l'appli (Gmail compris) : seulement si Gmail n'est pas branché avec Google
+      const { data: gm } = await admin.from("gmail_comptes").select("mode").eq("user_id", moi).maybeSingle();
+      if (rt && gm?.mode !== "google") await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(rt), { method: "POST" }).catch(() => {});
       await admin.rpc("drive_oublier", { u: moi });
       return rep({ ok: true });
     }
