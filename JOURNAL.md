@@ -33,6 +33,14 @@ Règle pour chaque session :
 
 ## Historique
 
+### 16/11/2026 (23 h) — page Documents refaite en explorateur
+- Retour de Théo : on ne pouvait pas ajouter de dossier (bouton caché derrière "Dossiers connectés"), "Ouvrir" bloquait dans GTP Invest sans pouvoir remonter, et toucher un fichier n'offrait aucun moyen de le retirer.
+- Nouvelle page (appli installée) : carte **Mes dossiers Drive** toujours visible (nombre de fichiers par dossier, + Ajouter des dossiers / des fichiers). On entre dans un dossier (+ Choisir des fichiers ici, Ouvrir dans Drive, Retirer ce dossier avec confirmation) et on en ressort par "← Tous mes dossiers".
+- Toucher un fichier ouvre ses actions : Ouvrir, Ranger dans un logement (logement deviné), Envoyer par e-mail (marche maintenant hors claude.ai), Retirer de l'appli (le fichier reste dans le Drive). La ligne indique où il est déjà rangé.
+- Sélecteur Google : onglets "ce dossier", **Mon Drive** (pour remonter tout en haut), "Partagés avec moi", "Drives partagés". Les fichiers choisis depuis un dossier restent groupés sous ce dossier, même pris dans un sous-dossier.
+- `envoyer-gmail` (v10) : la pièce jointe garde son vrai type (photo, Word…) au lieu de toujours "PDF".
+- Tests : test45 (nouveau) 25/25, test43 adapté 24/24, test33, test44, test5, test22, test26 OK.
+
 ### 16/11/2026 (22 h) — nom de domaine à soi
 - Google refuse une page d'accueil sur une adresse partagée (`pages.dev`). Théo a acheté **sci-gestion-locative.com** chez Cloudflare (`gestion-locative-sci.com` était pris) et créé les 2 CNAME (`@` et `www` vers `gestion-locative-sci.pages.dev`).
 - Domaine rattaché au projet Pages (API) : actif. Vérifié en se faisant passer pour Googlebot : `/`, `/presentation`, `/confidentialite`, le fichier de preuve Google et `/robots.txt` répondent 200 sur les deux adresses.

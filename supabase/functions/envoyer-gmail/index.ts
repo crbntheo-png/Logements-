@@ -19,13 +19,13 @@ async function google(params: Record<string, string>) {
 const enTete = (s: string) => /^[\x20-\x7e]*$/.test(s) ? s : "=?UTF-8?B?" + b64(new TextEncoder().encode(s)) + "?=";
 function b64(u8: Uint8Array) { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); }
 const lignes76 = (s: string) => s.replace(/.{1,76}/g, "$&\r\n");
-function mime(de: string, a: string[], objet: string, texte: string, pj?: { nom: string; b64: string }) {
+function mime(de: string, a: string[], objet: string, texte: string, pj?: { nom: string; b64: string; type?: string }) {
   const f = "f" + crypto.randomUUID().replace(/-/g, "");
   const corps = lignes76(b64(new TextEncoder().encode(texte || "")));
   const tete = [`From: ${de}`, `To: ${a.join(", ")}`, `Subject: ${enTete(objet || "")}`, "MIME-Version: 1.0"];
   const msg = !pj ? [...tete, 'Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", corps].join("\r\n")
     : [...tete, `Content-Type: multipart/mixed; boundary="${f}"`, "", `--${f}`, 'Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", corps,
-      `--${f}`, `Content-Type: application/pdf; name="${enTete(pj.nom)}"`, `Content-Disposition: attachment; filename="${enTete(pj.nom)}"`, "Content-Transfer-Encoding: base64", "", lignes76(pj.b64.replace(/\s+/g, "")), `--${f}--`, ""].join("\r\n");
+      `--${f}`, `Content-Type: ${pj.type || "application/pdf"}; name="${enTete(pj.nom)}"`, `Content-Disposition: attachment; filename="${enTete(pj.nom)}"`, "Content-Transfer-Encoding: base64", "", lignes76(pj.b64.replace(/\s+/g, "")), `--${f}--`, ""].join("\r\n");
   return b64(new TextEncoder().encode(msg)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
@@ -70,19 +70,20 @@ Deno.serve(async (req) => {
     const a = (c.a || []).filter((x: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
     if (!a.length) return rep({ erreur: "Destinataire manquant" }, 400);
     const de = c.nom ? `${enTete(String(c.nom).replace(/["\r\n]/g, ""))} <${s.adresse}>` : s.adresse;
+    const typePj = /^[\w.+-]+\/[\w.+-]+$/.test(String(c.type_fichier || "")) ? String(c.type_fichier) : "application/pdf";
     let id = "";
     if (s.rt) {
       const { ok, j } = await google({ refresh_token: s.rt, grant_type: "refresh_token" });
       if (!ok || !j.access_token) return rep({ erreur: j.error === "invalid_grant" ? "La connexion à ton Gmail s'est arrêtée : rebranche-la (Réglages › Envoi des e-mails)." : "Google ne répond pas, réessaie." }, 400);
       const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", { method: "POST", headers: { Authorization: "Bearer " + j.access_token, "Content-Type": "application/json" },
-        body: JSON.stringify({ raw: mime(de, a, c.objet || "", c.texte || "", c.pdf_base64 ? { nom: c.nom_fichier || "document.pdf", b64: c.pdf_base64 } : undefined) }) });
+        body: JSON.stringify({ raw: mime(de, a, c.objet || "", c.texte || "", c.pdf_base64 ? { nom: c.nom_fichier || "document.pdf", b64: c.pdf_base64, type: typePj } : undefined) }) });
       const jr = await r.json().catch(() => ({}));
       if (!r.ok) return rep({ erreur: "Gmail a refusé l'envoi (" + (jr?.error?.message || r.status) + ")" }, 400);
       id = jr.id || "";
     } else {
       const tr = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user: s.adresse, pass: String(s.mdp || "").replace(/\s+/g, "") } });
       const info = await tr.sendMail({ from: c.nom ? `"${String(c.nom).replace(/"/g, "")}" <${s.adresse}>` : s.adresse, to: a.join(", "), subject: c.objet || "", text: c.texte || "",
-        attachments: c.pdf_base64 ? [{ filename: c.nom_fichier || "document.pdf", content: c.pdf_base64, encoding: "base64", contentType: "application/pdf" }] : [] });
+        attachments: c.pdf_base64 ? [{ filename: c.nom_fichier || "document.pdf", content: c.pdf_base64, encoding: "base64", contentType: typePj }] : [] });
       id = info.messageId;
     }
     await admin.from("envois").insert({ espace_id: c.espace, par: u.user.id, destinataires: a, objet: c.objet, requete_id: null });

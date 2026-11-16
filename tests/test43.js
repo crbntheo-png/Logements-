@@ -59,16 +59,15 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.evaluate(() => dossiersChoisis().map(d => d.nom).join(',')) === 'Studio Rennes,Compta', '2 dossiers cochés d\u2019un coup');
   t(await p.evaluate(() => DOCS.etat === 'pret' && DOCS.fichiers.length === 2 && DOCS.fichiers.some(f => f.chemin.join('/') === 'Studio Rennes/Diagnostics')), 'contenu lu, sous-dossiers compris');
   await p.evaluate(() => render()); await p.waitForTimeout(400); await p.screenshot({ path: __dirname + '/b43-dossiers.png', fullPage: true });
-  t(await p.isVisible('text=Ouvrir « Compta »'), 'dossier fermé par Google : bouton pour l\u2019ouvrir et toucher ses fichiers');
+  t(await p.isVisible('.lr-main:has-text("Compta") >> text=touche pour choisir'), 'dossier fermé par Google : invite à l\u2019ouvrir et toucher ses fichiers');
   await p.evaluate(() => { window.__picker = [{ id: 'c1', name: 'Facture plombier.pdf', mimeType: 'application/pdf', parent: 'dosB' }]; });
-  await p.click('text=Ouvrir « Compta »'); await p.waitForTimeout(1500);
+  await p.click('.lr-main:has-text("Compta")'); await p.waitForTimeout(300); await p.click('button:has-text("+ Choisir des fichiers ici")'); await p.waitForTimeout(1500);
   t(await p.evaluate(() => window.__args[3] === 'dosB' && DOCS.fichiers.some(f => f.titre === 'Facture plombier.pdf' && f.chemin[0] === 'Compta')), 'le sélecteur s\u2019ouvre dans le dossier, les fichiers touchés y sont rangés');
   t(await p.evaluate(() => SCOPE_DRIVE.endsWith('drive.file') && !document.documentElement.innerHTML.includes('auth/drive.readonly')), 'jamais de demande d\u2019accès large au Drive');
-  // revenir dessus : voir la liste, ajouter, retirer
-  await p.click('button:has-text("Dossiers connectés")'); await p.waitForTimeout(300);
-  t(await p.isVisible('text=+ Ajouter des dossiers') && await p.isVisible('li:has-text("Compta") button:has-text("Retirer")'), 'liste des dossiers connectés avec + et Retirer');
-  await p.click('li:has-text("Compta") button:has-text("Retirer")'); await p.waitForTimeout(1500);
-  t(await p.evaluate(() => dossiersChoisis().length === 1 && !(DOCS.vides || []).length), 'dossier retiré, plus d\u2019alerte');
+  // revenir dessus : ajouter, retirer
+  t(await p.isVisible('button:has-text("Retirer ce dossier")'), 'dans le dossier : Retirer ce dossier');
+  await p.click('button:has-text("Retirer ce dossier")'); await p.waitForTimeout(200); await p.click('#cyes'); await p.waitForTimeout(1500);
+  t(await p.evaluate(() => dossiersChoisis().length === 1) && await p.isVisible('text=+ Ajouter des dossiers'), 'dossier retiré, retour à la liste avec + Ajouter');
   await p.evaluate(() => { window.__picker = [{ id: 'dosA', name: 'Studio Rennes', mimeType: 'application/vnd.google-apps.folder' }]; }); await p.evaluate(() => choisirDossierDrive()); await p.waitForTimeout(800);
   t(await p.evaluate(() => dossiersChoisis().length === 1), 'pas de doublon en recochant le même dossier');
   await p.evaluate(() => reglage('drive')); await p.waitForTimeout(400);

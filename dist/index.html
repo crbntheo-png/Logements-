@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "328c4d3", "date": "2026-11-16T20:13"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "4616cd4", "date": "2026-11-16T22:29"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -224,6 +224,10 @@ details.rgl { scroll-margin-top: 76px; }
 .lr-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-left: 56px; }
 .lr-acts.sans-av { padding-left: 0; }
 .lr-total { display: flex; justify-content: space-between; padding: 12px 14px; background: var(--surface-2); font-weight: 750; }
+.doc-l { cursor: pointer; } .doc-l .tx b { font-weight: 600; overflow-wrap: anywhere; } .doc-l:active { background: var(--surface-2); }
+.doc-plus { margin-left: auto; padding: 4px 10px; font-size: 20px; color: var(--muted); }
+.actions-doc { display: flex; flex-direction: column; gap: 8px; } .actions-doc > * { width: 100%; justify-content: flex-start; text-align: left; }
+.docs-actions { margin: 4px 0 14px; flex-wrap: wrap; }
 .lr .ico-cat { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
 .bad-txt { color: var(--bad, #c0392b); }
 .lr-plus { width: 100%; margin-top: -4px; }
@@ -1275,7 +1279,7 @@ async function appelGmail(corps, brut) {
 }
 async function envoyerViaGmail({ to, objet, corps, pieces }) {
   const p = pieces[0];
-  const r = await appelGmail({ espace: ESPACE, a: to, objet, texte: corps, nom: estPerso() ? S.sci.gerant || "" : S.sci.nom || "", nom_fichier: p ? p.nom : null, pdf_base64: p ? p.b64 : null });
+  const r = await appelGmail({ espace: ESPACE, a: to, objet, texte: corps, nom: estPerso() ? S.sci.gerant || "" : S.sci.nom || "", nom_fichier: p ? p.nom : null, pdf_base64: p ? p.b64 : null, type_fichier: p ? p.type || "application/pdf" : null });
   if (!r.ok) toast("L'e-mail n'est pas parti : " + r.erreur);
   return r.ok;
 }
@@ -3949,9 +3953,12 @@ async function ouvrirPicker(titre, multi = true, dossiers = false, parent = "") 
   const jeton = await jetonDrive(); await chargerPicker();
   return new Promise(fin => {
     const P2 = google.picker;
-    const vue = () => { const v = new P2.DocsView(P2.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(dossiers).setMode(P2.DocsViewMode.LIST); if (dossiers) v.setMimeTypes(DOSSIER); return v; };
-    const mon = vue().setParent(parent || "root"), partages = vue().setOwnedByMe(false);
-    let b = new P2.PickerBuilder().addView(mon).addView(partages);
+    const vue = (nom) => { const v = new P2.DocsView(P2.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(dossiers).setMode(P2.DocsViewMode.LIST); if (dossiers) v.setMimeTypes(DOSSIER); if (nom && v.setLabel) v.setLabel(nom); return v; };
+    const d = parent && dossiersChoisis().find(x => x.id === parent);
+    let b = new P2.PickerBuilder();
+    if (parent) b = b.addView(vue(d ? d.nom : "Ce dossier").setParent(parent)); // on commence dans le dossier…
+    b = b.addView(vue("Mon Drive").setParent("root")).addView(vue("Partagés avec moi").setOwnedByMe(false)); // …mais on peut toujours remonter tout en haut
+    try { b = b.addView(vue("Drives partagés").setEnableDrives(true)); } catch (e) {}
     if (!dossiers) b = b.addView(new P2.DocsView(P2.ViewId.RECENTLY_PICKED));
     b = b.setOAuthToken(jeton).setAppId(GOOGLE_PROJET).setLocale("fr").setTitle(titre).setOrigin(location.origin)
       .setCallback(d => {
@@ -3966,9 +3973,13 @@ async function ouvrirPicker(titre, multi = true, dossiers = false, parent = "") 
 /* Liste des fichiers que le propriétaire a choisis (nom, type, lien) : c'est tout ce que l'appli connaît du Drive */
 const choisisDrive = () => S.sci.driveChoisis || [];
 const rienChoisi = () => !(S.sci.driveDossiers || []).length && !(S.sci.driveChoisis || []).length;
-function memoriserChoisis(liste) {
+function memoriserChoisis(liste, dossier) {
   const L = choisisDrive().slice(), ids = new Set(L.map(f => f.id));
-  liste.forEach(x => { if (!ids.has(x.id)) { ids.add(x.id); L.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink || `https://drive.google.com/file/d/${x.id}/view`, modif: x.modifiedTime || "", taille: x.size || 0, parent: x.parent || "" }); } });
+  liste.forEach(x => {
+    if (ids.has(x.id)) { if (dossier) L.find(f => f.id === x.id).dossier = dossier; return; }
+    ids.add(x.id); L.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink || `https://drive.google.com/file/d/${x.id}/view`, modif: x.modifiedTime || "", taille: x.size || 0, parent: x.parent || "", dossier: dossier || "" });
+  });
+  if (S.sci.driveMasques) S.sci.driveMasques = S.sci.driveMasques.filter(id => !ids.has(id) || !liste.some(x => x.id === id)); // re-choisi : il réapparaît
   S.sci.driveChoisis = L; save();
 }
 function oublierChoisi(id) { S.sci.driveChoisis = choisisDrive().filter(f => f.id !== id); save(); DOCS = { etat: "vide", fichiers: [], dossiers: {} }; lectureDriveFond("dossier"); }
@@ -4078,12 +4089,15 @@ async function indexerDriveG(silencieux) {
         L.forEach(x => {
           if (vus.has(x.id)) return; vus.add(x.id);
           if (x.mimeType === DOSSIER) { if (!D.dossiers[x.id]) D.dossiers[x.id] = { titre: x.name, chemin: f.chemin.concat(x.name), lien: x.webViewLink, ancetres: f.ancetres }; file.push({ id: x.id, racine: f.racine, chemin: f.chemin.concat(x.name), ancetres: f.ancetres.concat(x.id) }); }
-          else D.fichiers.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink, modif: x.modifiedTime, taille: +x.size || 0, chemin: f.chemin, parent: f.id, ancetres: f.ancetres });
+          else D.fichiers.push({ id: x.id, titre: x.name, type: x.mimeType, lien: x.webViewLink, modif: x.modifiedTime, taille: +x.size || 0, chemin: f.chemin, parent: f.id, ancetres: f.ancetres, racine: f.racine });
         });
       }));
       D.n = D.fichiers.length; if (!silencieux && DOCS === D && pageCourante() === "docs") render();
     }
-    seuls.forEach(f => { if (!vus.has(f.id)) { vus.add(f.id); const d = racines.find(r => r.id === f.parent); D.fichiers.push({ ...f, chemin: d ? [d.nom || "Dossier"] : [], ancetres: d ? [d.id] : [] }); } });
+    seuls.forEach(f => { const d = racines.find(r => r.id === (f.dossier || f.parent));
+      if (vus.has(f.id)) { const x = D.fichiers.find(y => y.id === f.id); if (x && d && !x.racine) Object.assign(x, { racine: d.id, chemin: [d.nom || "Dossier"] }); return; }
+      vus.add(f.id); D.fichiers.push({ ...f, chemin: d ? [d.nom || "Dossier"] : [], ancetres: d ? [d.id] : [], racine: d ? d.id : "" }); });
+    const caches = new Set(S.sci.driveMasques || []); D.fichiers = D.fichiers.filter(f => !caches.has(f.id));
     D.vides = racines.filter(r => !parRacine[r.id]).map(r => r.nom || "Dossier"); // Google n'a rien montré à l'intérieur
     D.etat = "pret"; D.date = new Date(); D.n = D.fichiers.length;
   } catch (e) { D.etat = "erreur"; D.err = e.message; }
@@ -4109,13 +4123,22 @@ async function choisirFichiersDrive(parent) {
   closeOverlay();
   let liste; try { liste = await ouvrirPicker(parent ? "Touche chaque fichier à garder (ils passent en bleu), puis Sélectionner" : "Coche des fichiers (bail, DPE, factures…)", true, false, parent || ""); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
   if (!liste.length) return;
-  memoriserChoisis(liste); DOCS = { etat: "vide", fichiers: [], dossiers: {} };
+  memoriserChoisis(liste.filter(x => x.mimeType !== DOSSIER), parent || "");
+  const dos = liste.filter(x => x.mimeType === DOSSIER);
+  if (dos.length) { const L = dossiersChoisis().slice(); dos.forEach(x => { if (!L.some(d => d.id === x.id)) L.push({ id: x.id, nom: x.name }); }); S.sci.driveDossiers = L; save(); }
+  const n = liste.length - dos.length;
+  toast(n ? `✓ ${n} fichier${n > 1 ? "s" : ""} ajouté${n > 1 ? "s" : ""}` : "Aucun fichier choisi.");
+  if (parent) view.docDossier = parent;
+  DOCS = { etat: "vide", fichiers: [], dossiers: {} };
   setTimeout(() => { lectureDriveFond("dossier"); go("docs"); }, 50);
 }
-function retirerDossierDrive(id) {
+function retirerDossierDrive(id, ok) {
   if (!estProprio()) return;
   const d = dossiersChoisis().find(x => x.id === id);
-  S.sci.driveDossiers = dossiersChoisis().filter(x => x.id !== id); save();
+  if (!ok) return confirmer(`Retirer le dossier "${d ? d.nom : "Dossier"}" de l'appli ? Il reste dans ton Drive, et les documents déjà rangés dans tes logements restent aussi.`, () => retirerDossierDrive(id, true));
+  S.sci.driveDossiers = dossiersChoisis().filter(x => x.id !== id);
+  S.sci.driveChoisis = choisisDrive().filter(f => (f.dossier || f.parent) !== id); save(); // ses fichiers partent avec lui
+  if (view.docDossier === id) view.docDossier = "";
   DOCS = { etat: "vide", fichiers: [], dossiers: {} }; lectureDriveFond("dossier"); render();
   toast(`"${d ? d.nom : "Dossier"}" retiré. Les documents déjà rangés restent dans l'appli.`);
 }
@@ -4215,6 +4238,7 @@ function chercherDocs(q, racine) {
 const iconeFichier = f => /pdf/.test(f.type) ? "📕" : /image/.test(f.type) ? "🖼️" : /spreadsheet|excel|csv/.test(f.type) ? "📊" : /zip/.test(f.type) ? "🗜️" : /document|word/.test(f.type) ? "📝" : "📄";
 const tailleTxt = n => !n ? "" : n > 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1e3)) + " Ko";
 function ligneDoc(f) {
+  if (!MCP) { const ou = rangeOu(f.id); return `<li class="doc-l" onclick="actionsDoc('${f.id}')" role="button" tabindex="0"><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><b>${esc(f.titre)}</b><small>${ou.length ? "✅ " + esc(ou[0]) + " · " : ""}${esc(f.chemin.join(" › ") || "choisi un par un")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}</small></span><span class="doc-plus" aria-hidden="true">⋯</span></li>`; }
   return `<li><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><a href="${esc(f.lien)}" target="_blank" rel="noopener">${esc(f.titre)}</a><small>${esc(f.chemin.join(" › ") || "Ton Drive")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}${f.taille ? " · " + tailleTxt(f.taille) : ""}</small></span><button class="small" onclick="envoyerFichier('${f.id}')">Envoyer</button></li>`;
 }
 function pageDocs() {
@@ -4231,6 +4255,7 @@ function pageDocs() {
     <div class="empty party">📁 <span>Coche les dossiers de tes locations dans ton Drive (plusieurs d'un coup). L'appli ne verra que ceux-là.</span><button class="primary" onclick="choisirDossierDrive()">Choisir mes dossiers</button><button class="small ghost" onclick="choisirFichiersDrive()">ou des fichiers un par un</button></div>`;
   if (!MCP && !SB) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") { DOCS.etat = "attente"; setTimeout(indexerDrive, 0); }
+  if (!MCP) return pageDocsDrive();
   const racines = [...new Set(DOCS.fichiers.map(f => f.chemin[0]).filter(Boolean))].sort(); RACINES = ["", ...racines];
   const q = view.docQ || "", r = view.docRacine || "", res = chercherDocs(q, r), lim = view.docLim || 40;
   const lien = `https://drive.google.com/drive/folders/${driveRacine()}`;
@@ -4245,11 +4270,75 @@ function pageDocs() {
   ${DOCS.etat === "chargement" || DOCS.etat === "attente" ? `<p class="note">⏳ Lecture du Drive… ${DOCS.n || 0} documents trouvés</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : ""}
   <div id="docres">${listeDocs(res, lim)}</div>`;
 }
+/* ================= Page Documents (appli installée) : un petit explorateur de ce qui est choisi dans le Drive =================
+   Accueil = mes dossiers (toujours visibles, + Ajouter) ; on entre dans un dossier, on en ressort par "← Tous mes dossiers".
+   Toucher un fichier ouvre ses actions : Ouvrir, Ranger dans un logement, Envoyer, Retirer de l'appli. */
+const racineDe = f => f.racine || (f.ancetres || [])[0] || "";
+const rangeOu = id => S.fichiers.filter(x => x.driveId === id || (x.url || "").includes(id)).map(x => (bien(x.bienId) || {}).nom).filter(Boolean);
+function pageDocsDrive() {
+  const ds = dossiersChoisis(), q = view.docQ || "", lim = view.docLim || 40, cur = view.docDossier || "";
+  const dcur = cur && cur !== "_seuls" ? ds.find(d => d.id === cur) : null;
+  if (cur && cur !== "_seuls" && !dcur) view.docDossier = "";
+  const charge = DOCS.etat === "chargement" || DOCS.etat === "attente";
+  const nbDans = id => DOCS.fichiers.filter(f => racineDe(f) === id).length, seuls = DOCS.fichiers.filter(f => !racineDe(f));
+  const etat = charge ? `<p class="note">⏳ Lecture de ton Drive… ${DOCS.n || 0} document${(DOCS.n || 0) > 1 ? "s" : ""}</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : "";
+  const recherche = ph => `<form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="${ph}" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>`;
+  if (cur) {
+    const titre = dcur ? dcur.nom || "Dossier" : "Fichiers choisis un par un", n = dcur ? nbDans(dcur.id) : seuls.length;
+    return `<a class="back" href="#docs" onclick="event.preventDefault();view.docDossier='';view.docQ='';render()">← Tous mes dossiers</a>
+    <div class="head"><div><h1>📁 ${esc(titre)}</h1><p>${n} fichier${n > 1 ? "s" : ""} visible${n > 1 ? "s" : ""} par l'appli</p></div></div>
+    <div class="row docs-actions">${dcur ? `<button class="primary" onclick="choisirFichiersDrive('${dcur.id}')">+ Choisir des fichiers ici</button><a class="btn" href="https://drive.google.com/drive/folders/${esc(dcur.id)}" target="_blank" rel="noopener">Ouvrir dans Drive ↗</a><button class="ghost" onclick="retirerDossierDrive('${dcur.id}')">Retirer ce dossier</button>` : `<button class="primary" onclick="choisirFichiersDrive()">+ Choisir des fichiers</button>`}</div>
+    ${!n && !charge ? `<section class="card"><p class="note">📂 <b>Rien ici pour l'instant.</b> Google ne laisse l'appli voir que les fichiers que tu touches toi-même. Touche <b>+ Choisir des fichiers ici</b>, touche chaque fichier à garder (il passe en bleu), puis <b>Sélectionner</b>. Tu peux aussi remonter à tout ton Drive avec l'onglet <b>Mon Drive</b> en haut du sélecteur.</p></section>` : ""}
+    ${etat}${n > 8 ? recherche("Chercher dans ce dossier…") : ""}
+    <div id="docres">${listeDocs(chercherDocsDans(q, cur), lim)}</div>`;
+  }
+  const ligneDos = (id, ico, nom, n, sous) => `<li class="lr"><div class="lr-main" onclick="view.docDossier='${id}';view.docQ='';render();scrollTo(0,0)" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">${ico}</span><span class="tx"><b>${esc(nom)}</b><small>${charge ? "…" : n + " fichier" + (n > 1 ? "s" : "")}${sous ? " · " + sous : ""}</small></span>${ic("chevR", "chev")}</div></li>`;
+  return `<div class="head"><div><h1>Documents</h1><p>Les fichiers de ton Drive que tu as choisis. L'appli ne voit rien d'autre.</p></div>
+    <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
+  <section class="card"><div class="sec-head"><h2>📁 Mes dossiers Drive</h2></div>
+    ${ds.length || seuls.length ? `<ul class="lr-list">${ds.map(d => ligneDos(d.id, "📁", d.nom || "Dossier", nbDans(d.id), !charge && !nbDans(d.id) ? "touche pour choisir les fichiers" : "")).join("")}${seuls.length ? ligneDos("_seuls", "📄", "Fichiers choisis un par un", seuls.length) : ""}</ul>` : `<p class="note">Aucun dossier pour l'instant.</p>`}
+    <div class="row" style="margin-top:12px"><button class="small primary" onclick="choisirDossierDrive()">+ Ajouter des dossiers</button><button class="small" onclick="choisirFichiersDrive()">+ Ajouter des fichiers</button></div></section>
+  ${sectionLotsAuto() + sectionDossiersLogements()}
+  ${sectionPropositionsDrive()}
+  ${etat}
+  ${DOCS.fichiers.length ? `<h2 class="sec">Tous les fichiers</h2>${recherche("Chercher : bail, Kbis, taxe, nom d'un locataire…")}<div id="docres">${listeDocs(chercherDocsDans(q, ""), lim)}</div>` : ""}`;
+}
+function chercherDocsDans(q, dossier) {
+  const L = chercherDocs(q, "");
+  return !dossier ? L : dossier === "_seuls" ? L.filter(f => !racineDe(f)) : L.filter(f => racineDe(f) === dossier);
+}
+/* Toucher un fichier : ses actions */
+function actionsDoc(id) {
+  const f = DOCS.fichiers.find(x => x.id === id); if (!f) return;
+  const ou = rangeOu(id), choisi = choisisDrive().some(x => x.id === id);
+  modal(`${iconeFichier(f)} ${esc(f.titre)}`, `<p class="full note">${esc(f.chemin.join(" › ") || "Ton Drive")}${f.modif ? " · modifié le " + fds(f.modif.slice(0, 10)) : ""}${f.taille ? " · " + tailleTxt(f.taille) : ""}${ou.length ? `<br>✅ Rangé dans : <b>${esc([...new Set(ou)].join(", "))}</b>` : ""}</p>
+    <div class="full actions-doc">
+      <a class="btn" href="${esc(f.lien)}" target="_blank" rel="noopener" onclick="closeOverlay()">👁 Ouvrir</a>
+      ${S.biens.length && estProprio() ? `<button type="button" onclick="rangerDocDrive('${f.id}')">🏠 Ranger dans un logement</button>` : ""}
+      <button type="button" onclick="closeOverlay();envoyerFichier('${f.id}')">✉️ Envoyer par e-mail</button>
+      ${estProprio() ? `<button type="button" class="danger" onclick="retirerDocDrive('${f.id}')">🗑 Retirer de l'appli</button>` : ""}
+    </div>${estProprio() ? `<p class="full note small">"Retirer" ne touche pas à ton Drive : le fichier y reste, l'appli ne le voit plus.${choisi ? "" : ""}</p>` : ""}`, () => true, { ok: "Fermer", lecture: true });
+}
+function retirerDocDrive(id, ok) {
+  const f = DOCS.fichiers.find(x => x.id === id); if (!f) return;
+  if (!ok) return confirmer(`Retirer "${f.titre}" de l'appli ? Il reste dans ton Drive.`, () => retirerDocDrive(id, true));
+  S.sci.driveChoisis = choisisDrive().filter(x => x.id !== id);
+  S.sci.driveMasques = [...new Set([...(S.sci.driveMasques || []), id])]; save();
+  DOCS.fichiers = DOCS.fichiers.filter(x => x.id !== id); DOCS.n = DOCS.fichiers.length;
+  render(); toast(`"${f.titre}" retiré de l'appli`);
+}
+function rangerDocDrive(id) {
+  const f = DOCS.fichiers.find(x => x.id === id); if (!f) return;
+  const devine = (analyserDrive([f]).ranger || [])[0] || {};
+  modal(`Ranger « ${esc(f.titre)} »`, `${sel("Logement", "bienId", devine.bienId || S.biens[0].id, S.biens.map(b => [b.id, b.nom]))}${sel("Catégorie", "cat", devine.cat || "Autre", CATS_DOC.map(c => [c, c]))}
+    <p class="full note">Il est copié dans l'appli : tes associés pourront l'ouvrir sans accès à ton Drive.</p>`,
+    d => { importerDepuisDrive([{ id: f.id, name: f.titre, mimeType: f.type, size: f.taille, webViewLink: f.lien }], { bienId: d.bienId, cat: d.cat, bailId: devine.bienId === d.bienId ? devine.bailId || "" : "" }); }, { ok: "Ranger" });
+}
 function listeDocs(res, lim) {
   if (!res.length) return DOCS.etat === "pret" ? `<div class="empty">Aucun document trouvé.</div>` : "";
   return `<p class="note">${res.length} document${res.length > 1 ? "s" : ""}</p><ul class="todo docs">${res.slice(0, lim).map(ligneDoc).join("")}</ul>${res.length > lim ? `<p><button onclick="view.docLim=${lim + 60};rafraichirDocs()">Voir plus</button></p>` : ""}`;
 }
-function rafraichirDocs() { const el = document.getElementById("docres"); if (el) el.innerHTML = listeDocs(chercherDocs(view.docQ || "", view.docRacine || ""), view.docLim || 40); }
+function rafraichirDocs() { const el = document.getElementById("docres"); if (el) el.innerHTML = listeDocs(MCP ? chercherDocs(view.docQ || "", view.docRacine || "") : chercherDocsDans(view.docQ || "", view.docDossier || ""), view.docLim || 40); }
 
 /* Destinataires possibles : locataires, associés, contacts */
 function destinataires() {
@@ -4275,7 +4364,7 @@ function envoyerFichier(id) {
       const btn = form.querySelector("button.primary"); btn.disabled = true; btn.textContent = "Envoi…";
       (async () => {
         try {
-          const c = await drive("download_file_content", { fileId: f.id, exportMimeType: "application/pdf" });
+          const c = MCP ? await drive("download_file_content", { fileId: f.id, exportMimeType: "application/pdf" }) : await telechargerDrive(f);
           const nom = /\.[a-z0-9]{2,4}$/i.test(f.titre) ? f.titre : f.titre + (/pdf/.test(c.mimeType || f.type) || /google-apps/.test(f.type) ? ".pdf" : "");
           const ok = await envoyerMailBrut({ to, objet: d.objet, corps: d.corps, pieces: [{ nom, b64: c.content, type: /google-apps/.test(f.type) ? "application/pdf" : (c.mimeType || f.type), lien: f.lien }] });
           if (ok) { closeOverlay(); toast("Envoyé à " + to.join(", ")); } else { btn.disabled = false; btn.textContent = "Envoyer"; }
@@ -4283,6 +4372,14 @@ function envoyerFichier(id) {
       })();
       return false;
     }, { ok: "Envoyer" });
+}
+async function telechargerDrive(f) {
+  const natif = /^application\/vnd\.google-apps\./.test(f.type);
+  const r = await fetch(natif ? `https://www.googleapis.com/drive/v3/files/${f.id}/export?mimeType=application/pdf` : `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: "Bearer " + await jetonDrive() } });
+  if (!r.ok) throw new Error("Google Drive refuse ce fichier (" + r.status + ")");
+  const bl = await r.blob(); if (bl.size > 15 * 1024 * 1024) throw new Error("Fichier trop lourd pour un e-mail (15 Mo maximum).");
+  const content = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1]); fr.readAsDataURL(bl); });
+  return { content, mimeType: natif ? "application/pdf" : (f.type || bl.type) };
 }
 /* Range chaque PDF généré dans le Drive, dossier "Documents générés par l'appli" */
 async function dossierAppli() {
