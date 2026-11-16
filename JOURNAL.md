@@ -32,6 +32,12 @@ Règle pour chaque session :
 
 ## Historique
 
+### 16/11/2026 (21 h) — premiers essais réels de Google : ça marche
+- Théo s'est connecté avec **Continuer avec Google** (20:00 UTC, compte rattaché au même utilisateur : fournisseurs email + google), a rebranché **Gmail avec Google** (20:01) et a **envoyé une attestation de loyer depuis son Gmail** (20:03, table `envois`). Tout le chemin Google est donc vérifié en vrai.
+- Validation Google : site validé dans la Search Console (fichier servi par réécriture `_redirects`), accès déclarés, vidéo filmée : https://youtu.be/WzOVD4jxKMw . Fiche (branding) refusée une première fois car la preuve de propriété n'était pas encore enregistrée : **relancer le 17/11 au soir** ("J'ai corrigé les problèmes"), puis envoyer la demande au Centre de validation.
+- Google : écran d'autorisation forcé à chaque branchement (`prompt: "consent"`), sinon pas de clé de renouvellement au 2e branchement.
+- Reste : le code de connexion par e-mail (Brevo) tant que l'appli Google n'est pas publiée pour tous.
+
 ### 16/11/2026 (nuit, fin) — dossier de validation Google (Gmail)
 - Page d'accueil publique **https://gestion-locative-sci.pages.dev/presentation** (`presentation.html`, copiée par `build.py`) : présente l'appli et ce qu'elle fait des données Google ; lien "Découvrir l'appli" sur l'écran de connexion.
 - `build.py` copie dans `dist/` tout fichier `googleXXXX.html` posé à la racine du projet (vérification Google Search Console) : quand Théo donne le nom du fichier, créer `googleXXXX.html` contenant `google-site-verification: googleXXXX.html`, puis `./deploy.sh`.
