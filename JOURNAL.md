@@ -32,6 +32,12 @@ Règle pour chaque session :
 
 ## Historique
 
+### 16/11/2026 (nuit, fin) — dossier de validation Google (Gmail)
+- Page d'accueil publique **https://gestion-locative-sci.pages.dev/presentation** (`presentation.html`, copiée par `build.py`) : présente l'appli et ce qu'elle fait des données Google ; lien "Découvrir l'appli" sur l'écran de connexion.
+- `build.py` copie dans `dist/` tout fichier `googleXXXX.html` posé à la racine du projet (vérification Google Search Console) : quand Théo donne le nom du fichier, créer `googleXXXX.html` contenant `google-site-verification: googleXXXX.html`, puis `./deploy.sh`.
+- Dossier pas à pas pour Théo (5 étapes, textes en anglais pour gmail.send) : page privée https://claude.ai/artifact/2AWe6uC4Wz98xc27m2PXck
+- Attend : le nom du fichier Search Console, puis la vidéo et l'envoi de la demande par Théo.
+
 ### 16/11/2026 (nuit, fin) — plus d'écran "Google n'a pas validé cette application" pour le Drive
 - Essai réel de Théo : le dossier coché "02 - GTP Invest" n'a rien montré (avec `drive.file`, Google ne donne pas le contenu d'un dossier coché), et "Autoriser la lecture des dossiers" (`drive.readonly`) a affiché l'écran rouge de Google. Ce bouton est **supprimé** : l'appli ne demande plus jamais d'accès large au Drive.
 - À la place : carte "Google ne laisse pas l'appli ouvrir ce dossier tout seul" avec un bouton **Ouvrir « nom du dossier »** : le sélecteur Google s'ouvre directement dans ce dossier (`ouvrirPicker(..., parent)`), on touche les fichiers à garder, Sélectionner. Ces fichiers sont rangés sous le nom du dossier (dossier = logement marche).
