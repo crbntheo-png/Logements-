@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "4616cd4", "date": "2026-11-16T22:29"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "87e84b4", "date": "2026-11-16T22:42"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -577,7 +577,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 @media (max-width: 560px) { .sr-wrap { padding: 0; align-items: stretch; background: var(--surface); } .sr-box { border-radius: 0; max-height: none; height: 100%; box-shadow: none; padding-top: env(safe-area-inset-top, 0px); } }
 
 /* Divers */
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 650; font-size: .9rem; z-index: 80; width: max-content; max-width: calc(100% - 32px); box-shadow: var(--sh-3); text-align: center; pointer-events: none; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 650; font-size: .9rem; z-index: 2147483000; width: max-content; max-width: calc(100% - 32px); box-shadow: var(--sh-3); text-align: center; pointer-events: none; }
 .toast.avec-action { pointer-events: auto; display: flex; align-items: center; gap: 14px; text-align: left; padding: 10px 10px 10px 18px; }
 .toast-undo { background: transparent; color: var(--gold); border: 0; font-weight: 800; height: 36px; padding: 0 12px; border-radius: 10px; flex: none; }
 .toast-undo:hover { background: rgba(255,255,255,.08); }
@@ -2590,7 +2590,7 @@ const qDrive = t => String(t).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 async function choisirFichierDrive(ctx) {
   if (!ctx) return;
   closeOverlay();
-  let liste; try { liste = await ouvrirPicker("Choisis les documents à ajouter"); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
+  let liste; try { liste = await ouvrirPicker("Choisis tes documents"); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
   if (!liste.length) return;
   memoriserChoisis(liste);
   const bienId = ctx.bienId;
@@ -3951,6 +3951,7 @@ function chargerPicker() {
 async function ouvrirPicker(titre, multi = true, dossiers = false, parent = "") {
   if (DRIVEG.etat !== "oui") { connecterDrive(); throw new Error("Connecte d'abord ton Drive."); }
   const jeton = await jetonDrive(); await chargerPicker();
+  toast(dossiers ? "Touche chaque dossier (il passe en bleu), plusieurs possibles, puis Sélectionner." : "Touche chaque fichier à garder (il passe en bleu), puis Sélectionner. Onglet Mon Drive pour remonter tout en haut.");
   return new Promise(fin => {
     const P2 = google.picker;
     const vue = (nom) => { const v = new P2.DocsView(P2.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(dossiers).setMode(P2.DocsViewMode.LIST); if (dossiers) v.setMimeTypes(DOSSIER); if (nom && v.setLabel) v.setLabel(nom); return v; };
@@ -4108,7 +4109,7 @@ async function indexerDriveG(silencieux) {
 async function choisirDossierDrive() {
   if (!estProprio()) { toast(msgProprio("choisir les dossiers Drive de l'espace")); return; }
   closeOverlay();
-  let liste; try { liste = await ouvrirPicker("Coche les dossiers de tes locations (plusieurs possibles), puis Sélectionner", true, true); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
+  let liste; try { liste = await ouvrirPicker("Coche tes dossiers", true, true); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
   if (!liste.length) return;
   const L = dossiersChoisis().slice(), ids = new Set(L.map(d => d.id)); let n = 0;
   liste.forEach(x => { if (x.mimeType === DOSSIER && !ids.has(x.id)) { ids.add(x.id); L.push({ id: x.id, nom: x.name }); n++; } });
@@ -4121,7 +4122,7 @@ async function choisirDossierDrive() {
 async function choisirFichiersDrive(parent) {
   if (!estProprio()) { toast(msgProprio("choisir les documents Drive de l'espace")); return; }
   closeOverlay();
-  let liste; try { liste = await ouvrirPicker(parent ? "Touche chaque fichier à garder (ils passent en bleu), puis Sélectionner" : "Coche des fichiers (bail, DPE, factures…)", true, false, parent || ""); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
+  let liste; try { liste = await ouvrirPicker(parent ? "Touche tes fichiers" : "Choisis tes fichiers", true, false, parent || ""); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
   if (!liste.length) return;
   memoriserChoisis(liste.filter(x => x.mimeType !== DOSSIER), parent || "");
   const dos = liste.filter(x => x.mimeType === DOSSIER);

@@ -39,6 +39,7 @@ Règle pour chaque session :
 - Toucher un fichier ouvre ses actions : Ouvrir, Ranger dans un logement (logement deviné), Envoyer par e-mail (marche maintenant hors claude.ai), Retirer de l'appli (le fichier reste dans le Drive). La ligne indique où il est déjà rangé.
 - Sélecteur Google : onglets "ce dossier", **Mon Drive** (pour remonter tout en haut), "Partagés avec moi", "Drives partagés". Les fichiers choisis depuis un dossier restent groupés sous ce dossier, même pris dans un sous-dossier.
 - `envoyer-gmail` (v10) : la pièce jointe garde son vrai type (photo, Word…) au lieu de toujours "PDF".
+- Titres du sélecteur Google raccourcis (le titre long recouvrait les onglets sur téléphone) ; consigne affichée par l'appli, au-dessus du sélecteur.
 - Tests : test45 (nouveau) 25/25, test43 adapté 24/24, test33, test44, test5, test22, test26 OK.
 
 ### 16/11/2026 (22 h) — nom de domaine à soi
