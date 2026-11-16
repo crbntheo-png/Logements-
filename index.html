@@ -3913,20 +3913,19 @@ async function indexerDrive() {
 // La connexion est gardée sur le serveur (fonction "drive") : elle ne se perd pas en fermant l'appli.
 let DRIVEG = { etat: "inconnu" }, GCFG = null;
 const SCOPE_DRIVE = "openid email https://www.googleapis.com/auth/drive.file"; // seulement les fichiers choisis dans le sélecteur Google
-const SCOPE_DRIVE_DOSSIERS = "openid email https://www.googleapis.com/auth/drive.readonly"; // seulement si Google ne montre pas l'intérieur des dossiers cochés
 const GOOGLE_PROJET = "502656965437"; // numéro du projet Google Cloud (début de l'identifiant client)
 function chargerPicker() {
   if (window.google && google.picker) return Promise.resolve();
   return new Promise((ok, ko) => { const go = () => gapi.load("picker", { callback: ok, onerror: ko }); if (window.gapi) return go(); const sc = document.createElement("script"); sc.src = "https://apis.google.com/js/api.js"; sc.onload = go; sc.onerror = () => ko(new Error("Google ne répond pas.")); document.head.appendChild(sc); });
 }
 /* Sélecteur officiel de Google : la personne coche ses fichiers, l'appli ne reçoit que ceux-là */
-async function ouvrirPicker(titre, multi = true, dossiers = false) {
+async function ouvrirPicker(titre, multi = true, dossiers = false, parent = "") {
   if (DRIVEG.etat !== "oui") { connecterDrive(); throw new Error("Connecte d'abord ton Drive."); }
   const jeton = await jetonDrive(); await chargerPicker();
   return new Promise(fin => {
     const P2 = google.picker;
     const vue = () => { const v = new P2.DocsView(P2.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(dossiers).setMode(P2.DocsViewMode.LIST); if (dossiers) v.setMimeTypes(DOSSIER); return v; };
-    const mon = vue().setParent("root"), partages = vue().setOwnedByMe(false);
+    const mon = vue().setParent(parent || "root"), partages = vue().setOwnedByMe(false);
     let b = new P2.PickerBuilder().addView(mon).addView(partages);
     if (!dossiers) b = b.addView(new P2.DocsView(P2.ViewId.RECENTLY_PICKED));
     b = b.setOAuthToken(jeton).setAppId(GOOGLE_PROJET).setLocale("fr").setTitle(titre).setOrigin(location.origin)
@@ -3982,7 +3981,7 @@ async function preparerGoogle() {
   if (!GCFG.pret) throw new Error("La connexion Google Drive n'est pas encore installée sur le serveur.");
   await chargerGIS();
 }
-function connecterDrive(large) {
+function connecterDrive() {
   if (!SB) { toast("La connexion au Drive marche dans l'appli installée."); return; }
   if (!estProprio()) { toast(msgProprio("connecter le Drive de l'espace")); return; }
   if (LECTURE) { toast("En lecture seule, tu ne peux pas brancher le Drive."); return; }
@@ -3991,7 +3990,7 @@ function connecterDrive(large) {
   modal("Connecter ton Google Drive", `<div class="full">${texteDrive()}</div>`, () => {
     if (erreur) { toast(erreur); return false; }
     if (!pret) { toast("Un instant, Google se prépare…"); return false; }
-    const cl = google.accounts.oauth2.initCodeClient({ client_id: GCFG.client_id, scope: large ? SCOPE_DRIVE_DOSSIERS : SCOPE_DRIVE, ux_mode: "popup", select_account: true, include_granted_scopes: false,
+    const cl = google.accounts.oauth2.initCodeClient({ client_id: GCFG.client_id, scope: SCOPE_DRIVE, ux_mode: "popup", select_account: true, include_granted_scopes: false,
       callback: async r => {
         if (!r || !r.code) { toast("Connexion annulée."); return; }
         toast("Connexion au Drive…");
@@ -4059,7 +4058,7 @@ async function indexerDriveG(silencieux) {
       }));
       D.n = D.fichiers.length; if (!silencieux && DOCS === D && pageCourante() === "docs") render();
     }
-    seuls.forEach(f => { if (!vus.has(f.id)) { vus.add(f.id); D.fichiers.push({ ...f, chemin: [], ancetres: [] }); } });
+    seuls.forEach(f => { if (!vus.has(f.id)) { vus.add(f.id); const d = racines.find(r => r.id === f.parent); D.fichiers.push({ ...f, chemin: d ? [d.nom || "Dossier"] : [], ancetres: d ? [d.id] : [] }); } });
     D.vides = racines.filter(r => !parRacine[r.id]).map(r => r.nom || "Dossier"); // Google n'a rien montré à l'intérieur
     D.etat = "pret"; D.date = new Date(); D.n = D.fichiers.length;
   } catch (e) { D.etat = "erreur"; D.err = e.message; }
@@ -4080,10 +4079,10 @@ async function choisirDossierDrive() {
   DOCS = { etat: "vide", fichiers: [], dossiers: {} };
   setTimeout(() => { lectureDriveFond("dossier"); go("docs"); }, 50);
 }
-async function choisirFichiersDrive() {
+async function choisirFichiersDrive(parent) {
   if (!estProprio()) { toast(msgProprio("choisir les documents Drive de l'espace")); return; }
   closeOverlay();
-  let liste; try { liste = await ouvrirPicker("Coche des fichiers (bail, DPE, factures…)"); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
+  let liste; try { liste = await ouvrirPicker(parent ? "Touche chaque fichier à garder (ils passent en bleu), puis Sélectionner" : "Coche des fichiers (bail, DPE, factures…)", true, false, parent || ""); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
   if (!liste.length) return;
   memoriserChoisis(liste); DOCS = { etat: "vide", fichiers: [], dossiers: {} };
   setTimeout(() => { lectureDriveFond("dossier"); go("docs"); }, 50);
@@ -4169,7 +4168,7 @@ const bandeauDrive = () => SB && !MCP && pageCourante() === "locataires" && estP
   ? `<div class="banner"><span>⚠️ <span><b>Ton Drive s'est déconnecté</b>, reconnecte-le pour que tes documents continuent de se ranger.</span></span><button class="small primary" onclick="connecterDrive()">Reconnecter</button></div>` : "";
 function sectionDriveReglages() {
   const ok = DRIVEG.etat === "oui", n = choisisDrive().length;
-  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}. </p>${blocConnecte()}${DRIVEG.large ? `<p class="note">🔓 Lecture des dossiers autorisée : l'appli lit seulement les dossiers ci-dessus. Pour revenir à l'accès le plus limité : Débrancher, puis Connecter.</p>` : ""}` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
+  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}. </p>${blocConnecte()}${DRIVEG.large ? `<p class="drive-avant">⚠️ Ton Drive est branché avec un accès large (lecture de tout le Drive). Touche <b>Débrancher</b> puis <b>Connecter</b> pour ne donner accès qu'à ce que tu choisis.</p>` : ""}` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
     <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive()}</details>
     <div class="row" style="margin-top:10px">${ok ? `<button class="small" onclick="go('docs')">Voir ce qu'il a trouvé</button><button class="small ghost" onclick="debrancherDrive()">Débrancher</button>` : `<button class="small primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}</div>`;
 }
@@ -4213,7 +4212,7 @@ function pageDocs() {
   return `<div class="head"><div><h1>Documents</h1><p>Le Drive ${estPerso() ? "de tes locations" : "de la SCI"}, rangé et cherchable. <a href="${lien}" target="_blank" rel="noopener">Ouvrir le Drive ↗</a></p></div>
     <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button>${!MCP ? `<button class="small ghost" onclick="view.connecteOuvert=!view.connecteOuvert;render()">📁 Dossiers connectés</button>` : ""}</div></div>
   ${!MCP && view.connecteOuvert ? `<section class="card">${blocConnecte()}</section>` : ""}
-  ${!MCP && DOCS.vides && DOCS.vides.length ? `<section class="card"><h2>🔒 Google ne montre pas l'intérieur de ${DOCS.vides.length > 1 ? "ces dossiers" : "ce dossier"}</h2><p class="note">${DOCS.vides.map(esc).join(", ")} : ${DOCS.vides.length > 1 ? "ils sont vides, ou bien Google" : "il est vide, ou bien Google"} ne laisse l'appli voir que les fichiers cochés un par un. Pour lire tout le contenu des dossiers cochés, autorise la lecture : l'appli ne lira <b>que</b> ces dossiers, jamais le reste.</p><div class="row"><button class="small primary" onclick="connecterDrive(true)">Autoriser la lecture des dossiers</button><button class="small ghost" onclick="choisirFichiersDrive()">Plutôt cocher les fichiers</button></div></section>` : ""}
+  ${!MCP && DOCS.vides && DOCS.vides.length ? `<section class="card"><h2>📂 Google ne laisse pas l'appli ouvrir ${DOCS.vides.length > 1 ? "ces dossiers" : "ce dossier"} tout seul</h2><p class="note">Pour protéger ton Drive, Google ne donne à l'appli que les fichiers que tu touches toi-même. Ouvre ${DOCS.vides.length > 1 ? "chaque dossier" : "le dossier"} et touche les fichiers à garder (ils passent en bleu), puis <b>Sélectionner</b> : c'est fait une fois pour toutes.</p><div class="row">${dossiersChoisis().filter(d => DOCS.vides.includes(d.nom || "Dossier")).map(d => `<button class="small primary" onclick="choisirFichiersDrive('${d.id}')">📂 Ouvrir « ${esc(d.nom || "Dossier")} »</button>`).join("")}</div></section>` : ""}
   ${!MCP ? sectionLotsAuto() + sectionDossiersLogements() : ""}
   ${sectionPropositionsDrive()}
   <form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="Chercher : bail, Kbis, taxe, nom d'un locataire…" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>

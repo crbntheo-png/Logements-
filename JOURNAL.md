@@ -32,6 +32,12 @@ Règle pour chaque session :
 
 ## Historique
 
+### 16/11/2026 (nuit, fin) — plus d'écran "Google n'a pas validé cette application" pour le Drive
+- Essai réel de Théo : le dossier coché "02 - GTP Invest" n'a rien montré (avec `drive.file`, Google ne donne pas le contenu d'un dossier coché), et "Autoriser la lecture des dossiers" (`drive.readonly`) a affiché l'écran rouge de Google. Ce bouton est **supprimé** : l'appli ne demande plus jamais d'accès large au Drive.
+- À la place : carte "Google ne laisse pas l'appli ouvrir ce dossier tout seul" avec un bouton **Ouvrir « nom du dossier »** : le sélecteur Google s'ouvre directement dans ce dossier (`ouvrirPicker(..., parent)`), on touche les fichiers à garder, Sélectionner. Ces fichiers sont rangés sous le nom du dossier (dossier = logement marche).
+- Reste un écran d'avertissement : **brancher Gmail** (`gmail.send` est un droit "sensible" pour Google) tant que l'appli n'est pas validée par Google (demande gratuite : domaine vérifié, texte de justification, courte vidéo).
+- test43 24/24, test33 OK, test5 OK. En ligne.
+
 ### 16/11/2026 (nuit, suite) — Drive : cocher des dossiers entiers (demande de Théo après essai sur son téléphone)
 - Le sélecteur Google marche en vrai chez Théo (sans clé d'API). Mais cocher fichier par fichier n'est pas pratique : on coche maintenant **des dossiers entiers, plusieurs d'un coup** (`choisirDossierDrive` → sélecteur en mode dossiers), et l'appli lit leur contenu et leurs sous-dossiers (`S.sci.driveDossiers`). Les fichiers un par un restent possibles (`choisirFichiersDrive`).
 - **Revenir dessus** : liste "Ce que l'appli peut lire dans ton Drive" (`blocConnecte`, Docs › Dossiers connectés et Réglages › Google Drive) avec "+ Ajouter des dossiers", "+ Des fichiers" et "Retirer".
