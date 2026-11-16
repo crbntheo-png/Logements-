@@ -1,4 +1,5 @@
-// Tous les matins : alertes sur le téléphone (virement reçu, loyer en retard) et, le 1er et le 5 du mois, résumé par e-mail.
+// Tous les matins : alertes sur le téléphone (virement reçu, loyer en retard) et, le 1er et le 5 du mois, résumé par e-mail (depuis le Gmail branché de chacun, à lui-même).
+// Aussi : nouveau signalement ({ signalement: id }, en-tête x-cle-cron) -> alerte et e-mail à l'administrateur, depuis son propre Gmail.
 // Appelée par la tâche planifiée « notifier » (en-tête x-cle-cron), ou par un membre connecté pour un essai ({ essai: true }).
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import webpush from "npm:web-push@3.6.7";
@@ -32,6 +33,27 @@ function echeance(b: any, m: string, pays: any[], auj: Date) {
   return { du, paye, reste: r2(Math.max(0, du - paye)), statut, due, jours: Math.floor((+auj - +due) / 864e5) };
 }
 
+// ---- Envoi depuis le Gmail branché de la personne (droit "envoyer" seulement). Aucun envoi par un serveur commun. ----
+const enTete = (s: string) => /^[\x20-\x7e]*$/.test(s) ? s : "=?UTF-8?B?" + b64u8(new TextEncoder().encode(s)) + "?=";
+function b64u8(u8: Uint8Array) { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); }
+const l76 = (s: string) => s.replace(/.{1,76}/g, "$&\r\n");
+async function envoyerParGmail(admin: any, userId: string, a: string[], objet: string, texte: string, pj?: { nom: string; b64: string; type: string }) {
+  const { data: s } = await admin.rpc("gmail_secret", { u: userId });
+  if (!s?.rt) throw new Error("Gmail pas branché avec Google (Réglages › Envoi des e-mails)");
+  const t = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "", client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET") || "", refresh_token: s.rt, grant_type: "refresh_token" }) });
+  const j = await t.json().catch(() => ({}));
+  if (!t.ok || !j.access_token) throw new Error("connexion Gmail arrêtée : rebranche-la");
+  const f = "f" + crypto.randomUUID().replace(/-/g, ""), corps = l76(b64u8(new TextEncoder().encode(texte)));
+  const tete = [`From: ${enTete("Gestion locative")} <${s.adresse}>`, `To: ${a.join(", ")}`, `Subject: ${enTete(objet)}`, "MIME-Version: 1.0"];
+  const msg = !pj ? [...tete, 'Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", corps].join("\r\n")
+    : [...tete, `Content-Type: multipart/mixed; boundary="${f}"`, "", `--${f}`, 'Content-Type: text/plain; charset="UTF-8"', "Content-Transfer-Encoding: base64", "", corps,
+      `--${f}`, `Content-Type: ${pj.type}; name="${enTete(pj.nom)}"`, `Content-Disposition: attachment; filename="${enTete(pj.nom)}"`, "Content-Transfer-Encoding: base64", "", l76(pj.b64), `--${f}--`, ""].join("\r\n");
+  const raw = b64u8(new TextEncoder().encode(msg)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const r = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", { method: "POST", headers: { Authorization: "Bearer " + j.access_token, "Content-Type": "application/json" }, body: JSON.stringify({ raw }) });
+  if (!r.ok) throw new Error("Gmail a refusé l'envoi (" + ((await r.json().catch(() => ({})))?.error?.message || r.status) + ")");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = Deno.env.get("SUPABASE_URL")!, admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -43,6 +65,16 @@ Deno.serve(async (req) => {
     seulUser = u.user.id;
   }
   webpush.setVapidDetails(APP, Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
+  if (corps.signalement && !seulUser) {
+    const { data: sg } = await admin.from("signalements").select("id, email, type, message, page").eq("id", corps.signalement).maybeSingle();
+    const { data: ad } = await admin.rpc("admin_destinataire");
+    if (!sg || !ad?.user_id) return rep({ ok: true, rien: true });
+    const titre = `[${sg.type === "bug" ? "Problème" : sg.type === "idee" ? "Idée" : "Question"} n°${sg.id}] ${String(sg.message || "").replace(/\s+/g, " ").slice(0, 70)}`;
+    await envoyerParGmail(admin, ad.user_id, [ad.email], titre, `Envoyé par ${sg.email || "?"}\n\n${sg.message}\n\n— Page : ${sg.page || "?"}\n\nRéponds à ${sg.email || "la personne"} depuis ta messagerie.`).catch(() => {});
+    const { data: subs1 } = await admin.from("push_abonnements").select("*").eq("user_id", ad.user_id);
+    for (const s1 of subs1 || []) await webpush.sendNotification({ endpoint: s1.endpoint, keys: { p256dh: s1.p256dh, auth: s1.auth } }, JSON.stringify({ titre: "🆘 " + titre, texte: String(sg.message || "").slice(0, 120), url: "./", tag: "sig-" + sg.id })).catch(() => {});
+    return rep({ ok: true });
+  }
   const auj = paris(); auj.setHours(12, 0, 0, 0); const CUR = mk(auj), jour = auj.getDate(), resumeDuJour = jour === 1 || jour === 5;
   const { data: subs } = await admin.from("push_abonnements").select("*");
   const { data: prefs } = await admin.from("notif_prefs").select("*");
@@ -77,9 +109,8 @@ Deno.serve(async (req) => {
       const titre = `Loyers de ${MOIS[auj.getMonth()]} : ${recus} sur ${L.length} reçus`, texte = `${titre} (${eur(rec)} / ${eur(att)}) · ${nomEsp}\n\n${L.map(ligne).join("\n")}\n\nOuvrir l'appli : ${APP}\n\nTu reçois ce résumé le 1er et le 5 du mois. Pour l'arrêter : Réglages › Notifications.`;
       if (seulUser || !(await dejaEnvoye(`res-${esp.id}-${CUR}-${jour}`))) {
         nPush += await envoyerPush(users, { titre: `📊 ${titre}`, texte: `${eur(rec)} reçus sur ${eur(att)} · ${nomEsp}`, url: "./#locataires", tag: "res-" + esp.id });
-        const dest = (membres || []).filter((m: any) => users.includes(m.user_id) && pref(m.user_id).resume && m.email).map((m: any) => ({ email: m.email }));
-        if (dest.length && Deno.env.get("BREVO_API_KEY")) await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST", headers: { "api-key": Deno.env.get("BREVO_API_KEY")!, "content-type": "application/json", accept: "application/json" },
-          body: JSON.stringify({ sender: { name: "Gestion locative", email: Deno.env.get("BREVO_SENDER") }, to: dest, subject: titre + " · " + nomEsp, textContent: texte }) });
+        for (const m of (membres || []).filter((m: any) => users.includes(m.user_id) && pref(m.user_id).resume && m.email))
+          await envoyerParGmail(admin, m.user_id, [m.email], titre + " · " + nomEsp, texte).catch(() => {}); // sans Gmail branché : pas d'e-mail, l'alerte sur le téléphone suffit
       }
     }
     bilan.push({ espace: nomEsp, push: nPush });

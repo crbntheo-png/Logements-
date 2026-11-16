@@ -6,7 +6,7 @@ const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURICompo
 (async () => {
   const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
   const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
-  p.on('pageerror', e => errs.push(e.message));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test
   await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
   await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-b@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
   await p.waitForTimeout(1200); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Nouveau venu'); await p.click('#esp_btn'); await p.waitForTimeout(2000);

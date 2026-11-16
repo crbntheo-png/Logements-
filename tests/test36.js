@@ -21,7 +21,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' })).newPage();
-  p.on('pageerror', e => errs.push(e.message));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test
   let lus = new Set();
   await p.route('https://www.googleapis.com/drive/v3/files?**', r => {
     const q = new URL(r.request().url()).searchParams.get('q');

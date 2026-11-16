@@ -8,7 +8,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
 (async () => {
   const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
   const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
-  p.on('pageerror', e => errs.push(e.message));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test
   await p.route('https://www.googleapis.com/drive/v3/files/**', r => { const u = r.request().url();
     if (u.includes('/export?')) return r.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4 export' });
     if (u.includes('gros')) return r.fulfill({ status: 403, body: '{}' });

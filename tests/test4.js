@@ -18,7 +18,7 @@ FAKE = FAKE.replace(/const mcp = \{[\s\S]*?\};\n/, `const tree = { '1Bcx1xiH7q1C
   const errs = [];
   const route = r => r.fulfill({ path: __dirname + '/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' });
   const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
-  p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && errs.push(m.text()));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test p.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await p.addInitScript(FAKE); await p.route('**/jspdf.umd.min.js', route);
   await p.goto('file:///home/user/Logements-/index.html'); await p.waitForTimeout(600);
   await p.evaluate(() => { S = demo(); S.baux[0].email = 'camille@test.fr'; S.sci.contacts = [{ nom: 'Cabinet X', role: 'Comptable', email: 'compta@x.fr' }]; save(); render(); }); await p.waitForTimeout(300);

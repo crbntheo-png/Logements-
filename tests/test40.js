@@ -11,7 +11,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
-  p.on('pageerror', e => errs.push(e.message));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test
   await p.addInitScript(FAKE);
   await p.goto('file://' + path.join(__dirname, '..', 'index.html')); await p.waitForTimeout(500);
   const r = await p.evaluate(() => {

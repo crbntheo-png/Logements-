@@ -12,7 +12,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
   const b = await chromium.launch(); const errs = [];
   for (const scheme of ['light', 'dark']) {
     const p = await b.newPage({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
-    p.on('pageerror', e => errs.push(e.message));
+    p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test
     await p.addInitScript(FAKE);
     await p.route('**/jspdf.umd.min.js', r => r.fulfill({ path: __dirname + '/vendor/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' }));
     await p.goto('file://' + path.join(__dirname, '..', 'index.html')); await p.waitForTimeout(600);

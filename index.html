@@ -587,6 +587,7 @@ body.sans-nav header.top nav, body.sans-nav #bottomnav, body.sans-nav .top-acts 
 .auth-card { width: min(420px, 100%); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
 .auth-card form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
 .auth-card p { color: var(--muted); }
+.gbtn { display: flex; justify-content: center; min-height: 44px; }
 .logo.big { width: 56px; height: 56px; border-radius: 16px; margin: 0 auto; }
 .logo.big .ic { width: 28px; height: 28px; }
 input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-weight: 800; height: 58px; font-variant-numeric: tabular-nums; }
@@ -1126,21 +1127,47 @@ function pageConnexion() {
   return `<div class="auth"><div class="auth-card">
     <span class="logo big" aria-hidden="true">🏠</span>
     <h1>Gestion locative</h1>
-    ${e.etape === "email" ? `<p>Entre ton adresse e-mail : tu vas recevoir un code à 6 chiffres. Pas de mot de passe à retenir.</p>
+    ${e.etape === "email" && !e.parCode ? `<p>Connecte-toi avec ton compte Google. Pas de mot de passe à retenir.</p>
+      <div id="gbtn" class="gbtn" aria-live="polite"><button class="primary big" type="button" disabled>Google se prépare…</button></div>
+      <p class="note center" style="margin-top:14px"><a href="#" onclick="CONNEXION.parCode=true;render();return false">Pas de compte Google ? Recevoir un code par e-mail</a></p>`
+    : e.etape === "email" ? `<p>Entre ton adresse e-mail : tu vas recevoir un code à 6 chiffres.</p>
       <form onsubmit="event.preventDefault();envoyerCode(this)"><label class="fl">Adresse e-mail<input id="auth_email" name="email" type="email" autocomplete="email" inputmode="email" required value="${esc(e.email)}" placeholder="prenom@exemple.fr"></label>
-      <button class="primary big" id="auth_btn">Recevoir mon code</button></form>`
+      <button class="primary big" id="auth_btn">Recevoir mon code</button></form>
+      <button class="ghost" onclick="CONNEXION.parCode=false;render()">← Continuer avec Google</button>`
     : `<p>Code envoyé à <b>${esc(e.email)}</b>. Il arrive en général en moins d'une minute (pense à regarder les indésirables).</p>
       <form onsubmit="event.preventDefault();verifierCode(this)"><label class="fl">Code reçu par e-mail<input id="auth_code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="123456" class="code"></label>
       <button class="primary big" id="auth_btn">Se connecter</button></form>
       <button class="ghost" onclick="CONNEXION.etape='email';render()">Changer d'adresse</button>`}
   </div>${!estInstallee() && (estIOS() || estAndroid()) && e.etape === "email" ? `<div class="auth-card install-tuto"><h2>📲 D'abord, installe l'appli</h2><p class="note">Fais-le avant de te connecter${estIOS() ? " : sur iPhone, l'appli installée ne garde pas la connexion faite dans Safari" : ""}.</p>${estIOS() ? tutoIphone() : tutoAndroid()}</div>` : ""}</div>`;
 }
+/* Connexion avec Google (jeton d'identité vérifié par Supabase) : aucun e-mail n'est envoyé */
+const GOOGLE_CLIENT_ID = "502656965437-j06kbn3e5lrim4db8n7kbbo2lghbl9qh.apps.googleusercontent.com";
+let GNONCE = null;
+async function boutonGoogle() {
+  const el = document.getElementById("gbtn"); if (!el || el.dataset.pret) return; el.dataset.pret = "1";
+  try {
+    await chargerGIS();
+    const brut = Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2, "0")).join("");
+    const h = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(brut))), x => x.toString(16).padStart(2, "0")).join("");
+    GNONCE = brut;
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, nonce: h, ux_mode: "popup", auto_select: false, itp_support: true, use_fedcm_for_button: true, callback: connexionGoogle });
+    el.innerHTML = ""; google.accounts.id.renderButton(el, { type: "standard", theme: "filled_blue", size: "large", text: "continue_with", shape: "pill", width: Math.min(320, el.clientWidth || 320), locale: "fr" });
+  } catch (e) { delete el.dataset.pret; el.innerHTML = `<p class="note">Google ne répond pas. Vérifie ta connexion, ou <a href="#" onclick="CONNEXION.parCode=true;render();return false">reçois un code par e-mail</a>.</p>`; }
+}
+async function connexionGoogle(rep) {
+  if (!rep || !rep.credential) { toast("Connexion annulée."); return; }
+  toast("Connexion…");
+  const r = await SB.auth.signInWithIdToken({ provider: "google", token: rep.credential, nonce: GNONCE });
+  if (r.error || !r.data.user) { toast("Google n'a pas pu te connecter : " + (r.error ? r.error.message : "réessaie")); const el = document.getElementById("gbtn"); if (el) { delete el.dataset.pret; boutonGoogle(); } return; }
+  CONNEXION = { etape: "email", email: "" };
+  await apresConnexion(r.data.user);
+}
 async function envoyerCode(f) {
   const email = f.email.value.trim().toLowerCase(), b = document.getElementById("auth_btn");
   b.disabled = true; b.textContent = "Envoi…";
   const r = await SB.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
   if (r.error) { b.disabled = false; b.textContent = "Recevoir mon code"; toast(/rate|limit|seconds/i.test(r.error.message) ? "Trop de demandes. Attends une minute et réessaie." : "Envoi impossible : " + r.error.message); return; }
-  CONNEXION = { etape: "code", email }; render(); setTimeout(() => { const c = document.getElementById("auth_code"); if (c) c.focus(); }, 50);
+  CONNEXION = { etape: "code", email, parCode: true }; render(); setTimeout(() => { const c = document.getElementById("auth_code"); if (c) c.focus(); }, 50);
 }
 async function verifierCode(f) {
   const b = document.getElementById("auth_btn"); b.disabled = true; b.textContent = "Vérification…";
@@ -1230,7 +1257,7 @@ async function envoyerViaGmail({ to, objet, corps, pieces }) {
 function sectionGmail() {
   const sur = `<p class="note">🔒 Google demande ton accord pour <b>envoyer des e-mails</b> seulement : l'appli ne peut <b>pas lire</b> tes e-mails, ni les supprimer. Tu peux débrancher à tout moment, ici ou dans ton compte Google (Sécurité › Applications tierces).</p>`;
   if (GMAIL && GMAIL.mode === "google") return `<section class="card"><h2>✉️ Envoi depuis ton Gmail</h2><p class="note">✅ Tes quittances, relances et documents partent de <b>${esc(GMAIL.adresse)}</b>, et on les retrouve dans tes "Messages envoyés".</p>${sur}<div class="row"><button class="small ghost" onclick="debrancherGmail()">Débrancher</button></div></section>`;
-  const ancien = GMAIL ? `<p class="drive-avant">⚠️ Ton Gmail est branché avec un <b>mot de passe d'application</b> : il donne accès à toute ta boîte mail. Passe à la connexion Google ci-dessous (envoi seulement), puis supprime ce mot de passe sur <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">la page "Mots de passe des applications"</a> (touche la corbeille à côté de "Gestion SCI").</p>` : `<p class="note">Aujourd'hui, tes e-mails partent par le serveur de l'appli. Branche ton Gmail pour qu'ils partent de ta vraie adresse.</p>`;
+  const ancien = GMAIL ? `<p class="drive-avant">⚠️ Ton Gmail est branché avec un <b>mot de passe d'application</b> : il donne accès à toute ta boîte mail. Passe à la connexion Google ci-dessous (envoi seulement), puis supprime ce mot de passe sur <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">la page "Mots de passe des applications"</a> (touche la corbeille à côté de "Gestion SCI").</p>` : `<p class="note">Branche ton Gmail pour envoyer quittances, relances et documents d'ici, depuis ta vraie adresse. Sans Gmail, l'appli n'envoie aucun e-mail : tu partages les PDF toi-même (WhatsApp, ta messagerie…).</p>`;
   return `<section class="card install-tuto"><h2>✉️ Envoyer depuis ton adresse Gmail</h2>${ancien}${sur}
     <p class="note">Tant que l'appli n'est pas vérifiée par Google, un écran "Google n'a pas validé cette application" peut s'afficher : touche <b>Paramètres avancés</b>, puis <b>Accéder à l'appli</b>.</p>
     <div class="row"><button class="primary" id="gm_btn" onclick="connecterGmail()">Continuer avec Google</button>${GMAIL ? `<button class="small ghost" onclick="debrancherGmail()">Débrancher</button>` : ""}</div></section>`;
@@ -1256,20 +1283,7 @@ async function connecterGmail() {
     error_callback: e => { fin(); toast(e && e.type === "popup_closed" ? "Connexion annulée." : "Google n'a pas pu s'ouvrir. Autorise les fenêtres pour ce site, puis réessaie."); } });
   cl.requestCode();
 }
-function debrancherGmail() { confirmer("Débrancher ton Gmail ? Les e-mails repartiront par le serveur de l'appli.", async () => { await appelGmail({ action: "debrancher" }); await SB.rpc("gmail_debrancher"); GMAIL = null; render(); }); }
-/* Envoi d'un e-mail par le serveur (Brevo), avec suivi du résultat */
-async function envoyerViaServeur({ to, objet, corps, pieces }) {
-  const p = pieces[0];
-  const r = await SB.rpc("envoyer_mail", { espace: ESPACE, a: to, objet, texte: corps, nom_fichier: p ? p.nom : null, pdf_base64: p ? p.b64 : null, repondre_a: S.sci.email || null });
-  if (r.error) { toast(/configur/i.test(r.error.message) ? "L'envoi d'e-mails n'est pas encore activé." : "L'e-mail n'est pas parti : " + r.error.message); return false; }
-  for (let k = 0; k < 16; k++) {
-    await new Promise(res => setTimeout(res, 600));
-    const s = await SB.rpc("statut_envoi", { requete: r.data });
-    if (s.data && s.data.etat === "ok") return true;
-    if (s.data && s.data.etat === "erreur") { toast("L'e-mail a été refusé (" + (s.data.detail || s.data.code) + ")."); return false; }
-  }
-  return true;
-}
+function debrancherGmail() { confirmer("Débrancher ton Gmail ? L'appli ne pourra plus envoyer d'e-mails à ta place (tu pourras toujours partager les PDF).", async () => { await appelGmail({ action: "debrancher" }); await SB.rpc("gmail_debrancher"); GMAIL = null; render(); }); }
 /* Proposer l'installation sur l'écran d'accueil */
 let INSTALL = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); INSTALL = e; if (MODE !== "chargement") render(); });
@@ -1325,7 +1339,8 @@ async function initExtras() {
   try { DL = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch (e) { DL = null; }
   if (MODE !== "chargement") render();
 }
-const peutEnvoyer = () => !!MCP || !!(SB && ESPACE);
+// Envoi direct seulement depuis le Gmail branché de la personne (jamais par un serveur commun)
+const peutEnvoyer = () => !!MCP || !!(SB && ESPACE && GMAIL);
 
 
 /* ================= Outils dates & montants ================= */
@@ -2122,7 +2137,7 @@ function render0() {
   const app = document.getElementById("app");
   document.body.classList.toggle("sans-nav", MODE === "connexion" || MODE === "nouvel-espace" || MODE === "chargement");
   if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
-  if (MODE === "connexion") { app.innerHTML = location.hash === "#legal" ? pageLegal().replace('href="#reglages">← Réglages', 'href="#">← Connexion') : pageConnexion() + `<p class="note center" style="margin-top:18px"><a href="#legal">Mentions légales et confidentialité</a></p>`; return; }
+  if (MODE === "connexion") { app.innerHTML = location.hash === "#legal" ? pageLegal().replace('href="#reglages">← Réglages', 'href="#">← Connexion') : pageConnexion() + `<p class="note center" style="margin-top:18px"><a href="#legal">Mentions légales et confidentialité</a></p>`; if (document.getElementById("gbtn")) setTimeout(boutonGoogle, 0); return; }
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
@@ -3080,7 +3095,7 @@ function sectionMaj() {
     <div class="row" style="margin-top:10px">${e === "dispo" || e === "prete" ? `<button class="primary" onclick="majMaintenant()">Mettre à jour maintenant</button>` : ""}${e === "charge" ? `<button class="primary" disabled>Mise à jour…</button>` : ""}${e !== "prete" && e !== "charge" ? `<button class="${e === "dispo" ? "" : "primary"}" onclick="chercherMaj()" ${e === "cherche" ? "disabled" : ""}>Chercher une mise à jour</button>` : ""}</div>`;
 }
 const bandeauMaj = () => MAJ.etat === "prete" ? `<div class="maj-bandeau" role="status"><span>🆕 Nouvelle version prête</span><button class="small" onclick="majMaintenant()">Mettre à jour</button></div>` : "";
-/* ================= Copie de sauvegarde chaque semaine par e-mail (propriétaire, via Brevo) ================= */
+/* ================= Copie de sauvegarde chaque semaine par e-mail (propriétaire, depuis son Gmail branché, à lui-même) ================= */
 let HEBDO = { etat: "inconnu" };
 async function chargerHebdo() {
   if (!SB || !ESPACE) return;
@@ -3099,6 +3114,7 @@ function sectionCopieHebdo() {
   if (!SB || !ESPACE) return "";
   if (!estProprio()) return `<p class="note">📧 La copie de sauvegarde par e-mail est gérée par le propriétaire de l'espace.</p>`;
   if (HEBDO.etat === "inconnu") { setTimeout(chargerHebdo, 0); return ""; }
+  if (!(GMAIL && GMAIL.mode === "google")) return `<p class="note">📧 Copie de sauvegarde chaque semaine par e-mail : elle part de ton propre Gmail, vers toi. <a href="#" onclick="reglage('gmail');return false">Branche d'abord ton Gmail</a>.${HEBDO.active ? " (La copie du lundi est en pause tant que Gmail n'est pas branché.)" : ""}</p>`;
   return HEBDO.active
     ? `<div class="copie-hebdo"><p class="note">📧 ✅ Une copie part <b>chaque lundi matin</b> sur ton adresse e-mail${HEBDO.derniere ? ` · dernière le ${fds(String(HEBDO.derniere).slice(0, 10))}` : ""}.${HEBDO.erreur ? `<br>⚠️ Dernier envoi raté : ${esc(HEBDO.erreur)}` : ""}</p>
       <div class="row"><button class="small" onclick="copieHebdo('maintenant')">Envoyer une copie maintenant</button><button class="small ghost" onclick="copieHebdo('arreter')">Arrêter</button></div></div>`
@@ -3728,14 +3744,14 @@ function showDoc(html, o = {}) {
   ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="closeOverlay()" aria-label="Fermer">✕</button><b class="doc-t">${esc(o.titre || "")}</b></div>
   <div class="row"><button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer…</span></button>` : ""}</div></div>
   <div class="paper" id="paper">${html}</div>
-  ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.bailId && bail(o.bailId) && bail(o.bailId).tel ? `<button class="small" onclick="envoyerAutrement('sms')">📱 Par SMS</button><button class="small" onclick="envoyerAutrement('wa')">💬 WhatsApp</button>` : ""}${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div></div>` : ""}</div>`;
+  ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.bailId && bail(o.bailId) && bail(o.bailId).tel ? `<button class="small" onclick="envoyerAutrement('sms')">📱 Par SMS</button><button class="small" onclick="envoyerAutrement('wa')">💬 WhatsApp</button>` : ""}${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div>${SB && !MCP && !GMAIL ? `<p class="note">✉️ Pour envoyer d'ici en un geste, depuis ta propre adresse : <a href="#" onclick="closeOverlay();reglage('gmail');return false">branche ton Gmail</a>.</p>` : ""}</div>` : ""}</div>`;
   ov.hidden = false; ov.scrollTop = 0;
   if (o.onSent && document.getElementById("dsent")) document.getElementById("dsent").onclick = () => { o.onSent(); save(); closeOverlay(); toast("Enregistré comme envoyé"); };
   if (mail) document.getElementById("dsend").onclick = ev => {
     const dest = (document.getElementById("maildest").value || "").trim(), objet = (document.getElementById("mailobjet").value || o.titre).trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(dest)) { toast("Indique une adresse e-mail valide."); document.getElementById("maildest").focus(); return; }
     const corps = (document.getElementById("mailtxt") || {}).value || o.email.corps;
-    const de = GMAIL ? GMAIL.adresse : "l'adresse de l'appli";
+    const de = GMAIL ? GMAIL.adresse : "?";
     const old = document.getElementById("confEnvoi"); if (old) old.remove();
     const bar = document.createElement("div"); bar.id = "confEnvoi"; bar.className = "conf-envoi";
     bar.innerHTML = `<span>Envoyer <b>${esc(objet)}</b> à <b>${esc(dest)}</b>, depuis ${esc(de)}, avec le PDF${o.photos && o.photos.length ? " et les photos" : ""} ?</span><span class="row"><button class="small" id="confNon">Annuler</button><button class="small primary" id="confOui">Oui, envoyer</button></span>`;
@@ -3854,7 +3870,7 @@ function erreurConnecteur(e, nom) {
 const b64Octets = b64 => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; };
 let FILEARGS = null;
 async function envoyerMailBrut({ to, objet, corps, pieces = [] }) {
-  if (!MCP && SB && ESPACE) { const dests = (Array.isArray(to) ? to : [to]).filter(Boolean); if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; } return GMAIL ? envoyerViaGmail({ to: dests, objet, corps, pieces }) : envoyerViaServeur({ to: dests, objet, corps, pieces }); }
+  if (!MCP && SB && ESPACE) { const dests = (Array.isArray(to) ? to : [to]).filter(Boolean); if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; } if (!GMAIL) { toast("Branche ton Gmail pour envoyer d'ici (Réglages › Envoi des e-mails)."); return false; } return envoyerViaGmail({ to: dests, objet, corps, pieces }); }
   if (!MCP) { toast("L'envoi d'e-mails n'est pas disponible ici."); return false; }
   const dests = (Array.isArray(to) ? to : [to]).filter(Boolean);
   if (!dests.length) { toast("Il manque l'adresse e-mail."); return false; }
@@ -4400,12 +4416,12 @@ function envoyerToutesQuittances() {
   return new Promise(fin => {
     const liste = toutesEcheances().filter(qAFaire); // respecte "Pas besoin" (qno-) et sansQuittance
     if (!liste.length) { toast("Aucune quittance à envoyer."); return fin(0); }
-    if (!peutEnvoyer()) { toast("Tu ne peux pas envoyer d'e-mails depuis cet espace (lecture seule)."); return fin(0); }
+    if (!peutEnvoyer()) { if (SB && !GMAIL) { toast("Pour envoyer les quittances d'ici, branche d'abord ton Gmail."); reglage("gmail"); } else toast("Tu ne peux pas envoyer d'e-mails depuis cet espace (lecture seule)."); return fin(0); }
     const avec = liste.filter(e => e.b.email), sans = liste.filter(e => !e.b.email), avant = avec.map(e => e.b.email);
     const ligne = (e, i) => `<li class="q-lot"><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="q${i}" checked onchange="majBoutonQuittances()"><span class="tx"><b>${esc(nomCourt(e.b.nom))}</b> · ${fm(e.m)} · ${eur(e.du)}<small>${esc(bienLabel(bien(e.b.bienId)))}</small></span></label>
       <div class="q-mail"><input type="email" name="m${i}" value="${esc(e.b.email)}" aria-label="Adresse e-mail de ${esc(e.b.nom)}" autocomplete="off"><button type="button" class="small ghost" onclick="quittance('${e.b.id}','${e.m}')">Voir</button></div></li>`;
     modal(`Quittances à envoyer (${liste.length})`, `
-      <p class="full note">Vérifie la liste (tu peux décocher, corriger une adresse ou voir chaque quittance), puis valide. Elles partiront de <b>${esc(GMAIL ? GMAIL.adresse : "l'adresse de l'appli")}</b>, avec la quittance en PDF.</p>
+      <p class="full note">Vérifie la liste (tu peux décocher, corriger une adresse ou voir chaque quittance), puis valide. Elles partiront de <b>${esc(GMAIL ? GMAIL.adresse : "?")}</b>, avec la quittance en PDF.</p>
       ${avec.length ? `<ul class="todo full lot-q">${avec.map(ligne).join("")}</ul><p class="full note small">Une adresse corrigée ici est aussi corrigée sur la fiche du locataire.</p>` : `<p class="full note">Aucun locataire n'a d'adresse e-mail : télécharge les PDF ci-dessous.</p>`}
       ${sans.length ? `<div class="full"><h3>Sans adresse e-mail (${sans.length})</h3><ul class="todo">${sans.map(e => `<li><span class="tx"><b>${esc(nomCourt(e.b.nom))}</b> · ${fm(e.m)} · ${eur(e.du)}<small>Ajoute son e-mail sur sa fiche, ou donne-lui le PDF</small></span><button type="button" class="small" onclick="telechargerQuittance('${e.b.id}','${e.m}')">Télécharger le PDF</button></li>`).join("")}</ul></div>` : ""}
       ${avec.length ? `<p class="full drive-avant">⚠️ Un e-mail envoyé ne peut pas être annulé.</p>` : ""}`,
@@ -4911,7 +4927,7 @@ function blocNotif() {
   return `<ul class="todo plat">
     <li><span class="ico" aria-hidden="true">📱</span><span class="tx">Alertes sur ce téléphone<small>Virement reçu, loyer pas arrivé 3 jours après la date, point du mois le 1er et le 5.</small></span>
       ${NOTIF.etat === "actif" ? `<button class="small" onclick="desactiverPush()">Couper</button>` : iosPasInstalle ? `<span class="pill warn">installe d'abord l'appli</span>` : !support ? `<span class="pill">pas possible ici</span>` : `<button class="small primary" onclick="activerPush()">Activer</button>`}</li>
-    <li><span class="ico" aria-hidden="true">✉️</span><span class="tx">Résumé des loyers par e-mail<small>Le 1er et le 5 du mois, à ${esc(SB_USER && SB_USER.email || "ton adresse")}. Rien n'est envoyé aux locataires.</small></span>
+    <li><span class="ico" aria-hidden="true">✉️</span><span class="tx">Résumé des loyers par e-mail<small>Le 1er et le 5 du mois, envoyé par ton Gmail à ${esc(SB_USER && SB_USER.email || "ton adresse")}${GMAIL && GMAIL.mode === "google" ? "" : " (branche d'abord ton Gmail : Réglages › Envoi des e-mails)"}. Rien n'est envoyé aux locataires.</small></span>
       <button class="small ${NOTIF.prefs.resume ? "" : "primary"}" onclick="prefNotif('resume',${!NOTIF.prefs.resume})">${NOTIF.prefs.resume ? "Couper" : "Activer"}</button></li></ul>
     ${iosPasInstalle ? `<p class="note">Sur iPhone, les alertes marchent seulement une fois l'appli installée sur l'écran d'accueil (iOS 16.4 ou plus récent) : voir "Installer l'appli" plus haut.</p>` : ""}
     ${NOTIF.etat === "actif" ? `<div class="row"><button class="small ghost" onclick="essaiNotif()">M'envoyer un essai</button></div>` : ""}`;

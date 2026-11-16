@@ -12,7 +12,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
   const b = await chromium.launch(); const errs = [];
   for (const scheme of ['light', 'dark']) {
     const p = await b.newPage({ viewport: { width: 390, height: 844 }, colorScheme: scheme });
-    p.on('pageerror', e => errs.push(e.message));
+    p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test
     await p.addInitScript(FAKE);
     await p.goto('file://' + path.join(__dirname, '..', 'index.html')); await p.waitForTimeout(500);
     await p.evaluate(() => { S = demo(); S.biens[0].adresse = ''; S.biens[0].cp = ''; S.biens[0].ville = ''; S.biens[0].dpe = ''; S.biens[0].surface = 60; save(); render(); });

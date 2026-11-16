@@ -6,7 +6,7 @@ const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURICompo
 (async () => {
   const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
   const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
-  p.on('pageerror', e => errs.push(e.message));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test
   await p.route('**/html2canvas.min.js', r => r.fulfill({ path: __dirname + '/vendor/h2c/package/dist/html2canvas.min.js', contentType: 'application/javascript' }));
   await p.route('**/jspdf.umd.min.js', r => r.fulfill({ path: __dirname + '/vendor/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' }));
   await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);

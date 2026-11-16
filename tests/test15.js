@@ -4,7 +4,7 @@ let FAKE = fs.readFileSync(__dirname + '/test2.js', 'utf8').split('const FAKE = 
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const p = await b.newPage({ viewport: { width: 390, height: 844 } });
-  p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && errs.push(m.text()));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); // bouton Google réel : pas joignable depuis la machine de test p.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await p.addInitScript(FAKE); await p.route('**/jspdf.umd.min.js', r => r.fulfill({ path: __dirname + '/vendor/jspdfpkg/package/dist/jspdf.umd.min.js', contentType: 'application/javascript' }));
   await p.goto('file://' + require('path').join(__dirname, '..', 'index.html') + ''); await p.waitForTimeout(500);
   // Steve : loyer 510 le 10, suivi depuis septembre, rien payé en sept/oct
