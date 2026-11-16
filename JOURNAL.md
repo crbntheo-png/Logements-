@@ -30,6 +30,11 @@ Règle pour chaque session :
 
 ## Historique
 
+### 16/11/2026 (suite) — contrôle de confidentialité (session du compte principal)
+- Le jeton d'administration Supabase avait été remplacé : nouveau jeton `sbp_fc39…` donné par Théo, rangé dans `.env` (et dans le secret réseau de l'environnement cloud). Les autres sessions doivent mettre à jour leur `.env`.
+- Test « inconnu » (sans compte, puis compte test-b non invité) sur les 15 tables, les buckets et les fonctions : aucune donnée de GTP lisible, écriture refusée, `envoyer_mail` et `banque_actualiser` refusés. Côté serveur : 15 tables sur 15 avec RLS, buckets `photos` et `documents` privés, seules fonctions appelables sans compte : `est_membre`, `est_editeur`, `est_proprietaire` (renvoient faux sans compte).
+- Nettoyé : 2 espaces de test « Nouveau venu » restés sur test-b (pense à supprimer les espaces de test à la fin des tests).
+
 ### 16/11/2026 — « Ajouter un document » : choisir dans Google Drive (session du compte principal, demande de Théo)
 - Fenêtre « Ajouter un document » : bouton **📁 Choisir dans mon Google Drive** (propriétaire, Drive connecté) ; sinon lien « Connecte ton Drive ». Le choix sur le téléphone reste en dessous.
 - Navigateur Drive (`choisirFichierDrive`) : dossiers choisis en premier (« tes documents »), Mon Drive, partagés avec moi, sous-dossiers (› / ← Retour), recherche par nom, plusieurs fichiers cochés, catégorie et locataire.
