@@ -89,7 +89,10 @@ def main():
     shutil.copy(os.path.join(ICI, "vendor", "supabase.js"), os.path.join(DIST, "supabase.js"))
     shutil.copy(os.path.join(ICI, "presentation.html"), os.path.join(DIST, "presentation.html"))  # page d'accueil publique (exigée par Google)
     for f in os.listdir(ICI):  # fichiers de vérification Google Search Console (googleXXXX.html)
-        if re.match(r"^google[0-9a-f]+\.html$", f): shutil.copy(os.path.join(ICI, f), os.path.join(DIST, f))
+        if re.match(r"^google[0-9a-f]+\.html$", f):
+            # Cloudflare Pages redirige "x.html" vers "x" (308), ce que Google refuse : on sert le contenu tel quel par une réécriture
+            shutil.copy(os.path.join(ICI, f), os.path.join(DIST, "verif-" + f[:-5] + ".txt"))
+            open(os.path.join(DIST, "_redirects"), "a").write(f"/{f} /verif-{f[:-5]}.txt 200\n")
     icone(192).save(os.path.join(DIST, "icon-192.png"))
     icone(512).save(os.path.join(DIST, "icon-512.png"))
     icone(512, marge=0.08, fond_plein=True).save(os.path.join(DIST, "icon-maskable-512.png"))
