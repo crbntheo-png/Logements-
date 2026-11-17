@@ -43,11 +43,15 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 4. ✅ (18/11) **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
 5. ✅ (18/11) **Trésorerie 12 mois** + alerte de seuil.
 6. ✅ (18/11) **Activité entre associés** ("X a marqué le loyer payé").
-7. **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
+7. ✅ (18/11) **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
 
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — feuille de route, étape 7 : surveillance de l'appli
+- GitHub Action `.github/workflows/surveillance.yml`, chaque jour à 6 h 17 UTC (7 h 17 à Paris en hiver), et à la demande (onglet Actions › Surveillance de l'appli › Run workflow) : la page https://sci-gestion-locative.com s'ouvre et contient l'appli ; l'adresse pages.dev s'ouvre ; la base répond (requête légère sur `espaces`, qui évite aussi la mise en pause du projet Supabase gratuit) ; la fonction `locataire` refuse un faux lien (404). Si une étape échoue, GitHub envoie un e-mail. La clé utilisée est la clé publique lue sur la page (aucun secret).
+- Essai des 4 vérifications depuis la machine de session : page ok, pages.dev ok, base 200, fonction 404. 1er passage sur GitHub lancé à la main le 18/11 : réussi (https://github.com/crbntheo-png/Logements-/actions/runs/44197732192).
 
 ### 18/11/2026 — feuille de route, étape 6 : qui a fait quoi entre associés
 - Serveur (`supabase/activite.sql`) : la table `docs` note l'auteur de chaque ajout ou modification (déclencheur `docs_auteur` : `maj_par` = la personne connectée, nouvelle colonne `cree_le`) ; les suppressions de paiements, dépenses, locataires et logements sont gardées 60 jours (`docs_supprimes`, lisible par les membres). Les anciennes lignes ont reçu `cree_le = maj_le`.
