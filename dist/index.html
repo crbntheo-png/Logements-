@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "ad3fcef", "date": "2026-11-17T23:01"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "428c50c", "date": "2026-11-17T23:09"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -546,6 +546,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .paper th, .paper td { border: 1px solid #999; padding: 6px 10px; color: var(--paper-ink); background: transparent; text-transform: none; letter-spacing: 0; font: 13.5px Georgia, serif; }
 .paper .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
 .paper .sign div { min-height: 90px; }
+.deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
 .treso-d summary { cursor: pointer; font-weight: 650; } .tbl-scroll { overflow-x: auto; } .treso-t { width: 100%; border-collapse: collapse; font-size: .82rem; font-variant-numeric: tabular-nums; } .treso-t th, .treso-t td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; } .treso-t th:first-child, .treso-t td:first-child { text-align: left; } .treso-t tr.neg td { color: var(--bad); }
 .loc-page { display: grid; gap: 14px; max-width: 640px; margin: 0 auto; }
@@ -935,7 +936,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
-  DEMANDES = []; PORTAIL_PUBLIE = {}; chargerDemandes(); setTimeout(publierPortails, 5000);
+  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
 /* ================= Banque (via Pennylane, lue par le serveur) ================= */
@@ -2517,7 +2518,7 @@ function pageAccueil(T) {
       <button class="cta" onclick="lancerPoint()">⚡ Faire le point</button>
     </div>
   </section>
-  ${carteBanqueAccueil()}
+  ${carteBanqueAccueil()}${carteActivite()}
   <section><div class="sec-head"><h2 class="sec">Locataires <span class="count">${actifs.length}</span></h2><button class="small" onclick="editBail()">➕ Ajouter</button></div>
     <div class="tiles">${actifs.map(b => [b, ({ retard: 0, partiel: 1, etale: 2, avenir: 3, paye: 4 })[(echeance(b, CUR) || {}).statut] ?? 5]).sort((x, y) => x[1] - y[1]).map(x => carteLocataire(x[0])).join("")}
     ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span class="who"><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="tile-state"><i class="dot"></i>Disponible</div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">➕ Mettre un locataire</button></div></article>`).join("")}</div>
@@ -3209,6 +3210,69 @@ function sectionTreso() {
       <p class="note small">Départ : ${eur(T.depart)} ${T.banque ? "(solde lu dans la banque)" : `(saisi le ${fds(P(S.sci.soldeTreso.date))}) · <a href="#" onclick="event.preventDefault();delete S.sci.soldeTreso;save();render()">changer</a>`}. Loyers : ce que les baux en cours prévoient (les retards des mois passés ne sont pas comptés). Prêts : ${T.avecTableau ? "tes tableaux d'amortissement" : `moyenne de tes échéances passées (${eur(T.pretsMoyen)}/mois) : saisis tes prêts dans Emprunts pour plus de précision`}. Taxe foncière : ${T.tf ? eur(T.tf) + " en octobre (dernier montant connu)" : "aucune saisie"}. Dépenses courantes : moyenne de tes 12 derniers mois (${eur(T.courantes)}/mois).</p>
       <form class="row" onsubmit="event.preventDefault();S.sci.seuilTreso=+this.seuil.value||0;save();render();toast('Seuil enregistré')"><label class="fl" style="flex:1">Me prévenir si le compte passe sous (€)<input name="seuil" id="treso_seuil" type="number" step="1" value="${T.seuil || ""}" placeholder="0"></label><button class="small">OK</button></form></details></section>`;
 }
+/* ================= Activité entre associés =================
+   Le serveur note qui ajoute, modifie ou supprime (docs.maj_par, docs_supprimes) et qui envoie quoi (envois).
+   L'accueil montre ce que les AUTRES ont fait ces 14 derniers jours ; un document prévient si un associé a déjà écrit au même locataire. */
+let ACTIVITE = [];
+const prenomMembre = uid => { const m = MEMBRES && MEMBRES.membres.find(x => x.user_id === uid); const l = m && m.email ? m.email.split("@")[0].split(/[._-]/)[0] : "Un associé"; return l.charAt(0).toUpperCase() + l.slice(1); };
+async function chargerActivite() {
+  if (!SB || !ESPACE || !SB_USER) return; const id = ESPACE, moi = SB_USER.id, depuis = new Date(Date.now() - 14 * 864e5).toISOString();
+  try {
+    const [d, x, e] = await Promise.all([
+      SB.from("docs").select("coll, doc_id, data, maj_le, maj_par, cree_le").eq("espace_id", id).neq("maj_par", moi).gte("maj_le", depuis).in("coll", ["paiements", "depenses", "baux", "biens", "taxes"]).order("maj_le", { ascending: false }).limit(60),
+      SB.from("docs_supprimes").select("coll, data, par, le").eq("espace_id", id).neq("par", moi).gte("le", depuis).order("le", { ascending: false }).limit(30),
+      SB.from("envois").select("par, destinataires, objet, cree_le").eq("espace_id", id).neq("par", moi).gte("cree_le", depuis).order("cree_le", { ascending: false }).limit(30)]);
+    if (ESPACE !== id) return;
+    const L = [];
+    (d.data || []).forEach(r => { const cree = Math.abs(new Date(r.maj_le) - new Date(r.cree_le)) < 120000; L.push({ qui: r.maj_par, quand: r.maj_le, coll: r.coll, act: cree ? "ajout" : "modif", data: r.data }); });
+    (x.data || []).forEach(r => L.push({ qui: r.par, quand: r.le, coll: r.coll, act: "suppr", data: r.data || {} }));
+    (e.data || []).forEach(r => L.push({ qui: r.par, quand: r.cree_le, coll: "envoi", act: "envoi", data: { objet: r.objet, a: r.destinataires || [] } }));
+    L.sort((a, b) => new Date(b.quand) - new Date(a.quand));
+    ACTIVITE = L; if (MODE === "partage") render();
+  } catch (err) { /* l'activité est un bonus */ }
+}
+function texteActivite(g) {
+  const n = g.l.length, x = g.l[0], dd = x.data || {}, b = dd.bailId && bail(dd.bailId), nb = b ? nomCourt(b.nom) : "";
+  const noms = [...new Set(g.l.map(y => y.data && y.data.bailId && bail(y.data.bailId)).filter(Boolean).map(y => nomCourt(y.nom).split(" ")[0]))].slice(0, 3).join(", ");
+  const tot = r2(g.l.reduce((s, y) => s + (+(y.data || {}).montant || 0), 0));
+  switch (x.coll + "|" + x.act) {
+    case "paiements|ajout": return ["💶", n > 1 ? `a enregistré ${n} paiements (${eur(tot)}${noms ? " · " + noms : ""})${dd.tx ? " lus dans la banque" : ""}` : `a enregistré ${eur(+dd.montant || 0)} reçus${nb ? " de " + nb : ""}${dd.mois ? " (" + fm(dd.mois) + ")" : ""}${dd.tx ? ", lus dans la banque" : ""}`];
+    case "paiements|modif": return ["💶", n > 1 ? `a modifié ${n} paiements` : `a modifié un paiement${nb ? " de " + nb : ""}`];
+    case "paiements|suppr": return ["🗑", n > 1 ? `a supprimé ${n} paiements (${eur(tot)})` : `a supprimé un paiement de ${eur(+dd.montant || 0)}${nb ? " (" + nb + ")" : ""}`];
+    case "depenses|ajout": return ["🧾", n > 1 ? `a ajouté ${n} dépenses (${eur(tot)})` : `a ajouté une dépense : ${esc(dd.libelle || dd.categorie || "")} (${eur(+dd.montant || 0)})`];
+    case "depenses|modif": return ["🧾", n > 1 ? `a modifié ${n} dépenses` : `a modifié la dépense ${esc(dd.libelle || dd.categorie || "")}`];
+    case "depenses|suppr": return ["🗑", n > 1 ? `a supprimé ${n} dépenses` : `a supprimé la dépense ${esc(dd.libelle || dd.categorie || "")} (${eur(+dd.montant || 0)})`];
+    case "baux|ajout": return ["👤", `a ajouté ${n > 1 ? n + " locataires" : "le locataire " + esc(nomCourt(dd.nom || ""))}`];
+    case "baux|modif": return ["👤", n > 1 ? `a modifié ${n} fiches de locataires` : `a modifié la fiche de ${esc(nomCourt(dd.nom || ""))}`];
+    case "baux|suppr": return ["🗑", `a supprimé le locataire ${esc(nomCourt(dd.nom || ""))}`];
+    case "biens|ajout": return ["🏠", `a ajouté ${n > 1 ? n + " logements" : "le logement " + esc(dd.nom || "")}`];
+    case "biens|modif": return ["🏠", n > 1 ? `a modifié ${n} logements` : `a modifié le logement ${esc(dd.nom || "")}`];
+    case "biens|suppr": return ["🗑", `a supprimé le logement ${esc(dd.nom || "")}`];
+    case "taxes|ajout": case "taxes|modif": return ["🏛", `a saisi la taxe foncière ${dd.annee || ""}${dd.bienId && bien(dd.bienId) ? " de " + esc(bien(dd.bienId).nom) : ""}`];
+    case "envoi|envoi": return ["✉️", n > 1 ? `a envoyé ${n} e-mails (${esc(dd.objet || "")}…)` : `a envoyé « ${esc(dd.objet || "")} » à ${esc((dd.a || []).join(", "))}`];
+  }
+  return ["•", "a fait une modification"];
+}
+function groupesActivite() {
+  const G = [];
+  ACTIVITE.forEach(x => { const k = x.qui + "|" + x.coll + "|" + x.act, g = G[G.length - 1];
+    if (g && g.k === k && Math.abs(new Date(g.l[g.l.length - 1].quand) - new Date(x.quand)) < 10 * 60000) g.l.push(x); else G.push({ k, l: [x] }); });
+  return G;
+}
+const ligneActivite = g => { const [ico, t] = texteActivite(g); return `<li><span class="ico" aria-hidden="true">${ico}</span><span class="tx"><b>${esc(prenomMembre(g.l[0].qui))}</b> ${t}<small>${ilYa(g.l[0].quand)}</small></span></li>`; };
+function carteActivite() {
+  if (!SB || !MEMBRES || MEMBRES.membres.length < 2 || !ACTIVITE.length) return "";
+  const G = groupesActivite();
+  return `<section class="card activite"><div class="sec-head"><h2 class="sec">👥 Ce que font tes associés</h2>${G.length > 4 ? `<button class="small ghost" onclick="toutActivite()">Tout voir</button>` : ""}</div><ul class="todo">${G.slice(0, 4).map(ligneActivite).join("")}</ul></section>`;
+}
+function toutActivite() { modal("👥 Activité des associés (14 jours)", `<ul class="todo full">${groupesActivite().map(ligneActivite).join("")}</ul>`, () => true, { ok: "Fermer", lecture: true }); }
+/* Un associé a-t-il écrit à cette adresse ces 3 derniers jours ? */
+function dejaEcrit(adr) {
+  const a = String(adr || "").toLowerCase().trim(); if (!a) return null;
+  const x = ACTIVITE.find(y => y.coll === "envoi" && Date.now() - new Date(y.quand) < 3 * 864e5 && (y.data.a || []).some(z => String(z).toLowerCase() === a));
+  return x ? { qui: prenomMembre(x.qui), quand: x.quand, objet: x.data.objet } : null;
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && SB && ESPACE && MODE === "partage") chargerActivite(); });
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -3925,6 +3989,7 @@ function showDoc(html, o = {}) {
   <div class="paper" id="paper">${html}</div>
   ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.bailId && bail(o.bailId) && bail(o.bailId).tel ? `<button class="small" onclick="envoyerAutrement('sms')">📱 Par SMS</button><button class="small" onclick="envoyerAutrement('wa')">💬 WhatsApp</button>` : ""}${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div>${SB && !MCP && !GMAIL ? `<p class="note">✉️ Pour envoyer d'ici en un geste, depuis ta propre adresse : <a href="#" onclick="closeOverlay();reglage('gmail');return false">branche ton Gmail</a>.</p>` : ""}</div>` : ""}</div>`;
   ov.hidden = false; ov.scrollTop = 0;
+  const deja = o.to && dejaEcrit(o.to); if (deja) ov.querySelector(".docbar").insertAdjacentHTML("afterend", `<div class="deja-ecrit">${grosMsg("attention", `👥 ${esc(deja.qui)} a déjà écrit à ${esc(o.to)} ${ilYa(deja.quand)}`, `« ${esc(deja.objet || "")} ». Vérifie avant d'envoyer, pour ne pas faire de doublon.`)}</div>`);
   if (o.onSent && document.getElementById("dsent")) document.getElementById("dsent").onclick = () => { o.onSent(); save(); closeOverlay(); toast("Enregistré comme envoyé"); };
   if (mail) document.getElementById("dsend").onclick = ev => {
     const dest = (document.getElementById("maildest").value || "").trim(), objet = (document.getElementById("mailobjet").value || o.titre).trim();

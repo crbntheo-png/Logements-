@@ -42,12 +42,19 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 3. ✅ (18/11) **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
 4. ✅ (18/11) **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
 5. ✅ (18/11) **Trésorerie 12 mois** + alerte de seuil.
-6. **Activité entre associés** ("X a marqué le loyer payé").
+6. ✅ (18/11) **Activité entre associés** ("X a marqué le loyer payé").
 7. **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
 
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — feuille de route, étape 6 : qui a fait quoi entre associés
+- Serveur (`supabase/activite.sql`) : la table `docs` note l'auteur de chaque ajout ou modification (déclencheur `docs_auteur` : `maj_par` = la personne connectée, nouvelle colonne `cree_le`) ; les suppressions de paiements, dépenses, locataires et logements sont gardées 60 jours (`docs_supprimes`, lisible par les membres). Les anciennes lignes ont reçu `cree_le = maj_le`.
+- Accueil : carte "👥 Ce que font tes associés" (seulement à plusieurs) : ce que les AUTRES ont fait ces 14 jours, regroupé ("Gabriel a enregistré 3 paiements (1 650 € · Jean, Marie)", "a ajouté une dépense : Plombier (120 €)", "a supprimé…", "a envoyé « Relance » à …"), "Tout voir". Rechargée quand on revient dans l'appli.
+- Anti-doublon : un document adressé à un locataire à qui un associé a écrit ces 3 derniers jours affiche en grand "👥 Gabriel a déjà écrit à … il y a 2 h · « objet »".
+- Tests : test59 (vraie base, 2 vrais comptes : propriétaire + associé) 10/10 ; test33, test47, test55, test56 (écritures serveur après le déclencheur) OK ; test5, test58 OK. En ligne.
+- Pas vérifié : avec Gabriel et Pierre pour de vrai.
 
 ### 18/11/2026 — feuille de route, étape 5 : trésorerie des 12 prochains mois
 - Compta (année en cours) : carte "📈 Trésorerie des 12 prochains mois". Départ = solde lu dans la banque (Pennylane), sinon solde saisi une fois. Chaque mois : + loyers prévus par les baux en cours (les retards passés ne comptent pas), − échéances de prêts (tableaux d'amortissement ; sans prêt saisi, moyenne des échéances vues dans les dépenses), − taxe foncière en octobre (dernier montant connu par logement), − moyenne des dépenses courantes des 12 derniers mois (hors taxe foncière, prêts, achat, travaux d'amélioration).
