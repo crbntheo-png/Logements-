@@ -521,6 +521,15 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .paper th, .paper td { border: 1px solid #999; padding: 6px 10px; color: var(--paper-ink); background: transparent; text-transform: none; letter-spacing: 0; font: 13.5px Georgia, serif; }
 .paper .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
 .paper .sign div { min-height: 90px; }
+.paper .sig-img { display: block; max-width: 220px; max-height: 90px; margin-top: 6px; }
+.paper .sig-l { display: block; color: #3d4a5c; }
+.sigpad { position: fixed; inset: 0; z-index: 60; background: rgba(9, 14, 22, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.sigpad .modal { width: min(560px, 100%); padding-top: 18px; }
+.sig-zone { width: 100%; height: 200px; background: #fff; border: 2px dashed var(--line); border-radius: 12px; touch-action: none; display: block; cursor: crosshair; }
+.sig-liste { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.sig-liste li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; flex-wrap: wrap; }
+.sig-liste .ok { color: var(--ok, #1f7a56); font-weight: 600; }
+@media (max-width: 640px) { .sigpad { align-items: flex-end; padding: 0; } .sigpad .modal { border-radius: 24px 24px 0 0; } }
 .paper .small { font-size: 11.5px; color: #444; }
 .paper p { margin: 6px 0; }
 .paper a { color: inherit; }
@@ -588,6 +597,8 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 @media (max-width: 380px) { .docbar { flex-wrap: wrap; } .docbar .row { flex-wrap: wrap; } .docbar button { padding-left: 10px; padding-right: 10px; } }
 .docbar .row { flex-wrap: nowrap; min-width: 0; }
 .docbar .doc-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .95rem; }
+@media (max-width: 600px) { .docbar:has(#dsigner) button:not(#dsigner) .lbl { display: none; } }
+.docbar > .row:first-child { flex: 1 1 auto; min-width: 0; } .docbar > .row:last-child { flex: 0 0 auto; } .docbar .doc-t { min-width: 0; }
 .docbar button { box-shadow: none; }
 .docbar button:not(.primary):not(.icon-btn) { background: var(--surface-2); }
 .task { align-items: start; }
@@ -3506,8 +3517,8 @@ function modal(title, body, onSubmit, opts = {}) {
   if (opts.after) opts.after(f);
   const first = f.querySelector("input:not([type=checkbox]):not([type=radio]),select,textarea"); if (first && matchMedia("(pointer: fine)").matches) first.focus();
 }
-function closeOverlay() { const o = document.getElementById("overlay"); o.hidden = true; o.innerHTML = ""; if (pendingRender) { pendingRender = false; } render(); }
-document.addEventListener("keydown", e => { if (e.key === "Escape" && !document.getElementById("overlay").hidden) closeOverlay(); });
+function closeOverlay() { fermerSigPad(); const o = document.getElementById("overlay"); o.hidden = true; o.innerHTML = ""; if (pendingRender) { pendingRender = false; } render(); }
+document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (document.getElementById("sigpad")) { fermerSigPad(); return; } if (!document.getElementById("overlay").hidden) closeOverlay(); });
 function confirmer(msg, yes) {
   const o = document.getElementById("overlay");
   o.innerHTML = `<div class="modal" role="alertdialog" style="width:min(460px,100%)"><p>${esc(msg)}</p><div class="row" style="justify-content:flex-end"><button onclick="closeOverlay()">Annuler</button><button class="primary" id="cyes">Confirmer</button></div></div>`;
@@ -3783,10 +3794,10 @@ const lignesMontants = e => `<table><tbody><tr><td>Loyer hors charges</td><td cl
 /* Affichage d'un document, avec téléchargement PDF et envoi par e-mail */
 let CURDOC = null;
 function showDoc(html, o = {}) {
-  CURDOC = { html, o };
+  CURDOC = { html, base: html, o, sigs: {}, range: true };
   const ov = document.getElementById("overlay"), mail = !!o.email && peutEnvoyer();
-  ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="closeOverlay()" aria-label="Fermer">✕</button><b class="doc-t">${esc(o.titre || "")}</b></div>
-  <div class="row"><button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer…</span></button>` : ""}</div></div>
+  ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="fermerDoc()" aria-label="Fermer">✕</button><b class="doc-t">${esc(o.titre || "")}</b></div>
+  <div class="row">${/class="sign"/.test(html) ? `<button onclick="panneauSignature()" id="dsigner" aria-label="Signer sur l'écran">✍️<span class="lbl">Signer</span></button>` : ""}<button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer…</span></button>` : ""}</div></div>
   <div class="paper" id="paper">${html}</div>
   ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.bailId && bail(o.bailId) && bail(o.bailId).tel ? `<button class="small" onclick="envoyerAutrement('sms')">📱 Par SMS</button><button class="small" onclick="envoyerAutrement('wa')">💬 WhatsApp</button>` : ""}${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div>${SB && !MCP && !GMAIL ? `<p class="note">✉️ Pour envoyer d'ici en un geste, depuis ta propre adresse : <a href="#" onclick="closeOverlay();reglage('gmail');return false">branche ton Gmail</a>.</p>` : ""}</div>` : ""}</div>`;
   ov.hidden = false; ov.scrollTop = 0;
@@ -3806,7 +3817,7 @@ function showDoc(html, o = {}) {
       const bt = document.getElementById("dsend"); if (bt) { bt.disabled = true; bt.lastChild.textContent = "Envoi…"; }
       const b = o.bailId && bail(o.bailId);
       if (b && !b.email) { b.email = dest; save(); }
-      const ok = await envoyerMail({ to: dest, objet, corps, html, fichier: o.fichier, photos: o.photos });
+      const ok = await envoyerMail({ to: dest, objet, corps, html: CURDOC.html, fichier: o.fichier, photos: o.photos });
       if (ok) { if (o.onSent) o.onSent(); save(); closeOverlay(); render(); toast("✓ Envoyé à " + dest); }
       else if (bt) { bt.disabled = false; bt.lastChild.textContent = "Envoyer…"; }
     };
@@ -3853,9 +3864,15 @@ function fairePdf(html, images = []) {
   function block(el) {
     const tag = el.tagName, cl = el.classList;
     if (tag === "DIV" && (cl.contains("two-col") || cl.contains("sign"))) {
-      const kids = [...el.children]; y += 2; ensure(30);
+      const kids = [...el.children]; y += 2; ensure(cl.contains("sign") ? 50 : 30);
       const y1 = column(kids[0], M, W / 2 - 5), y2 = kids[1] ? column(kids[1], M + W / 2 + 5, W / 2 - 5) : y;
-      y = Math.max(y1, y2) + (cl.contains("sign") ? 25 : 4); return;
+      let bas = Math.max(y1, y2), signe = false;
+      if (cl.contains("sign")) kids.slice(0, 2).forEach((k, i) => {
+        const im = k.querySelector("img.sig-img"); if (!im) return;
+        const iw = +im.dataset.w || 300, ih = +im.dataset.h || 100, h = Math.min(22, 55 * ih / iw), w = h * iw / ih;
+        try { doc.addImage(im.getAttribute("src"), "PNG", i ? M + W / 2 + 5 : M, (i ? y2 : y1) + 1, w, h); signe = true; bas = Math.max(bas, (i ? y2 : y1) + 1 + h); } catch (e) {}
+      });
+      y = bas + (cl.contains("sign") ? (signe ? 8 : 25) : 4); return;
     }
     if (tag === "H1") { y += 3; write(el.textContent, { size: 15, bold: true, align: "center" }); y += 1; return; }
     if (tag === "H2") { y += 3; ensure(10); write(el.textContent.toUpperCase(), { size: 10.5, bold: true }); doc.setLineWidth(0.2); doc.line(M, y + 0.5, M + W, y + 0.5); y += 2.5; return; }
@@ -3886,6 +3903,107 @@ function fairePdf(html, images = []) {
     delete images._col;
   }
   return doc;
+}
+/* ================= Signature au doigt (état des lieux, bail, avenant, plan d'apurement) =================
+   Chaque colonne du bloc "sign" du document = un signataire. La signature (dessin) est ajoutée au document
+   affiché et au PDF, avec le nom, la date et l'heure. Puis le PDF signé est rangé dans les documents du logement. */
+function signataires() {
+  const t = document.createElement("div"); t.innerHTML = CURDOC.base;
+  const bloc = t.querySelector(".sign"); if (!bloc) return [];
+  const b = bail(CURDOC.o.bailId) || {};
+  const bailleur = estPerso() ? (S.sci.gerant || "") : [S.sci.gerant, S.sci.nom ? "pour " + S.sci.nom : ""].filter(Boolean).join(" ");
+  return [...bloc.children].slice(0, 2).map((k, i) => {
+    const role = (k.querySelector("b") || k).textContent.trim() || (i ? "Le locataire" : "Le bailleur");
+    return { i, role, lu: /lu et approuv/i.test(k.textContent), nom: /bailleur/i.test(role) ? bailleur : (b.nom || "") };
+  });
+}
+function appliquerSignatures() {
+  const t = document.createElement("div"); t.innerHTML = CURDOC.base;
+  const bloc = t.querySelector(".sign");
+  if (bloc) Object.entries(CURDOC.sigs).forEach(([i, g]) => {
+    const k = bloc.children[+i]; if (!k) return;
+    k.querySelectorAll(".small").forEach(x => { if (/^signature/i.test(x.textContent.trim())) x.remove(); });
+    const d = new Date(g.quand);
+    k.insertAdjacentHTML("beforeend", `<span class="small sig-l">${g.lu ? "Lu et approuvé. " : ""}Signé sur écran par ${esc(g.nom)} le ${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span><img class="sig-img" alt="Signature de ${esc(g.nom)}" src="${g.img}" data-w="${g.w}" data-h="${g.h}">`);
+  });
+  CURDOC.html = t.innerHTML;
+  const p = document.getElementById("paper"); if (p) p.innerHTML = CURDOC.html;
+  const bt = document.getElementById("dsigner"); const n = Object.keys(CURDOC.sigs).length;
+  if (bt) bt.lastChild.textContent = n ? `Signé (${n})` : "Signer";
+}
+function fermerSigPad() { const x = document.getElementById("sigpad"); if (x) x.remove(); }
+function sigPadHtml(titre, corps) {
+  fermerSigPad();
+  const d = document.createElement("div"); d.id = "sigpad"; d.className = "sigpad";
+  d.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(titre)}"><div class="mh"><h2>${titre}</h2><button class="ghost" type="button" onclick="fermerSigPad()" aria-label="Fermer">✕</button></div>${corps}</div>`;
+  document.body.appendChild(d); return d;
+}
+const bienDuDoc = () => { const b = bail(CURDOC && CURDOC.o.bailId); return b ? b.bienId : (CURDOC && CURDOC.o.bienId) || ""; };
+function panneauSignature(msg) {
+  if (!CURDOC) return;
+  const L = signataires(), n = Object.keys(CURDOC.sigs).length, peutRanger = !!(SB && ESPACE && bienDuDoc());
+  const d = sigPadHtml("✍️ Signer sur l'écran", `${msg ? grosMsg("attention", msg, "") : ""}
+    <p class="note">Chacun signe avec le doigt, sur ce téléphone. La signature, le nom, la date et l'heure sont ajoutés au PDF.</p>
+    <ul class="sig-liste">${L.map(x => { const g = CURDOC.sigs[x.i]; return `<li><span><b>${esc(x.role)}</b>${g ? `<br><span class="small ok">✓ signé par ${esc(g.nom)}</span>` : ""}</span><button type="button" class="${g ? "small" : "primary small"}" onclick="dessinerSignature(${x.i})">${g ? "Refaire" : "✍️ Signer"}</button></li>`; }).join("")}</ul>
+    ${n ? grosMsg("ok", n === L.length ? "✅ Tout le monde a signé" : `${n} signature${n > 1 ? "s" : ""} sur ${L.length}`, peutRanger ? (CURDOC.range ? "Le PDF signé est rangé dans les documents du logement." : "Range le PDF signé dans le logement : sinon, la signature est perdue en fermant le document.") : "Télécharge ou partage le PDF signé : il n'est pas gardé en fermant le document.") : ""}
+    <div class="row" style="justify-content:flex-end">${n && peutRanger && !CURDOC.range ? `<button type="button" class="primary" id="sigRanger">📁 Ranger le PDF signé dans le logement</button>` : ""}<button type="button" onclick="fermerSigPad()">${n ? "Voir le document" : "Fermer"}</button></div>`);
+  const r = d.querySelector("#sigRanger"); if (r) r.onclick = () => rangerPdfSigne(r);
+}
+function dessinerSignature(i) {
+  const x = signataires().find(s => s.i === i); if (!x) return;
+  const d = sigPadHtml(`✍️ ${esc(x.role)}`, `<label class="fl">Nom de la personne qui signe<input id="sigNom" value="${esc(x.nom)}" autocomplete="off"></label>
+    <p class="note">Signe dans le cadre avec le doigt${x.lu ? ". \"Lu et approuvé\" est ajouté tout seul" : ""}.</p>
+    <canvas class="sig-zone" id="sigZone" aria-label="Zone de signature"></canvas>
+    <div class="row" style="justify-content:space-between"><button type="button" id="sigEff">Effacer</button><div class="row"><button type="button" onclick="panneauSignature()">Retour</button><button type="button" class="primary" id="sigOk">Valider la signature</button></div></div>`);
+  const c = d.querySelector("#sigZone"), r = window.devicePixelRatio || 1;
+  const taille = () => { const b = c.getBoundingClientRect(); c.width = Math.round(b.width * r); c.height = Math.round(b.height * r); };
+  taille();
+  const g = c.getContext("2d"); let trace = false, vide = true, der = null;
+  const pos = e => { const b = c.getBoundingClientRect(); return [(e.clientX - b.left) * r, (e.clientY - b.top) * r]; };
+  const style = () => { g.lineWidth = 2.6 * r; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#1b2a6b"; g.fillStyle = "#1b2a6b"; };
+  style();
+  c.addEventListener("pointerdown", e => { e.preventDefault(); try { c.setPointerCapture(e.pointerId); } catch (_) {} trace = true; der = pos(e); g.beginPath(); g.arc(der[0], der[1], 1.3 * r, 0, 7); g.fill(); vide = false; });
+  c.addEventListener("pointermove", e => { if (!trace) return; e.preventDefault(); const p = pos(e); g.beginPath(); g.moveTo(der[0], der[1]); g.lineTo(p[0], p[1]); g.stroke(); der = p; vide = false; });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(t => c.addEventListener(t, () => { trace = false; }));
+  d.querySelector("#sigEff").onclick = () => { g.clearRect(0, 0, c.width, c.height); vide = true; };
+  d.querySelector("#sigOk").onclick = () => {
+    const nom = d.querySelector("#sigNom").value.trim();
+    if (!nom) { toast("Indique le nom de la personne qui signe."); d.querySelector("#sigNom").focus(); return; }
+    if (vide) { toast("Signe dans le cadre avec le doigt."); return; }
+    const im = rognerSignature(c); if (!im) { toast("Signe dans le cadre avec le doigt."); return; }
+    CURDOC.sigs[i] = Object.assign(im, { nom, lu: x.lu, quand: new Date().toISOString() }); CURDOC.range = false;
+    appliquerSignatures(); panneauSignature();
+  };
+}
+/* Coupe le blanc autour du dessin, pour une image nette et légère */
+function rognerSignature(c) {
+  const g = c.getContext("2d"), { width: W, height: H } = c, px = g.getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (px[(y * W + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const m = 6, w = Math.min(W, x1 - x0 + 2 * m), h = Math.min(H, y1 - y0 + 2 * m), o = document.createElement("canvas");
+  const k = Math.min(1, 600 / w); o.width = Math.max(1, Math.round(w * k)); o.height = Math.max(1, Math.round(h * k));
+  o.getContext("2d").drawImage(c, Math.max(0, x0 - m), Math.max(0, y0 - m), w, h, 0, 0, o.width, o.height);
+  return { img: o.toDataURL("image/png"), w: o.width, h: o.height };
+}
+async function rangerPdfSigne(bt) {
+  const bienId = bienDuDoc(); if (!bienId || !SB || !ESPACE) return;
+  if (bt) { bt.disabled = true; bt.textContent = "Rangement…"; }
+  try {
+    const doc = fairePdf(CURDOC.html, await imagesDoc(CURDOC.o)), blob = doc.output("blob");
+    const chemin = `${ESPACE}/${bienId}/${uid()}.pdf`;
+    const up = await SB.storage.from("documents").upload(chemin, new Blob([blob], { type: "application/pdf" }), { contentType: "application/pdf" });
+    if (up.error) throw up.error;
+    const t = CURDOC.o.titre || "Document", cat = /état des lieux/i.test(t) ? "État des lieux" : "Bail";
+    const nom = t.replace(/\s*–\s*à relire avant signature/i, "") + " (signé le " + new Date().toLocaleDateString("fr-FR") + ")";
+    S.fichiers.push(Object.assign({ id: uid(), bienId, cat, nom, chemin, type: "application/pdf", taille: blob.size, date: iso(TODAY), signe: true }, qui(CURDOC.o.bailId || "")));
+    CURDOC.range = true; save();
+    panneauSignature(); toast("✓ PDF signé rangé dans les documents du logement");
+  } catch (e) { toast("Rangement impossible : " + (e.message || e)); if (bt) { bt.disabled = false; bt.textContent = "📁 Ranger le PDF signé dans le logement"; } }
+}
+function fermerDoc() {
+  if (CURDOC && Object.keys(CURDOC.sigs || {}).length && !CURDOC.range && SB && ESPACE && bienDuDoc() && !CURDOC.avertiFermer) { CURDOC.avertiFermer = true; panneauSignature("⚠️ La signature n'est pas encore rangée"); return; }
+  fermerSigPad(); closeOverlay();
 }
 async function telechargerPdf() {
   if (!CURDOC) return;

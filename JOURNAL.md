@@ -37,7 +37,7 @@ Règle pour chaque session :
 Page visuelle : https://claude.ai/artifact/VDxQf3ztq7bFiADKC77K6o. Devant les autres : SCI (associés, AG, 2072), IA (Drive, baux), DPE/risques. Manques : banque toutes banques, signature, espace locataire, quittance automatique, trésorerie.
 
 Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
-1. **Signature au doigt** (EDL, bail, avenant) : zone de signature sur l'écran pour bailleur et locataire, ajoutée au PDF (jsPDF addImage) avec date, heure, nom ; PDF signé rangé dans le logement.
+1. ✅ (18/11) **Signature au doigt** (EDL, bail, avenant) : zone de signature sur l'écran pour bailleur et locataire, ajoutée au PDF (jsPDF addImage) avec date, heure, nom ; PDF signé rangé dans le logement.
 2. **Quittance automatique à réception du loyer** (Pennylane) : envoi seul ou après accord (choix dans Réglages).
 3. **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
 4. **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
@@ -48,6 +48,16 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — feuille de route, étape 1 : signer au doigt
+- Bouton "✍️ Signer" sur les documents qui ont une zone de signature : bail, état des lieux, avenant, plan d'apurement (pas sur les quittances ni les courriers). Une ligne par signataire (bailleur, locataire), nom prérempli et modifiable, cadre où l'on signe au doigt, Effacer / Valider. Refusé sans dessin ou sans nom.
+- La signature (image rognée), "Lu et approuvé" quand le document le demande, le nom, la date et l'heure sont ajoutés au document affiché et au PDF (téléchargé, partagé, envoyé par e-mail). Le bouton devient "Signé (N)".
+- "📁 Ranger le PDF signé dans le logement" : copie le PDF dans les documents du logement ("Bail (signé le JJ/MM/AAAA)", rattaché au locataire, catégorie Bail ou État des lieux, `signe: true`). Fermer le document sans ranger : avertissement une fois (sinon la signature est perdue).
+- Barre du document sur téléphone : elle débordait (le bouton Envoyer sortait de l'écran à 390 px) ; le titre se raccourcit et PDF / Partager n'affichent que leur icône quand Signer est là.
+- Valeur légale : c'est une signature simple (comme sur papier, faite devant toi). Pour signer à distance avec valeur renforcée, il faudra un service payant (Youtrust).
+- Tests : test53 (local, clair et sombre) 31/31 ; test54 (vraie base, compte de test, espace supprimé à la fin) 9/9 : PDF rangé, vrai PDF avec la signature, ouvrable. test5, test22, test38 OK. test30 échoue aussi sans ce changement (bibliothèque en ligne injoignable depuis la machine de test). En ligne.
+- Pas vérifié : sur un vrai téléphone, au doigt.
+
 
 ### 18/11/2026 — bilan de l'IA, propositions modifiables
 - Carte IA renommée "🤖 Le bilan de l'IA" ; bouton "🤖 Qu'est-ce que tu me suggères ?". En tête, des chiffres : logements à créer, dossiers à relier, locataires actuels, anciens locataires, logements sans dossier, documents lus.
