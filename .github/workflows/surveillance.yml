@@ -1,0 +1,33 @@
+# Surveillance de l'appli, chaque jour à 7 h 17 (heure de Paris en hiver) : si l'appli, la base ou les fonctions serveur
+# ne répondent plus, cette tâche échoue et GitHub envoie un e-mail. La requête à la base évite aussi la mise en pause
+# du projet Supabase gratuit (après 7 jours sans activité).
+name: Surveillance de l'appli
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: L'appli s'ouvre (sci-gestion-locative.com)
+        run: |
+          curl -fsS --retry 3 --retry-delay 20 -o page.html "https://sci-gestion-locative.com/?surveillance=$(date +%s)"
+          grep -q "APP_SUPABASE" page.html || { echo "::error::La page ne contient pas l'appli"; exit 1; }
+          echo "URL=$(grep -o '"url": "[^"]*"' page.html | head -1 | cut -d'"' -f4)" >> "$GITHUB_ENV"
+          echo "CLE=$(grep -o '"cle": "[^"]*"' page.html | head -1 | cut -d'"' -f4)" >> "$GITHUB_ENV"
+      - name: L'adresse de secours s'ouvre (pages.dev)
+        run: curl -fsS --retry 3 --retry-delay 20 -o /dev/null https://gestion-locative-sci.pages.dev/
+      - name: La base de données répond (et reste éveillée)
+        run: |
+          code=$(curl -sS --retry 3 --retry-delay 20 -o rep.json -w "%{http_code}" "$URL/rest/v1/espaces?select=id&limit=1" -H "apikey: $CLE")
+          cat rep.json; echo
+          [ "$code" = "200" ] || { echo "::error::La base répond $code"; exit 1; }
+      - name: Les fonctions serveur répondent
+        run: |
+          code=$(curl -sS --retry 3 --retry-delay 20 -o rep.json -w "%{http_code}" -X POST "$URL/functions/v1/locataire" -H "apikey: $CLE" -H "Content-Type: application/json" -d '{"jeton":"surveillanceSurveillanceSurveillance00000"}')
+          cat rep.json; echo
+          [ "$code" = "404" ] || { echo "::error::La fonction locataire répond $code (attendu 404 : faux lien refusé)"; exit 1; }
