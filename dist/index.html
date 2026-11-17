@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "3190023", "date": "2026-11-16T22:57"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "7725f05", "date": "2026-11-17T06:55"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4280,18 +4280,37 @@ function pageDocs() {
 const TYPES_IMPORT = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", txt: "text/plain" };
 const typeImport = n => TYPES_IMPORT[(String(n).split(".").pop() || "").toLowerCase()] || "";
 let IMPORT_DOS = null;
-const boutonImport = (cls = "small") => `<button class="${cls}" onclick="importerDossier()">📦 Importer un dossier entier</button>`;
+const boutonImport = (cls = "small") => `<button class="${cls}" onclick="importerDossier()">📦 Importer des documents</button>`;
 function importerDossier() {
   if (!SB) { toast("L'import marche dans l'appli installée."); return; }
   if (!estProprio()) { toast(msgProprio("importer les documents de l'espace")); return; }
   if (LECTURE) { toast("En lecture seule, tu ne peux pas importer."); return; }
   if (!S.biens.length) { toast("Ajoute d'abord tes logements : l'appli range chaque document dans le bon."); return; }
-  modal("Importer un dossier entier", `<div class="full imp-aide">
-    <p><b>💻 Sur ordinateur</b> (le plus simple) : sur <a href="https://drive.google.com" target="_blank" rel="noopener">drive.google.com</a>, fais un <b>clic droit</b> sur le dossier (par exemple "02 - GTP Invest") › <b>Télécharger</b>. Google te donne un fichier <b>.zip</b> avec tout ce qu'il contient, sous-dossiers compris. Choisis-le ci-dessous.</p>
-    <p><b>📱 Sur téléphone</b> : touche le bouton ci-dessous, va dans <b>Drive</b>, ouvre le dossier, touche longuement un fichier puis <b>Tout sélectionner</b>.</p>
-    <p class="note">L'appli lit tout, devine le logement et le type de chaque document, et te montre la liste <b>avant</b> de copier quoi que ce soit. Elle n'a besoin d'aucun accès à ton Drive pour ça.</p>
-    <label class="fl">Le .zip ou tes documents<input type="file" name="fichiers" multiple></label></div>`,
-    (d, f) => { const fs = [...f.querySelector("input[name=fichiers]").files]; if (!fs.length) { toast("Choisis le .zip ou tes documents."); return false; } lireImport(fs); return false; }, { ok: "Lire", lecture: true });
+  const drv = DRIVEG.etat === "oui";
+  modal("Importer des documents", `<div class="full imp-aide">
+    <button type="button" class="primary big btn-drive" onclick="importerDepuisPickerDrive()">📁 Choisir dans mon Drive</button>
+    <p class="note">${drv ? "Ton Drive s'ouvre : entre dans le dossier, touche chaque fichier à garder (il passe en bleu), puis <b>Sélectionner</b>." : "Il faudra d'abord connecter ton Drive (une fois)."} Google ne laisse pas choisir un dossier entier d'un coup : pour ça, utilise le .zip ci-dessous.</p>
+    <hr>
+    <p><b>📦 Un dossier entier, sous-dossiers compris</b> : sur ordinateur, sur <a href="https://drive.google.com" target="_blank" rel="noopener">drive.google.com</a>, fais un <b>clic droit</b> sur le dossier (par exemple "02 - GTP Invest") › <b>Télécharger</b>. Google te donne un fichier <b>.zip</b> : choisis-le ici.</p>
+    <label class="fl">Un .zip ou des fichiers de ton appareil<input type="file" name="fichiers" multiple accept="${ACCEPT_IMPORT}" onchange="if(this.files.length){lireImport([...this.files])}"></label>
+    <p class="note">Dans tous les cas, l'appli devine le logement et le type de chaque document et te montre la liste <b>avant</b> de copier quoi que ce soit.</p></div>`,
+    (d, f) => { const fs = [...f.querySelector("input[name=fichiers]").files]; if (!fs.length) { toast("Choisis dans ton Drive, ou un .zip."); return false; } lireImport(fs); return false; }, { ok: "Lire", lecture: true });
+}
+// Sans "image/*" ni "tout" : le téléphone ouvre directement ses fichiers, pas le choix Photo / Vidéo
+const ACCEPT_IMPORT = ".zip,application/zip,application/x-zip-compressed,.pdf,application/pdf,.doc,.docx,.xls,.xlsx,.txt";
+/* Choisir directement dans le Drive (sélecteur Google) : les fichiers touchés sont lus puis passent par le même aperçu */
+async function importerDepuisPickerDrive() {
+  if (DRIVEG.etat !== "oui") { closeOverlay(); connecterDrive(); return; }
+  closeOverlay();
+  let liste; try { liste = await ouvrirPicker("Choisis tes fichiers", true, false, ""); } catch (e) { toast(e.message || "Le sélecteur Google ne s'ouvre pas."); return; }
+  const dos = liste.filter(x => x.mimeType === DOSSIER), fics = liste.filter(x => x.mimeType !== DOSSIER);
+  if (!fics.length) { if (dos.length) toast("Google ne donne pas le contenu d'un dossier : entre dedans et touche les fichiers, ou importe le .zip."); return; }
+  memoriserChoisis(fics);
+  const L = fics.map(x => { const natif = /^application\/vnd\.google-apps\./.test(x.mimeType), d = dossiersChoisis().find(r => r.id === x.parent);
+    return { titre: natif ? x.name + ".pdf" : x.name, chemin: d ? [d.nom || "Dossier"] : [], taille: natif ? 0 : x.size || 0, driveId: x.id,
+      lire: async () => { const r = await fetch(natif ? `https://www.googleapis.com/drive/v3/files/${x.id}/export?mimeType=application/pdf` : `https://www.googleapis.com/drive/v3/files/${x.id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: "Bearer " + await jetonDrive() } });
+        if (!r.ok) throw new Error("Google Drive refuse ce fichier (" + r.status + ")"); return r.blob(); } }; });
+  preparerImport(L);
 }
 async function lireImport(fs) {
   const L = [];
@@ -4309,6 +4328,9 @@ async function lireImport(fs) {
       } else L.push({ titre: x.name, chemin: [], taille: x.size, lire: async () => x });
     }
   } catch (e) { toast("Impossible de lire ce fichier : " + (e.message || e)); return; }
+  closeOverlay(); preparerImport(L);
+}
+function preparerImport(L) {
   if (!L.length) { toast("Aucun document trouvé dedans."); return; }
   const sansExt = t => normTxt(t || "").replace(/\.[A-Z0-9]{2,5}$/, "");
   const deja = new Set(S.fichiers.map(x => x.bienId + "|" + sansExt(x.titreDrive || x.nom)));
@@ -4344,7 +4366,7 @@ async function envoyerImport(L) {
       const ext = (f.titre.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin", chemin = `${ESPACE}/${f.bienId}/${uid()}.${ext}`;
       const up = await SB.storage.from("documents").upload(chemin, bl, { contentType: f.type });
       if (up.error) throw up.error;
-      S.fichiers.push({ id: uid(), bienId: f.bienId, bailId: f.bienId === f.bienDevine ? f.bailId : "", cat: f.cat, nom: f.titre.replace(/\.[a-z0-9]{2,5}$/i, ""), titreDrive: f.titre, chemin, type: f.type, taille: bl.size, date: iso(TODAY), importe: true });
+      S.fichiers.push(Object.assign({ id: uid(), bienId: f.bienId, bailId: f.bienId === f.bienDevine ? f.bailId : "", cat: f.cat, nom: f.titre.replace(/\.[a-z0-9]{2,5}$/i, ""), titreDrive: f.titre, chemin, type: f.type, taille: bl.size, date: iso(TODAY), importe: true }, f.driveId ? { driveId: f.driveId } : {}));
       ok++; if (ok % 10 === 0) save();
     } catch (e) { ko++; raison = raison || (e && (e.message || e.error)) || String(e); }
   }

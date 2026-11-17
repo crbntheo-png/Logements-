@@ -33,6 +33,11 @@ Règle pour chaque session :
 
 ## Historique
 
+### 17/11/2026 (8 h) — import : directement dans le Drive
+- Sur le téléphone de Théo, le bouton d'import ouvrait le choix Photo / Vidéo / Fichiers (champ sans filtre). Corrigé : le champ n'accepte que .zip, PDF, Word, Excel, texte, donc le téléphone ouvre directement ses fichiers.
+- Nouveau gros bouton **📁 Choisir dans mon Drive** dans "Importer des documents" : le sélecteur Google s'ouvre, les fichiers touchés sont lus (documents Google convertis en PDF) et passent par le même aperçu (logement deviné) avant copie.
+- Tests : test46 18/18, test45 25/25, test43 24/24.
+
 ### 17/11/2026 (0 h) — importer un dossier entier
 - Théo a choisi "02 - GTP Invest" et l'appli a lu 0 fichier. C'est la règle de Google pour l'accès "fichiers choisis seulement" (drive.file) : choisir un dossier ne donne pas son contenu. Seul l'accès à tout le Drive (drive.readonly, "restreint") le permettrait, avec l'écran rouge et un audit de sécurité payant chaque année : écarté.
 - Ajout de **📦 Importer un dossier entier** (page Docs, même sans Drive connecté) : sur ordinateur, clic droit sur le dossier dans drive.google.com › Télécharger → un .zip avec tous les sous-dossiers ; sur téléphone, plusieurs fichiers d'un coup. L'appli ouvre le .zip (JSZip 3.10.1, cdnjs), devine logement et type de chaque document (même fonction `deviner` que le Drive), montre la liste (Reconnus / À choisir toi-même, menu du logement sous chaque fichier, déjà présents et formats refusés signalés), et ne copie qu'après "Importer".
