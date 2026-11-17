@@ -41,13 +41,19 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 2. ✅ (18/11) **Quittance automatique à réception du loyer** (Pennylane) : envoi seul ou après accord (choix dans Réglages).
 3. ✅ (18/11) **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
 4. ✅ (18/11) **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
-5. **Trésorerie 12 mois** + alerte de seuil.
+5. ✅ (18/11) **Trésorerie 12 mois** + alerte de seuil.
 6. **Activité entre associés** ("X a marqué le loyer payé").
 7. **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
 
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — feuille de route, étape 5 : trésorerie des 12 prochains mois
+- Compta (année en cours) : carte "📈 Trésorerie des 12 prochains mois". Départ = solde lu dans la banque (Pennylane), sinon solde saisi une fois. Chaque mois : + loyers prévus par les baux en cours (les retards passés ne comptent pas), − échéances de prêts (tableaux d'amortissement ; sans prêt saisi, moyenne des échéances vues dans les dépenses), − taxe foncière en octobre (dernier montant connu par logement), − moyenne des dépenses courantes des 12 derniers mois (hors taxe foncière, prêts, achat, travaux d'amélioration).
+- En grand : "✅ Pas de trou prévu · au plus bas X € en …" ou "⚠️ Ton compte pourrait passer sous X € en …". Graphique de 12 barres (rouge sous le seuil, orange au plus bas), détail mois par mois repliable, seuil d'alerte réglable. Sous le seuil : tâche "Trésorerie" dans À faire.
+- Tests : test58 (mode local, clair et sombre) 21/21, calculs vérifiés (100 €/mois de courantes, 900 € de taxe en octobre, mensualité du prêt) ; À faire reste rapide (2 ms). test5, test22, test33, test38, test53 OK. En ligne.
+- Pas vérifié : avec les vraies données de GTP (prêts pas encore saisis : la moyenne des "ECH PRET" de la banque sert en attendant).
 
 ### 18/11/2026 — feuille de route, étape 4 : l'IA lit tous les papiers
 - Bouton "🤖 Lire" sur chaque document rangé dans l'appli (PDF ou photo, propriétaire seulement), et "🤖 Lire avec l'IA" dans les actions d'un fichier du Drive. L'IA reconnaît le papier et ouvre le bon formulaire déjà rempli, avec un message en grand "vérifie" :

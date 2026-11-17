@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "771af51", "date": "2026-11-17T22:56"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "ad3fcef", "date": "2026-11-17T23:01"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -546,6 +546,8 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .paper th, .paper td { border: 1px solid #999; padding: 6px 10px; color: var(--paper-ink); background: transparent; text-transform: none; letter-spacing: 0; font: 13.5px Georgia, serif; }
 .paper .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
 .paper .sign div { min-height: 90px; }
+.treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
+.treso-d summary { cursor: pointer; font-weight: 650; } .tbl-scroll { overflow-x: auto; } .treso-t { width: 100%; border-collapse: collapse; font-size: .82rem; font-variant-numeric: tabular-nums; } .treso-t th, .treso-t td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; } .treso-t th:first-child, .treso-t td:first-child { text-align: left; } .treso-t tr.neg td { color: var(--bad); }
 .loc-page { display: grid; gap: 14px; max-width: 640px; margin: 0 auto; }
 .loc-card { display: grid; gap: 10px; } .loc-t { font-size: 1.5rem; margin: 0; }
 .loc-l { list-style: none; margin: 0; padding: 0; display: grid; } .loc-l li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); } .loc-l li:last-child { border-bottom: 0; }
@@ -1790,6 +1792,7 @@ function taches() {
   const T = [], y = TODAY.getFullYear();
   const add = (o) => T.push(o);
   const ech = toutesEcheances();
+  { const T = !LECTURE && S.baux.length ? tresorerie() : null; if (T && T.sous) add({ key: "treso-" + T.sous.m, prio: "soon", date: TODAY, t: `Trésorerie : ton compte pourrait passer sous ${eur(T.seuil)} en ${fm(T.sous.m)}`, d: `Solde prévu ${eur(T.sous.solde)} (loyers attendus, prêts, taxe foncière, dépenses courantes). À anticiper.`, acts: [["Voir", "location.hash='compta'"]] }); }
   (DEMANDES || []).forEach(d => { const b = bail(d.bail_id);
     add({ bailId: d.bail_id, key: "dem-" + d.id, prio: "urgent", date: new Date(d.cree_le), t: `🔧 ${esc(nomCourt(d.nom || (b && b.nom) || "Un locataire"))} signale un problème`, d: `"${esc(String(d.texte).slice(0, 140))}"${d.photo ? " · 📷 photo" : ""} · ${ilYa(d.cree_le)}`, acts: [["Voir", `voirDemande(${d.id})`, "primary"]] }); });
   // 1. Impayés
@@ -3156,6 +3159,56 @@ function recettes(year) {
   (S.taxes || []).forEach(tx => tx.parts.filter(p => p.payeLe && p.payeLe.startsWith(String(year))).forEach(p => { by[tx.bienId] = by[tx.bienId] || { loyers: 0, charges: 0 }; by[tx.bienId].charges += p.montant; }));
   return by;
 }
+/* ================= Trésorerie des 12 prochains mois =================
+   Solde de départ (banque Pennylane, sinon saisi) + loyers attendus − échéances de prêts − taxe foncière (octobre, montant connu le plus récent)
+   − moyenne des dépenses courantes des 12 derniers mois. Alerte si le compte passe sous le seuil choisi. */
+const CATS_PRET = new Set(["Intérêts d'emprunt", "Assurance emprunteur", "Remboursement capital emprunt", "Échéance de prêt (capital + intérêts, à ventiler)"]);
+const CATS_PONCTUEL = new Set(["Taxe foncière", "Achat du bien / frais d'acquisition", "Travaux d'amélioration"]);
+function tresorerie() {
+  const banque = SB && BANQUE.lien && BANQUE.comptes.length, st = S.sci.soldeTreso || null;
+  const depart = banque ? r2(BANQUE.comptes.reduce((s, c) => s + +c.solde, 0)) : st && st.montant !== "" && st.montant !== undefined ? +st.montant : null;
+  if (depart === null) return null;
+  const debut = addM(CUR, -12), passe = S.depenses.filter(d => d.date && d.date.slice(0, 7) >= debut && d.date.slice(0, 7) < CUR);
+  const moisConnus = Math.max(1, Math.min(12, new Set(passe.map(d => d.date.slice(0, 7))).size));
+  const courantes = r2(passe.filter(d => !CATS_PRET.has(d.categorie) && !CATS_PONCTUEL.has(d.categorie) && !d.taxeId && !d.pretId).reduce((s, d) => s + +d.montant, 0) / moisConnus);
+  const avecTableau = (S.prets || []).length > 0;
+  const pretsMoyen = avecTableau ? 0 : r2(passe.filter(d => CATS_PRET.has(d.categorie)).reduce((s, d) => s + +d.montant, 0) / moisConnus);
+  // taxe foncière : le montant connu le plus récent de chaque logement
+  const tf = S.biens.reduce((s, bi) => { const t = (S.taxes || []).filter(x => x.bienId === bi.id).sort((a, b) => b.annee - a.annee)[0];
+    const d = t ? null : S.depenses.filter(x => x.bienId === bi.id && x.categorie === "Taxe foncière").sort((a, b) => b.date.localeCompare(a.date))[0];
+    return s + (t ? +t.total : d ? +d.montant : 0); }, 0);
+  const jourFrac = 1 - (TODAY.getDate() - 1) / new Date(TODAY.getFullYear(), TODAY.getMonth() + 1, 0).getDate();
+  const loyers = {}; S.baux.forEach(b => echeancesBail(b, addM(CUR, 11)).forEach(e => { if (e.m >= CUR) loyers[e.m] = r2((loyers[e.m] || 0) + e.reste); }));
+  let solde = depart; const mois = [];
+  for (let k = 0; k < 12; k++) {
+    const m = addM(CUR, k), frac = k ? 1 : jourFrac;
+    const prets = avecTableau ? r2((S.prets || []).reduce((s, p) => s + tableauPret(p).filter(x => x.date.slice(0, 7) === m && (k || P(x.date) >= TODAY)).reduce((t, x) => t + totalEch(x), 0), 0)) : r2(pretsMoyen * frac);
+    const taxe = m.slice(5) === "10" && (k || TODAY.getDate() <= 15) ? r2(tf) : 0, cour = r2(courantes * frac), entrees = loyers[m] || 0;
+    solde = r2(solde + entrees - prets - taxe - cour);
+    mois.push({ m, entrees, prets, taxe, courantes: cour, sorties: r2(prets + taxe + cour), solde });
+  }
+  const bas = mois.reduce((a, x) => x.solde < a.solde ? x : a, mois[0]), seuil = +S.sci.seuilTreso || 0;
+  return { depart, banque, mois, bas, seuil, courantes, pretsMoyen, avecTableau, tf, sous: mois.find(x => x.solde < seuil) || null };
+}
+function sectionTreso() {
+  if (estPerso() && !S.baux.length) return "";
+  const T = tresorerie();
+  if (!T) return `<section class="card treso"><h2>📈 Trésorerie des 12 prochains mois</h2><p class="note">Indique le solde de ton compte aujourd'hui : l'appli prévoit le solde mois par mois (loyers attendus, prêts, taxe foncière, dépenses courantes) et te prévient avant un trou.${SB ? " Avec la banque branchée (Réglages › Banque), c'est automatique." : ""}</p>
+    <form class="row" onsubmit="event.preventDefault();S.sci.soldeTreso={montant:+this.solde.value,date:iso(TODAY)};save();render()"><input name="solde" id="treso_solde" type="number" step="0.01" required placeholder="Solde du compte (€)" style="max-width:220px"><button class="primary small">Voir ma trésorerie</button></form></section>`;
+  const max = Math.max(...T.mois.map(x => Math.abs(x.solde)), Math.abs(T.seuil), 1), H = 120, W = 12 * 28;
+  const y0 = T.mois.some(x => x.solde < 0) || T.seuil < 0 ? H / 2 : H - 14, ech = (T.mois.some(x => x.solde < 0) || T.seuil < 0 ? H / 2 - 8 : H - 24) / max;
+  const barres = T.mois.map((x, i) => { const h = Math.max(2, Math.abs(x.solde) * ech), yy = x.solde >= 0 ? y0 - h : y0, c = x.solde < T.seuil ? "var(--bad)" : x === T.bas ? "var(--warn)" : "var(--ok)";
+    return `<rect x="${i * 28 + 5}" y="${yy.toFixed(1)}" width="18" height="${h.toFixed(1)}" rx="3" fill="${c}"><title>${fm(x.m)} : ${eur(x.solde)}</title></rect><text x="${i * 28 + 14}" y="${H + 12}" text-anchor="middle" class="treso-m">${fm(x.m).slice(0, 1).toUpperCase()}</text>`; }).join("");
+  const ligneSeuil = T.seuil ? `<line x1="0" x2="${W}" y1="${(y0 - T.seuil * ech).toFixed(1)}" y2="${(y0 - T.seuil * ech).toFixed(1)}" stroke="var(--bad)" stroke-dasharray="4 4" stroke-width="1.5"/>` : "";
+  const msg = T.sous ? grosMsg("attention", `⚠️ Ton compte pourrait passer sous ${eur(T.seuil)} en ${fm(T.sous.m)}`, `Solde prévu : ${eur(T.sous.solde)}. Au plus bas : ${eur(T.bas.solde)} en ${fm(T.bas.m)}. Anticipe : relance un retard, décale une dépense, ou mets de côté.`)
+    : grosMsg("ok", `✅ Pas de trou prévu`, `Au plus bas : ${eur(T.bas.solde)} en ${fm(T.bas.m)} · dans 12 mois : ${eur(T.mois[11].solde)}.`);
+  return `<section class="card treso"><h2>📈 Trésorerie des 12 prochains mois</h2>${msg}
+    <div class="treso-g"><svg viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Solde prévu mois par mois">${`<line x1="0" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--line)"/>`}${ligneSeuil}${barres}</svg></div>
+    <details class="treso-d"><summary>Le détail, mois par mois</summary><div class="tbl-scroll"><table class="treso-t"><thead><tr><th>Mois</th><th>Loyers</th><th>Prêts</th><th>Taxe f.</th><th>Courantes</th><th>Solde</th></tr></thead><tbody>
+      ${T.mois.map(x => `<tr class="${x.solde < T.seuil ? "neg" : ""}"><td style="text-transform:capitalize">${fm(x.m)}</td><td>+${eur(x.entrees)}</td><td>${x.prets ? "−" + eur(x.prets) : "—"}</td><td>${x.taxe ? "−" + eur(x.taxe) : "—"}</td><td>−${eur(x.courantes)}</td><td><b>${eur(x.solde)}</b></td></tr>`).join("")}</tbody></table></div>
+      <p class="note small">Départ : ${eur(T.depart)} ${T.banque ? "(solde lu dans la banque)" : `(saisi le ${fds(P(S.sci.soldeTreso.date))}) · <a href="#" onclick="event.preventDefault();delete S.sci.soldeTreso;save();render()">changer</a>`}. Loyers : ce que les baux en cours prévoient (les retards des mois passés ne sont pas comptés). Prêts : ${T.avecTableau ? "tes tableaux d'amortissement" : `moyenne de tes échéances passées (${eur(T.pretsMoyen)}/mois) : saisis tes prêts dans Emprunts pour plus de précision`}. Taxe foncière : ${T.tf ? eur(T.tf) + " en octobre (dernier montant connu)" : "aucune saisie"}. Dépenses courantes : moyenne de tes 12 derniers mois (${eur(T.courantes)}/mois).</p>
+      <form class="row" onsubmit="event.preventDefault();S.sci.seuilTreso=+this.seuil.value||0;save();render();toast('Seuil enregistré')"><label class="fl" style="flex:1">Me prévenir si le compte passe sous (€)<input name="seuil" id="treso_seuil" type="number" step="1" value="${T.seuil || ""}" placeholder="0"></label><button class="small">OK</button></form></details></section>`;
+}
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -3171,7 +3224,7 @@ function pageCompta() {
   <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`], ["🏦 Ajouter un prêt", "editPret()"], estPerso() ? null : ["👤 Un associé a payé de sa poche", "avanceAssocie()"]], "Plus")}</div>
   ${aideDeclaration(y, lignes, tot)}
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
-  ${y === TODAY.getFullYear() ? sectionBanque() : ""}
+  ${y === TODAY.getFullYear() ? sectionBanque() + sectionTreso() : ""}
   ${sectionSorties(y)}
   ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
   ${sectionPrets(y)}${sectionAvances()}
