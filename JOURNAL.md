@@ -11,7 +11,7 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
-- [ ] **Clé de l'appli pour le partage de dossiers (Théo)** : dans le projet "Gestion locative Drive", créer un compte de service + une clé JSON, me l'envoyer → secret Supabase `GOOGLE_PARTAGE_SA`. Puis partager "02 - GTP Invest" avec l'adresse du compte de service (Lecteur) et Docs › + Ajouter un dossier › C'est fait. Ensuite : Docs › "Retirer cet accès" (lecture de tout le Drive, essai du 17/11).
+- [ ] **Partage de dossiers (Théo)** : partager "02 - GTP Invest" avec `lecture-dossiers@gestion-locative-drive.iam.gserviceaccount.com` (Lecteur), puis Docs › + Ajouter un dossier › C'est fait. Ensuite Docs › "Retirer cet accès" (lecture de tout le Drive, essai du 17/11).
 - [ ] **Domaine sci-gestion-locative.com (Théo, ce soir)** : 1) Search Console › propriété "Domaine" `sci-gestion-locative.com` ; 2) client OAuth : ajouter les origines https://sci-gestion-locative.com et https://www.sci-gestion-locative.com ; 3) tester la connexion Google sur https://sci-gestion-locative.com ; 4) Branding : page d'accueil https://sci-gestion-locative.com/presentation, confidentialité https://sci-gestion-locative.com/confidentialite, domaine autorisé `sci-gestion-locative.com`, puis "J'ai corrigé les problèmes". Ensuite (Claude) : renvoyer automatiquement pages.dev vers le nouveau domaine, puis retirer pages.dev chez Google.
 - [ ] **Google (Théo), dans cet ordre** : 1) https://console.cloud.google.com/auth/branding (nom, e-mail, page d'accueil, https://gestion-locative-sci.pages.dev/confidentialite, domaine autorisé `gestion-locative-sci.pages.dev`) ; 2) https://console.cloud.google.com/auth/audience › Publier ; 3) activer https://console.cloud.google.com/apis/library/gmail.googleapis.com et https://console.cloud.google.com/apis/library/picker.googleapis.com ; 4) dans l'appli : se connecter avec Google, brancher Gmail, Débrancher puis Connecter le Drive, "Choisir mes documents". Ensuite : retirer le code de connexion par e-mail (dernier envoi Brevo) et le crochet `envoyer_code_auth`.
 - [ ] **Gmail (Théo)** : 1) activer l'API Gmail dans le projet Google Cloud (https://console.cloud.google.com/apis/library/gmail.googleapis.com) ; 2) Réglages › Envoi des e-mails › Continuer avec Google ; 3) supprimer l'ancien mot de passe d'application "Gestion SCI" (https://myaccount.google.com/apppasswords). Pour ouvrir l'appli aux inconnus : publier l'appli Google (https://console.cloud.google.com/auth/audience › Publier), sinon seuls les "utilisateurs test" peuvent brancher Gmail ou Drive.
@@ -33,6 +33,9 @@ Règle pour chaque session :
 - [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
 
 ## Historique
+
+### 17/11/2026 (20 h) — clé de l'appli posée
+- Compte de service `lecture-dossiers@gestion-locative-drive.iam.gserviceaccount.com` (projet gestion-locative-drive). Clé JSON rangée dans `.env` (GOOGLE_PARTAGE_SA, une ligne) et en secret Supabase. Vérifié : `config` prêt, `lister` répond (Google accepte la clé, API Drive active), `fichier` sur un fichier non partagé refusé, appel sans connexion refusé (401).
 
 ### 17/11/2026 (19 h) — dossiers PARTAGÉS avec l'appli (méthode principale)
 - Essai du mode "tout le Drive" : la lecture marche (399 fichiers de GTP Invest), mais Théo refuse l'écran "appli non validée" et la phrase "accès à tout ton Drive" : les autres utilisateurs ne l'accepteront pas.
