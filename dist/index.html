@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "5e8a6a8", "date": "2026-11-17T19:06"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "0598e1e", "date": "2026-11-17T19:41"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -236,6 +236,9 @@ details.rgl { scroll-margin-top: 76px; }
 .gros-msg.attention { background: rgba(245, 166, 35, .14); border-color: rgba(245, 166, 35, .7); }
 .gros-msg.ok { background: rgba(16, 150, 100, .12); border-color: rgba(16, 150, 100, .6); }
 .gros-msg.stop { background: rgba(220, 50, 50, .12); border-color: rgba(220, 50, 50, .65); } .ia-card .todo li { align-items: flex-start; }
+.chips-choix { display: flex; flex-wrap: wrap; gap: 8px; } .chips-choix label { display: inline-flex; } .chips-choix input { position: absolute; opacity: 0; pointer-events: none; }
+.chips-choix span { padding: 8px 12px; border-radius: 999px; background: var(--surface-2); border: 1.5px solid transparent; cursor: pointer; font-size: .92rem; }
+.chips-choix input:checked + span { border-color: var(--accent, #0b7a64); background: rgba(16, 150, 100, .12); font-weight: 700; } .chips-choix input:focus-visible + span { outline: 2px solid var(--accent, #0b7a64); }
 .imp-l { max-height: 52vh; overflow: auto; } .todo li.imp-li { display: block; height: auto; min-height: 0; padding: 10px 12px; } .imp-li .tx { display: block; } .imp-li .tx b { display: block; font-weight: 600; overflow-wrap: anywhere; } .imp-li .tx small { display: block; } .imp-li select { display: block; width: 100%; margin-top: 6px; } .imp-aide p { margin: 0 0 10px; }
 .lr .ico-cat { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
 .bad-txt { color: var(--bad, #c0392b); }
@@ -863,7 +866,7 @@ async function apresConnexion(user, enFond) {
   SB_USER = user; if (!enFond) { MODE = "chargement"; render(); }
   try { await SB.rpc("accepter_invitations"); } catch (e) {}
   SB.from("gmail_comptes").select("adresse,mode").eq("user_id", user.id).maybeSingle().then(g => { GMAIL = g.data || null; }, () => {});
-  chargerEtatDrive(user); chargerPartage();
+  chargerEtatDrive(user); chargerPartage(); SB.rpc("est_admin").then(r => { ADMIN = !!r.data; }, () => {});
   const r = await SB.from("espaces").select("id, nom, cree_le").order("cree_le");
   if (r.error) { if (enFond) { toast("📴 Pas de connexion : tu vois tes données de la dernière ouverture."); return; } MODE = "connexion"; render(); toast("Impossible de charger tes espaces : " + r.error.message); return; }
   ESPACES = r.data || [];
@@ -2218,6 +2221,7 @@ function render0() {
   else if (h.startsWith("docs-")) html = pageDocsBien(decodeURIComponent(h.slice(5)));
   else if (h === "aide") html = pageAide();
   else if (h === "legal") html = pageLegal();
+  else if (h === "integrations") html = pageIntegrations();
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
@@ -2292,6 +2296,37 @@ function pageAide() {
     ${sectionLexique()}<section class="card aide"><h2>🔒 Ce qui ne se fait jamais sans toi</h2><p>Aucun e-mail ne part tout seul : quittances, relances et courriers s'ouvrent en aperçu, tu vérifies l'adresse et le texte, puis tu confirmes. Les dépenses trouvées dans la banque attendent ta validation.</p></section>
     </div>`;
 }
+/* ================= Demander une intégration avec une autre appli (Dropbox, banque, signature…) =================
+   Enregistrée comme signalement de type "integration" : l'administrateur est prévenu (e-mail + notification) et voit le classement (#integrations). */
+const APPLIS_DEMANDEES = ["Dropbox", "OneDrive", "iCloud Drive", "Ma banque directement (sans Pennylane)", "Qonto", "Signature électronique (Yousign, Docusign…)", "Outlook / Hotmail (envoi des e-mails)", "Excel / Google Sheets", "Logiciel comptable", "WhatsApp", "Autre"];
+function ouvrirDemandeIntegration(pre) {
+  if (!SB) { toast("Disponible dans l'appli installée."); return; }
+  modal("🔌 Brancher une autre appli", `<div class="full">${grosMsg("attention", "Dis-nous quelle appli tu utilises", "Google Drive, Gmail et Pennylane sont déjà branchés. Les applis les plus demandées seront ajoutées en premier.")}</div>
+    <fieldset class="full"><legend>Laquelle ?</legend><div class="chips-choix">${APPLIS_DEMANDEES.map((a, i) => `<label><input type="radio" name="appli" value="${esc(a)}" ${pre === a || (!pre && i === 0) ? "checked" : ""} onchange="document.getElementById('autreAppli').hidden=this.value!=='Autre'"><span>${esc(a)}</span></label>`).join("")}</div>
+      <label class="fl" id="autreAppli" ${pre === "Autre" ? "" : "hidden"}>Son nom<input name="autre" placeholder="Ex : Nuki, Indy, Boxtal…"></label></fieldset>
+    <label class="fl full">Pourquoi ? Qu'est-ce que ça t'éviterait de faire à la main ?<textarea name="pourquoi" rows="4" required placeholder="Ex : tous mes baux et factures sont dans Dropbox, je ne veux pas les déplacer."></textarea></label>
+    <fieldset class="full"><legend>C'est…</legend><div class="chips-choix"><label><input type="radio" name="importance" value="indispensable"><span>🔥 Indispensable pour moi</span></label><label><input type="radio" name="importance" value="pratique" checked><span>👍 Pratique</span></label></div></fieldset>`,
+    d => {
+      const appli = d.appli === "Autre" ? (String(d.autre || "").trim() || "Autre") : d.appli, pourquoi = String(d.pourquoi || "").trim();
+      if (!pourquoi) { toast("Explique en quelques mots pourquoi."); return false; }
+      (async () => {
+        const r = await SB.rpc("signaler", { type: "integration", message: `${appli} — ${pourquoi}`, page: location.hash || "#accueil", contexte: { espace: ESPACE || "", appli, importance: d.importance || "", appareil: navigator.userAgent }, capture_b64: null });
+        if (r.error) { toast("Pas envoyé : " + r.error.message); return; }
+        modal("Merci !", `<div class="full">${grosMsg("ok", "✅ Demande bien reçue", `« ${esc(appli)} » est noté. Plus une appli est demandée, plus vite elle arrive. On te répond par e-mail.`)}</div>`, () => true, { ok: "Fermer", lecture: true });
+      })();
+    }, { ok: "Envoyer la demande" });
+}
+/* Pour l'administrateur : le classement des intégrations demandées */
+let INTEG = null;
+function pageIntegrations() {
+  if (!INTEG) { INTEG = { etat: "chargement" }; SB.rpc("demandes_integrations").then(r => { INTEG = r.error ? { etat: "refus", err: r.error.message } : { etat: "pret", L: r.data || [] }; render(); }); }
+  const L = INTEG.L || [];
+  return `<a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>🔌 Intégrations demandées</h1><p>Ce que les utilisateurs aimeraient brancher, le plus demandé en premier. Visible par toi seul.</p></div><div class="row"><button class="small" onclick="INTEG=null;render()">↻ Actualiser</button></div></div>
+    ${INTEG.etat === "chargement" ? `<p class="note">Chargement…</p>` : INTEG.etat === "refus" ? `<div class="empty">${esc(INTEG.err)}</div>` : !L.length ? `<div class="empty">Aucune demande pour l'instant.</div>`
+      : L.map(x => `<section class="card"><div class="sec-head"><h2>${esc(x.appli)}</h2><span class="pill ${x.nb > 2 ? "warn" : "info"}">${plur(x.nb, "demande")} · ${plur(x.personnes, "personne")}</span></div>
+        <ul class="todo">${(x.demandes || []).slice(0, 20).map(d => `<li><span class="tx">${d.importance === "indispensable" ? "🔥 " : ""}${esc(String(d.message || "").replace(/^[^—]*—\s*/, ""))}<small>${esc(d.email || "?")} · ${fds(String(d.date).slice(0, 10))}</small></span>${d.email ? `<a class="btn small" href="mailto:${esc(d.email)}?subject=${encodeURIComponent("Ta demande : " + x.appli)}">Répondre</a>` : ""}</li>`).join("")}</ul></section>`).join("")}`;
+}
+let ADMIN = false;
 /* ================= Signaler un problème / une idée (bouton « ? » toujours visible) ================= */
 let CAPTURE = null;
 function chargerH2C() {
@@ -2319,7 +2354,8 @@ async function ouvrirSignalement(type) {
     <label class="fl full">Explique en une ou deux phrases<textarea name="message" rows="4" required placeholder="${type === "idee" ? "Ex : pouvoir envoyer toutes les quittances le 1er du mois d'un seul geste." : "Ex : quand je touche &quot;Envoyer la quittance&quot;, rien ne se passe."}"></textarea></label>
     ${CAPTURE ? `<label class="full sig-capture"><input type="checkbox" name="avecCapture" checked> <span>Joindre la capture de l'écran que tu regardais</span><img src="${CAPTURE}" alt="Capture de l'écran"></label>` : ""}
     <label class="fl full">${CAPTURE ? "Ou" : ""} ajoute une photo ou une capture (facultatif)<input type="file" name="photo" accept="image/*"></label>
-    <p class="full note">On reçoit aussi la page où tu étais et le modèle de ton téléphone, pour comprendre plus vite. On te répond par e-mail.</p>`,
+    <p class="full note">On reçoit aussi la page où tu étais et le modèle de ton téléphone, pour comprendre plus vite. On te répond par e-mail.</p>
+    <p class="full"><button type="button" class="small" onclick="ouvrirDemandeIntegration()">🔌 Tu voudrais brancher une autre appli ? (Dropbox, ta banque…)</button></p>`,
     d => {
       if (!(d.message || "").trim()) { toast("Écris quelques mots."); return false; }
       const f = document.querySelector('#overlay input[name=photo]').files[0];
@@ -3440,6 +3476,7 @@ function pageReglages() {
       : rubrique("drive", "📁", "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
     rubrique("banque", "🏦", "Banque", BANQUE.lien ? `Pennylane branché${BANQUE.lien.erreur ? " · ⚠️ à rebrancher" : ""}` : "Pas branchée · Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
+    rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
   ].join("") : sci;
@@ -4668,7 +4705,8 @@ function pageDocsDrive() {
     <div class="row" style="margin-top:12px">${ajouter()}</div>
     ${vieux ? `<p class="note" style="margin-top:10px">💡 Les dossiers marqués "ancienne méthode" ne montrent que les fichiers touchés un par un : ouvre-les et partage-les avec l'appli pour tout lire.</p>` : ""}
     ${complet ? `<div class="drive-avant" style="margin-top:12px">Tu as aussi autorisé la lecture de <b>tout</b> ton Drive (essai du 17/11). Avec le partage de dossiers, ce n'est plus utile. <button class="small" onclick="debrancherDrive()">Retirer cet accès</button></div>` : ""}
-    <div class="row" style="margin-top:10px">${unParUn}${boutonImport("small ghost")}</div></section>
+    <div class="row" style="margin-top:10px">${unParUn}${boutonImport("small ghost")}</div>
+    <p class="note" style="margin-top:10px">Tes documents sont ailleurs (Dropbox, OneDrive, iCloud…) ? <a href="#" onclick="event.preventDefault();ouvrirDemandeIntegration('Dropbox')">🔌 Demande-nous de le brancher</a></p></section>
   ${sectionIA()}
   ${sectionLotsAuto() + sectionDossiersLogements()}
   ${sectionPropositionsDrive()}

@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     const { data: sg } = await admin.from("signalements").select("id, email, type, message, page").eq("id", corps.signalement).maybeSingle();
     const { data: ad } = await admin.rpc("admin_destinataire");
     if (!sg || !ad?.user_id) return rep({ ok: true, rien: true });
-    const titre = `[${sg.type === "bug" ? "Problème" : sg.type === "idee" ? "Idée" : "Question"} n°${sg.id}] ${String(sg.message || "").replace(/\s+/g, " ").slice(0, 70)}`;
+    const titre = `[${sg.type === "bug" ? "Problème" : sg.type === "idee" ? "Idée" : sg.type === "integration" ? "Intégration demandée" : "Question"} n°${sg.id}] ${String(sg.message || "").replace(/\s+/g, " ").slice(0, 70)}`;
     await envoyerParGmail(admin, ad.user_id, [ad.email], titre, `Envoyé par ${sg.email || "?"}\n\n${sg.message}\n\n— Page : ${sg.page || "?"}\n\nRéponds à ${sg.email || "la personne"} depuis ta messagerie.`).catch(() => {});
     const { data: subs1 } = await admin.from("push_abonnements").select("*").eq("user_id", ad.user_id);
     for (const s1 of subs1 || []) await webpush.sendNotification({ endpoint: s1.endpoint, keys: { p256dh: s1.p256dh, auth: s1.auth } }, JSON.stringify({ titre: "🆘 " + titre, texte: String(sg.message || "").slice(0, 120), url: "./", tag: "sig-" + sg.id })).catch(() => {});

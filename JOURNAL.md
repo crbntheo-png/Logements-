@@ -34,6 +34,12 @@ Règle pour chaque session :
 
 ## Historique
 
+### 18/11/2026 — demander une intégration avec une autre appli
+- Les utilisateurs peuvent demander de brancher une autre appli : fenêtre "🔌 Brancher une autre appli" (choix parmi Dropbox, OneDrive, iCloud Drive, banque directe, Qonto, signature électronique, Outlook, Excel/Sheets, logiciel comptable, WhatsApp, Autre + nom), "Pourquoi ? Qu'est-ce que ça t'éviterait ?" (obligatoire), "🔥 Indispensable / 👍 Pratique". Accès : bouton "?", page Docs ("Tes documents sont ailleurs ? Demande-nous de le brancher"), Réglages › "Une autre appli ?".
+- Enregistré comme signalement de type `integration` (fonction `signaler` existante) : Théo est prévenu par e-mail depuis son Gmail et par notification (titre "[Intégration demandée n°…]", `notifier` v11).
+- Page admin `#integrations` (lien dans Réglages › Une autre appli, visible seulement par l'administrateur) : classement par appli (nombre de demandes et de personnes, raisons, 🔥, bouton Répondre par e-mail). SQL `est_admin()` et `demandes_integrations()` (refusée à tout autre compte, supabase/integrations.sql).
+- Tests : test51 8/8 (envoi simulé pour ne pas envoyer de vrai e-mail ; refus admin testé sur le vrai serveur).
+
 ### 18/11/2026 — nouveaux utilisateurs, invitations, IA réservée au propriétaire
 - Vérifié de bout en bout avec de vrais comptes neufs (test50, 11/11) : connexion → "Bienvenue / Créer mon espace" → propriétaire ; crédits normaux pour tout nouveau compte (2/jour, 5/mois d'analyses ; 15 lectures de documents/mois ; budget global 3 $/mois) ; Théo seul sans limite (IA_SANS_LIMITE).
 - Invitations : plusieurs adresses d'un coup (séparées par virgules ou espaces), puis fenêtre "📤 Dernière étape : préviens-les" en grand, avec un message prêt (lien https://sci-gestion-locative.com, nom de l'espace, adresse à utiliser, tutoiement ou vouvoiement selon le nombre) : Envoyer (WhatsApp, SMS…), Copier, Par e-mail. "Partager le lien" donne toujours le nouveau domaine.
