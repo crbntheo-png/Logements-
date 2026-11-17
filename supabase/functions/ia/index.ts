@@ -57,13 +57,42 @@ Recopie exactement ce qui est écrit, sans rien inventer : chaîne vide "" ou 0 
 - garant_nom / garant_contact : la caution solidaire si elle existe ; visale : numéro de visa Visale s'il est écrit.
 - clauses_particulieres : résumé fidèle et court des clauses particulières propres à ce bail (pas les clauses types).
 - adresse_logement : adresse du logement loué. remarques : 1 phrase sur ce qui est illisible ou incertain, sinon "".`;
-async function lireUnBail(admin: any, u: any, c: any) {
+// Lecture d'un autre papier (taxe foncière, DPE, assurance, facture, charges de copropriété) : ce qu'il faut ranger dans l'appli
+const DATE = { type: "string" }, CLASSE = { type: "string", enum: ["A", "B", "C", "D", "E", "F", "G", ""] };
+const S_DOC = {
+  type: "object", additionalProperties: false,
+  required: ["type", "resume", "adresse_logement", "date_document", "annee", "montant_total", "montant_teom", "fournisseur", "objet", "categorie", "dpe_classe", "dpe_ges", "dpe_numero", "dpe_date", "dpe_validite", "assure_nom", "assurance_fin", "remarques"],
+  properties: {
+    type: { type: "string", enum: ["taxe_fonciere", "dpe", "attestation_assurance_locataire", "assurance_proprietaire", "facture", "charges_copropriete", "bail", "autre"] },
+    resume: { type: "string" }, adresse_logement: { type: "string" }, date_document: DATE, annee: { type: "number" },
+    montant_total: { type: "number" }, montant_teom: { type: "number" }, fournisseur: { type: "string" }, objet: { type: "string" },
+    categorie: { type: "string", enum: ["Taxe foncière", "Charges de copropriété", "Assurance propriétaire (PNO)", "Assurance loyers impayés", "Travaux d'entretien / réparation", "Travaux d'amélioration", "Diagnostics", "Honoraires (comptable, notaire, avocat…)", "Eau / électricité / gaz", "Autre"] },
+    dpe_classe: CLASSE, dpe_ges: CLASSE, dpe_numero: { type: "string" }, dpe_date: DATE, dpe_validite: DATE,
+    assure_nom: { type: "string" }, assurance_fin: DATE, remarques: { type: "string" },
+  },
+};
+const CONSIGNE_DOC = `Tu lis un document reçu par un propriétaire bailleur (souvent une SCI) pour le ranger au bon endroit dans son appli de gestion locative.
+Recopie exactement ce qui est écrit, sans rien inventer : "" ou 0 quand l'information n'est pas dans le document. Dates au format AAAA-MM-JJ.
+- type : taxe_fonciere (avis de taxe foncière), dpe (diagnostic de performance énergétique), attestation_assurance_locataire (attestation d'assurance habitation du LOCATAIRE), assurance_proprietaire (avis d'échéance ou contrat d'assurance du propriétaire : PNO, loyers impayés), facture (artisan, diagnostiqueur, fournisseur, honoraires), charges_copropriete (appel de fonds du syndic), bail (contrat de location), sinon autre.
+- resume : 1 phrase simple qui dit ce qu'est ce document.
+- adresse_logement : adresse du bien concerné (pour la taxe foncière : l'adresse du local imposé).
+- date_document : date de la facture, de l'avis ou du document. annee : année d'imposition pour la taxe foncière, sinon 0.
+- montant_total : montant total à payer TTC (taxe foncière : total de l'avis ; facture : total TTC ; assurance : prime annuelle ; charges : montant appelé).
+- montant_teom : seulement pour la taxe foncière, la taxe d'enlèvement des ordures ménagères (ligne TEOM), sinon 0.
+- fournisseur : l'entreprise, l'artisan, l'assureur ou le syndic. objet : libellé court de la dépense (ex : "Remplacement du chauffe-eau").
+- categorie : la catégorie de dépense qui convient le mieux (Travaux d'entretien / réparation pour une réparation, Travaux d'amélioration pour un équipement neuf ou une rénovation).
+- dpe_* : seulement pour un DPE : classe énergie, classe climat (GES), numéro ADEME (13 caractères), date d'établissement, date de fin de validité.
+- assure_nom / assurance_fin : seulement pour l'attestation d'un locataire : nom de l'assuré et date de fin de la période couverte.
+- remarques : 1 phrase sur ce qui est illisible ou incertain, sinon "".`;
+async function lireUnBail(admin: any, u: any, c: any) { return lireDocument(admin, u, c, S_BAIL, CONSIGNE_BAIL, "Remplis la fiche à partir de ce bail.", "bail"); }
+async function lireUnDoc(admin: any, u: any, c: any) { return lireDocument(admin, u, c, S_DOC, CONSIGNE_DOC, "Lis ce document" + (c.nom ? ` (fichier « ${court(c.nom, 200)} »)` : "") + " et dis où le ranger.", "doc"); }
+async function lireDocument(admin: any, u: any, c: any, schema: any, consigne: string, demande: string, cle: string) {
   const illimite = sansLimite(u.email);
   const { data: ok } = await admin.rpc("ia_reserver_doc", { u: u.id, max_jour: illimite ? 100000 : DOC_JOUR(), max_mois: illimite ? 100000 : DOC_MOIS(), budget: illimite ? 1e15 : BUDGET() });
   if (ok !== "ok") return rep({ erreur: ok === "budget" ? "L'IA est en pause pour tout le monde jusqu'au 1er du mois (budget de l'appli atteint)." : `Tu as utilisé tes lectures de documents par l'IA ${ok === "jour" ? "d'aujourd'hui" : "de ce mois-ci"}.`, raison: ok, credits: await credits(admin, u) }, 429);
   const texte = court(c.texte, 120000), b64 = String(c.fichier_b64 || ""), type = String(c.type || "");
   let contenu: any[];
-  if (texte.length > 300) contenu = [{ type: "text", text: "Texte du bail (extrait du PDF) :\n" + texte }];
+  if (texte.length > 300) contenu = [{ type: "text", text: "Texte du document (extrait du PDF) :\n" + texte }];
   else if (b64 && /^application\/pdf$/.test(type)) contenu = [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }];
   else if (b64 && /^image\/(jpeg|png|webp|gif)$/.test(type)) contenu = [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }];
   else { await admin.rpc("ia_rembourser_doc", { u: u.id }); return rep({ erreur: "Document vide ou format non lu (PDF ou photo)." }, 400); }
@@ -71,14 +100,14 @@ async function lireUnBail(admin: any, u: any, c: any) {
   try {
     m = await new Anthropic().beta.messages.stream({
       model: "claude-opus-5-5", max_tokens: 8000, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
-      output_config: { effort: "medium", format: { type: "json_schema", schema: S_BAIL } }, system: CONSIGNE_BAIL,
-      messages: [{ role: "user", content: [...contenu, { type: "text", text: "Remplis la fiche à partir de ce bail." }] }],
+      output_config: { effort: "medium", format: { type: "json_schema", schema } }, system: consigne,
+      messages: [{ role: "user", content: [...contenu, { type: "text", text: demande }] }],
     } as any).finalMessage();
   } catch (e) { await admin.rpc("ia_rembourser_doc", { u: u.id }); throw e; }
   await admin.rpc("ia_cout", { u: u.id, c: (m.usage?.input_tokens || 0) * 4 + (m.usage?.output_tokens || 0) * 20 });
   if (m.stop_reason === "refusal") { await admin.rpc("ia_rembourser_doc", { u: u.id }); return rep({ erreur: "L'IA n'a pas pu lire ce document." }, 400); }
   let res: any; try { res = JSON.parse((m.content || []).filter((b: any) => b.type === "text").map((b: any) => b.text).join("")); } catch (_) { return rep({ erreur: "Réponse de l'IA illisible, réessaie." }, 400); }
-  return rep({ ok: true, bail: res, credits: await credits(admin, u), usage: { entree: m.usage?.input_tokens || 0, sortie: m.usage?.output_tokens || 0 } });
+  return rep({ ok: true, [cle]: res, credits: await credits(admin, u), usage: { entree: m.usage?.input_tokens || 0, sortie: m.usage?.output_tokens || 0 } });
 }
 
 const CONSIGNE = `Tu aides un propriétaire (souvent une SCI familiale) à brancher son Google Drive sur son appli de gestion locative.
@@ -107,6 +136,7 @@ Deno.serve(async (req) => {
     const { data: proprio } = await moi.rpc("est_proprietaire", { e: c.espace });
     if (!proprio) return rep({ erreur: "L'IA est réservée au propriétaire de l'espace : c'est lui qui gère ses crédits.", raison: "proprio" }, 403);
     if (c.action === "bail") return await lireUnBail(admin, u.user, c);
+    if (c.action === "doc") return await lireUnDoc(admin, u.user, c);
     const illimite = sansLimite(u.user.email);
     const { data: ok } = await admin.rpc("ia_reserver", { u: u.user.id, max_jour: illimite ? 100000 : NB_JOUR(), max_mois: illimite ? 100000 : NB_MOIS(), budget: illimite ? 1e15 : BUDGET() });
     if (ok !== "ok") return rep({ erreur: ok === "jour" ? `Tu as utilisé tes ${NB_JOUR()} analyses d'aujourd'hui. Reviens demain.` : ok === "mois" ? `Tu as utilisé tes ${NB_MOIS()} analyses de ce mois-ci. Elles reviennent le 1er du mois.` : "L'IA est en pause pour tout le monde jusqu'au 1er du mois (budget de l'appli atteint).", raison: ok, credits: await credits(admin, u.user) }, 429);

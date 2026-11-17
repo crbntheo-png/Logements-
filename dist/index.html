@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "f13b64b", "date": "2026-11-17T22:47"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "771af51", "date": "2026-11-17T22:56"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2794,7 +2794,7 @@ function pageDocsBien(arg) {
   const anc = ancienId && (bi.anciens || []).find(x => x.id === ancienId);
   const G = docsGroupes(bienId, bailId || null, ancienId || null), cat = CATS_DOC[i], groupes = i >= 0 ? G.filter(g => g.i === i) : G, b = bailId && bail(bailId);
   const ligne = f => f.edl ? `<li><span class="ico" aria-hidden="true">📋</span><span class="tx"><a href="#edl-${f.edl.id}">État des lieux ${f.edl.type === "entree" ? "d'entrée" : "de sortie"} — ${esc((bail(f.edl.bailId) || {}).nom || "")}</a><small>${fds(f.edl.date)} · ${nbPhotos(f.edl)} photo(s) · fait dans l'appli</small></span></li>`
-    : `<li><span class="ico" aria-hidden="true">${iconeDoc(f)}</span><span class="tx"><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">${esc(f.nom)}</a><small>${f.bailId && bail(f.bailId) && !bailId ? esc(bail(f.bailId).nom) + " · " : ""}${f.url ? "lien" : tailleTxt(f.taille || 0)} · ajouté le ${fds(f.date)}</small></span><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></li>`;
+    : `<li><span class="ico" aria-hidden="true">${iconeDoc(f)}</span><span class="tx"><a href="#" onclick="event.preventDefault();ouvrirDocument('${f.id}')">${esc(f.nom)}</a><small>${f.bailId && bail(f.bailId) && !bailId ? esc(bail(f.bailId).nom) + " · " : ""}${f.url ? "lien" : tailleTxt(f.taille || 0)} · ajouté le ${fds(f.date)}</small></span>${SB && f.chemin && estProprio() && /pdf|image/.test(f.type || "") ? `<button class="small ghost" onclick="lireDocIA({ fichier: '${f.id}' })" aria-label="Lire avec l'IA" title="L'IA lit ce document et remplit l'appli">🤖 Lire</button>` : ""}<button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></li>`;
   return `<div><a class="back" href="${b ? "#bail-" + b.id : "#bien-" + bi.id}">← ${esc(b ? b.nom : bi.nom)}</a>
     <div class="head"><div><h1>${anc ? "🕰 " + esc(anc.nom) : i >= 0 ? `${ICONES_CAT[cat] || ""} ${esc(cat)}` : "Tous les documents"}</h1><p>${esc(bi.nom)}${b ? " · " + esc(b.nom) : ""}${anc ? " · ancien locataire · " + periodeAncien(anc) : ""}</p></div>${anc && PEUT_MODIFIER() ? `<div class="row"><button class="small" onclick="editAncien('${bi.id}','${anc.id}')">Modifier</button></div>` : ""}</div></div>
     ${anc && anc.notes ? `<section class="card"><p class="note">📝 ${nl2br(anc.notes)}</p></section>` : ""}
@@ -3795,7 +3795,7 @@ function annulerPaiement(bailId, m) { const p = S.paiements.filter(x => x.bailId
 
 function editDepense(id, pre) {
   const d0 = id ? S.depenses.find(x => x.id === id) : Object.assign({ date: iso(TODAY), categorie: CATS[4] }, pre || {});
-  modal(id ? "Modifier la dépense" : "Nouvelle dépense", `${id ? "" : pre && pre.lue !== undefined ? `<p class="full note">${pre.lue ? "📷 Lu sur la facture : vérifie le montant, la date et la catégorie." : "📷 Je n'ai pas pu lire la facture : remplis à la main."}</p>` : `<div class="full row"><button type="button" onclick="closeOverlay();photoFacture()">📷 Remplir avec une photo de la facture</button></div>`}
+  modal(id ? "Modifier la dépense" : "Nouvelle dépense", `${id ? "" : pre && pre.ia ? `<div class="full">${grosMsg("attention", "🤖 L'IA a lu ce document : vérifie avant d'enregistrer", esc(pre.ia))}</div>` : pre && pre.lue !== undefined ? `<p class="full note">${pre.lue ? "📷 Lu sur la facture : vérifie le montant, la date et la catégorie." : "📷 Je n'ai pas pu lire la facture : remplis à la main."}</p>` : `<div class="full row"><button type="button" onclick="closeOverlay();photoFacture()">📷 Remplir avec une photo de la facture</button></div>`}
     ${fld("Date", "date", d0.date, "date", "", "required")}${fld("Montant (€)", "montant", d0.montant, "number", "", "required")}
     ${sel("Catégorie", "categorie", d0.categorie, CATS.map(c => [c, c]))}${sel("Bien concerné", "bienId", d0.bienId || "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
     ${fld("Détail (ex : plombier fuite cuisine)", "libelle", d0.libelle, "text", "full")}
@@ -4221,6 +4221,76 @@ async function signalerLocataire(f) {
     const j = await appelLocataire({ action: "voir" }); LOC = { etat: "ok", ...j }; render();
     toast("✓ Envoyé : votre propriétaire est prévenu");
   } catch (e) { toast(e.message); bt.disabled = false; bt.textContent = "Envoyer"; }
+}
+/* ================= L'IA lit n'importe quel papier et le range au bon endroit =================
+   Taxe foncière → fiche taxe foncière (total + ordures ménagères) ; DPE → fiche du logement ; attestation d'assurance
+   d'un locataire → sa date de fin ; facture, assurance, charges de copropriété → nouvelle dépense. Toujours vérifié avant d'enregistrer. */
+async function lireDocIA(src) {
+  if (!SB || !estProprio()) { toast("L'IA est réservée au propriétaire de l'espace."); return; }
+  if (IA.credits && iaBloquee(IA.credits) || (IA.credits && !IA.credits.illimite && IA.credits.docs_restants <= 0)) { grosMsgToast(); return; }
+  let bl, type, nom, bienId = "", bailId = "";
+  try {
+    if (src.fichier) {
+      const f = S.fichiers.find(x => x.id === src.fichier); if (!f) return;
+      nom = f.nom; bienId = f.bienId || ""; bailId = f.bailId || ""; type = f.type || "";
+      toast("🤖 L'IA lit « " + nom + " »… (20 secondes environ)");
+      const r = await SB.storage.from("documents").download(f.chemin); if (r.error) throw new Error("Document introuvable : " + r.error.message);
+      bl = r.data; type = type || bl.type;
+    } else {
+      const f = DOCS.fichiers.find(x => x.id === src.drive); if (!f) return;
+      nom = f.titre; const rg = S.fichiers.find(x => x.driveId === f.id || (x.url || "").includes(f.id)); if (rg) { bienId = rg.bienId; bailId = rg.bailId || ""; }
+      toast("🤖 L'IA lit « " + nom + " »… (20 secondes environ)");
+      bl = await blobDrive({ id: f.id, mimeType: f.type, partage: f.partage }); type = /google-apps/.test(f.type) ? "application/pdf" : (f.type || bl.type);
+    }
+    const corps = { action: "doc", espace: ESPACE, nom };
+    if (/pdf/.test(type)) { let t = ""; try { t = await texteToutPdf(bl); } catch (e) {} if (t.replace(/\s/g, "").length > 500) corps.texte = t; else { if (bl.size > 15e6) throw new Error("PDF scanné trop lourd (15 Mo maximum)."); corps.fichier_b64 = await b64Blob(bl); corps.type = "application/pdf"; } }
+    else { const r = /^image\/(jpeg|png|webp)$/.test(type) && bl.size < 3e6 ? bl : await reduirePhoto(bl); corps.fichier_b64 = await b64Blob(r); corps.type = r.type || "image/jpeg"; }
+    const j = await fnIA(corps);
+    appliquerLectureDoc(j.doc, { bienId, bailId, nom }, j.credits);
+  } catch (e) { toast(e.message || "L'IA n'a pas pu lire ce document."); }
+}
+function grosMsgToast() { modal("🤖 Lecture par l'IA", `<div class="full">${grosMsg("stop", "⛔ Plus de lecture de document ce mois-ci", "Tes crédits reviennent le 1er du mois. En attendant, remplis à la main.")}</div>`, () => true, { ok: "Fermer", lecture: true }); }
+const resteDocsTxt = c => c && !c.illimite && c.docs_restants !== undefined ? ` Il te reste ${c.docs_restants} lecture${c.docs_restants > 1 ? "s" : ""} ce mois-ci.` : "";
+const dateOk = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") ? v : "";
+function surligner(f, champs) { champs.forEach(([k, v]) => { const el = f && f.elements[k]; if (!el || v === "" || v === null || v === undefined || (typeof v === "number" && !(v > 0))) return; el.value = v; el.classList.add("auto"); el.dispatchEvent(new Event("input", { bubbles: true })); }); }
+function choisirBienPuis(titre, texte, bienId, suite) {
+  if (bienId || S.biens.length === 1) return suite(bienId || S.biens[0].id);
+  if (!S.biens.length) { toast("Ajoute d'abord un logement."); return; }
+  modal(titre, `<div class="full">${grosMsg("attention", "À quel logement ça correspond ?", texte)}</div>${sel("Logement", "bienId", "", S.biens.map(b => [b.id, b.nom]))}`, d => { setTimeout(() => suite(d.bienId), 50); return true; }, { ok: "Continuer", lecture: true });
+}
+function appliquerLectureDoc(d, ctx, credits) {
+  if (!d) return;
+  const bid = ctx.bienId || bienDuBail({ adresse_logement: d.adresse_logement }), rem = d.remarques ? " ⚠️ " + d.remarques : "", reste = resteDocsTxt(credits);
+  const bandeau = (f, titre, texte) => { if (!f) return; f.insertAdjacentHTML("afterbegin", `<div class="full">${grosMsg("attention", titre, esc(texte))}</div>`); };
+  if (d.type === "taxe_fonciere") {
+    const an = +d.annee > 2000 ? +d.annee : TODAY.getFullYear();
+    return choisirBienPuis("🤖 Taxe foncière " + an, d.resume, bid, b => { taxeFonciere(b, an); const f = document.getElementById("mform");
+      surligner(f, [["total", +d.montant_total || ""], ["teom", d.montant_teom > 0 ? +d.montant_teom : ""]]);
+      bandeau(f, "🤖 L'IA a lu l'avis : vérifie les montants", `Total ${eur(+d.montant_total || 0)}${d.montant_teom > 0 ? `, dont ${eur(+d.montant_teom)} d'ordures ménagères` : " (ordures ménagères pas trouvées : regarde la ligne TEOM)"}.${rem}${reste}`); });
+  }
+  if (d.type === "dpe") {
+    return choisirBienPuis("🤖 DPE", d.resume, bid, b => { const bi = bien(b);
+      modal(`🤖 DPE — ${esc(bi.nom)}`, `<div class="full">${grosMsg("attention", `Classe ${esc(d.dpe_classe || "?")}${d.dpe_ges ? " · climat " + esc(d.dpe_ges) : ""}`, `L'IA a lu le diagnostic : vérifie puis enregistre sur le logement.${rem}${reste}`)}</div>
+        ${sel("Classe énergie", "dpe", d.dpe_classe || bi.dpe || "", ["", "A", "B", "C", "D", "E", "F", "G"].map(x => [x, x || "—"]))}${sel("Classe climat (GES)", "dpeGes", d.dpe_ges || bi.dpeGes || "", ["", "A", "B", "C", "D", "E", "F", "G"].map(x => [x, x || "—"]))}
+        ${fld("Numéro ADEME", "dpeNumero", d.dpe_numero || bi.dpeNumero || "")}${fld("Fait le", "dpeDate", dateOk(d.dpe_date) || bi.dpeDate || "", "date")}${fld("Valable jusqu'au", "dpeValidite", dateOk(d.dpe_validite) || bi.dpeValidite || "", "date")}`,
+        v => { v.dpeNumero = String(v.dpeNumero || "").toUpperCase().replace(/[^0-9A-Z]/g, ""); Object.assign(bi, v); toast("✓ DPE enregistré sur " + bi.nom); }, { ok: "Enregistrer sur le logement" }); });
+  }
+  if (d.type === "attestation_assurance_locataire") {
+    const a = " " + normTxt(d.assure_nom).replace(/[^A-Z0-9]+/g, " ") + " ";
+    const cands = S.baux.filter(b => !b.dateSortie || P(b.dateSortie) >= TODAY).filter(b => b.id === ctx.bailId || motsDe(b.nom).some(m => m.length > 2 && a.includes(" " + m + " ")));
+    const b = cands.find(x => x.id === ctx.bailId) || (cands.length === 1 ? cands[0] : null);
+    modal("🤖 Attestation d'assurance", `<div class="full">${grosMsg("attention", `Assuré${d.assure_nom ? " : " + esc(d.assure_nom) : ""}`, `Jusqu'au ${dateOk(d.assurance_fin) ? fds(P(d.assurance_fin)) : "?"}. L'appli te rappellera de redemander la suivante un mois avant.${rem}${reste}`)}</div>
+      ${sel("Locataire", "bailId", b ? b.id : "", [["", "Choisis le locataire"], ...S.baux.filter(x => !x.dateSortie || P(x.dateSortie) >= TODAY).map(x => [x.id, x.nom])])}${fld("Assuré jusqu'au", "fin", dateOk(d.assurance_fin), "date", "", "required")}`,
+      v => { const bb = bail(v.bailId); if (!bb) { toast("Choisis le locataire."); return false; } bb.assuranceFin = v.fin; toast("✓ Noté : " + nomCourt(bb.nom) + " assuré jusqu'au " + fds(P(v.fin))); }, { ok: "Enregistrer" });
+    return;
+  }
+  if (["facture", "assurance_proprietaire", "charges_copropriete"].includes(d.type)) {
+    const cat = CATS.includes(d.categorie) ? d.categorie : d.type === "charges_copropriete" ? "Charges de copropriété" : d.type === "assurance_proprietaire" ? "Assurance propriétaire (PNO)" : CATS[4];
+    editDepense(null, { date: dateOk(d.date_document) || iso(TODAY), montant: +d.montant_total > 0 ? +d.montant_total : "", categorie: cat, bienId: bid, libelle: [d.fournisseur, d.objet].filter(Boolean).join(" – ").slice(0, 80), ia: `${d.resume}${rem}${reste}` });
+    const f = document.getElementById("mform"); if (f) ["date", "montant", "categorie", "libelle"].forEach(k => f.elements[k] && f.elements[k].value && f.elements[k].classList.add("auto"));
+    return;
+  }
+  modal("🤖 Lecture par l'IA", `<div class="full">${grosMsg(d.type === "bail" ? "attention" : "ok", d.type === "bail" ? "C'est un bail" : "Rien à remplir pour ce document", esc(d.resume) + (d.type === "bail" ? " Pour créer le locataire, ouvre Biens › + Ajouter un locataire › 🤖 Remplir depuis le bail." : "") + esc(rem) + esc(reste))}</div>`, () => true, { ok: "Fermer", lecture: true });
 }
 async function telechargerPdf() {
   if (!CURDOC) return;
@@ -5066,6 +5136,7 @@ function actionsDoc(id) {
     <div class="full actions-doc">
       <a class="btn" href="${esc(f.lien)}" target="_blank" rel="noopener" onclick="closeOverlay()">👁 Ouvrir</a>
       ${S.biens.length && estProprio() ? `<button type="button" onclick="rangerDocDrive('${f.id}')">🏠 Ranger dans un logement</button>` : ""}
+      ${SB && estProprio() && /pdf|image|google-apps\.document/.test(f.type || "") ? `<button type="button" onclick="closeOverlay();lireDocIA({ drive: '${f.id}' })">🤖 Lire avec l'IA</button>` : ""}
       <button type="button" onclick="closeOverlay();envoyerFichier('${f.id}')">✉️ Envoyer par e-mail</button>
       ${estProprio() ? `<button type="button" class="danger" onclick="retirerDocDrive('${f.id}')">🗑 Retirer de l'appli</button>` : ""}
     </div>${estProprio() ? `<p class="full note small">"Retirer" ne touche pas à ton Drive : le fichier y reste, l'appli ne le voit plus.${choisi ? "" : ""}</p>` : ""}`, () => true, { ok: "Fermer", lecture: true });
@@ -5895,7 +5966,7 @@ function pageLegal() {
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
   ${b("🔗 Espace locataire", `<p>Si tu crées un lien pour un locataire, il voit seulement ce qui le concerne : son logement, ce qu'il doit, ses quittances des 12 derniers mois, son bail et ses états des lieux, et les problèmes qu'il a signalés. Rien sur les autres locataires, la compta ou la banque. Le lien est secret (le serveur n'en garde qu'une empreinte) ; tu peux le désactiver à tout moment depuis sa fiche. Les photos qu'il envoie sont rangées dans les documents de ton espace.</p>`)}
-  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement ; Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
+  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement. Si tu demandes à l'IA de <b>lire un document</b> (bail, avis de taxe foncière, facture, DPE, attestation d'assurance), le contenu de <b>ce document seulement</b> est envoyé à Anthropic, au moment où tu le demandes, pour remplir l'appli. Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
   ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}
   ${b("🍪 Cookies", `<p>Aucun cookie publicitaire ni de mesure d'audience. L'appli garde seulement sur ton appareil ce qui sert à rester connecté et à fonctionner sans réseau.</p>`)}

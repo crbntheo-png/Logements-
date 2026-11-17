@@ -40,7 +40,7 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 1. ✅ (18/11) **Signature au doigt** (EDL, bail, avenant) : zone de signature sur l'écran pour bailleur et locataire, ajoutée au PDF (jsPDF addImage) avec date, heure, nom ; PDF signé rangé dans le logement.
 2. ✅ (18/11) **Quittance automatique à réception du loyer** (Pennylane) : envoi seul ou après accord (choix dans Réglages).
 3. ✅ (18/11) **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
-4. **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
+4. ✅ (18/11) **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
 5. **Trésorerie 12 mois** + alerte de seuil.
 6. **Activité entre associés** ("X a marqué le loyer payé").
 7. **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
@@ -48,6 +48,18 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — feuille de route, étape 4 : l'IA lit tous les papiers
+- Bouton "🤖 Lire" sur chaque document rangé dans l'appli (PDF ou photo, propriétaire seulement), et "🤖 Lire avec l'IA" dans les actions d'un fichier du Drive. L'IA reconnaît le papier et ouvre le bon formulaire déjà rempli, avec un message en grand "vérifie" :
+  - avis de taxe foncière → fiche taxe foncière du bon logement (retrouvé par l'adresse), bonne année, total et ordures ménagères (les parts des locataires se calculent) ;
+  - facture, assurance du propriétaire, appel de charges → nouvelle dépense (date, total TTC, catégorie, logement d'après l'adresse du chantier, fournisseur et objet) ;
+  - DPE → classes énergie et climat, numéro ADEME, dates, enregistrés sur le logement ;
+  - attestation d'assurance d'un locataire → le bon locataire et sa date de fin (rappel un mois avant) ;
+  - bail → renvoie vers "🤖 Remplir depuis le bail" ; autre → résumé, rien à remplir.
+- Serveur `ia` v7 : action `doc` (schéma `S_DOC`), même crédits que la lecture des baux (lectures de documents), remboursé si l'IA échoue.
+- Confidentialité : précise que le contenu d'un document est envoyé à Anthropic seulement quand on demande sa lecture (c'était déjà le cas pour les baux, pas écrit).
+- Test réel : test57 (4 vrais PDF, vraie IA, 6 à 9 s chacun) 12/12 : taxe 831 € dont 133 € de TEOM sur le bon logement, facture 1 039,50 € TTC en travaux sur le 43 (adresse du chantier), DPE E/B avec numéro et dates, attestation jusqu'au 31/08/2027 sur Jean. test5, test45, test49, test53 OK. En ligne.
+- Pas vérifié : sur de vrais avis scannés ou photographiés (le test utilise des PDF avec du texte).
 
 ### 18/11/2026 — feuille de route, étape 3 : espace locataire
 - **Propriétaire** : fiche du locataire › Plus › "🔗 Son espace locataire" : ce qu'il verra / ne verra jamais, "Créer son lien", puis Copier, Envoyer (WhatsApp, SMS…), "Voir ce qu'il voit", "Désactiver ce lien", et "ouvert pour la dernière fois il y a…". Réservé aux éditeurs (pas aux lecteurs).
