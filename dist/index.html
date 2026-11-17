@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "0598e1e", "date": "2026-11-17T19:41"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "1cba540", "date": "2026-11-17T20:04"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -230,6 +230,10 @@ details.rgl { scroll-margin-top: 76px; }
 .docs-actions { margin: 4px 0 14px; flex-wrap: wrap; }
 .adresse-appli { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--surface-2); padding: 10px 12px; border-radius: 12px; } .adresse-appli code { flex: 1 1 200px; overflow-wrap: anywhere; font-size: .85rem; } .partage-aide ol { padding-left: 20px; } .partage-aide li { margin-bottom: 6px; }
 .ia-card { border: 1.5px solid var(--accent, #0b7a64); }
+.bilan-ia { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 12px 0; }
+.bilan-ia div { background: var(--surface-2); border-radius: 12px; padding: 10px 12px; } .bilan-ia b { display: block; font-size: 1.5rem; } .bilan-ia span { font-size: .85rem; color: var(--muted); }
+.props-ia li { display: flex; gap: 10px; align-items: flex-start; } .chk-ia { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .75rem; color: var(--muted); padding-top: 22px; }
+.chk-ia input { width: 22px; height: 22px; } .champs-ia { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; min-width: 0; } .champs-ia > b, .champs-ia > small { grid-column: 1 / -1; }
 .gros-msg { border-radius: 14px; padding: 14px 16px; margin: 12px 0; border: 2px solid; color: var(--ink); }
 .gros-msg > b { display: block; font-size: 1.15rem; line-height: 1.3; font-weight: 800; }
 .gros-msg p { margin: 6px 0 0; font-size: .95rem; }
@@ -2249,7 +2253,7 @@ function etapesGuide() {
   let installOk = false; try { installOk = estInstallee() || localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) { installOk = estInstallee(); }
   const L = [
     { ok: !!(S.sci.nom && S.sci.gerant && S.sci.siege), ico: "🏛", t: estPerso() ? "Tes infos de propriétaire" : "Les infos de ta société", pourquoi: "Ton nom, ton adresse et le signataire apparaissent sur chaque quittance, bail et courrier. Sans eux, les documents sont incomplets.", comment: "Réglages › rubrique « La SCI ». 1 minute.", btn: ["Remplir", "reglage('sci')"] },
-    { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: "Un par logement : adresse, surface, meublé ou vide.", btn: ["Ajouter un logement", "editBien()"] },
+    { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: SB ? "Le plus rapide : partage le dossier Drive de tes locations, l'IA te fait le bilan et crée tes logements (tu corriges avant). Sinon : Biens › + Ajouter." : "Un par logement : adresse, surface, meublé ou vide.", btn: SB ? ["🤖 Depuis mon Drive", "go('docs')"] : ["Ajouter un logement", "editBien()"] },
     { ok: S.baux.length > 0, ico: "👤", t: "Tes locataires", pourquoi: "L'appli calcule chaque mois ce qui est dû, te dit qui est en retard, prépare quittances et relances, et te rappelle la révision du loyer (IRL) au bon moment.", comment: "Nom, e-mail, date d'entrée, loyer. L'e-mail sert à envoyer les documents.", btn: ["Ajouter un locataire", "editBail()"] },
     { ok: relOk, ico: "🏦", t: "Ta banque", pourquoi: "Les loyers reçus se cochent tout seuls et la compta se remplit avec tes dépenses : plus de pointage à la main.", comment: "Ton relevé une fois par mois (2 min), ou Pennylane si tu l'as.", btn: ["Voir comment", "go('compta')"] },
     { ok: S.fichiers.length > 0 || S.edl.length > 0, ico: "📁", t: "Tes documents", pourquoi: "Bail signé, DPE, assurance, factures : tout est rangé par logement, sur ton téléphone et celui de tes associés. Fini de chercher dans les mails.", comment: "Fiche d'un logement › Documents › Ajouter un fichier (PDF ou photo).", btn: ["Ouvrir mes logements", "go('biens')"] },
@@ -4497,34 +4501,61 @@ function sectionIA() {
   if (IA.etat === "en cours") return `<section class="card ia-card">${grosMsg("attention", "🤖 L'IA lit l'organisation de ton Drive…", "Elle regarde les noms des dossiers et des fichiers (pas leur contenu). Environ une minute : ne ferme pas l'appli.")}</section>`;
   const bouton = (cls, txt) => bloque ? "" : `<div class="row" style="margin-top:12px"><button class="${cls}" onclick="analyserIA()">${txt}</button></div>`;
   const erreur = IA.etat === "erreur" ? grosMsg("stop", "⛔ L'analyse n'a pas marché", esc(IA.err || "")) : "";
-  if (!r) return `<section class="card ia-card"><h2>🤖 Laisser l'IA organiser</h2>
-    <p class="note">Elle regarde les noms de tes dossiers et propose : quel dossier correspond à quel logement, les logements à créer, les anciens locataires. Tu valides avant que quoi que ce soit change.</p>
+  if (!r) return `<section class="card ia-card"><h2>🤖 Demander le bilan à l'IA</h2>
+    <p class="note">Elle regarde les noms de tes dossiers et te fait un bilan : combien de logements à créer (avec nom, adresse, type), quel dossier va avec quel logement, tes locataires actuels et anciens. <b>Tu corriges et tu valides</b> avant que quoi que ce soit change.</p>
     ${erreur}${bloque ? msgBlocage(c) : c && !c.illimite ? grosMsg("attention", `⚠️ ${plur(c.par_mois, "analyse")} par mois`, `${resteIA(c)} Partage d'abord tous tes dossiers, puis lance une seule analyse.`) : ""}
-    ${bouton("primary big", "🤖 Analyser mon Drive")}<p class="note" style="margin-top:8px">🔒 Ces crédits sont à toi : tes associés ne peuvent pas les utiliser.</p></section>`;
+    ${bouton("primary big", "🤖 Qu'est-ce que tu me suggères ?")}<p class="note" style="margin-top:8px">🔒 Ces crédits sont à toi : tes associés ne peuvent pas les utiliser.</p></section>`;
   const bienDe = x => x.bien_id && bien(x.bien_id) ? x.bien_id : ((S.biens.find(bi => x.bien_a_creer && normTxt(bi.nom) === normTxt(x.bien_a_creer)) || {}).id || "");
   const P = propositionsIA(), info = [...(r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))).map(x => { const bid = bienDe(x), fb = bid && bailDansDrive(x.nom); return `<li class="deux"><span class="tx">👤 Locataire actuel probable : <b>${esc(x.nom)}</b>${bid ? " · " + esc(bien(bid).nom) : x.bien_a_creer ? " · " + esc(x.bien_a_creer) + " (logement à créer d'abord)" : ""}<small>${esc(x.raison || "")}</small></span>${bid ? `<span class="acts-li">${fb ? `<button type="button" class="small primary" onclick="creerDepuisBailDrive('${fb.id}','${bid}')">🤖 Créer depuis son bail</button>` : `<button type="button" class="small" onclick="editBail(null,'${bid}')">Ajouter</button>`}</span>` : ""}</li>`; }),
     ...(r.biens_sans_dossier || []).filter(x => bien(x.bien_id)).map(x => `<li><span class="tx">❓ <b>${esc(bien(x.bien_id).nom)}</b> : aucun dossier trouvé<small>${esc(x.remarque || "")}</small></span></li>`)];
-  return `<section class="card ia-card"><div class="sec-head"><h2>🤖 Ce que l'IA a compris</h2><small class="note">${fds(ia.date.slice(0, 10))}</small></div>
+  const nb = t => P.filter(p => p.type === t).length, nAct = (r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))).length;
+  const bilan = [[nb("creer"), "🏠", "logement à créer", "logements à créer"], [nb("lien"), "📁", "dossier à relier", "dossiers à relier"], [nAct, "👤", "locataire actuel", "locataires actuels"], [nb("ancien"), "🕰", "ancien locataire", "anciens locataires"], [(r.biens_sans_dossier || []).filter(x => bien(x.bien_id)).length, "❓", "logement sans dossier", "logements sans dossier"], [DOCS.fichiers.length, "📄", "document lu", "documents lus"]].filter(x => x[0]);
+  return `<section class="card ia-card"><div class="sec-head"><h2>🤖 Le bilan de l'IA</h2><small class="note">${fds(ia.date.slice(0, 10))}</small></div>
     ${IA.fait ? grosMsg("ok", `✅ Analyse faite${P.length ? ` : ${plur(P.length, "proposition")} à vérifier` : " : tout est en ordre"}`, resteIA(c)) : ""}${erreur}
+    ${bilan.length ? `<div class="bilan-ia">${bilan.map(([n, ico, un, plusieurs]) => `<div><b>${ico} ${n}</b><span>${n > 1 ? plusieurs : un}</span></div>`).join("")}</div>` : ""}
     ${r.resume ? `<p class="note">${esc(r.resume)}</p>` : ""}
-    ${P.length ? `<form onsubmit="event.preventDefault();appliquerIA(this)">${grosMsg("attention", "👀 Vérifie avant d'appliquer", "Décoche ce qui est faux. Rien n'est supprimé, et tu pourras tout annuler.")}<ul class="todo">${P.map((p, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:flex-start;flex:1"><input type="checkbox" name="p${i}" checked><span class="tx">${p.t}<small>${p.d}</small></span></label></li>`).join("")}</ul>
+    ${P.length ? `<form onsubmit="event.preventDefault();appliquerIA(this)" class="ia-props">${grosMsg("attention", "✏️ Corrige si besoin, puis applique", "Tout est modifiable : nom, adresse, type, logement. Décoche ce qui est faux. Rien n'est supprimé, et tu pourras tout annuler.")}
+      ${propsIAHtml(P)}
       <div class="row"><button class="primary big">Appliquer ce qui est coché</button></div></form>` : `<p class="note">✅ Tout ce qu'elle a proposé est fait.</p>`}
     ${info.length ? `<h3>À regarder</h3><ul class="todo">${info.join("")}</ul>` : ""}
-    ${bloque ? msgBlocage(c) : `${bouton("small ghost", "↻ Relancer l'analyse (1 crédit)")}${c && !c.illimite && !IA.fait ? `<p class="note">${resteIA(c)}</p>` : ""}`}</section>`;
+    ${bloque ? msgBlocage(c) : `${bouton("small ghost", "↻ Refaire le bilan (1 crédit)")}${c && !c.illimite && !IA.fait ? `<p class="note">${resteIA(c)}</p>` : ""}`}</section>`;
+}
+/* Les propositions, chacune modifiable. Logements proposés : "new:<index>" dans les listes de logements */
+const TYPES_LOGEMENT = ["Appartement", "Studio", "Maison", "Parking", "Local commercial", "Autre"];
+function propsIAHtml(P) {
+  const nouveaux = P.map((p, i) => p.type === "creer" ? [i, p.x.nom] : null).filter(Boolean);
+  const choixBien = (nom, sel) => `<select name="${nom}" aria-label="Logement">${S.biens.map(b => `<option value="${b.id}" ${sel === b.id ? "selected" : ""}>${esc(b.nom)}</option>`).join("")}${nouveaux.map(([i, n]) => `<option value="new:${i}" ${sel === "new:" + i ? "selected" : ""}>🆕 ${esc(n)}</option>`).join("")}</select>`;
+  const nouveauDe = nom => { const k = nouveaux.find(([, n]) => normTxt(n) === normTxt(nom || "")); return k ? "new:" + k[0] : ""; };
+  const D = DOCS.dossiers || {}, nomDos = id => D[id] ? (D[id].chemin || [D[id].titre]).join(" › ") : "dossier";
+  const bloc = (titre, items) => items.length ? `<h3>${titre}</h3><ul class="todo props-ia">${items.join("")}</ul>` : "";
+  const coche = i => `<input type="checkbox" name="p${i}" checked aria-label="Appliquer">`;
+  const creer = P.map((p, i) => p.type !== "creer" ? "" : `<li><label class="chk-ia">${coche(i)}<span>Créer</span></label><div class="champs-ia">
+      <label class="fl">Nom<input name="n${i}" value="${esc(p.x.nom)}"></label><label class="fl">Adresse<input name="a${i}" value="${esc(p.x.adresse || "")}" placeholder="N° et rue, code postal ville"></label>
+      <label class="fl">Type<select name="t${i}">${TYPES_LOGEMENT.map(t => `<option ${t === p.x.type ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label class="fl">Location<select name="m${i}"><option value="vide">Vide</option><option value="meuble">Meublée</option></select></label>
+      <small class="note">${p.x.dossiers.length ? "📁 " + esc(p.x.dossiers.map(nomDos).join(", ")) + " · " : ""}${esc(p.x.raison || "")}</small></div></li>`).filter(Boolean);
+  const liens = P.map((p, i) => p.type !== "lien" ? "" : `<li><label class="chk-ia">${coche(i)}<span>Relier</span></label><div class="champs-ia"><b>📁 ${esc(nomDos(p.x.dossier))}</b><label class="fl">= le logement${choixBien("b" + i, p.x.bien_id)}</label><small class="note">${esc(p.x.raison || "")}</small></div></li>`).filter(Boolean);
+  const anciens = P.map((p, i) => p.type !== "ancien" ? "" : `<li><label class="chk-ia">${coche(i)}<span>Ajouter</span></label><div class="champs-ia"><label class="fl">Ancien locataire<input name="an${i}" value="${esc(p.x.nom)}"></label><label class="fl">Logement${choixBien("b" + i, p.x.bien_id || nouveauDe(p.x.bien_a_creer))}</label><small class="note">${esc(p.x.raison || "")}</small></div></li>`).filter(Boolean);
+  return bloc(`🏠 Logements à créer (${creer.length})`, creer) + bloc(`📁 Dossiers à relier (${liens.length})`, liens) + bloc(`🕰 Anciens locataires (${anciens.length})`, anciens);
 }
 function appliquerIA(form) {
   if (!estProprio()) { toast(msgProprio("appliquer les propositions")); return; }
-  const d = Object.fromEntries(new FormData(form).entries()), P = propositionsIA(), choix = P.filter((p, i) => d["p" + i]);
-  if (!choix.length) { toast("Rien de coché."); return; }
+  const d = Object.fromEntries(new FormData(form).entries()), P = propositionsIA(), pris = i => !!d["p" + i];
+  if (!P.some((p, i) => pris(i))) { toast("Rien de coché."); return; }
   avecAnnuler(() => {
-    const L = Object.assign({}, S.sci.driveLogements), nouveaux = {}; let nb = 0, nl = 0, na = 0;
-    choix.filter(p => p.type === "creer").forEach(({ x }) => { const bi = { id: uid(), nom: x.nom, type: x.type === "Autre" ? "" : x.type, adresse: x.adresse || "", cp: "", ville: "", meuble: "vide", notes: "Créé avec l'IA depuis le Drive." }; S.biens.push(bi); nouveaux[normTxt(x.nom)] = bi.id; x.dossiers.forEach(id => { L[id] = bi.id; }); nb++; });
-    choix.filter(p => p.type === "lien").forEach(({ x }) => { L[x.dossier] = x.bien_id; nl++; });
-    choix.filter(p => p.type === "ancien").forEach(({ x }) => { const bi = bien(x.bien_id) || bien(nouveaux[normTxt(x.bien_a_creer)]); if (!bi) return; bi.anciens = (bi.anciens || []).concat({ id: uid(), nom: x.nom, du: "", au: "", notes: x.raison ? "Trouvé par l'IA : " + x.raison : "" }); na++; });
+    const L = Object.assign({}, S.sci.driveLogements), crees = {}; let nb = 0, nl = 0, na = 0;
+    P.forEach((p, i) => { if (p.type !== "creer" || !pris(i)) return;
+      const adr = String(d["a" + i] || "").trim(), m = /^(.*?)[,\s]+(\d{5})\s+(.+)$/.exec(adr), type = d["t" + i] || p.x.type;
+      const bi = { id: uid(), nom: String(d["n" + i] || p.x.nom).trim() || p.x.nom, type: type === "Autre" ? "" : type, adresse: m ? m[1].trim() : adr, cp: m ? m[2] : "", ville: m ? m[3].trim() : "", meuble: d["m" + i] === "meuble" ? "meuble" : "vide", notes: "Créé avec l'IA depuis le Drive." };
+      S.biens.push(bi); crees["new:" + i] = bi.id; p.x.dossiers.forEach(id => { L[id] = bi.id; }); nb++; });
+    const cible = v => crees[v] || (bien(v) ? v : "");
+    P.forEach((p, i) => { if (p.type !== "lien" || !pris(i)) return; const id = cible(d["b" + i]); if (id) { L[p.x.dossier] = id; nl++; } });
+    P.forEach((p, i) => { if (p.type !== "ancien" || !pris(i)) return; const bi = bien(cible(d["b" + i])), nom = String(d["an" + i] || p.x.nom).trim(); if (!bi || !nom) return;
+      bi.anciens = (bi.anciens || []).concat({ id: uid(), nom, du: "", au: "", notes: p.x.raison ? "Trouvé par l'IA : " + p.x.raison : "" }); na++; });
     S.sci.driveLogements = L; save();
-    toast([nb ? `${nb} logement${nb > 1 ? "s" : ""} créé${nb > 1 ? "s" : ""}` : "", nl ? `${nl} dossier${nl > 1 ? "s" : ""} relié${nl > 1 ? "s" : ""}` : "", na ? `${na} ancien${na > 1 ? "s" : ""} locataire${na > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ") + ". Les documents se rangent…");
+    toast([nb ? `${plur(nb, "logement")} créé${nb > 1 ? "s" : ""}` : "", nl ? `${plur(nl, "dossier")} relié${nl > 1 ? "s" : ""}` : "", na ? `${plur(na, "ancien locataire")}` : ""].filter(Boolean).join(" · ") + ". Les documents se rangent…");
   });
-  render(); setTimeout(() => rangerAuto("ia"), 300);
+  IA.fait = false; render(); setTimeout(() => rangerAuto("ia"), 300);
 }
 /* ================= IA : lire un bail et remplir la fiche du locataire ================= */
 const b64Blob = bl => new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1]); fr.onerror = () => ko(new Error("Fichier illisible")); fr.readAsDataURL(bl); });

@@ -1,0 +1,71 @@
+// IA, nouvel utilisateur (aucun logement) : bilan réel, logements proposés, correction avant d'appliquer
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const DIST = path.join(__dirname, '..', 'dist');
+const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
+let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK ' : 'KO ') + m); };
+// Drive simulé : 02 - GTP Invest / Agon (2 lots), Beauchamps 41 (connu), Beauchamps 43 (pas dans l'appli), Compta
+const D = {}, F = []; let k = 0;
+const dos = (id, chemin) => { D[id] = { titre: chemin[chemin.length - 1], chemin, ancetres: [] }; };
+const fic = (titre, chemin, anc) => F.push({ id: 'f' + (k++), titre, type: 'application/pdf', lien: 'x', chemin, ancetres: anc, racine: 'GTP', partage: true });
+dos('GTP', ['02 - GTP Invest']);
+dos('AG', ['02 - GTP Invest', 'Agon Coutainville']); dos('AG1', ['02 - GTP Invest', 'Agon Coutainville', 'Lot 1 - Antoine']); dos('AG2', ['02 - GTP Invest', 'Agon Coutainville', 'Lot 2 - Sofiane']);
+dos('B41', ['02 - GTP Invest', '41 rue de Beauchamps']); dos('B41a', ['02 - GTP Invest', '41 rue de Beauchamps', 'Anciens locataires']);
+dos('B43', ['02 - GTP Invest', '43 rue de Beauchamps']); dos('CPT', ['02 - GTP Invest', 'Compta SCI']);
+Object.entries(D).forEach(([id, d]) => { d.ancetres = { GTP: [], AG: ['GTP'], AG1: ['GTP', 'AG'], AG2: ['GTP', 'AG'], B41: ['GTP'], B41a: ['GTP', 'B41'], B43: ['GTP'], CPT: ['GTP'] }[id]; });
+fic('Bail Antoine Martin 2024.pdf', D.AG1.chemin, ['GTP', 'AG', 'AG1']); fic('EDL entree Antoine.pdf', D.AG1.chemin, ['GTP', 'AG', 'AG1']);
+fic('Bail Sofiane Hesry.pdf', D.AG2.chemin, ['GTP', 'AG', 'AG2']); fic('DPE lot 2.pdf', D.AG2.chemin, ['GTP', 'AG', 'AG2']);
+fic('Bail Margottet Fravelle 2025.pdf', D.B41.chemin, ['GTP', 'B41']); fic('Quittance octobre 2026.pdf', D.B41.chemin, ['GTP', 'B41']);
+fic('Bail Julie Sergent 2019.pdf', D.B41a.chemin, ['GTP', 'B41', 'B41a']); fic('EDL sortie Julie Sergent 2023.pdf', D.B41a.chemin, ['GTP', 'B41', 'B41a']);
+fic('Bail Steve Lemaire 2025.pdf', D.B43.chemin, ['GTP', 'B43']); fic('Taxe fonciere 2026 43 Beauchamps.pdf', D.B43.chemin, ['GTP', 'B43']);
+fic('Bilan 2025.pdf', D.CPT.chemin, ['GTP', 'CPT']); fic('Releve banque octobre.pdf', D.CPT.chemin, ['GTP', 'CPT']);
+(async () => {
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort());
+  await p.route('**/functions/v1/partage', async r => { const c = JSON.parse(r.request().postData() || '{}');
+    if (c.action === 'config') return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ pret: true, adresse: 'lecture@x.iam.gserviceaccount.com' }) });
+    return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ racines: [{ id: 'GTP', nom: '02 - GTP Invest', dossier: true }], dossiers: D, fichiers: F }) }); });
+  await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
+  await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
+  await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Nouvel utilisateur IA'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
+  await p.evaluate(() => {
+    DRIVEG = { etat: 'non' }; DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; go('docs'); render(); });
+  await p.waitForTimeout(2000); await p.evaluate(() => render()); await p.waitForTimeout(300);
+  t(await p.isVisible('button:has-text("Qu\'est-ce que tu me suggères")'), 'bouton « Qu’est-ce que tu me suggères ? »');
+  await p.waitForFunction(() => IA.credits, null, { timeout: 15000 }); await p.evaluate(() => render()); await p.waitForTimeout(200);
+  t(await p.isVisible('.gros-msg.attention >> text=analyses par mois'), 'en grand : le nombre d’analyses par mois');
+  await p.screenshot({ path: __dirname + '/b48-avant.png' });
+  await p.click('button:has-text("Qu\'est-ce que tu me suggères")'); await p.waitForTimeout(300);
+  t(await p.isVisible('#overlay .gros-msg >> text=utilise 1 de tes crédits IA'), 'confirmation en grand avant de dépenser un crédit');
+  await p.screenshot({ path: __dirname + '/b48-confirmer.png' });
+  const t0 = Date.now(); await p.click('#overlay button:has-text("Lancer l\'analyse")');
+  await p.waitForFunction(() => IA.etat !== 'en cours', null, { timeout: 180000 }); const duree = Math.round((Date.now() - t0) / 1000);
+  const R = await p.evaluate(() => ({ etat: IA.etat, err: IA.err, res: S.sci.ia && S.sci.ia.res }));
+  console.log('durée', duree, 's', JSON.stringify(R, null, 1).slice(0, 3000));
+  t(R.etat === 'pret', 'analyse réelle par l’IA terminée (' + duree + ' s)');
+  const r = R.res || {};
+  const noms = (r.biens_a_creer || []).map(x => x.nom + ' ' + x.adresse + ' ' + x.dossiers.join(','));
+  t((r.biens_a_creer || []).length >= 4 && ['AG1', 'AG2', 'B41', 'B43'].every(id => (r.biens_a_creer || []).some(x => x.dossiers.includes(id))), 'sans rien dans l’appli : 4 logements proposés (Agon lot 1, lot 2, 41, 43)');
+  t(!(r.biens_a_creer || []).some(x => x.dossiers.includes('CPT')), 'Compta : pas un logement');
+  await p.evaluate(() => render()); await p.waitForTimeout(300); await p.screenshot({ path: __dirname + '/b52-bilan.png', fullPage: true });
+  t(await p.isVisible('.bilan-ia >> text=logements à créer') && await p.isVisible('.bilan-ia >> text=documents lus'), 'bilan chiffré en tête');
+  // corriger le logement du 43 : nom, adresse, meublé
+  const i43 = await p.evaluate(() => propositionsIA().findIndex(x => x.type === 'creer' && x.x.dossiers.includes('B43')));
+  await p.fill(`input[name=n${i43}]`, 'Studio 43'); await p.fill(`input[name=a${i43}]`, '43 rue de Beauchamps, 35000 Rennes'); await p.selectOption(`select[name=m${i43}]`, 'meuble'); await p.selectOption(`select[name=t${i43}]`, 'Studio');
+  // décocher le lot 2
+  const iA2 = await p.evaluate(() => propositionsIA().findIndex(x => x.type === 'creer' && x.x.dossiers.includes('AG2')));
+  await p.uncheck(`input[name=p${iA2}]`);
+  await p.click('button:has-text("Appliquer ce qui est coché")'); await p.waitForTimeout(1500);
+  const A = await p.evaluate(() => ({ biens: S.biens.map(b => ({ nom: b.nom, adr: b.adresse, cp: b.cp, ville: b.ville, m: b.meuble, t: b.type })), liens: S.sci.driveLogements, anciens: S.biens.flatMap(b => (b.anciens || []).map(a => a.nom + '@' + b.nom)), docs: S.fichiers.length }));
+  console.log(JSON.stringify(A));
+  const s43 = A.biens.find(b => b.nom === 'Studio 43');
+  t(s43 && s43.adr === '43 rue de Beauchamps' && s43.cp === '35000' && s43.ville === 'Rennes' && s43.m === 'meuble' && s43.t === 'Studio', 'correction appliquée : nom, adresse découpée, meublé, type');
+  t(A.biens.length === (r.biens_a_creer || []).length - 1, 'le logement décoché n’est pas créé');
+  t(A.anciens.some(x => /Sergent/.test(x)), 'ancienne locataire rattachée au logement créé');
+  t(A.docs > 0, 'documents rangés dans les logements créés (' + A.docs + ')');
+  t(!errs.length, 'aucune erreur JS ' + errs.join(' | '));
+  await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });
+  console.log(`\n${ok} OK, ${ko} KO`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);
+})().catch(e => { console.log('FATAL', e.message); process.exit(1); });

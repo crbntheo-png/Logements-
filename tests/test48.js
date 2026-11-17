@@ -34,11 +34,11 @@ fic('Bilan 2025.pdf', D.CPT.chemin, ['GTP', 'CPT']); fic('Releve banque octobre.
     S.baux.push({ id: 'l1', bienId: 'bA1', nom: 'Antoine Martin', typeBail: 'vide', dateEntree: '2024-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }, { id: 'l2', bienId: 'b41', nom: 'Margottet – Fravelle', typeBail: 'vide', dateEntree: '2025-09-01', suiviDepuis: '2026-11', loyerHC: '700', charges: '0', jourPaiement: '10', revisions: [] }); save();
     DRIVEG = { etat: 'non' }; DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; go('docs'); render(); });
   await p.waitForTimeout(2000); await p.evaluate(() => render()); await p.waitForTimeout(300);
-  t(await p.isVisible('button:has-text("Analyser mon Drive")'), 'bouton « Analyser mon Drive »');
+  t(await p.isVisible('button:has-text("Qu\'est-ce que tu me suggères")'), 'bouton « Qu’est-ce que tu me suggères ? »');
   await p.waitForFunction(() => IA.credits, null, { timeout: 15000 }); await p.evaluate(() => render()); await p.waitForTimeout(200);
   t(await p.isVisible('.gros-msg.attention >> text=analyses par mois'), 'en grand : le nombre d’analyses par mois');
   await p.screenshot({ path: __dirname + '/b48-avant.png' });
-  await p.click('button:has-text("Analyser mon Drive")'); await p.waitForTimeout(300);
+  await p.click('button:has-text("Qu\'est-ce que tu me suggères")'); await p.waitForTimeout(300);
   t(await p.isVisible('#overlay .gros-msg >> text=utilise 1 de tes crédits IA'), 'confirmation en grand avant de dépenser un crédit');
   await p.screenshot({ path: __dirname + '/b48-confirmer.png' });
   const t0 = Date.now(); await p.click('#overlay button:has-text("Lancer l\'analyse")');

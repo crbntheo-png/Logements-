@@ -34,6 +34,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 18/11/2026 — bilan de l'IA, propositions modifiables
+- Carte IA renommée "🤖 Le bilan de l'IA" ; bouton "🤖 Qu'est-ce que tu me suggères ?". En tête, des chiffres : logements à créer, dossiers à relier, locataires actuels, anciens locataires, logements sans dossier, documents lus.
+- Chaque proposition est modifiable avant d'appliquer : logement à créer (nom, adresse, type, vide/meublée ; l'adresse "rue, 35000 Ville" est découpée en adresse / code postal / ville), dossier à relier (choix du logement, y compris un logement proposé 🆕), ancien locataire (nom, logement). Décocher = ne pas appliquer.
+- Guide de démarrage : l'étape "Tes logements" propose d'abord "🤖 Depuis mon Drive" (l'IA crée les logements, on corrige), sinon Biens › + Ajouter.
+- Tests réels : test52 (nouvel utilisateur sans logement : 4 logements proposés en 16 s, compta écartée, corrections appliquées, logement décoché non créé, ancienne locataire rattachée, 10 documents rangés) 12/12 ; test48 16/16.
+- À savoir : un document d'un dossier non relié peut être rangé par la règle des noms dans un logement voisin (ex. "lot 2" dans "Agon lot 1" si le lot 2 n'est pas créé) ; annulable via "Derniers rangements automatiques".
+
 ### 18/11/2026 — demander une intégration avec une autre appli
 - Les utilisateurs peuvent demander de brancher une autre appli : fenêtre "🔌 Brancher une autre appli" (choix parmi Dropbox, OneDrive, iCloud Drive, banque directe, Qonto, signature électronique, Outlook, Excel/Sheets, logiciel comptable, WhatsApp, Autre + nom), "Pourquoi ? Qu'est-ce que ça t'éviterait ?" (obligatoire), "🔥 Indispensable / 👍 Pratique". Accès : bouton "?", page Docs ("Tes documents sont ailleurs ? Demande-nous de le brancher"), Réglages › "Une autre appli ?".
 - Enregistré comme signalement de type `integration` (fonction `signaler` existante) : Théo est prévenu par e-mail depuis son Gmail et par notification (titre "[Intégration demandée n°…]", `notifier` v11).
