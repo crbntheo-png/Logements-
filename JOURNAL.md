@@ -34,6 +34,11 @@ Règle pour chaque session :
 
 ## Historique
 
+### 17/11/2026 (23 h) — crédits IA limités et annoncés en grand
+- Serveur `ia` (v4) : 2 analyses par personne et par jour, 5 par mois (IA_JOUR, IA_MOIS), budget global de l'appli 3 $ par mois (IA_BUDGET_MOIS), Théo sans limite (IA_SANS_LIMITE). Coût réel de chaque appel enregistré (table `ia_usage`, colonne `cout` en millionièmes de dollar, supabase/ia_quota.sql). Une analyse ratée n'est pas comptée. Action `credits` : ce qui reste.
+- Appli : messages "à lire" en grand (`grosMsg` : attention orange, ok vert, stop rouge). Avant : "⚠️ 5 analyses par mois · il te reste…". Confirmation obligatoire "Cette analyse utilise 1 de tes crédits IA". Après : "✅ Analyse faite · il te reste…". Épuisé : "⛔ Tu as utilisé tes 5 analyses de ce mois-ci", plus de bouton. L'analyse n'est plus lancée toute seule après un partage (elle coûte un crédit) : on invite à la lancer.
+- Tests : test48 16/16 (vraie analyse, 9 s), test47 11/11, test45 25/25.
+
 ### 17/11/2026 (22 h) — l'IA organise le Drive (Claude)
 - Théo veut que l'appli détecte seule les logements, les dossiers qui leur correspondent, les logements à créer ou à retirer. Les règles sur les noms (`deviner`) ne savent que ranger dans des logements existants.
 - Clé Anthropic de Théo vérifiée (200 avec la clé, 401 avec une fausse), rangée dans `.env` et en secret Supabase `ANTHROPIC_API_KEY`.

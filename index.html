@@ -204,7 +204,13 @@ details.rgl { scroll-margin-top: 76px; }
 .actions-doc { display: flex; flex-direction: column; gap: 8px; } .actions-doc > * { width: 100%; justify-content: flex-start; text-align: left; }
 .docs-actions { margin: 4px 0 14px; flex-wrap: wrap; }
 .adresse-appli { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--surface-2); padding: 10px 12px; border-radius: 12px; } .adresse-appli code { flex: 1 1 200px; overflow-wrap: anywhere; font-size: .85rem; } .partage-aide ol { padding-left: 20px; } .partage-aide li { margin-bottom: 6px; }
-.ia-card { border: 1.5px solid var(--accent, #0b7a64); } .ia-card .todo li { align-items: flex-start; }
+.ia-card { border: 1.5px solid var(--accent, #0b7a64); }
+.gros-msg { border-radius: 14px; padding: 14px 16px; margin: 12px 0; border: 2px solid; }
+.gros-msg > b { display: block; font-size: 1.15rem; line-height: 1.3; font-weight: 800; }
+.gros-msg p { margin: 6px 0 0; font-size: .95rem; }
+.gros-msg.attention { background: rgba(245, 166, 35, .14); border-color: rgba(245, 166, 35, .7); }
+.gros-msg.ok { background: rgba(16, 150, 100, .12); border-color: rgba(16, 150, 100, .6); }
+.gros-msg.stop { background: rgba(220, 50, 50, .12); border-color: rgba(220, 50, 50, .65); } .ia-card .todo li { align-items: flex-start; }
 .imp-l { max-height: 52vh; overflow: auto; } .todo li.imp-li { display: block; height: auto; min-height: 0; padding: 10px 12px; } .imp-li .tx { display: block; } .imp-li .tx b { display: block; font-weight: 600; overflow-wrap: anywhere; } .imp-li .tx small { display: block; } .imp-li select { display: block; width: 100%; margin-top: 6px; } .imp-aide p { margin: 0 0 10px; }
 .lr .ico-cat { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
 .bad-txt { color: var(--bad, #c0392b); }
@@ -4330,7 +4336,7 @@ async function verifierPartage() {
   const D = await indexerAppli();
   if (D.errPartage) { toast("Le Drive ne répond pas : " + D.errPartage); return; }
   const nouveaux = racinesPartagees().filter(r => !avant.has(r.id));
-  if (nouveaux.length) { toast(`✅ ${nouveaux.map(r => `"${r.nom}"`).join(", ")} : ${nouveaux.reduce((n, r) => n + D.fichiers.filter(f => f.racine === r.id).length, 0)} fichiers lus. L'IA regarde l'organisation…`); setTimeout(() => analyserIA(true), 1500); }
+  if (nouveaux.length) { toast(`✅ ${nouveaux.map(r => `"${r.nom}"`).join(", ")} : ${nouveaux.reduce((n, r) => n + D.fichiers.filter(f => f.racine === r.id).length, 0)} fichiers lus. Lance l'analyse IA juste en dessous.`); setTimeout(() => { const el = document.querySelector(".ia-card"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 600); }
   else if (racinesPartagees().length) toast("Rien de nouveau. Si tu viens de partager, attends quelques secondes et touche Actualiser.");
   else toastActions("Je ne vois encore aucun dossier partagé avec l'appli.", [["Revoir comment faire", "ajouterDossierPartage()"]]);
   rangerAuto("dossier");
@@ -4346,6 +4352,24 @@ function retirerPartage(id) {
    On envoie au serveur (fonction "ia") seulement les noms des dossiers, quelques noms de fichiers par dossier, les logements et les locataires.
    L'IA rend des propositions ; la personne coche, rien n'est appliqué sans elle, et rien n'est jamais supprimé. */
 let IA = { etat: "" };
+/* Message à lire absolument : gros titre, couleur selon le cas (attention, ok, stop) */
+const grosMsg = (type, titre, texte = "") => `<div class="gros-msg ${type}" role="${type === "stop" ? "alert" : "status"}"><b>${titre}</b>${texte ? `<p>${texte}</p>` : ""}</div>`;
+async function fnIA(corps) {
+  const s = (await SB.auth.getSession()).data.session;
+  const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/ia", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s && s.access_token) }, body: JSON.stringify(corps) });
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (j.credits) IA.credits = j.credits;
+  if (!r.ok || j.erreur) { const e = new Error(j.erreur || "Erreur " + r.status); e.raison = j.raison; throw e; }
+  return j;
+}
+function chargerCreditsIA() {
+  if (IA.creditsDemandes) return; IA.creditsDemandes = true;
+  fnIA({ action: "credits" }).then(c => { IA.credits = c; if (pageCourante() === "docs") render(); }, () => {});
+}
+const plur = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
+const resteIA = c => !c ? "" : c.illimite ? "Analyses illimitées pour toi." : `Il te reste ${plur(c.mois_restant, "analyse")} ce mois-ci (${plur(Math.min(c.jour_restant, c.mois_restant), "analyse")} aujourd'hui).`;
+const iaBloquee = c => c && !c.illimite && (c.pause || c.mois_restant <= 0 || c.jour_restant <= 0);
+const msgBlocage = c => c.pause ? grosMsg("stop", "⛔ L'IA est en pause pour tout le monde", "Le budget de l'appli pour ce mois est atteint. Elle revient le 1er du mois.") : c.mois_restant <= 0 ? grosMsg("stop", `⛔ Tu as utilisé tes ${c.par_mois} analyses de ce mois-ci`, "Elles reviennent le 1er du mois. Tout ce que l'IA a déjà proposé reste disponible ci-dessous.") : grosMsg("stop", `⛔ Tu as utilisé tes ${c.par_jour} analyses d'aujourd'hui`, "Reviens demain. Tout ce que l'IA a déjà proposé reste disponible ci-dessous.");
 function donneesIA() {
   const D = DOCS, parDossier = {};
   D.fichiers.forEach(f => { const p = (f.ancetres || []).slice(-1)[0] || f.parent; if (p) (parDossier[p] = parDossier[p] || []).push(f.titre); });
@@ -4354,21 +4378,25 @@ function donneesIA() {
   const locataires = [...S.baux.map(b => ({ nom: b.nom, bienId: b.bienId, actif: isActive(b) })), ...S.biens.flatMap(bi => (bi.anciens || []).map(a => ({ nom: a.nom, bienId: bi.id, actif: false })))];
   return { espace: ESPACE, biens: S.biens.map(bi => ({ id: bi.id, nom: bi.nom, adresse: adresseBien(bi) })), locataires, dossiers };
 }
-async function analyserIA(auto) {
-  if (!SB || MCP || !estProprio() || LECTURE) { if (!auto) toast(msgProprio("analyser le Drive")); return; }
-  if (!DOCS || DOCS.etat !== "pret" || !Object.keys(DOCS.dossiers || {}).length) { if (!auto) toast("Ajoute d'abord un dossier Drive."); return; }
+function analyserIA() {
+  if (!SB || MCP || !estProprio() || LECTURE) { toast(msgProprio("analyser le Drive")); return; }
+  if (!DOCS || DOCS.etat !== "pret" || !Object.keys(DOCS.dossiers || {}).length) { toast("Ajoute d'abord un dossier Drive."); return; }
   if (IA.etat === "en cours") return;
-  IA = { etat: "en cours" }; if (pageCourante() === "docs") render();
+  const c = IA.credits;
+  if (iaBloquee(c)) { render(); return; }
+  if (c && c.illimite) return lancerIA();
+  modal("Lancer l'analyse par l'IA ?", `<div class="full">${grosMsg("attention", "⚠️ Cette analyse utilise 1 de tes crédits IA", c ? `Tu as droit à <b>${plur(c.par_mois, "analyse")} par mois</b> et ${plur(c.par_jour, "analyse")} par jour. ${resteIA(c)}` : "Le nombre d'analyses est limité par mois.")}
+    <p class="note">Conseil : partage d'abord <b>tous</b> les dossiers de tes locations, puis lance une seule analyse.</p></div>`, () => { closeOverlay(); lancerIA(); return false; }, { ok: "Lancer l'analyse", lecture: true });
+}
+async function lancerIA() {
+  IA.etat = "en cours"; IA.fait = false; if (pageCourante() === "docs") render();
   try {
-    const s = (await SB.auth.getSession()).data.session;
-    const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/ia", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s && s.access_token) }, body: JSON.stringify(donneesIA()) });
-    let j = {}; try { j = await r.json(); } catch (e) {}
-    if (!r.ok || j.erreur) throw new Error(j.erreur || "Erreur " + r.status);
+    const j = await fnIA(donneesIA());
     S.sci.ia = { date: new Date().toISOString(), res: j }; save();
-    IA = { etat: "pret" };
-    const n = propositionsIA().length; toast(n ? `🤖 L'IA propose ${n} changement${n > 1 ? "s" : ""} : à vérifier dans Docs` : "🤖 L'IA n'a rien à proposer : tout est en ordre.");
-  } catch (e) { IA = { etat: "erreur", err: e.message }; if (!auto) toast(e.message); }
-  if (pageCourante() === "docs") render();
+    IA.etat = "pret"; IA.fait = true;
+    const n = propositionsIA().length; toast(n ? `🤖 L'IA propose ${plur(n, "changement")} : à vérifier ci-dessous` : "🤖 L'IA n'a rien à proposer : tout est en ordre.");
+  } catch (e) { IA.etat = "erreur"; IA.err = e.message; toast(e.message); }
+  if (pageCourante() === "docs") { render(); setTimeout(() => { const el = document.querySelector(".ia-card"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100); }
 }
 /* Ce qui reste à proposer (on retire ce qui est déjà fait dans l'appli) */
 function propositionsIA() {
@@ -4383,17 +4411,24 @@ function propositionsIA() {
 }
 function sectionIA() {
   if (!SB || MCP || !estProprio() || !DOCS || DOCS.etat !== "pret" || !Object.keys(DOCS.dossiers || {}).length) return "";
-  const ia = S.sci.ia, r = ia && ia.res;
-  if (IA.etat === "en cours") return `<section class="card ia-card"><h2>🤖 L'IA lit l'organisation de ton Drive…</h2><p class="note">Elle regarde les noms des dossiers et des fichiers (pas leur contenu). Environ une minute.</p></section>`;
-  if (!r) return `<section class="card ia-card"><h2>🤖 Laisser l'IA organiser</h2><p class="note">Elle regarde les noms de tes dossiers et propose : quel dossier correspond à quel logement, les logements à créer, les anciens locataires. Tu valides avant que quoi que ce soit change.</p>${IA.etat === "erreur" ? `<p class="note">⚠️ ${esc(IA.err)}</p>` : ""}<div class="row"><button class="primary" onclick="analyserIA()">🤖 Analyser mon Drive</button></div></section>`;
+  chargerCreditsIA();
+  const ia = S.sci.ia, r = ia && ia.res, c = IA.credits, bloque = iaBloquee(c);
+  if (IA.etat === "en cours") return `<section class="card ia-card">${grosMsg("attention", "🤖 L'IA lit l'organisation de ton Drive…", "Elle regarde les noms des dossiers et des fichiers (pas leur contenu). Environ une minute : ne ferme pas l'appli.")}</section>`;
+  const bouton = (cls, txt) => bloque ? "" : `<div class="row" style="margin-top:12px"><button class="${cls}" onclick="analyserIA()">${txt}</button></div>`;
+  const erreur = IA.etat === "erreur" ? grosMsg("stop", "⛔ L'analyse n'a pas marché", esc(IA.err || "")) : "";
+  if (!r) return `<section class="card ia-card"><h2>🤖 Laisser l'IA organiser</h2>
+    <p class="note">Elle regarde les noms de tes dossiers et propose : quel dossier correspond à quel logement, les logements à créer, les anciens locataires. Tu valides avant que quoi que ce soit change.</p>
+    ${erreur}${bloque ? msgBlocage(c) : c && !c.illimite ? grosMsg("attention", `⚠️ ${plur(c.par_mois, "analyse")} par mois`, `${resteIA(c)} Partage d'abord tous tes dossiers, puis lance une seule analyse.`) : ""}
+    ${bouton("primary big", "🤖 Analyser mon Drive")}</section>`;
   const P = propositionsIA(), info = [...(r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))).map(x => `<li><span class="tx">👤 Locataire actuel probable : <b>${esc(x.nom)}</b>${x.bien_id && bien(x.bien_id) ? " · " + esc(bien(x.bien_id).nom) : x.bien_a_creer ? " · " + esc(x.bien_a_creer) : ""}<small>${esc(x.raison || "")}</small></span>${x.bien_id && bien(x.bien_id) ? `<button type="button" class="small" onclick="editBail(null,'${x.bien_id}')">Ajouter</button>` : ""}</li>`),
     ...(r.biens_sans_dossier || []).filter(x => bien(x.bien_id)).map(x => `<li><span class="tx">❓ <b>${esc(bien(x.bien_id).nom)}</b> : aucun dossier trouvé<small>${esc(x.remarque || "")}</small></span></li>`)];
   return `<section class="card ia-card"><div class="sec-head"><h2>🤖 Ce que l'IA a compris</h2><small class="note">${fds(ia.date.slice(0, 10))}</small></div>
+    ${IA.fait ? grosMsg("ok", `✅ Analyse faite${P.length ? ` : ${plur(P.length, "proposition")} à vérifier` : " : tout est en ordre"}`, resteIA(c)) : ""}${erreur}
     ${r.resume ? `<p class="note">${esc(r.resume)}</p>` : ""}
-    ${P.length ? `<form onsubmit="event.preventDefault();appliquerIA(this)"><p class="note">Décoche ce qui est faux, puis applique. Rien n'est supprimé.</p><ul class="todo">${P.map((p, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:flex-start;flex:1"><input type="checkbox" name="p${i}" checked><span class="tx">${p.t}<small>${p.d}</small></span></label></li>`).join("")}</ul>
-      <div class="row"><button class="primary">Appliquer ce qui est coché</button></div></form>` : `<p class="note">✅ Tout ce qu'elle a proposé est fait.</p>`}
+    ${P.length ? `<form onsubmit="event.preventDefault();appliquerIA(this)">${grosMsg("attention", "👀 Vérifie avant d'appliquer", "Décoche ce qui est faux. Rien n'est supprimé, et tu pourras tout annuler.")}<ul class="todo">${P.map((p, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:flex-start;flex:1"><input type="checkbox" name="p${i}" checked><span class="tx">${p.t}<small>${p.d}</small></span></label></li>`).join("")}</ul>
+      <div class="row"><button class="primary big">Appliquer ce qui est coché</button></div></form>` : `<p class="note">✅ Tout ce qu'elle a proposé est fait.</p>`}
     ${info.length ? `<h3>À regarder</h3><ul class="todo">${info.join("")}</ul>` : ""}
-    <div class="row" style="margin-top:10px"><button class="small ghost" onclick="analyserIA()">↻ Relancer l'analyse</button></div></section>`;
+    ${bloque ? msgBlocage(c) : `${bouton("small ghost", "↻ Relancer l'analyse (1 crédit)")}${c && !c.illimite && !IA.fait ? `<p class="note">${resteIA(c)}</p>` : ""}`}</section>`;
 }
 function appliquerIA(form) {
   if (!estProprio()) { toast(msgProprio("appliquer les propositions")); return; }
