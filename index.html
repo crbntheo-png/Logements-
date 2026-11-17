@@ -205,7 +205,7 @@ details.rgl { scroll-margin-top: 76px; }
 .docs-actions { margin: 4px 0 14px; flex-wrap: wrap; }
 .adresse-appli { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--surface-2); padding: 10px 12px; border-radius: 12px; } .adresse-appli code { flex: 1 1 200px; overflow-wrap: anywhere; font-size: .85rem; } .partage-aide ol { padding-left: 20px; } .partage-aide li { margin-bottom: 6px; }
 .ia-card { border: 1.5px solid var(--accent, #0b7a64); }
-.gros-msg { border-radius: 14px; padding: 14px 16px; margin: 12px 0; border: 2px solid; }
+.gros-msg { border-radius: 14px; padding: 14px 16px; margin: 12px 0; border: 2px solid; color: var(--ink); }
 .gros-msg > b { display: block; font-size: 1.15rem; line-height: 1.3; font-weight: 800; }
 .gros-msg p { margin: 6px 0 0; font-size: .95rem; }
 .gros-msg.attention { background: rgba(245, 166, 35, .14); border-color: rgba(245, 166, 35, .7); }
@@ -3590,7 +3590,7 @@ function editBail(id, bienId, pre) {
   if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
   if (!S.biens.length) { confirmer("Ajoutez d'abord un bien.", () => editBien()); return; }
   modal(id ? "Modifier le locataire" : "Nouveau locataire", `
-    ${id ? "" : `<div class="full row"><button type="button" onclick="remplirDepuisBail(this)">📄 Remplir depuis le bail (PDF ou photo)</button><span class="note" id="bailLu" aria-live="polite"></span></div>`}
+    ${id ? "" : `<div class="full"><button type="button" class="primary" onclick="remplirDepuisBail(this)">🤖 Remplir depuis le bail (PDF ou photo)</button><div class="note" id="bailLu" aria-live="polite"></div></div>`}
     <fieldset><legend>Locataire</legend>
     ${fld("Nom et prénom", "nom", b.nom, "text", "", "required")}${fld("Colocataire(s) / co-titulaire(s)", "colocataires", b.colocataires)}
     ${fld("Téléphone", "tel", b.tel, "tel")}${fld("E-mail", "email", b.email, "email")}
@@ -4420,7 +4420,8 @@ function sectionIA() {
     <p class="note">Elle regarde les noms de tes dossiers et propose : quel dossier correspond à quel logement, les logements à créer, les anciens locataires. Tu valides avant que quoi que ce soit change.</p>
     ${erreur}${bloque ? msgBlocage(c) : c && !c.illimite ? grosMsg("attention", `⚠️ ${plur(c.par_mois, "analyse")} par mois`, `${resteIA(c)} Partage d'abord tous tes dossiers, puis lance une seule analyse.`) : ""}
     ${bouton("primary big", "🤖 Analyser mon Drive")}</section>`;
-  const P = propositionsIA(), info = [...(r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))).map(x => `<li><span class="tx">👤 Locataire actuel probable : <b>${esc(x.nom)}</b>${x.bien_id && bien(x.bien_id) ? " · " + esc(bien(x.bien_id).nom) : x.bien_a_creer ? " · " + esc(x.bien_a_creer) : ""}<small>${esc(x.raison || "")}</small></span>${x.bien_id && bien(x.bien_id) ? `<button type="button" class="small" onclick="editBail(null,'${x.bien_id}')">Ajouter</button>` : ""}</li>`),
+  const bienDe = x => x.bien_id && bien(x.bien_id) ? x.bien_id : ((S.biens.find(bi => x.bien_a_creer && normTxt(bi.nom) === normTxt(x.bien_a_creer)) || {}).id || "");
+  const P = propositionsIA(), info = [...(r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))).map(x => { const bid = bienDe(x), fb = bid && bailDansDrive(x.nom); return `<li class="deux"><span class="tx">👤 Locataire actuel probable : <b>${esc(x.nom)}</b>${bid ? " · " + esc(bien(bid).nom) : x.bien_a_creer ? " · " + esc(x.bien_a_creer) + " (logement à créer d'abord)" : ""}<small>${esc(x.raison || "")}</small></span>${bid ? `<span class="acts-li">${fb ? `<button type="button" class="small primary" onclick="creerDepuisBailDrive('${fb.id}','${bid}')">🤖 Créer depuis son bail</button>` : `<button type="button" class="small" onclick="editBail(null,'${bid}')">Ajouter</button>`}</span>` : ""}</li>`; }),
     ...(r.biens_sans_dossier || []).filter(x => bien(x.bien_id)).map(x => `<li><span class="tx">❓ <b>${esc(bien(x.bien_id).nom)}</b> : aucun dossier trouvé<small>${esc(x.remarque || "")}</small></span></li>`)];
   return `<section class="card ia-card"><div class="sec-head"><h2>🤖 Ce que l'IA a compris</h2><small class="note">${fds(ia.date.slice(0, 10))}</small></div>
     ${IA.fait ? grosMsg("ok", `✅ Analyse faite${P.length ? ` : ${plur(P.length, "proposition")} à vérifier` : " : tout est en ordre"}`, resteIA(c)) : ""}${erreur}
@@ -4443,6 +4444,66 @@ function appliquerIA(form) {
     toast([nb ? `${nb} logement${nb > 1 ? "s" : ""} créé${nb > 1 ? "s" : ""}` : "", nl ? `${nl} dossier${nl > 1 ? "s" : ""} relié${nl > 1 ? "s" : ""}` : "", na ? `${na} ancien${na > 1 ? "s" : ""} locataire${na > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ") + ". Les documents se rangent…");
   });
   render(); setTimeout(() => rangerAuto("ia"), 300);
+}
+/* ================= IA : lire un bail et remplir la fiche du locataire ================= */
+const b64Blob = bl => new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1]); fr.onerror = () => ko(new Error("Fichier illisible")); fr.readAsDataURL(bl); });
+async function texteToutPdf(bl) {
+  const L = await libPdf(), doc = await L.getDocument({ data: await bl.arrayBuffer() }).promise; let txt = "";
+  for (let i = 1; i <= Math.min(doc.numPages, 40); i++) { const c = await (await doc.getPage(i)).getTextContent(); txt += c.items.map(x => x.str).join(" ") + "\n"; }
+  return txt;
+}
+/* bl : le fichier (PDF ou photo). Rend { bail, credits } ou lance une erreur (e.raison si crédits épuisés) */
+async function lireBailIA(bl, type) {
+  const corps = { action: "bail", espace: ESPACE };
+  if (/pdf/.test(type)) { let t = ""; try { t = await texteToutPdf(bl); } catch (e) {} if (t.replace(/\s/g, "").length > 800) corps.texte = t; else { if (bl.size > 15e6) throw new Error("PDF scanné trop lourd (15 Mo maximum)."); corps.fichier_b64 = await b64Blob(bl); corps.type = "application/pdf"; } }
+  else { const r = /^image\/(jpeg|png|webp)$/.test(type) && bl.size < 3e6 ? bl : await reduirePhoto(bl); corps.fichier_b64 = await b64Blob(r); corps.type = r.type || "image/jpeg"; }
+  return fnIA(corps);
+}
+function preDepuisBailIA(r) {
+  const n = v => +v > 0 ? +v : "";
+  return { nom: r.nom, colocataires: r.colocataires, email: r.email, tel: r.tel, adressePrec: r.adresse_precedente,
+    typeBail: TYPES_BAIL[r.type_bail] ? r.type_bail : "", dateEntree: /^\d{4}-\d{2}-\d{2}$/.test(r.date_entree || "") ? r.date_entree : "", dureeMobilite: r.type_bail === "mobilite" ? n(r.duree_mobilite_mois) : "",
+    loyerHC: n(r.loyer_hc), charges: n(r.charges), chargesMode: r.charges_mode === "provision" || r.charges_mode === "forfait" ? r.charges_mode : "", jourPaiement: +r.jour_paiement >= 1 && +r.jour_paiement <= 31 ? +r.jour_paiement : "",
+    depot: n(r.depot), irlTrimestre: qKey(r.irl_trimestre) ? qLabel(qKey(r.irl_trimestre)) : "", garantNom: r.garant_nom, garantContact: r.garant_contact, visale: r.visale, clauses: r.clauses_particulieres };
+}
+/* Le logement du bail, d'après son adresse */
+function bienDuBail(r) {
+  const a = " " + normTxt(r.adresse_logement || "").replace(/[^A-Z0-9]+/g, " ") + " "; if (a.trim().length < 4) return "";
+  const sc = S.biens.map(bi => ({ bi, n: motsDe(adresseBien(bi) + " " + bi.nom).filter(m => m.length > 1 && a.includes(" " + m + " ")).length })).filter(x => x.n >= 2).sort((x, y) => y.n - x.n);
+  return sc.length && (sc.length === 1 || sc[0].n > sc[1].n) ? sc[0].bi.id : "";
+}
+/* Remplit le formulaire ouvert, surligne ce qui vient du bail, et le dit en grand */
+function remplirFormBail(f, r, credits) {
+  const p = preDepuisBailIA(r), noms = { nom: "nom", colocataires: "colocataires", email: "e-mail", tel: "téléphone", adressePrec: "adresse précédente", typeBail: "type de bail", dateEntree: "date d'entrée", dureeMobilite: "durée", loyerHC: "loyer", charges: "charges", chargesMode: "type de charges", jourPaiement: "jour de paiement", depot: "dépôt", irlTrimestre: "indice IRL", garantNom: "garant", garantContact: "contact du garant", visale: "Visale", clauses: "clauses particulières" }, faits = [];
+  const bid = bienDuBail(r); if (bid && f.elements.bienId && !f.elements.bienId.dataset.choisi) { f.elements.bienId.value = bid; f.elements.bienId.classList.add("auto"); }
+  ["dateEntree", ...Object.keys(p).filter(k => k !== "dateEntree")].forEach(k => { const el = f.elements[k], v = p[k];
+    if (!el || v === "" || v === undefined || v === null) return;
+    if (el.tagName === "SELECT" && ![...el.options].some(o => o.value === String(v))) return;
+    el.value = v; el.classList.add("auto"); el.dispatchEvent(new Event("change", { bubbles: true })); faits.push(noms[k]); });
+  if (f.elements.revisable && typeof r.revision_annuelle === "boolean") f.elements.revisable.checked = r.revision_annuelle;
+  f.dispatchEvent(new Event("input"));
+  const reste = credits && !credits.illimite ? ` Lectures de documents par l'IA encore possibles : ${credits.docs_restants} (limite ${credits.docs_par_mois} par mois).` : "";
+  const zone = document.getElementById("bailLu");
+  if (zone) zone.innerHTML = faits.length ? grosMsg("attention", `🤖 L'IA a rempli ${plur(faits.length, "case")} : vérifie-les`, `Les cases surlignées viennent du bail (${faits.join(", ")}). Contrôle-les avant d'enregistrer, surtout le loyer et la date.${r.remarques ? "<br>⚠️ " + esc(r.remarques) : ""}${reste}`)
+    : grosMsg("stop", "L'IA n'a rien trouvé de sûr dans ce document", "Vérifie que c'est bien le bail, ou remplis à la main." + reste);
+  return faits.length;
+}
+/* Depuis la carte de l'IA : un locataire trouvé dans le Drive, son bail est dans un dossier partagé */
+function bailDansDrive(nom) {
+  const mots = motsDe(nom).filter(m => m.length >= 3); if (!mots.length || !DOCS || !DOCS.fichiers) return null;
+  return DOCS.fichiers.filter(f => /bail/i.test(f.titre) && !/avenant|ancien/i.test(f.titre) && /pdf|image|google-apps\.document/.test(f.type || "") && mots.some(m => (" " + normTxt(f.titre).replace(/[^A-Z0-9]+/g, " ") + " ").includes(" " + m + " ")))
+    .sort((a, b) => String(b.modif || "").localeCompare(String(a.modif || "")))[0] || null;
+}
+async function creerDepuisBailDrive(fid, bienId) {
+  const f = DOCS.fichiers.find(x => x.id === fid); if (!f) return;
+  if (iaBloquee(IA.credits) || (IA.credits && !IA.credits.illimite && IA.credits.docs_restants <= 0)) { toast("Plus de lecture de document par l'IA ce mois-ci : remplis la fiche à la main."); editBail(null, bienId); return; }
+  toast("🤖 L'IA lit le bail « " + f.titre + " »… (30 secondes environ)");
+  try {
+    const bl = await blobDrive({ id: f.id, mimeType: f.type, partage: f.partage }), type = /google-apps/.test(f.type) ? "application/pdf" : (f.type || bl.type);
+    const j = await lireBailIA(bl, type);
+    editBail(null, bienId); const form = document.getElementById("mform"); if (form && form.elements.bienId) form.elements.bienId.dataset.choisi = "1";
+    if (form) remplirFormBail(form, j.bail, j.credits);
+  } catch (e) { toast(e.message); }
 }
 /* ================= Importer un dossier entier : le .zip téléchargé depuis le Drive (sous-dossiers compris), ou plein de fichiers d'un coup =================
    Google ne donne pas le contenu d'un dossier choisi (accès "fichiers choisis seulement"). Ici, aucun accès Google n'est nécessaire :
@@ -5222,7 +5283,13 @@ function lireBail(txt) {
 async function remplirDepuisBail(btn) {
   const f = document.getElementById("mform"), info = x => { const n = document.getElementById("bailLu"); if (n) n.textContent = x; };
   const file = await choisirFichier("application/pdf,image/*"); if (!file) return;
-  btn.disabled = true; info("Lecture du bail…");
+  btn.disabled = true;
+  if (SB && !MCP && ESPACE) {
+    info("🤖 L'IA lit le bail… (30 secondes environ)");
+    try { const j = await lireBailIA(file, file.type || ""); remplirFormBail(f, j.bail, j.credits); btn.disabled = false; return; }
+    catch (e) { info((e.raison ? e.message : "L'IA n'a pas pu lire le bail (" + e.message + ").") + " Lecture simple à la place…"); }
+  }
+  info("Lecture du bail…");
   try {
     const txt = /pdf/.test(file.type) ? await lireTextePdf(file, info) : await lireTexteImage(file, info), r = lireBail(txt), trouves = [];
     const noms = { nom: "nom", email: "e-mail", tel: "téléphone", dateEntree: "date d'entrée", loyerHC: "loyer", charges: "charges", depot: "dépôt", jourPaiement: "jour de paiement", typeBail: "type" };

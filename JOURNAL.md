@@ -34,6 +34,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 18/11/2026 — l'IA lit les baux et remplit la fiche du locataire
+- Comparaison avec Qalimo (qalimo.fr) : l'appli a déjà relances en 3 niveaux, quittances, avis d'échéance, IRL, régularisation, états des lieux, candidats, aide à la déclaration. Manquent surtout : signature électronique et recommandé en ligne (services payants), synchronisation bancaire sans Pennylane (compte chez un fournisseur à ouvrir). Choix de la mise en prod : créer un locataire depuis son bail, sans rien taper (Qalimo fait tout saisir).
+- Serveur `ia` (v5) : action `bail` (Claude Opus 5.5, sortie JSON imposée) : 21 champs (locataires, colocataires, contact, adresse précédente, type, date d'effet, loyer HC, charges et mode, jour de paiement, dépôt, IRL, révision, garant, Visale, clauses particulières, adresse du logement, remarques). Texte du PDF envoyé quand il est lisible (moins cher), sinon le PDF scanné ou la photo. Compteur séparé : 10 lectures par jour, 15 par mois (IA_DOCS_JOUR / IA_DOCS_MOIS), même budget global ; lecture ratée non comptée (supabase/ia_docs.sql).
+- Appli : le bouton du formulaire devient "🤖 Remplir depuis le bail" (l'IA d'abord, l'ancienne lecture par règles en secours), cases remplies surlignées, message en grand "L'IA a rempli N cases : vérifie-les", logement reconnu par l'adresse du bail. Carte "Ce que l'IA a compris" : "🤖 Créer depuis son bail" pour chaque locataire actuel probable dont le bail est dans un dossier partagé (y compris pour un logement que l'IA vient de faire créer).
+- Test réel (test49, bail PDF de 2 pages) : 16/16, 15 cases justes en 9 s ; même résultat depuis un dossier partagé ; locataire enregistré.
+- Théo : 1 analyse réelle de son Drive le 17/11 (0,08 $). Il est bien sans limite (IA_SANS_LIMITE).
+
 ### 17/11/2026 (23 h) — crédits IA limités et annoncés en grand
 - Serveur `ia` (v4) : 2 analyses par personne et par jour, 5 par mois (IA_JOUR, IA_MOIS), budget global de l'appli 3 $ par mois (IA_BUDGET_MOIS), Théo sans limite (IA_SANS_LIMITE). Coût réel de chaque appel enregistré (table `ia_usage`, colonne `cout` en millionièmes de dollar, supabase/ia_quota.sql). Une analyse ratée n'est pas comptée. Action `credits` : ce qui reste.
 - Appli : messages "à lire" en grand (`grosMsg` : attention orange, ok vert, stop rouge). Avant : "⚠️ 5 analyses par mois · il te reste…". Confirmation obligatoire "Cette analyse utilise 1 de tes crédits IA". Après : "✅ Analyse faite · il te reste…". Épuisé : "⛔ Tu as utilisé tes 5 analyses de ce mois-ci", plus de bouton. L'analyse n'est plus lancée toute seule après un partage (elle coûte un crédit) : on invite à la lancer.
