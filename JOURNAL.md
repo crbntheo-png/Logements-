@@ -11,6 +11,7 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Projet Google "Drive" (Théo)** : créer un 2e projet Google Cloud (lecture des dossiers en entier, drive.readonly, publié non vérifié), puis me donner l'ID client et le code secret → secrets Supabase `GOOGLE_DRIVE_CLIENT_ID` / `GOOGLE_DRIVE_CLIENT_SECRET`. Ensuite dans l'appli : Docs › "Lire mes dossiers en entier".
 - [ ] **Domaine sci-gestion-locative.com (Théo, ce soir)** : 1) Search Console › propriété "Domaine" `sci-gestion-locative.com` ; 2) client OAuth : ajouter les origines https://sci-gestion-locative.com et https://www.sci-gestion-locative.com ; 3) tester la connexion Google sur https://sci-gestion-locative.com ; 4) Branding : page d'accueil https://sci-gestion-locative.com/presentation, confidentialité https://sci-gestion-locative.com/confidentialite, domaine autorisé `sci-gestion-locative.com`, puis "J'ai corrigé les problèmes". Ensuite (Claude) : renvoyer automatiquement pages.dev vers le nouveau domaine, puis retirer pages.dev chez Google.
 - [ ] **Google (Théo), dans cet ordre** : 1) https://console.cloud.google.com/auth/branding (nom, e-mail, page d'accueil, https://gestion-locative-sci.pages.dev/confidentialite, domaine autorisé `gestion-locative-sci.pages.dev`) ; 2) https://console.cloud.google.com/auth/audience › Publier ; 3) activer https://console.cloud.google.com/apis/library/gmail.googleapis.com et https://console.cloud.google.com/apis/library/picker.googleapis.com ; 4) dans l'appli : se connecter avec Google, brancher Gmail, Débrancher puis Connecter le Drive, "Choisir mes documents". Ensuite : retirer le code de connexion par e-mail (dernier envoi Brevo) et le crochet `envoyer_code_auth`.
 - [ ] **Gmail (Théo)** : 1) activer l'API Gmail dans le projet Google Cloud (https://console.cloud.google.com/apis/library/gmail.googleapis.com) ; 2) Réglages › Envoi des e-mails › Continuer avec Google ; 3) supprimer l'ancien mot de passe d'application "Gestion SCI" (https://myaccount.google.com/apppasswords). Pour ouvrir l'appli aux inconnus : publier l'appli Google (https://console.cloud.google.com/auth/audience › Publier), sinon seuls les "utilisateurs test" peuvent brancher Gmail ou Drive.
@@ -32,6 +33,13 @@ Règle pour chaque session :
 - [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
 
 ## Historique
+
+### 17/11/2026 (9 h) — lire les dossiers en entier (projet Google à part)
+- Théo : ne pas pouvoir lire un dossier entier est "catastrophique", et l'écran d'import n'était pas clair. Confirmé par un test d'un autre développeur (github.com/shitikanth/calibre-cloud/issues/156) : avec drive.file, choisir un dossier ne donne jamais son contenu. Seule la lecture du Drive (drive.readonly, "restreint") le permet.
+- Choix : un **second projet Google réservé au Drive**, publié non vérifié (écran "appli non validée" une fois, 100 utilisateurs maximum tant qu'il n'y a pas d'audit). La connexion Google et Gmail restent sur le projet principal, dont la validation est en cours (on n'y ajoute pas d'accès restreint).
+- Serveur `drive` : mode `choix` (drive.file, projet principal) ou `complet` (drive.readonly, secrets `GOOGLE_DRIVE_CLIENT_ID/SECRET`), colonne `drive_comptes.mode` (supabase/drive_complet.sql), renouvellement avec le bon client ; `config` dit si le mode complet est installé. `envoyer-gmail` : débrancher Gmail retire son accès chez Google si le Drive est sur l'autre projet.
+- Appli : un seul bouton **+ Ajouter des dossiers ou fichiers** (le sélecteur accepte les deux), bandeau "Tes dossiers sont lus à moitié › Lire mes dossiers en entier" tant que le mode complet n'est pas actif, sélecteur rattaché au bon projet. Fenêtre d'import réduite au .zip / fichiers de l'appareil ("📦 Importer un .zip"), sans doublon avec le Drive. Textes de confidentialité et page de présentation mis à jour (lecture seule, seulement les dossiers choisis).
+- Tests : test47 (nouveau) 12/12, test46 16/16, test45 25/25, test43 24/24, test33, test44 OK. En attente : les clés du projet Drive (sans elles, rien ne change pour l'utilisateur).
 
 ### 17/11/2026 (8 h) — import : directement dans le Drive
 - Sur le téléphone de Théo, le bouton d'import ouvrait le choix Photo / Vidéo / Fichiers (champ sans filtre). Corrigé : le champ n'accepte que .zip, PDF, Word, Excel, texte, donc le téléphone ouvre directement ses fichiers.

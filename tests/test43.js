@@ -63,7 +63,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.evaluate(() => { window.__picker = [{ id: 'c1', name: 'Facture plombier.pdf', mimeType: 'application/pdf', parent: 'dosB' }]; });
   await p.click('.lr-main:has-text("Compta")'); await p.waitForTimeout(300); await p.click('button:has-text("+ Choisir des fichiers ici")'); await p.waitForTimeout(1500);
   t(await p.evaluate(() => window.__args[3] === 'dosB' && DOCS.fichiers.some(f => f.titre === 'Facture plombier.pdf' && f.chemin[0] === 'Compta')), 'le sélecteur s\u2019ouvre dans le dossier, les fichiers touchés y sont rangés');
-  t(await p.evaluate(() => SCOPE_DRIVE.endsWith('drive.file') && !document.documentElement.innerHTML.includes('auth/drive.readonly')), 'jamais de demande d\u2019accès large au Drive');
+  t(await p.evaluate(() => SCOPE_DRIVE.endsWith('drive.file') && !SCOPE_DRIVE.includes('readonly')), 'accès « fichiers choisis » : jamais de lecture large');
   // revenir dessus : ajouter, retirer
   t(await p.isVisible('button:has-text("Retirer ce dossier")'), 'dans le dossier : Retirer ce dossier');
   await p.click('button:has-text("Retirer ce dossier")'); await p.waitForTimeout(200); await p.click('#cyes'); await p.waitForTimeout(1500);

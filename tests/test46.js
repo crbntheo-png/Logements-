@@ -1,4 +1,4 @@
-// Importer des documents : .zip téléchargé depuis le Drive (sous-dossiers compris), aperçu, copie dans les logements
+// Importer un .zip : .zip téléchargé depuis le Drive (sous-dossiers compris), aperçu, copie dans les logements
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const DIST = path.join(__dirname, '..', 'dist');
@@ -16,13 +16,13 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
     S.baux.push({ id: 'l1', bienId: 'b1', nom: 'Jean Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save();
     DRIVEG = { etat: 'non' }; go('docs'); render(); });
   await p.waitForTimeout(500);
-  t(await p.isVisible('button:has-text("Importer des documents")'), 'bouton « Importer des documents » même sans Drive connecté');
-  await p.click('button:has-text("Importer des documents")'); await p.waitForTimeout(300);
+  t(await p.isVisible('button:has-text("Importer un .zip")'), 'bouton « Importer un .zip » même sans Drive connecté');
+  await p.click('button:has-text("Importer un .zip")'); await p.waitForTimeout(300);
   await p.screenshot({ path: __dirname + '/b46-aide.png' });
   t(await p.isVisible('#overlay >> text=clic droit'), 'explique comment télécharger le dossier depuis le Drive');
   const acc = await p.getAttribute('#overlay input[name=fichiers]', 'accept');
   t(acc && acc.includes('.zip') && !/image|\*/.test(acc), 'le téléphone ouvre directement ses fichiers (pas Photo / Vidéo)');
-  t(await p.isVisible('#overlay button:has-text("Choisir dans mon Drive")'), 'bouton « Choisir dans mon Drive »');
+  t(!(await p.isVisible('#overlay button:has-text("Choisir dans mon Drive")')), 'plus de doublon avec le Drive dans la fenêtre d’import');
   await p.setInputFiles('#overlay input[name=fichiers]', __dirname + '/gtp-test.zip'); await p.waitForTimeout(3000);
   await p.screenshot({ path: __dirname + '/b46-apercu.png' });
   const I = await p.evaluate(() => (IMPORT_DOS || []).map(f => ({ t: f.titre, c: f.chemin.join('/'), b: f.bienId, cat: f.cat, r: f.refus })));
@@ -48,16 +48,6 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   // relancer le même import : signale ce qui est déjà là
   await p.evaluate(() => importerDossier()); await p.setInputFiles('#overlay input[name=fichiers]', __dirname + '/gtp-test.zip'); await p.click('#overlay button.primary'); await p.waitForTimeout(2500);
   t(await p.evaluate(() => IMPORT_DOS.find(f => f.titre === 'Bail Jean Test.pdf').deja), 'réimport : « déjà dans l’appli », non coché');
-  // directement dans le Drive (sélecteur Google simulé) : mêmes aperçu et copie
-  await p.evaluate(() => closeOverlay());
-  await p.route('https://www.googleapis.com/drive/v3/files/**', r => r.fulfill({ status: 200, contentType: 'application/pdf', body: '%PDF-1.4 drive' }));
-  await p.evaluate(() => { DRIVEG = { etat: 'oui', jeton: 'faux', exp: Date.now() + 3600e3 }; window.ouvrirPicker = async () => [{ id: 'd1', name: 'Quittance Jean Test octobre 2026.pdf', mimeType: 'application/pdf', size: 900 }, { id: 'd2', name: 'Etat des lieux Jean Test', mimeType: 'application/vnd.google-apps.document' }]; importerDossier(); });
-  await p.click('#overlay button:has-text("Choisir dans mon Drive")'); await p.waitForTimeout(1500);
-  t(await p.isVisible('#overlay >> text=2 documents trouvés'), 'Drive : les fichiers touchés arrivent dans l’aperçu');
-  const nAv = await p.evaluate(() => S.fichiers.length);
-  await p.click('#overlay button.primary'); await p.waitForTimeout(4000);
-  const G = await p.evaluate(n => S.fichiers.slice(n).map(f => ({ nom: f.nom, bien: f.bienId, type: f.type, drive: f.driveId })), nAv); console.log(JSON.stringify(G));
-  t(G.length === 2 && G.every(f => f.bien === 'b1' && f.drive) && G.some(f => f.nom === 'Etat des lieux Jean Test' && f.type === 'application/pdf'), 'Drive : copiés dans le logement, document Google converti en PDF');
   t(!errs.length, 'aucune erreur JS ' + errs.join(' | '));
   await p.evaluate(async () => { closeOverlay(); const c = S.fichiers.filter(f => f.chemin).map(f => f.chemin); await SB.storage.from('documents').remove(c); await SB.from('espaces').delete().eq('id', ESPACE); });
   console.log(`\n${ok} OK, ${ko} KO`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);
