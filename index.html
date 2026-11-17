@@ -204,6 +204,7 @@ details.rgl { scroll-margin-top: 76px; }
 .actions-doc { display: flex; flex-direction: column; gap: 8px; } .actions-doc > * { width: 100%; justify-content: flex-start; text-align: left; }
 .docs-actions { margin: 4px 0 14px; flex-wrap: wrap; }
 .adresse-appli { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--surface-2); padding: 10px 12px; border-radius: 12px; } .adresse-appli code { flex: 1 1 200px; overflow-wrap: anywhere; font-size: .85rem; } .partage-aide ol { padding-left: 20px; } .partage-aide li { margin-bottom: 6px; }
+.ia-card { border: 1.5px solid var(--accent, #0b7a64); } .ia-card .todo li { align-items: flex-start; }
 .imp-l { max-height: 52vh; overflow: auto; } .todo li.imp-li { display: block; height: auto; min-height: 0; padding: 10px 12px; } .imp-li .tx { display: block; } .imp-li .tx b { display: block; font-weight: 600; overflow-wrap: anywhere; } .imp-li .tx small { display: block; } .imp-li select { display: block; width: 100%; margin-top: 6px; } .imp-aide p { margin: 0 0 10px; }
 .lr .ico-cat { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
 .bad-txt { color: var(--bad, #c0392b); }
@@ -2804,7 +2805,7 @@ function analyserDrive(fichiers) {
     if (/ATTESTATION.*ASSURANCE.*HABITATION|ASSURANCE HABITATION.*ATTESTATION/.test(T) && b && !b.assuranceFin)
       aRemplir("ass-" + b.id, `Assurance habitation de ${esc(b.nom)}`, `Attestation trouvée : "${esc(f.titre)}". Note jusqu'à quand il est assuré.`, ["Noter", `assuranceRecue('${b.id}')`]);
     const nomBail = T.match(/^(?:ANCIEN\s+)?BAIL\s+[-–]?\s*(.+?)(\s+20\d\d)?(\.PDF)?$/);
-    if (nomBail && !g.bailId) { const nom = f.titre.replace(/^(ancien\s+)?bail\s*[-–]?\s*/i, "").replace(/\.pdf$/i, "").replace(/\s+20\d\d$/, "");
+    if (nomBail && !g.bailId && !(S.sci.ia && S.sci.ia.res)) { /* l'IA s'occupe des locataires quand elle a analysé le Drive */ const nom = f.titre.replace(/^(ancien\s+)?bail\s*[-–]?\s*/i, "").replace(/\.pdf$/i, "").replace(/\s+20\d\d$/, "");
       if (!S.biens.some(bi => (bi.anciens || []).some(a => normTxt(a.nom) === normTxt(nom))) && !S.fichiers.some(y => y.url === f.lien && y.ancienId))
         aRemplir("loc-" + slug(nom), `Bail de "${esc(nom)}" : un ancien locataire ?`, `Bail trouvé : "${esc(f.titre)}". Si c'est un ancien, range-le dans l'historique du logement (à part du locataire actuel). Si c'est un locataire actuel, ajoute-le dans Locataires.`, ["Ranger dans l'historique", `ancienDepuisDrive('${f.id}','${esc(nom).replace(/'/g, "\\'")}','${g.bienId || ""}')`]); }
   });
@@ -4329,7 +4330,7 @@ async function verifierPartage() {
   const D = await indexerAppli();
   if (D.errPartage) { toast("Le Drive ne répond pas : " + D.errPartage); return; }
   const nouveaux = racinesPartagees().filter(r => !avant.has(r.id));
-  if (nouveaux.length) toast(`✅ ${nouveaux.map(r => `"${r.nom}"`).join(", ")} : ${nouveaux.reduce((n, r) => n + D.fichiers.filter(f => f.racine === r.id).length, 0)} fichiers lus`);
+  if (nouveaux.length) { toast(`✅ ${nouveaux.map(r => `"${r.nom}"`).join(", ")} : ${nouveaux.reduce((n, r) => n + D.fichiers.filter(f => f.racine === r.id).length, 0)} fichiers lus. L'IA regarde l'organisation…`); setTimeout(() => analyserIA(true), 1500); }
   else if (racinesPartagees().length) toast("Rien de nouveau. Si tu viens de partager, attends quelques secondes et touche Actualiser.");
   else toastActions("Je ne vois encore aucun dossier partagé avec l'appli.", [["Revoir comment faire", "ajouterDossierPartage()"]]);
   rangerAuto("dossier");
@@ -4340,6 +4341,73 @@ function retirerPartage(id) {
     <ol><li>Ouvre le dossier dans ton Drive (bouton ci-dessous).</li><li><b>Partager</b> (⋮ sur téléphone, clic droit sur ordinateur).</li><li>À côté de <code>${esc(PARTAGE.adresse || "l'adresse de l'appli")}</code>, choisis <b>Supprimer l'accès</b>, puis <b>Enregistrer</b>.</li></ol>
     <p><a class="btn" href="https://drive.google.com/drive/folders/${esc(id)}" target="_blank" rel="noopener">Ouvrir le dossier ↗</a></p>
     <p class="note">Les documents déjà rangés dans tes logements restent dans l'appli.</p></div>`, () => { DOCS = { etat: "vide", fichiers: [], dossiers: {} }; view.docDossier = ""; render(); return true; }, { ok: "C'est fait", lecture: true });
+}
+/* ================= IA (Claude) : comprendre l'organisation du Drive =================
+   On envoie au serveur (fonction "ia") seulement les noms des dossiers, quelques noms de fichiers par dossier, les logements et les locataires.
+   L'IA rend des propositions ; la personne coche, rien n'est appliqué sans elle, et rien n'est jamais supprimé. */
+let IA = { etat: "" };
+function donneesIA() {
+  const D = DOCS, parDossier = {};
+  D.fichiers.forEach(f => { const p = (f.ancetres || []).slice(-1)[0] || f.parent; if (p) (parDossier[p] = parDossier[p] || []).push(f.titre); });
+  const dossiers = Object.entries(D.dossiers || {}).map(([id, d]) => ({ id, chemin: (d.chemin || [d.titre]).join(" / "), n: (parDossier[id] || []).length, exemples: (parDossier[id] || []).slice(0, 10) }))
+    .sort((a, b) => a.chemin.localeCompare(b.chemin)).slice(0, 400);
+  const locataires = [...S.baux.map(b => ({ nom: b.nom, bienId: b.bienId, actif: isActive(b) })), ...S.biens.flatMap(bi => (bi.anciens || []).map(a => ({ nom: a.nom, bienId: bi.id, actif: false })))];
+  return { espace: ESPACE, biens: S.biens.map(bi => ({ id: bi.id, nom: bi.nom, adresse: adresseBien(bi) })), locataires, dossiers };
+}
+async function analyserIA(auto) {
+  if (!SB || MCP || !estProprio() || LECTURE) { if (!auto) toast(msgProprio("analyser le Drive")); return; }
+  if (!DOCS || DOCS.etat !== "pret" || !Object.keys(DOCS.dossiers || {}).length) { if (!auto) toast("Ajoute d'abord un dossier Drive."); return; }
+  if (IA.etat === "en cours") return;
+  IA = { etat: "en cours" }; if (pageCourante() === "docs") render();
+  try {
+    const s = (await SB.auth.getSession()).data.session;
+    const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/ia", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s && s.access_token) }, body: JSON.stringify(donneesIA()) });
+    let j = {}; try { j = await r.json(); } catch (e) {}
+    if (!r.ok || j.erreur) throw new Error(j.erreur || "Erreur " + r.status);
+    S.sci.ia = { date: new Date().toISOString(), res: j }; save();
+    IA = { etat: "pret" };
+    const n = propositionsIA().length; toast(n ? `🤖 L'IA propose ${n} changement${n > 1 ? "s" : ""} : à vérifier dans Docs` : "🤖 L'IA n'a rien à proposer : tout est en ordre.");
+  } catch (e) { IA = { etat: "erreur", err: e.message }; if (!auto) toast(e.message); }
+  if (pageCourante() === "docs") render();
+}
+/* Ce qui reste à proposer (on retire ce qui est déjà fait dans l'appli) */
+function propositionsIA() {
+  const r = (S.sci.ia || {}).res; if (!r) return [];
+  const L = S.sci.driveLogements || {}, nomsB = new Set(S.biens.map(b => normTxt(b.nom))), D = DOCS.dossiers || {}, nomDos = id => D[id] ? (D[id].chemin || [D[id].titre]).join(" › ") : "dossier";
+  const dejaLoc = nom => S.baux.some(b => normTxt(b.nom) === normTxt(nom)) || S.biens.some(bi => (bi.anciens || []).some(a => normTxt(a.nom) === normTxt(nom)));
+  const out = [];
+  (r.biens_a_creer || []).filter(x => !nomsB.has(normTxt(x.nom))).forEach(x => out.push({ type: "creer", x, t: `🏠 Créer le logement « ${esc(x.nom)} »`, d: [x.adresse, x.type, x.dossiers.length ? "dossier " + x.dossiers.map(nomDos).join(", ") : ""].filter(Boolean).map(esc).join(" · ") + (x.raison ? "<br>" + esc(x.raison) : "") }));
+  (r.liens || []).filter(x => L[x.dossier] !== x.bien_id && bien(x.bien_id)).forEach(x => out.push({ type: "lien", x, t: `📁 « ${esc(nomDos(x.dossier))} » = ${esc(bien(x.bien_id).nom)}`, d: esc(x.raison || "") }));
+  (r.anciens_locataires || []).filter(x => !dejaLoc(x.nom) && (x.bien_id || x.bien_a_creer)).forEach(x => out.push({ type: "ancien", x, t: `🕰 Ancien locataire « ${esc(x.nom)} » → ${esc(x.bien_id ? bien(x.bien_id).nom : x.bien_a_creer)}`, d: esc(x.raison || "") }));
+  return out;
+}
+function sectionIA() {
+  if (!SB || MCP || !estProprio() || !DOCS || DOCS.etat !== "pret" || !Object.keys(DOCS.dossiers || {}).length) return "";
+  const ia = S.sci.ia, r = ia && ia.res;
+  if (IA.etat === "en cours") return `<section class="card ia-card"><h2>🤖 L'IA lit l'organisation de ton Drive…</h2><p class="note">Elle regarde les noms des dossiers et des fichiers (pas leur contenu). Environ une minute.</p></section>`;
+  if (!r) return `<section class="card ia-card"><h2>🤖 Laisser l'IA organiser</h2><p class="note">Elle regarde les noms de tes dossiers et propose : quel dossier correspond à quel logement, les logements à créer, les anciens locataires. Tu valides avant que quoi que ce soit change.</p>${IA.etat === "erreur" ? `<p class="note">⚠️ ${esc(IA.err)}</p>` : ""}<div class="row"><button class="primary" onclick="analyserIA()">🤖 Analyser mon Drive</button></div></section>`;
+  const P = propositionsIA(), info = [...(r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))).map(x => `<li><span class="tx">👤 Locataire actuel probable : <b>${esc(x.nom)}</b>${x.bien_id && bien(x.bien_id) ? " · " + esc(bien(x.bien_id).nom) : x.bien_a_creer ? " · " + esc(x.bien_a_creer) : ""}<small>${esc(x.raison || "")}</small></span>${x.bien_id && bien(x.bien_id) ? `<button type="button" class="small" onclick="editBail(null,'${x.bien_id}')">Ajouter</button>` : ""}</li>`),
+    ...(r.biens_sans_dossier || []).filter(x => bien(x.bien_id)).map(x => `<li><span class="tx">❓ <b>${esc(bien(x.bien_id).nom)}</b> : aucun dossier trouvé<small>${esc(x.remarque || "")}</small></span></li>`)];
+  return `<section class="card ia-card"><div class="sec-head"><h2>🤖 Ce que l'IA a compris</h2><small class="note">${fds(ia.date.slice(0, 10))}</small></div>
+    ${r.resume ? `<p class="note">${esc(r.resume)}</p>` : ""}
+    ${P.length ? `<form onsubmit="event.preventDefault();appliquerIA(this)"><p class="note">Décoche ce qui est faux, puis applique. Rien n'est supprimé.</p><ul class="todo">${P.map((p, i) => `<li><label class="chk" style="display:flex;gap:10px;align-items:flex-start;flex:1"><input type="checkbox" name="p${i}" checked><span class="tx">${p.t}<small>${p.d}</small></span></label></li>`).join("")}</ul>
+      <div class="row"><button class="primary">Appliquer ce qui est coché</button></div></form>` : `<p class="note">✅ Tout ce qu'elle a proposé est fait.</p>`}
+    ${info.length ? `<h3>À regarder</h3><ul class="todo">${info.join("")}</ul>` : ""}
+    <div class="row" style="margin-top:10px"><button class="small ghost" onclick="analyserIA()">↻ Relancer l'analyse</button></div></section>`;
+}
+function appliquerIA(form) {
+  if (!estProprio()) { toast(msgProprio("appliquer les propositions")); return; }
+  const d = Object.fromEntries(new FormData(form).entries()), P = propositionsIA(), choix = P.filter((p, i) => d["p" + i]);
+  if (!choix.length) { toast("Rien de coché."); return; }
+  avecAnnuler(() => {
+    const L = Object.assign({}, S.sci.driveLogements), nouveaux = {}; let nb = 0, nl = 0, na = 0;
+    choix.filter(p => p.type === "creer").forEach(({ x }) => { const bi = { id: uid(), nom: x.nom, type: x.type === "Autre" ? "" : x.type, adresse: x.adresse || "", cp: "", ville: "", meuble: "vide", notes: "Créé avec l'IA depuis le Drive." }; S.biens.push(bi); nouveaux[normTxt(x.nom)] = bi.id; x.dossiers.forEach(id => { L[id] = bi.id; }); nb++; });
+    choix.filter(p => p.type === "lien").forEach(({ x }) => { L[x.dossier] = x.bien_id; nl++; });
+    choix.filter(p => p.type === "ancien").forEach(({ x }) => { const bi = bien(x.bien_id) || bien(nouveaux[normTxt(x.bien_a_creer)]); if (!bi) return; bi.anciens = (bi.anciens || []).concat({ id: uid(), nom: x.nom, du: "", au: "", notes: x.raison ? "Trouvé par l'IA : " + x.raison : "" }); na++; });
+    S.sci.driveLogements = L; save();
+    toast([nb ? `${nb} logement${nb > 1 ? "s" : ""} créé${nb > 1 ? "s" : ""}` : "", nl ? `${nl} dossier${nl > 1 ? "s" : ""} relié${nl > 1 ? "s" : ""}` : "", na ? `${na} ancien${na > 1 ? "s" : ""} locataire${na > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ") + ". Les documents se rangent…");
+  });
+  render(); setTimeout(() => rangerAuto("ia"), 300);
 }
 /* ================= Importer un dossier entier : le .zip téléchargé depuis le Drive (sous-dossiers compris), ou plein de fichiers d'un coup =================
    Google ne donne pas le contenu d'un dossier choisi (accès "fichiers choisis seulement"). Ici, aucun accès Google n'est nécessaire :
@@ -4461,6 +4529,7 @@ function pageDocsDrive() {
     ${vieux ? `<p class="note" style="margin-top:10px">💡 Les dossiers marqués "ancienne méthode" ne montrent que les fichiers touchés un par un : ouvre-les et partage-les avec l'appli pour tout lire.</p>` : ""}
     ${complet ? `<div class="drive-avant" style="margin-top:12px">Tu as aussi autorisé la lecture de <b>tout</b> ton Drive (essai du 17/11). Avec le partage de dossiers, ce n'est plus utile. <button class="small" onclick="debrancherDrive()">Retirer cet accès</button></div>` : ""}
     <div class="row" style="margin-top:10px">${unParUn}${boutonImport("small ghost")}</div></section>
+  ${sectionIA()}
   ${sectionLotsAuto() + sectionDossiersLogements()}
   ${sectionPropositionsDrive()}
   ${etat}
@@ -5299,7 +5368,7 @@ function pageLegal() {
   ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : l'autorisation d'<b>envoyer</b> depuis ton Gmail (Google ne donne pas le droit de lire tes e-mails ; rangée dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane (clé en lecture seule, rangée dans un coffre chiffré : l'appli refuse une clé qui pourrait modifier ta compta).</li><li>Si tu connectes ton Google Drive : l'autorisation (rangée dans un coffre chiffré), ton adresse Google, et le nom et le lien des fichiers des seuls dossiers et fichiers que tu choisis dans le sélecteur de Google ou que tu partages avec l'adresse de l'appli (avec leurs sous-dossiers). L'appli ne lit pas le reste de ton Drive et n'y modifie rien. Les documents que tu ajoutes à un logement sont copiés dans l'appli pour tes associés.</li></ul>`)}
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
-  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
+  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement ; Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
   ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}
   ${b("🍪 Cookies", `<p>Aucun cookie publicitaire ni de mesure d'audience. L'appli garde seulement sur ton appareil ce qui sert à rester connecté et à fonctionner sans réseau.</p>`)}

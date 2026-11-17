@@ -34,6 +34,13 @@ Règle pour chaque session :
 
 ## Historique
 
+### 17/11/2026 (22 h) — l'IA organise le Drive (Claude)
+- Théo veut que l'appli détecte seule les logements, les dossiers qui leur correspondent, les logements à créer ou à retirer. Les règles sur les noms (`deviner`) ne savent que ranger dans des logements existants.
+- Clé Anthropic de Théo vérifiée (200 avec la clé, 401 avec une fausse), rangée dans `.env` et en secret Supabase `ANTHROPIC_API_KEY`.
+- Nouvelle fonction serveur `ia` (verify_jwt true) : membre éditeur de l'espace obligatoire, 20 analyses par personne et par jour (table `ia_usage`, supabase/ia.sql). Envoie à Claude Opus 5.5 (effort medium, sortie JSON imposée par schéma, repli automatique en cas de refus) SEULEMENT les noms des dossiers, 10 noms de fichiers par dossier, les logements et les locataires. Rend : liens dossier → logement, logements à créer, anciens locataires, locataires actuels probables, logements sans dossier, résumé ; ne garde que des ids connus.
+- Appli : carte "🤖 Ce que l'IA a compris" dans Docs (cases à cocher, "Appliquer ce qui est coché", rien n'est supprimé), lancée automatiquement après un nouveau dossier partagé, ou bouton "Analyser mon Drive". Appliquer crée les logements, relie les dossiers, ajoute les anciens locataires, puis le rangement automatique range les documents. Les questions "ancien locataire ?" des règles sont masquées quand l'IA a analysé. Confidentialité mise à jour (noms envoyés à Anthropic, pas de contenu, pas d'entraînement).
+- Test réel (test48, Drive imitant GTP : Agon 2 lots, 41 et 43 Beauchamps, Compta) : 12/12, 11 s, ~2 900 jetons lus + 800 écrits ≈ 0,03 $. Corrigé en route : un commentaire avait masqué une ligne de code (détecté par test45 avant mise en ligne).
+
 ### 17/11/2026 (20 h) — clé de l'appli posée
 - Compte de service `lecture-dossiers@gestion-locative-drive.iam.gserviceaccount.com` (projet gestion-locative-drive). Clé JSON rangée dans `.env` (GOOGLE_PARTAGE_SA, une ligne) et en secret Supabase. Vérifié : `config` prêt, `lister` répond (Google accepte la clé, API Drive active), `fichier` sur un fichier non partagé refusé, appel sans connexion refusé (401).
 
