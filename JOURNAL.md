@@ -19,7 +19,7 @@ Règle pour chaque session :
 - [ ] **Jeton Pennylane GTP** : le remplacer par un jeton en lecture seule (l'actuel peut modifier la compta).
 - [ ] **Prêts GTP** : saisir le ou les prêts (Compta › Emprunts › + Prêt, ou importer le tableau de la banque), puis "Voir et ventiler" les échéances proposées ; vérifier les 8 "ECH PRET INT" d'environ 1 540 €.
 - [ ] **Copie de sauvegarde** : Réglages › Sauvegarde et import › "M'envoyer une copie chaque semaine" (case "maintenant" cochée pour vérifier la réception et rouvrir le .txt).
-- [ ] **Espace locataire** : décider (fiche dans l'Historique du 14/11, bloc 6).
+- [ ] **Espace locataire** (fait le 18/11) : essayer avec un vrai locataire (fiche › Plus › Son espace locataire).
 - [ ] **Drive** : sur ton téléphone, choisir tes dossiers (plusieurs possibles), relier chaque dossier de logement (Docs › Dossiers et logements), vérifier le 1er rangement automatique (Annuler si besoin).
 - [ ] **DPE et risques** : sur chaque logement, "Retrouver le DPE" puis "État des risques" ; faire l'ERP officiel sur errial.georisques.gouv.fr avant le prochain bail.
 - [ ] **Services payants** (Youtrust, GoCardless, Bridge/Powens, Stripe) : fiches dans l'Historique du 14/11 ; rien codé tant que Théo n'a pas ouvert de compte.
@@ -39,7 +39,7 @@ Page visuelle : https://claude.ai/artifact/VDxQf3ztq7bFiADKC77K6o. Devant les au
 Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 1. ✅ (18/11) **Signature au doigt** (EDL, bail, avenant) : zone de signature sur l'écran pour bailleur et locataire, ajoutée au PDF (jsPDF addImage) avec date, heure, nom ; PDF signé rangé dans le logement.
 2. ✅ (18/11) **Quittance automatique à réception du loyer** (Pennylane) : envoi seul ou après accord (choix dans Réglages).
-3. **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
+3. ✅ (18/11) **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
 4. **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
 5. **Trésorerie 12 mois** + alerte de seuil.
 6. **Activité entre associés** ("X a marqué le loyer payé").
@@ -48,6 +48,16 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — feuille de route, étape 3 : espace locataire
+- **Propriétaire** : fiche du locataire › Plus › "🔗 Son espace locataire" : ce qu'il verra / ne verra jamais, "Créer son lien", puis Copier, Envoyer (WhatsApp, SMS…), "Voir ce qu'il voit", "Désactiver ce lien", et "ouvert pour la dernière fois il y a…". Réservé aux éditeurs (pas aux lecteurs).
+- **Locataire** (lien https://sci-gestion-locative.com/#locataire=…, sans compte, vouvoiement) : son logement et le contact du propriétaire ; en grand "✅ Vous êtes à jour" ou "Reste à payer" ; loyer, prochain loyer, IBAN à copier ; quittances des 12 derniers mois en PDF ; son bail et ses états des lieux rangés dans l'appli (liens temporaires d'1 h) ; "🔧 Signaler un problème" avec photo, et "Mes demandes" (Envoyée / Réglé). Aucun menu de l'appli.
+- **Propriétaire prévenu** : notification à tous les membres et e-mail au propriétaire depuis son Gmail (`notifier` v13, `{ demande }`) ; la demande est dans À faire en urgent ("🔧 Jean signale un problème") ; "Voir" (texte, photo, appeler, répondre) puis "✓ C'est réglé".
+- **Serveur** : `supabase/locataire.sql` (tables `portails_locataire` : empreinte SHA-256 du jeton, photo des données publiée par l'appli ; `demandes_locataire` ; lecture par les membres, écriture par les éditeurs, rien pour l'anonyme). Fonction `locataire` (sans connexion, vérifie le jeton) : `voir`, `signaler` (10 demandes par jour maximum, photo réduite à 1600 px dans le bucket documents). L'appli republie la photo des données à chaque modification (`planifierPortails`, seulement si elle a changé).
+- **Sécurité vérifiée** : sans le lien, rien n'est lisible (3 tables testées en anonyme) ; faux lien refusé ; lien désactivé = plus d'accès ; le locataire ne voit ni l'autre locataire ni son bail.
+- Confidentialité : paragraphe "Espace locataire" ajouté.
+- Tests : test56 (vraie base, 2 locataires, vrai PDF, vraie photo, sans compte côté locataire) 22/22 ; test5, test22, test33, test38, test45, test53, test55 OK. En ligne.
+- Pas vérifié : la notification et l'e-mail réels au propriétaire (le compte de test n'a ni Gmail ni téléphone abonné) ; l'ouverture sur un vrai téléphone de locataire.
 
 ### 18/11/2026 — feuille de route, étape 2 : quittance dès que le loyer arrive
 - Quand la banque (Pennylane) montre un loyer payé en entier (`rapprocherBanque` garde maintenant la liste `RECUS`), l'appli réagit, seulement pour les loyers qui viennent d'arriver (jamais l'arriéré) :

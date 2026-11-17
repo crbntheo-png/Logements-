@@ -1,4 +1,5 @@
 // Tous les matins : alertes sur le téléphone (virement reçu, loyer en retard) et, le 1er et le 5 du mois, résumé par e-mail (depuis le Gmail branché de chacun, à lui-même).
+// Aussi : problème signalé par un locataire ({ demande: id }, en-tête x-cle-cron) -> notification aux membres, e-mail au propriétaire.
 // Aussi : nouveau signalement ({ signalement: id }, en-tête x-cle-cron) -> alerte et e-mail à l'administrateur, depuis son propre Gmail.
 // Appelée par la tâche planifiée « notifier » (en-tête x-cle-cron), ou par un membre connecté pour un essai ({ essai: true }).
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -73,6 +74,20 @@ Deno.serve(async (req) => {
     await envoyerParGmail(admin, ad.user_id, [ad.email], titre, `Envoyé par ${sg.email || "?"}\n\n${sg.message}\n\n— Page : ${sg.page || "?"}\n\nRéponds à ${sg.email || "la personne"} depuis ta messagerie.`).catch(() => {});
     const { data: subs1 } = await admin.from("push_abonnements").select("*").eq("user_id", ad.user_id);
     for (const s1 of subs1 || []) await webpush.sendNotification({ endpoint: s1.endpoint, keys: { p256dh: s1.p256dh, auth: s1.auth } }, JSON.stringify({ titre: "🆘 " + titre, texte: String(sg.message || "").slice(0, 120), url: "./", tag: "sig-" + sg.id })).catch(() => {});
+    return rep({ ok: true });
+  }
+  if (corps.demande && !seulUser) {
+    // problème signalé par un locataire depuis son espace : notification à tous les membres, e-mail au propriétaire (depuis son Gmail)
+    const { data: d } = await admin.from("demandes_locataire").select("id, espace_id, nom, texte, photo").eq("id", corps.demande).maybeSingle();
+    if (!d) return rep({ ok: true, rien: true });
+    const { data: mb } = await admin.from("membres").select("user_id, email, role").eq("espace_id", d.espace_id);
+    const titre = `🔧 ${d.nom || "Un locataire"} signale un problème`, texte = String(d.texte || "").replace(/\s+/g, " ").slice(0, 140);
+    for (const m of mb || []) {
+      const { data: ss } = await admin.from("push_abonnements").select("*").eq("user_id", m.user_id);
+      for (const x of ss || []) await webpush.sendNotification({ endpoint: x.endpoint, keys: { p256dh: x.p256dh, auth: x.auth } }, JSON.stringify({ titre, texte, url: "./#afaire", tag: "dem-" + d.id })).catch(() => {});
+    }
+    const pr = (mb || []).find((m: any) => m.role === "proprietaire");
+    if (pr?.email) await envoyerParGmail(admin, pr.user_id, [pr.email], titre, `${d.nom || "Un locataire"} a signalé un problème depuis son espace locataire :\n\n${d.texte}\n\n${d.photo ? "Une photo est jointe à la demande : ouvre l'appli pour la voir.\n\n" : ""}Ouvre l'appli : ${APP}/#afaire`).catch(() => {});
     return rep({ ok: true });
   }
   const auj = paris(); auj.setHours(12, 0, 0, 0); const CUR = mk(auj), jour = auj.getDate(), resumeDuJour = jour === 1 || jour === 5;

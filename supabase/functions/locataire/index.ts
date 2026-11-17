@@ -1,0 +1,54 @@
+// Espace locataire : le locataire ouvre son lien privé (https://sci-gestion-locative.com/#locataire=JETON), sans compte.
+// Actions : "voir" (ses infos publiées par le propriétaire, ses documents, ses demandes) et "signaler" (un problème, avec photo).
+// Le jeton n'est jamais gardé en clair : seule son empreinte SHA-256 est en base. Le locataire ne voit rien d'autre de l'espace.
+import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+const rep = (c: unknown, s = 200) => new Response(JSON.stringify(c), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
+const empreinte = async (t: string) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))).map(b => b.toString(16).padStart(2, "0")).join("");
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return rep({ erreur: "Méthode refusée" }, 405);
+  const url = Deno.env.get("SUPABASE_URL")!, admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  let c: any = {}; try { c = await req.json(); } catch (_) { return rep({ erreur: "Demande illisible" }, 400); }
+  const jeton = String(c.jeton || "");
+  if (!/^[A-Za-z0-9_-]{30,80}$/.test(jeton)) return rep({ erreur: "Lien incomplet : demande un nouveau lien à ton propriétaire." }, 400);
+  const { data: p } = await admin.from("portails_locataire").select("jeton_hash, espace_id, bail_id, donnees").eq("jeton_hash", await empreinte(jeton)).maybeSingle();
+  if (!p) return rep({ erreur: "Ce lien n'est plus valable : demande un nouveau lien à ton propriétaire." }, 404);
+
+  if (c.action === "signaler") {
+    const texte = String(c.texte || "").trim().slice(0, 3000);
+    if (!texte) return rep({ erreur: "Décris le problème en quelques mots." }, 400);
+    const depuis = new Date(Date.now() - 864e5).toISOString();
+    const { count } = await admin.from("demandes_locataire").select("id", { count: "exact", head: true }).eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).gte("cree_le", depuis);
+    if ((count || 0) >= 10) return rep({ erreur: "Trop de demandes aujourd'hui : réessaie demain, ou appelle ton propriétaire." }, 429);
+    let photo: string | null = null;
+    const m = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(c.photo || ""));
+    if (m && m[2].length < 6_000_000) {
+      const octets = Uint8Array.from(atob(m[2]), x => x.charCodeAt(0));
+      const chemin = `${p.espace_id}/demandes/${crypto.randomUUID()}.${m[1] === "jpeg" ? "jpg" : m[1]}`;
+      const up = await admin.storage.from("documents").upload(chemin, octets, { contentType: "image/" + m[1] });
+      if (!up.error) photo = chemin;
+    }
+    const nom = String((p.donnees as any)?.locataire || "").slice(0, 200) || null;
+    const { data: d, error } = await admin.from("demandes_locataire").insert({ espace_id: p.espace_id, bail_id: p.bail_id, nom, texte, photo }).select("id").single();
+    if (error) return rep({ erreur: "Envoi impossible, réessaie dans un moment." }, 500);
+    // prévenir le propriétaire et les associés (notification + e-mail depuis le Gmail du propriétaire)
+    try { await fetch(url + "/functions/v1/notifier", { method: "POST", headers: { "Content-Type": "application/json", "x-cle-cron": Deno.env.get("CLE_CRON_NOTIFIER") || "" }, body: JSON.stringify({ demande: d.id }) }); } catch (_) { /* la demande est enregistrée quand même */ }
+    return rep({ ok: true, id: d.id });
+  }
+
+  // voir
+  await admin.from("portails_locataire").update({ vu_le: new Date().toISOString() }).eq("jeton_hash", p.jeton_hash);
+  const don: any = p.donnees || {};
+  const docs = [];
+  for (const x of (Array.isArray(don.docs) ? don.docs : []).slice(0, 40)) {
+    if (!x || typeof x.chemin !== "string" || !x.chemin.startsWith(p.espace_id + "/") || x.chemin.includes("..")) continue;
+    const s = await admin.storage.from("documents").createSignedUrl(x.chemin, 3600);
+    if (s.data?.signedUrl) docs.push({ nom: String(x.nom || "Document"), cat: String(x.cat || ""), date: String(x.date || ""), url: s.data.signedUrl });
+  }
+  const { data: dem } = await admin.from("demandes_locataire").select("id, texte, statut, cree_le, traite_le").eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).order("cree_le", { ascending: false }).limit(20);
+  const { docs: _d, ...reste } = don;
+  return rep({ ok: true, donnees: reste, docs, demandes: dem || [] });
+});
