@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "e4860b5", "date": "2026-11-17T07:41"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "d18efd3", "date": "2026-11-17T16:27"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -228,6 +228,7 @@ details.rgl { scroll-margin-top: 76px; }
 .doc-plus { margin-left: auto; padding: 4px 10px; font-size: 20px; color: var(--muted); }
 .actions-doc { display: flex; flex-direction: column; gap: 8px; } .actions-doc > * { width: 100%; justify-content: flex-start; text-align: left; }
 .docs-actions { margin: 4px 0 14px; flex-wrap: wrap; }
+.adresse-appli { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: var(--surface-2); padding: 10px 12px; border-radius: 12px; } .adresse-appli code { flex: 1 1 200px; overflow-wrap: anywhere; font-size: .85rem; } .partage-aide ol { padding-left: 20px; } .partage-aide li { margin-bottom: 6px; }
 .imp-l { max-height: 52vh; overflow: auto; } .todo li.imp-li { display: block; height: auto; min-height: 0; padding: 10px 12px; } .imp-li .tx { display: block; } .imp-li .tx b { display: block; font-weight: 600; overflow-wrap: anywhere; } .imp-li .tx small { display: block; } .imp-li select { display: block; width: 100%; margin-top: 6px; } .imp-aide p { margin: 0 0 10px; }
 .lr .ico-cat { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
 .bad-txt { color: var(--bad, #c0392b); }
@@ -855,7 +856,7 @@ async function apresConnexion(user, enFond) {
   SB_USER = user; if (!enFond) { MODE = "chargement"; render(); }
   try { await SB.rpc("accepter_invitations"); } catch (e) {}
   SB.from("gmail_comptes").select("adresse,mode").eq("user_id", user.id).maybeSingle().then(g => { GMAIL = g.data || null; }, () => {});
-  chargerEtatDrive(user);
+  chargerEtatDrive(user); chargerPartage();
   const r = await SB.from("espaces").select("id, nom, cree_le").order("cree_le");
   if (r.error) { if (enFond) { toast("📴 Pas de connexion : tu vois tes données de la dernière ouverture."); return; } MODE = "connexion"; render(); toast("Impossible de charger tes espaces : " + r.error.message); return; }
   ESPACES = r.data || [];
@@ -2609,10 +2610,7 @@ async function importerDepuisDrive(liste, ctx) {
     try {
       const natif = /^application\/vnd\.google-apps\./.test(x.mimeType);
       if (!natif && +x.size > 20 * 1024 * 1024) throw new Error("trop lourd");
-      const u = natif ? `https://www.googleapis.com/drive/v3/files/${x.id}/export?mimeType=application/pdf` : `https://www.googleapis.com/drive/v3/files/${x.id}?alt=media&supportsAllDrives=true`;
-      const r = await fetch(u, { headers: { Authorization: "Bearer " + await jetonDrive() } });
-      if (!r.ok) throw new Error("Drive " + r.status);
-      const blob = await r.blob(); if (blob.size > 20 * 1024 * 1024) throw new Error("trop lourd");
+      const blob = await blobDrive(x); if (blob.size > 20 * 1024 * 1024) throw new Error("trop lourd");
       const type = natif ? "application/pdf" : (x.mimeType || blob.type || "application/octet-stream"), ext = natif ? "pdf" : ((x.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "") || "bin");
       const chemin = `${ESPACE}/${ctx.bienId}/${uid()}.${ext}`;
       const up = await SB.storage.from("documents").upload(chemin, blob, { contentType: type });
@@ -3914,7 +3912,7 @@ async function drive(tool, input) {
   return p || {};
 }
 async function indexerDrive() {
-  if (!MCP) { if (SB && DRIVEG.etat === "oui") return indexerDriveG(); return; }
+  if (!MCP) { if (SB) return indexerAppli(); return; }
   DOCS = { etat: "chargement", fichiers: [], dossiers: {}, n: 0 }; if (pageCourante() === "docs") render();
   const vus = new Set(), file = [{ id: driveRacine(), chemin: [] }];
   try {
@@ -4036,8 +4034,8 @@ function connecterDrive(modeVoulu) {
   if (LECTURE) { toast("En lecture seule, tu ne peux pas brancher le Drive."); return; }
   let pret = false, erreur = "";
   preparerGoogle().then(() => { pret = true; }, e => { erreur = e.message; });
-  const complet = () => modeVoulu !== "choix" && GCFG && GCFG.complet;
-  modal("Connecter ton Google Drive", `<div class="full" id="drv-txt">${texteDrive(modeVoulu !== "choix" && GCFG && GCFG.complet)}</div>`, () => {
+  const complet = () => modeVoulu === "complet" && GCFG && GCFG.complet;
+  modal("Connecter ton Google Drive", `<div class="full" id="drv-txt">${texteDrive(modeVoulu === "complet" && !!(GCFG && GCFG.complet))}</div>`, () => {
     if (erreur) { toast(erreur); return false; }
     if (!pret) { toast("Un instant, Google se prépare…"); return false; }
     const mode = complet() ? "complet" : "choix";
@@ -4191,7 +4189,7 @@ function sectionDossiersLogements() {
 }
 /* ================= Rangement automatique (seulement ce dont l'appli est sûre) ================= */
 function rangerAuto(source) {
-  if (MCP || !SB || LECTURE || !estProprio() || DRIVEG.etat !== "oui" || !DOCS || DOCS.etat !== "pret" || !S.biens.length) return 0;
+  if (MCP || !SB || LECTURE || !estProprio() || (DRIVEG.etat !== "oui" && PARTAGE.etat !== "pret") || !DOCS || DOCS.etat !== "pret" || !S.biens.length) return 0;
   const a = analyserDrive(DOCS.fichiers), surs = a.ranger.filter(x => x.sur && !fait("drv-noauto-" + x.f.id));
   if (!surs.length) { if (pageCourante() === "docs") render(); return 0; }
   const lot = "lot-" + uid(), date = new Date().toISOString();
@@ -4218,12 +4216,12 @@ function sectionLotsAuto() {
 }
 /* Lecture du Drive en fond : à l'ouverture (1 fois par 24 h au plus), après un choix de dossier, un logement ou un locataire créé ou renommé */
 async function lectureDriveFond(raison) {
-  if (MCP || !SB || LECTURE || DRIVEG.etat !== "oui" || !estProprio() || rienChoisi()) return 0;
+  if (MCP || !SB || LECTURE || !estProprio() || !((DRIVEG.etat === "oui" && !rienChoisi()) || PARTAGE.etat === "pret")) return 0;
   if (DOCS.etat === "chargement") return 0;
   const cle = "gestion-drive-lu-" + ESPACE;
   if (raison === "ouverture") { let t = 0; try { t = +localStorage.getItem(cle) || 0; } catch (e) {} if (Date.now() - t < 864e5) return 0; }
   if (raison === "modif" && DOCS.etat === "pret") return rangerAuto(raison);
-  await indexerDriveG(pageCourante() !== "docs");
+  await indexerAppli(pageCourante() !== "docs");
   try { localStorage.setItem(cle, String(Date.now())); } catch (e) {}
   return DOCS.etat === "pret" ? rangerAuto(raison) : 0;
 }
@@ -4233,8 +4231,9 @@ const bandeauDrive = () => SB && !MCP && pageCourante() === "locataires" && estP
   ? `<div class="banner"><span>⚠️ <span><b>Ton Drive s'est déconnecté</b>, reconnecte-le pour que tes documents continuent de se ranger.</span></span><button class="small primary" onclick="connecterDrive()">Reconnecter</button></div>` : "";
 function sectionDriveReglages() {
   const ok = DRIVEG.etat === "oui", n = choisisDrive().length;
-  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}. </p>${DRIVEG.mode === "complet" ? `<p class="note">📂 L'appli lit tes dossiers choisis <b>en entier</b> (lecture seule).</p>` : GCFG && GCFG.complet ? `<div class="drive-avant">📂 Avec l'accès actuel, l'appli ne lit que les fichiers touchés un par un. <button class="small primary" onclick="connecterDrive('complet')">Lire mes dossiers en entier</button></div>` : ""}${blocConnecte()}${DRIVEG.large ? `<p class="drive-avant">⚠️ Ton Drive est branché avec un accès large (lecture de tout le Drive). Touche <b>Débrancher</b> puis <b>Connecter</b> pour ne donner accès qu'à ce que tu choisis.</p>` : ""}` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
-    <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive(ok ? DRIVEG.mode === "complet" : !!(GCFG && GCFG.complet))}</details>
+  return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}. </p>${DRIVEG.mode === "complet" ? `<p class="drive-avant">Accès en lecture à <b>tout</b> ton Drive (essai). Plus utile avec le partage de dossiers (Docs › + Ajouter un dossier) : touche <b>Débrancher</b> pour le retirer.</p>` : ""}${blocConnecte()}${DRIVEG.large ? `<p class="drive-avant">⚠️ Ton Drive est branché avec un accès large (lecture de tout le Drive). Touche <b>Débrancher</b> puis <b>Connecter</b> pour ne donner accès qu'à ce que tu choisis.</p>` : ""}` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
+    <p class="note">📁 Pour que l'appli lise des <b>dossiers entiers</b>, partage-les avec elle depuis ton Drive : <a href="#docs">Docs › + Ajouter un dossier</a>. La connexion ci-dessous sert seulement à choisir des fichiers un par un.</p>
+    <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive(ok && DRIVEG.mode === "complet")}</details>
     <div class="row" style="margin-top:10px">${ok ? `<button class="small" onclick="go('docs')">Voir ce qu'il a trouvé</button><button class="small ghost" onclick="debrancherDrive()">Débrancher</button>` : `<button class="small primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}</div>`;
 }
 /* Message avec plusieurs boutons (ex : Voir · Annuler) */
@@ -4263,15 +4262,6 @@ function pageDocs() {
   if (!MCP && SB && !estProprio()) return `<div class="head"><div><h1>Documents</h1><p>Les documents de l'espace sont rangés dans chaque logement.</p></div></div>
     <section class="card"><h2>📁 Le Drive de l'espace</h2><p class="note">Le Drive est géré par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>) : lui seul le connecte et range les documents, pour que tout reste au bon endroit. Tu retrouves tout dans chaque logement et chaque locataire. Il te manque un document ? Demande-lui de le ranger, ou ajoute-le toi-même depuis la fiche du logement.</p>
     <div class="row" style="margin-top:10px"><a class="btn primary" href="#biens">Voir les logements</a>${ouvrirDrive}</div></section>`;
-  if (!MCP && SB && DRIVEG.etat !== "oui") return `<div class="head"><div><h1>Documents</h1><p>Tes documents restent dans ton Google Drive. L'appli lit seulement ceux que tu choisis, pour te proposer où les ranger.</p></div></div>
-    <section class="card drive-co"><h2>📁 Connecte ton Google Drive</h2>
-    ${DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : `<p class="note">Tu choisis tes documents dans le sélecteur de Google (bail, diagnostics, taxe foncière…) : l'appli te propose de ranger chacun au bon endroit. Elle ne voit rien d'autre de ton Drive.</p>`}
-    <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive(!!(GCFG && GCFG.complet))}</details>
-    <div class="row" style="margin-top:12px">${DRIVEG.etat === "inconnu" ? `<button disabled>Un instant…</button>` : `<button class="primary" onclick="connecterDrive()">Connecter mon Google Drive</button>`}${ouvrirDrive}</div></section>
-    <section class="card"><h2>📦 Ou tout importer d'un coup</h2><p class="note">Sans connecter ton Drive : télécharge un dossier entier (un .zip) ou choisis plein de fichiers, l'appli range chaque document dans le bon logement.</p><div class="row">${boutonImport("small")}</div></section>`;
-  if (!MCP && SB && rienChoisi()) return `<div class="head"><div><h1>Documents</h1><p>✅ Drive connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""}.</p></div></div>
-    <div class="empty party">📁 <span>Coche les dossiers de tes locations dans ton Drive (plusieurs d'un coup). L'appli ne verra que ceux-là.</span><button class="primary" onclick="choisirDossierDrive()">Choisir mes dossiers</button><button class="small ghost" onclick="choisirFichiersDrive()">ou des fichiers un par un</button></div>
-    <section class="card"><h2>📦 Tout importer d'un coup</h2><p class="note">Télécharge un dossier entier depuis ton Drive (sous-dossiers compris) : l'appli lit tout et range chaque document dans le bon logement.</p><div class="row">${boutonImport("small")}</div></section>`;
   if (!MCP && !SB) return `<div class="head"><div><h1>Documents</h1><p>Tous les documents du Drive de la SCI.</p></div></div><div class="empty">Les documents du Drive s'affichent dans la version en ligne de l'appli (claude.ai), avec Google Drive connecté.</div>`;
   if (DOCS.etat === "vide") { DOCS.etat = "attente"; setTimeout(indexerDrive, 0); }
   if (!MCP) return pageDocsDrive();
@@ -4288,6 +4278,93 @@ function pageDocs() {
   <div class="chips" role="group" aria-label="Filtrer par dossier">${["", ...racines].map((x, i) => `<button class="chip ${x === r ? "on" : ""}" aria-pressed="${x === r}" onclick="view.docRacine=RACINES[${i}];render()">${x ? esc(x) : "Tout"}</button>`).join("")}</div>
   ${DOCS.etat === "chargement" || DOCS.etat === "attente" ? `<p class="note">⏳ Lecture du Drive… ${DOCS.n || 0} documents trouvés</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : ""}
   <div id="docres">${listeDocs(res, lim)}</div>`;
+}
+/* ================= Dossiers Drive PARTAGÉS avec l'appli (méthode principale) =================
+   Comme avec un associé : la personne partage son dossier avec l'adresse de l'appli, en "Lecteur".
+   Pas d'écran Google, pas d'accès au reste du Drive ; le serveur (fonction "partage") ne rend à chacun que ce qu'il a partagé. */
+let PARTAGE = { etat: "inconnu" };
+async function fnPartage(action, extra, brut) {
+  const s = (await SB.auth.getSession()).data.session;
+  const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/partage", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s && s.access_token) }, body: JSON.stringify(Object.assign({ action }, extra || {})) });
+  if (brut && r.ok) return r.blob();
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (!r.ok || j.erreur) throw new Error(j.erreur || "Erreur " + r.status);
+  return j;
+}
+function chargerPartage() {
+  if (!SB || MCP) return Promise.resolve();
+  return fnPartage("config").then(c => {
+    const avant = PARTAGE.etat; PARTAGE = Object.assign(PARTAGE, { etat: c.pret ? "pret" : "absent", adresse: c.adresse || "" });
+    if (avant === "inconnu" && PARTAGE.etat === "pret") setTimeout(() => attendreRolePuisLire(), 1500);
+    if (pageCourante() === "docs") render();
+  }, () => { PARTAGE.etat = "absent"; });
+}
+/* Lecture de tout ce que l'appli peut voir : dossiers partagés + fichiers choisis dans le sélecteur Google */
+async function indexerAppli(silencieux) {
+  let D;
+  if (DRIVEG.etat === "oui" && !rienChoisi()) D = await indexerDriveG(true);
+  else { D = DOCS = { etat: "chargement", fichiers: [], dossiers: {}, n: 0 }; }
+  if (!silencieux && pageCourante() === "docs") render();
+  if (PARTAGE.etat === "inconnu") await chargerPartage();
+  if (PARTAGE.etat === "pret" && DOCS === D) {
+    if (D.etat !== "erreur") D.etat = "chargement";
+    try {
+      const p = await fnPartage("lister"), ids = new Set(D.fichiers.map(f => f.id));
+      PARTAGE.racines = p.racines || []; PARTAGE.lu = true;
+      Object.assign(D.dossiers, p.dossiers || {}); (p.fichiers || []).forEach(f => { if (!ids.has(f.id)) D.fichiers.push(f); });
+      const caches = new Set(S.sci.driveMasques || []); D.fichiers = D.fichiers.filter(f => !caches.has(f.id)); D.incomplet = !!p.incomplet;
+    } catch (e) { D.errPartage = e.message; }
+  }
+  if (DOCS !== D) return D;
+  if (D.etat !== "erreur") { D.etat = "pret"; D.date = new Date(); }
+  D.n = D.fichiers.length; render();
+  return D;
+}
+const racinesPartagees = () => (PARTAGE.racines || []).filter(r => r.dossier);
+/* Fichier du Drive : par le serveur s'il vient d'un dossier partagé, sinon avec la connexion Google */
+async function blobDrive(x) {
+  if (x.partage) return fnPartage("fichier", { id: x.id }, true);
+  const natif = /^application\/vnd\.google-apps\./.test(x.mimeType || x.type || "");
+  const r = await fetch(natif ? `https://www.googleapis.com/drive/v3/files/${x.id}/export?mimeType=application/pdf` : `https://www.googleapis.com/drive/v3/files/${x.id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: "Bearer " + await jetonDrive() } });
+  if (!r.ok) throw new Error("Google Drive refuse ce fichier (" + r.status + ")");
+  return r.blob();
+}
+function ajouterDossierPartage() {
+  if (!estProprio()) { toast(msgProprio("ajouter les dossiers de l'espace")); return; }
+  if (PARTAGE.etat !== "pret") { toast(PARTAGE.etat === "inconnu" ? "Un instant…" : "Le partage de dossiers n'est pas encore installé."); if (PARTAGE.etat === "inconnu") chargerPartage(); return; }
+  const a = PARTAGE.adresse;
+  modal("Ajouter un dossier", `<div class="full partage-aide">
+    <p>Partage ton dossier avec l'appli, <b>comme avec un associé</b> : elle le lit en <b>lecture seule</b>, avec ses sous-dossiers, et rien d'autre de ton Drive.</p>
+    <p class="adresse-appli"><code id="adr-appli">${esc(a)}</code><button type="button" class="small primary" onclick="copierTexte(document.getElementById('adr-appli').textContent)">Copier</button></p>
+    <ol>
+      <li>Touche <b>Copier</b> ci-dessus.</li>
+      <li>Ouvre ton Drive et trouve le dossier (par exemple "02 - GTP Invest").</li>
+      <li><b>📱 Téléphone</b> : touche <b>⋮</b> à côté du dossier › <b>Partager</b>.<br><b>💻 Ordinateur</b> : clic droit sur le dossier › <b>Partager</b> › <b>Partager</b>.</li>
+      <li>Colle l'adresse, laisse <b>Lecteur</b>, décoche <b>Envoyer une notification</b> si la case est là, puis <b>Envoyer</b>.</li>
+      <li>Reviens ici et touche <b>C'est fait</b>.</li>
+    </ol>
+    <p><a class="btn" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener">Ouvrir mon Drive ↗</a></p>
+    <p class="note">Partage depuis ton compte Google, le même que pour te connecter à l'appli. Pour arrêter : dans ton Drive, <b>Partager</b> › retire l'adresse de l'appli.</p></div>`,
+    () => { closeOverlay(); verifierPartage(); return false; }, { ok: "C'est fait", lecture: true });
+}
+async function verifierPartage() {
+  const avant = new Set(racinesPartagees().map(r => r.id));
+  toast("Je regarde ce que tu as partagé…");
+  DOCS = { etat: "vide", fichiers: [], dossiers: {} }; view.docDossier = ""; go("docs");
+  const D = await indexerAppli();
+  if (D.errPartage) { toast("Le Drive ne répond pas : " + D.errPartage); return; }
+  const nouveaux = racinesPartagees().filter(r => !avant.has(r.id));
+  if (nouveaux.length) toast(`✅ ${nouveaux.map(r => `"${r.nom}"`).join(", ")} : ${nouveaux.reduce((n, r) => n + D.fichiers.filter(f => f.racine === r.id).length, 0)} fichiers lus`);
+  else if (racinesPartagees().length) toast("Rien de nouveau. Si tu viens de partager, attends quelques secondes et touche Actualiser.");
+  else toastActions("Je ne vois encore aucun dossier partagé avec l'appli.", [["Revoir comment faire", "ajouterDossierPartage()"]]);
+  rangerAuto("dossier");
+}
+function retirerPartage(id) {
+  const r = racinesPartagees().find(x => x.id === id);
+  modal(`Retirer « ${esc(r ? r.nom : "ce dossier")} »`, `<div class="full"><p>Le dossier est partagé depuis ton Drive : c'est là qu'on l'arrête.</p>
+    <ol><li>Ouvre le dossier dans ton Drive (bouton ci-dessous).</li><li><b>Partager</b> (⋮ sur téléphone, clic droit sur ordinateur).</li><li>À côté de <code>${esc(PARTAGE.adresse || "l'adresse de l'appli")}</code>, choisis <b>Supprimer l'accès</b>, puis <b>Enregistrer</b>.</li></ol>
+    <p><a class="btn" href="https://drive.google.com/drive/folders/${esc(id)}" target="_blank" rel="noopener">Ouvrir le dossier ↗</a></p>
+    <p class="note">Les documents déjà rangés dans tes logements restent dans l'appli.</p></div>`, () => { DOCS = { etat: "vide", fichiers: [], dossiers: {} }; view.docDossier = ""; render(); return true; }, { ok: "C'est fait", lecture: true });
 }
 /* ================= Importer un dossier entier : le .zip téléchargé depuis le Drive (sous-dossiers compris), ou plein de fichiers d'un coup =================
    Google ne donne pas le contenu d'un dossier choisi (accès "fichiers choisis seulement"). Ici, aucun accès Google n'est nécessaire :
@@ -4376,35 +4453,39 @@ async function envoyerImport(L) {
 const racineDe = f => f.racine || (f.ancetres || [])[0] || "";
 const rangeOu = id => S.fichiers.filter(x => x.driveId === id || (x.url || "").includes(id)).map(x => (bien(x.bienId) || {}).nom).filter(Boolean);
 function pageDocsDrive() {
-  if (!GCFG && !view.cfgDemandee) { view.cfgDemandee = true; fnDrive("config").then(c => { GCFG = c; if (pageCourante() === "docs") render(); }, () => {}); }
-  const complet = driveComplet(), proposerComplet = !complet && GCFG && GCFG.complet && estProprio();
-  const ds = dossiersChoisis(), q = view.docQ || "", lim = view.docLim || 40, cur = view.docDossier || "";
-  const dcur = cur && cur !== "_seuls" ? ds.find(d => d.id === cur) : null;
-  if (cur && cur !== "_seuls" && !dcur) view.docDossier = "";
+  if (PARTAGE.etat === "inconnu" && !view.partageDemande) { view.partageDemande = true; chargerPartage(); }
+  const complet = driveComplet(), pret = PARTAGE.etat === "pret";
+  const parts = racinesPartagees().map(r => ({ id: r.id, nom: r.nom || "Dossier", type: "partage" })), idsP = new Set(parts.map(x => x.id));
+  const tous = [...parts, ...dossiersChoisis().filter(d => !idsP.has(d.id)).map(d => ({ id: d.id, nom: d.nom || "Dossier", type: "choix" }))];
+  const q = view.docQ || "", lim = view.docLim || 40, cur = view.docDossier || "", dcur = cur && cur !== "_seuls" ? tous.find(d => d.id === cur) : null;
+  if (cur && cur !== "_seuls" && !dcur && !(DOCS.etat === "chargement" || DOCS.etat === "attente")) view.docDossier = "";
   const charge = DOCS.etat === "chargement" || DOCS.etat === "attente";
   const nbDans = id => DOCS.fichiers.filter(f => racineDe(f) === id).length, seuls = DOCS.fichiers.filter(f => !racineDe(f));
-  const etat = charge ? `<p class="note">⏳ Lecture de ton Drive… ${DOCS.n || 0} document${(DOCS.n || 0) > 1 ? "s" : ""}</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : "";
+  const etat = charge ? `<p class="note">⏳ Lecture de ton Drive… ${DOCS.n || 0} document${(DOCS.n || 0) > 1 ? "s" : ""}</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : DOCS.errPartage ? `<div class="empty">Dossiers partagés : ${esc(DOCS.errPartage)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : "";
   const recherche = ph => `<form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="${ph}" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>`;
+  const ajouter = (cls = "primary") => `<button class="${cls}" onclick="${pret ? "ajouterDossierPartage()" : "choisirDossierDrive()"}">+ Ajouter un dossier</button>`;
+  const unParUn = `<button class="small ghost" onclick="${DRIVEG.etat === "oui" ? "choisirFichiersDrive()" : "connecterDrive('choix')"}">📄 Des fichiers un par un</button>`;
   if (cur) {
-    const titre = dcur ? dcur.nom || "Dossier" : "Fichiers choisis un par un", n = dcur ? nbDans(dcur.id) : seuls.length;
+    const titre = dcur ? dcur.nom : "Fichiers choisis un par un", n = dcur ? nbDans(dcur.id) : seuls.length, partage = dcur && dcur.type === "partage";
     return `<a class="back" href="#docs" onclick="event.preventDefault();view.docDossier='';view.docQ='';render()">← Tous mes dossiers</a>
-    <div class="head"><div><h1>📁 ${esc(titre)}</h1><p>${n} fichier${n > 1 ? "s" : ""} visible${n > 1 ? "s" : ""} par l'appli</p></div></div>
-    <div class="row docs-actions">${dcur ? `${complet ? "" : `<button class="primary" onclick="choisirFichiersDrive('${dcur.id}')">+ Choisir des fichiers ici</button>`}<a class="btn" href="https://drive.google.com/drive/folders/${esc(dcur.id)}" target="_blank" rel="noopener">Ouvrir dans Drive ↗</a><button class="ghost" onclick="retirerDossierDrive('${dcur.id}')">Retirer ce dossier</button>` : `<button class="primary" onclick="choisirFichiersDrive()">+ Choisir des fichiers</button>`}</div>
-    ${!n && !charge && complet ? `<section class="card"><p class="note">📂 Ce dossier est vide. Ajoute des fichiers dedans dans ton Drive, puis touche <b>Actualiser</b>.</p><div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></section>` : ""}
-    ${!n && !charge && !complet ? `<section class="card"><p class="note">📂 <b>Rien ici pour l'instant.</b> Google ne donne pas à l'appli le contenu d'un dossier, seulement les fichiers que tu touches toi-même.</p>
-      <p class="note"><b>Pour tout prendre d'un coup</b> (sous-dossiers compris) : télécharge le dossier depuis ton Drive et importe-le.</p><div class="row">${boutonImport("primary")}</div>
-      <p class="note">Ou touche <b>+ Choisir des fichiers ici</b>, puis chaque fichier à garder (il passe en bleu), puis <b>Sélectionner</b>.</p>
-      ${proposerComplet ? `<p class="note"><b>Le mieux</b> : laisser l'appli lire tes dossiers en entier.</p><div class="row"><button class="primary" onclick="connecterDrive('complet')">📂 Lire mes dossiers en entier</button></div>` : ""}</section>` : ""}
+    <div class="head"><div><h1>📁 ${esc(titre)}</h1><p>${n} fichier${n > 1 ? "s" : ""}${partage ? " · partagé avec l'appli, lecture seule" : ""}</p></div></div>
+    <div class="row docs-actions">${dcur ? `<a class="btn" href="https://drive.google.com/drive/folders/${esc(dcur.id)}" target="_blank" rel="noopener">Ouvrir dans Drive ↗</a>${partage ? `<button class="ghost" onclick="retirerPartage('${dcur.id}')">Retirer</button>` : `${complet || DRIVEG.etat !== "oui" ? "" : `<button onclick="choisirFichiersDrive('${dcur.id}')">+ Choisir des fichiers ici</button>`}<button class="ghost" onclick="retirerDossierDrive('${dcur.id}')">Retirer</button>`}` : unParUn}</div>
+    ${!n && !charge && partage ? `<section class="card"><p class="note">📂 Rien dedans pour l'instant (ou Google n'a pas encore pris le partage en compte). Ajoute des fichiers dans ton Drive, puis touche <b>Actualiser</b>.</p><div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></section>` : ""}
+    ${!n && !charge && dcur && !partage && !complet ? `<section class="card"><p class="note">📂 Ce dossier a été ajouté avec l'ancienne méthode : Google ne montre à l'appli que les fichiers touchés un par un.</p>${pret ? `<p class="note"><b>Pour tout lire</b>, sous-dossiers compris : partage-le avec l'appli.</p><div class="row"><button class="primary" onclick="ajouterDossierPartage()">Partager ce dossier avec l'appli</button></div>` : ""}</section>` : ""}
     ${etat}${n > 8 ? recherche("Chercher dans ce dossier…") : ""}
     <div id="docres">${listeDocs(chercherDocsDans(q, cur), lim)}</div>`;
   }
-  const ligneDos = (id, ico, nom, n, sous) => `<li class="lr"><div class="lr-main" onclick="view.docDossier='${id}';view.docQ='';render();scrollTo(0,0)" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">${ico}</span><span class="tx"><b>${esc(nom)}</b><small>${charge ? "…" : n + " fichier" + (n > 1 ? "s" : "")}${sous ? " · " + sous : ""}</small></span>${ic("chevR", "chev")}</div></li>`;
-  return `<div class="head"><div><h1>Documents</h1><p>Les fichiers de ton Drive que tu as choisis. L'appli ne voit rien d'autre.</p></div>
+  const ligneDos = (d, n) => `<li class="lr"><div class="lr-main" onclick="view.docDossier='${d.id}';view.docQ='';render();scrollTo(0,0)" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">${d.ico || "📁"}</span><span class="tx"><b>${esc(d.nom)}</b><small>${charge ? "…" : n + " fichier" + (n > 1 ? "s" : "")}${d.type === "partage" ? " · partagé, lecture seule" : d.type === "choix" && !complet && !n ? " · ancienne méthode" : ""}</small></span>${ic("chevR", "chev")}</div></li>`;
+  const vieux = !complet && pret && tous.some(d => d.type === "choix" && !nbDans(d.id));
+  return `<div class="head"><div><h1>Documents</h1><p>Les dossiers de ton Drive que tu partages avec l'appli. Elle ne voit rien d'autre.</p></div>
     <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
   <section class="card"><div class="sec-head"><h2>📁 Mes dossiers Drive</h2></div>
-    ${ds.length || seuls.length ? `<ul class="lr-list">${ds.map(d => ligneDos(d.id, "📁", d.nom || "Dossier", nbDans(d.id), !charge && !nbDans(d.id) ? (complet ? "vide" : "touche pour choisir les fichiers") : "")).join("")}${seuls.length ? ligneDos("_seuls", "📄", "Fichiers choisis un par un", seuls.length) : ""}</ul>` : `<p class="note">Aucun dossier pour l'instant.</p>`}
-    <div class="row" style="margin-top:12px"><button class="primary" onclick="choisirDossierDrive()">+ Ajouter des dossiers ou fichiers</button></div>
-    ${complet ? `<p class="note" style="margin-top:10px">✅ L'appli lit tes dossiers en entier, sous-dossiers compris.</p>` : proposerComplet ? `<div class="drive-avant" style="margin-top:12px"><b>📂 Tes dossiers sont lus à moitié.</b> Avec l'accès actuel, Google ne donne à l'appli que les fichiers que tu touches un par un. Autorise la lecture de tes dossiers en entier (lecture seule) :<div class="row" style="margin-top:8px"><button class="small primary" onclick="connecterDrive('complet')">📂 Lire mes dossiers en entier</button></div></div>` : `<p class="note" style="margin-top:12px">💡 Google ne donne pas à l'appli le contenu d'un dossier. Pour tout récupérer d'un coup (sous-dossiers compris) :</p><div class="row">${boutonImport("small")}</div>`}</section>
+    ${tous.length || seuls.length ? `<ul class="lr-list">${tous.map(d => ligneDos(d, nbDans(d.id))).join("")}${seuls.length ? ligneDos({ id: "_seuls", nom: "Fichiers choisis un par un", ico: "📄" }, seuls.length) : ""}</ul>`
+      : `<p class="note">Partage les dossiers de tes locations avec l'appli, <b>comme avec un associé</b> : elle les lit en <b>lecture seule</b>, sous-dossiers compris, et range chaque document dans le bon logement. Rien d'autre de ton Drive.</p>`}
+    <div class="row" style="margin-top:12px">${ajouter()}</div>
+    ${vieux ? `<p class="note" style="margin-top:10px">💡 Les dossiers marqués "ancienne méthode" ne montrent que les fichiers touchés un par un : ouvre-les et partage-les avec l'appli pour tout lire.</p>` : ""}
+    ${complet ? `<div class="drive-avant" style="margin-top:12px">Tu as aussi autorisé la lecture de <b>tout</b> ton Drive (essai du 17/11). Avec le partage de dossiers, ce n'est plus utile. <button class="small" onclick="debrancherDrive()">Retirer cet accès</button></div>` : ""}
+    <div class="row" style="margin-top:10px">${unParUn}${boutonImport("small ghost")}</div></section>
   ${sectionLotsAuto() + sectionDossiersLogements()}
   ${sectionPropositionsDrive()}
   ${etat}
@@ -4439,7 +4520,7 @@ function rangerDocDrive(id) {
   const devine = (analyserDrive([f]).ranger || [])[0] || {};
   modal(`Ranger « ${esc(f.titre)} »`, `${sel("Logement", "bienId", devine.bienId || S.biens[0].id, S.biens.map(b => [b.id, b.nom]))}${sel("Catégorie", "cat", devine.cat || "Autre", CATS_DOC.map(c => [c, c]))}
     <p class="full note">Il est copié dans l'appli : tes associés pourront l'ouvrir sans accès à ton Drive.</p>`,
-    d => { importerDepuisDrive([{ id: f.id, name: f.titre, mimeType: f.type, size: f.taille, webViewLink: f.lien }], { bienId: d.bienId, cat: d.cat, bailId: devine.bienId === d.bienId ? devine.bailId || "" : "" }); }, { ok: "Ranger" });
+    d => { importerDepuisDrive([{ id: f.id, name: f.titre, mimeType: f.type, size: f.taille, webViewLink: f.lien, partage: f.partage }], { bienId: d.bienId, cat: d.cat, bailId: devine.bienId === d.bienId ? devine.bailId || "" : "" }); }, { ok: "Ranger" });
 }
 function listeDocs(res, lim) {
   if (!res.length) return DOCS.etat === "pret" ? `<div class="empty">Aucun document trouvé.</div>` : "";
@@ -4482,9 +4563,7 @@ function envoyerFichier(id) {
 }
 async function telechargerDrive(f) {
   const natif = /^application\/vnd\.google-apps\./.test(f.type);
-  const r = await fetch(natif ? `https://www.googleapis.com/drive/v3/files/${f.id}/export?mimeType=application/pdf` : `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media&supportsAllDrives=true`, { headers: { Authorization: "Bearer " + await jetonDrive() } });
-  if (!r.ok) throw new Error("Google Drive refuse ce fichier (" + r.status + ")");
-  const bl = await r.blob(); if (bl.size > 15 * 1024 * 1024) throw new Error("Fichier trop lourd pour un e-mail (15 Mo maximum).");
+  const bl = await blobDrive({ id: f.id, mimeType: f.type, partage: f.partage }); if (bl.size > 15 * 1024 * 1024) throw new Error("Fichier trop lourd pour un e-mail (15 Mo maximum).");
   const content = await new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(",")[1]); fr.readAsDataURL(bl); });
   return { content, mimeType: natif ? "application/pdf" : (f.type || bl.type) };
 }
@@ -5242,10 +5321,10 @@ function pageLegal() {
   const b = (t, x) => `<section class="card aide"><h2>${t}</h2>${x}</section>`;
   return `<div><a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>Mentions légales et confidentialité</h1><p>Ce qu'on fait de tes données, en clair.</p></div></div></div><div class="stack">
   ${b("📌 Qui fait l'appli", `<p>${EDITEUR.nom ? `Éditeur : ${esc(EDITEUR.nom)}${EDITEUR.contact ? " · " + esc(EDITEUR.contact) : ""}.` : "Appli de gestion locative indépendante."} Pour toute question : bouton <b>?</b> en bas à droite de l'écran (une fois connecté).</p><p>Hébergement de l'appli : Cloudflare, Inc. (Cloudflare Pages). Données : Supabase, serveurs situés en Irlande (Union européenne).</p>`)}
-  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : l'autorisation d'<b>envoyer</b> depuis ton Gmail (Google ne donne pas le droit de lire tes e-mails ; rangée dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane (clé en lecture seule, rangée dans un coffre chiffré : l'appli refuse une clé qui pourrait modifier ta compta).</li><li>Si tu connectes ton Google Drive : l'autorisation (rangée dans un coffre chiffré), ton adresse Google, et le nom et le lien des fichiers des seuls dossiers et fichiers que tu choisis dans le sélecteur de Google (sous-dossiers compris si tu autorises la lecture des dossiers en entier). L'appli ne lit pas le reste de ton Drive et n'y modifie rien. Les documents que tu ajoutes à un logement sont copiés dans l'appli pour tes associés.</li></ul>`)}
+  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : l'autorisation d'<b>envoyer</b> depuis ton Gmail (Google ne donne pas le droit de lire tes e-mails ; rangée dans un coffre chiffré) et les mouvements de ton compte bancaire via Pennylane (clé en lecture seule, rangée dans un coffre chiffré : l'appli refuse une clé qui pourrait modifier ta compta).</li><li>Si tu connectes ton Google Drive : l'autorisation (rangée dans un coffre chiffré), ton adresse Google, et le nom et le lien des fichiers des seuls dossiers et fichiers que tu choisis dans le sélecteur de Google ou que tu partages avec l'adresse de l'appli (avec leurs sous-dossiers). L'appli ne lit pas le reste de ton Drive et n'y modifie rien. Les documents que tu ajoutes à un logement sont copiés dans l'appli pour tes associés.</li></ul>`)}
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
-  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu autorises la lecture de tes dossiers en entier, Google donne un droit de lecture seule sur ton Drive : l'appli s'en sert uniquement pour lire le contenu des dossiers que tu as choisis, jamais le reste. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
+  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
   ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}
   ${b("🍪 Cookies", `<p>Aucun cookie publicitaire ni de mesure d'audience. L'appli garde seulement sur ton appareil ce qui sert à rester connecté et à fonctionner sans réseau.</p>`)}

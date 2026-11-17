@@ -36,7 +36,7 @@ const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); if (!v) KO++;
   // 1. Pas connecté : page Docs
   await p.evaluate(() => location.hash = 'docs'); await p.waitForTimeout(1200);
   await p.screenshot({ path: OUT + '/1-docs-pas-connecte.png', fullPage: true });
-  ok('Docs : bouton "Connecter mon Google Drive"', await p.evaluate(() => /Connecter mon Google Drive/.test(document.body.innerText)));
+  ok('Docs : bouton "+ Ajouter un dossier" (sans connexion Google obligatoire)', await p.evaluate(() => /\+ Ajouter un dossier/.test(document.body.innerText)));
   // 2. Fenêtre d'explication
   await p.evaluate(() => connecterDrive()); await p.waitForTimeout(1500);
   await p.screenshot({ path: OUT + '/2-explication.png' });
@@ -53,7 +53,7 @@ const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); if (!v) KO++;
   // 4. Connecté (Google simulé) : choix du dossier
   await p.evaluate(() => { fnDrive = async a => a === 'jeton' ? { access_token: 'faux', expires_in: 3600 } : { ok: true }; DRIVEG = { etat: 'oui', adresse: 'test-a@gmail.com' }; DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; location.hash = 'docs'; render(); });
   await p.waitForTimeout(800); await p.screenshot({ path: OUT + '/4-choisir.png', fullPage: true });
-  ok('demande de cocher les dossiers', await p.evaluate(() => /Coche les dossiers de tes locations/.test(document.body.innerText)));
+  ok('propose d\'ajouter un dossier', await p.evaluate(() => /\+ Ajouter un dossier/.test(document.body.innerText)));
   // sélecteur officiel de Google (simulé) : la personne coche ses fichiers, l'appli ne reçoit que ceux-là
   await p.evaluate(() => { window.ouvrirPicker = async () => [
     { id: 'b1', name: 'Bail Camille Martin.pdf', mimeType: 'application/pdf', size: 2000 }, { id: 'd1', name: 'DPE Studio Lyon.pdf', mimeType: 'application/pdf', size: 900 },

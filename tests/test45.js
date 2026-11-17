@@ -22,16 +22,16 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.waitForTimeout(1500); await p.evaluate(() => render()); await p.waitForTimeout(300);
   await p.screenshot({ path: __dirname + '/b45-accueil.png', fullPage: true });
   t(await p.isVisible('text=Mes dossiers Drive'), 'carte « Mes dossiers Drive » visible tout de suite');
-  t(await p.isVisible('button:has-text("+ Ajouter des dossiers")'), 'bouton « + Ajouter des dossiers » toujours visible');
+  t(await p.isVisible('button:has-text("+ Ajouter un dossier")'), 'bouton « + Ajouter des dossiers » toujours visible');
   t(await p.isVisible('.lr-main:has-text("02 - GTP Invest") >> text=2 fichiers'), 'GTP Invest : 2 fichiers (même choisi dans un sous-dossier)');
-  t(await p.isVisible('.lr-main:has-text("Compta") >> text=touche pour choisir'), 'dossier vide : invite à choisir les fichiers');
+  t(await p.isVisible('.lr-main:has-text("Compta") >> text=ancienne méthode'), 'dossier vide : invite à choisir les fichiers');
   t(await p.isVisible('.lr-main:has-text("Fichiers choisis un par un")'), 'fichiers isolés regroupés');
   // entrer dans un dossier, puis en ressortir
   await p.click('.lr-main:has-text("02 - GTP Invest")'); await p.waitForTimeout(300);
   await p.screenshot({ path: __dirname + '/b45-dossier.png', fullPage: true });
   t(await p.isVisible('h1:has-text("02 - GTP Invest")'), 'on entre dans le dossier');
   t(await p.isVisible('text=Tous mes dossiers'), 'lien « ← Tous mes dossiers »');
-  t(await p.isVisible('button:has-text("+ Choisir des fichiers ici")') && await p.isVisible('button:has-text("Retirer ce dossier")'), 'dans le dossier : Choisir des fichiers ici, Retirer ce dossier');
+  t(await p.isVisible('button:has-text("+ Choisir des fichiers ici")') && await p.isVisible('button:text-is("Retirer")'), 'dans le dossier : Choisir des fichiers ici, Retirer ce dossier');
   t(await p.locator('#docres .doc-l').count() === 2, 'seulement les 2 fichiers du dossier');
   // toucher un fichier : ses actions
   await p.click('.doc-l:has-text("Kbis GTP")'); await p.waitForTimeout(300);
@@ -62,7 +62,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(V.some(v => v.parent === 'root' && v.label === 'Mon Drive'), 'onglet « Mon Drive » pour remonter tout en haut');
   t(V.some(v => v.drives), 'onglet « Drives partagés »');
   // retirer un dossier demande confirmation et retire ses fichiers
-  await p.evaluate(() => { view.docDossier = 'GTP'; render(); }); await p.click('button:has-text("Retirer ce dossier")'); await p.waitForTimeout(200);
+  await p.evaluate(() => { view.docDossier = 'GTP'; render(); }); await p.click('button:text-is("Retirer")'); await p.waitForTimeout(200);
   t(await p.isVisible('#overlay >> text=Il reste dans ton Drive'), 'confirmation avant de retirer un dossier'); await p.click('#cyes'); await p.waitForTimeout(800);
   t(await p.evaluate(() => !dossiersChoisis().some(d => d.id === 'GTP') && !choisisDrive().some(f => f.dossier === 'GTP') && !view.docDossier), 'dossier et ses fichiers retirés, retour à l’accueil');
   t(!errs.length, 'aucune erreur JS ' + errs.join(' | '));

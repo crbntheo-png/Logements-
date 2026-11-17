@@ -47,7 +47,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.evaluate(() => choisisDrive().length) === 5, 'pas de doublon dans la liste des fichiers choisis');
   t(await p.evaluate(() => DOCS.etat === 'pret' && DOCS.fichiers.length === 5), 'page Docs : les fichiers choisis sont analysés');
   await p.evaluate(() => { closeOverlay(); S.sci.driveChoisis = []; save(); DOCS = { etat: 'vide', fichiers: [], dossiers: {} }; go('docs'); render(); }); await p.waitForTimeout(800); await p.screenshot({ path: __dirname + '/b43-docs.png' });
-  t(await p.isVisible('button:has-text("Choisir mes dossiers")'), 'sans rien de choisi : bouton « Choisir mes dossiers »');
+  t(await p.isVisible('button:has-text("+ Ajouter un dossier")'), 'sans rien de choisi : bouton « Choisir mes dossiers »');
   // Dossiers entiers : on en coche 2 d'un coup ; Google montre le contenu de l'un, rien pour l'autre
   await p.route('https://www.googleapis.com/drive/v3/files?**', r => { const q = new URL(r.request().url()).searchParams.get('q');
     const L = /'dosA' in parents/.test(q) ? [{ id: 'a1', name: 'Bail Jean Test.pdf', mimeType: 'application/pdf' }, { id: 'sub', name: 'Diagnostics', mimeType: 'application/vnd.google-apps.folder' }] : /'sub' in parents/.test(q) ? [{ id: 'a2', name: 'DPE studio 2026.pdf', mimeType: 'application/pdf' }] : [];
@@ -59,15 +59,15 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.evaluate(() => dossiersChoisis().map(d => d.nom).join(',')) === 'Studio Rennes,Compta', '2 dossiers cochés d\u2019un coup');
   t(await p.evaluate(() => DOCS.etat === 'pret' && DOCS.fichiers.length === 2 && DOCS.fichiers.some(f => f.chemin.join('/') === 'Studio Rennes/Diagnostics')), 'contenu lu, sous-dossiers compris');
   await p.evaluate(() => render()); await p.waitForTimeout(400); await p.screenshot({ path: __dirname + '/b43-dossiers.png', fullPage: true });
-  t(await p.isVisible('.lr-main:has-text("Compta") >> text=touche pour choisir'), 'dossier fermé par Google : invite à l\u2019ouvrir et toucher ses fichiers');
+  t(await p.isVisible('.lr-main:has-text("Compta") >> text=ancienne méthode'), 'dossier fermé par Google : invite à l\u2019ouvrir et toucher ses fichiers');
   await p.evaluate(() => { window.__picker = [{ id: 'c1', name: 'Facture plombier.pdf', mimeType: 'application/pdf', parent: 'dosB' }]; });
   await p.click('.lr-main:has-text("Compta")'); await p.waitForTimeout(300); await p.click('button:has-text("+ Choisir des fichiers ici")'); await p.waitForTimeout(1500);
   t(await p.evaluate(() => window.__args[3] === 'dosB' && DOCS.fichiers.some(f => f.titre === 'Facture plombier.pdf' && f.chemin[0] === 'Compta')), 'le sélecteur s\u2019ouvre dans le dossier, les fichiers touchés y sont rangés');
   t(await p.evaluate(() => SCOPE_DRIVE.endsWith('drive.file') && !SCOPE_DRIVE.includes('readonly')), 'accès « fichiers choisis » : jamais de lecture large');
   // revenir dessus : ajouter, retirer
-  t(await p.isVisible('button:has-text("Retirer ce dossier")'), 'dans le dossier : Retirer ce dossier');
-  await p.click('button:has-text("Retirer ce dossier")'); await p.waitForTimeout(200); await p.click('#cyes'); await p.waitForTimeout(1500);
-  t(await p.evaluate(() => dossiersChoisis().length === 1) && await p.isVisible('text=+ Ajouter des dossiers'), 'dossier retiré, retour à la liste avec + Ajouter');
+  t(await p.isVisible('button:text-is("Retirer")'), 'dans le dossier : Retirer ce dossier');
+  await p.click('button:text-is("Retirer")'); await p.waitForTimeout(200); await p.click('#cyes'); await p.waitForTimeout(1500);
+  t(await p.evaluate(() => dossiersChoisis().length === 1) && await p.isVisible('text=+ Ajouter un dossier'), 'dossier retiré, retour à la liste avec + Ajouter');
   await p.evaluate(() => { window.__picker = [{ id: 'dosA', name: 'Studio Rennes', mimeType: 'application/vnd.google-apps.folder' }]; }); await p.evaluate(() => choisirDossierDrive()); await p.waitForTimeout(800);
   t(await p.evaluate(() => dossiersChoisis().length === 1), 'pas de doublon en recochant le même dossier');
   await p.evaluate(() => reglage('drive')); await p.waitForTimeout(400);
