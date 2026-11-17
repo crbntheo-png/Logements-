@@ -32,6 +32,21 @@ Règle pour chaque session :
 - [ ] **Avenants n° 1 Steve et Margottet** (ordures dans les charges dès janvier 2027) : enregistrés dans l'appli, à envoyer et faire signer.
 - [ ] **Margottet – Fravelle** : loyer de novembre pas reçu (dû le 10/11).
 
+## Feuille de route du 17/11 (comparaison Qalimo, Rentila, ImmobilierLoyer)
+
+Page visuelle : https://claude.ai/artifact/VDxQf3ztq7bFiADKC77K6o. Devant les autres : SCI (associés, AG, 2072), IA (Drive, baux), DPE/risques. Manques : banque toutes banques, signature, espace locataire, quittance automatique, trésorerie.
+
+Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
+1. **Signature au doigt** (EDL, bail, avenant) : zone de signature sur l'écran pour bailleur et locataire, ajoutée au PDF (jsPDF addImage) avec date, heure, nom ; PDF signé rangé dans le logement.
+2. **Quittance automatique à réception du loyer** (Pennylane) : envoi seul ou après accord (choix dans Réglages).
+3. **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
+4. **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
+5. **Trésorerie 12 mois** + alerte de seuil.
+6. **Activité entre associés** ("X a marqué le loyer payé").
+7. **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
+
+Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
+
 ## Historique
 
 ### 18/11/2026 — bilan de l'IA, propositions modifiables
