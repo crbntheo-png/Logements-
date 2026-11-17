@@ -103,8 +103,9 @@ Deno.serve(async (req) => {
     if (!Deno.env.get("ANTHROPIC_API_KEY")) return rep({ erreur: "L'IA n'est pas encore installée sur le serveur." }, 400);
     if (c.action === "credits") return rep({ ok: true, ...(await credits(admin, u.user)) });
     const moi = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: "Bearer " + jeton } } });
-    const { data: membre } = await moi.rpc("est_editeur", { e: c.espace });
-    if (!membre) return rep({ erreur: "Accès refusé" }, 403);
+    // Les crédits IA appartiennent au propriétaire de l'espace : ses associés ne peuvent pas les utiliser
+    const { data: proprio } = await moi.rpc("est_proprietaire", { e: c.espace });
+    if (!proprio) return rep({ erreur: "L'IA est réservée au propriétaire de l'espace : c'est lui qui gère ses crédits.", raison: "proprio" }, 403);
     if (c.action === "bail") return await lireUnBail(admin, u.user, c);
     const illimite = sansLimite(u.user.email);
     const { data: ok } = await admin.rpc("ia_reserver", { u: u.user.id, max_jour: illimite ? 100000 : NB_JOUR(), max_mois: illimite ? 100000 : NB_MOIS(), budget: illimite ? 1e15 : BUDGET() });

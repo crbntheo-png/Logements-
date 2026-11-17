@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "421c510", "date": "2026-11-17T18:49"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "5e8a6a8", "date": "2026-11-17T19:06"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1253,27 +1253,46 @@ function listeMembres() {
   return `<ul class="todo">${MEMBRES.membres.map(x => `<li>${avatar(x.email || "?")}<span class="tx">${esc(x.email || "")}${x.user_id === moi ? " (toi)" : ""}<small>${x.role === "proprietaire" ? "Propriétaire de l'espace" : x.role === "lecteur" ? "👀 Lecture seule" : "Peut modifier"}</small></span>${proprio && x.user_id !== moi ? `<button class="small" onclick="changerRole('${x.user_id}','${x.role === "lecteur" ? "membre" : "lecteur"}')">${x.role === "lecteur" ? "Peut modifier" : "Lecture seule"}</button><button class="small ghost" onclick="retirerMembre('${x.user_id}')">Retirer</button>` : ""}</li>`).join("")}
     ${MEMBRES.invitations.map(x => `<li><span class="avatar vide" aria-hidden="true">✉</span><span class="tx">${esc(x.email)}<small>${x.role === "lecteur" ? "👀 Lecture seule · " : ""}Invité · rejoindra l'espace à sa première connexion</small></span><button class="small ghost" onclick="annulerInvitation('${x.id}')">Annuler</button></li>`).join("")}</ul>`;
 }
+const LIEN_APPLI = "https://sci-gestion-locative.com";
 async function inviter(f) {
-  const email = f.email.value.trim().toLowerCase(); if (!email) return;
-  const role = f.role ? f.role.value : "membre";
-  let r = await SB.from("invitations").insert(role === "lecteur" ? { espace_id: ESPACE, email, role } : { espace_id: ESPACE, email });
-  if (r.error) { toast(/duplicate|unique/i.test(r.error.message) ? "Cette personne est déjà invitée." : "Invitation impossible : " + r.error.message); return; }
-  f.reset(); toast("Invitation enregistrée. Envoie-lui le lien de l'appli : elle se connecte avec " + email + ".");
-  chargerMembres();
+  const emails = [...new Set(String(f.email.value || "").toLowerCase().split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))];
+  const mauvais = emails.filter(x => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)); if (!emails.length) return;
+  if (mauvais.length) { toast("Adresse incorrecte : " + mauvais.join(", ")); return; }
+  const role = f.role ? f.role.value : "membre", ok = [], deja = [];
+  for (const email of emails) {
+    const r = await SB.from("invitations").insert(role === "lecteur" ? { espace_id: ESPACE, email, role } : { espace_id: ESPACE, email });
+    if (!r.error) ok.push(email); else if (/duplicate|unique/i.test(r.error.message)) deja.push(email); else { toast("Invitation impossible pour " + email + " : " + r.error.message); }
+  }
+  f.reset(); chargerMembres();
+  if (deja.length && !ok.length) { toast(deja.length > 1 ? "Ces personnes sont déjà invitées." : "Cette personne est déjà invitée."); }
+  if (ok.length || deja.length) envoyerInvitation([...ok, ...deja], role);
+}
+/* L'invitation est enregistrée : il reste à prévenir les personnes (WhatsApp, SMS, e-mail…) avec le bon lien et la bonne adresse */
+function texteInvitation(emails, role) {
+  const nom = S.sci.nom || "mon espace", qui = S.sci.gerant || "", pl = emails.length > 1;
+  return `Bonjour, ${pl ? "je vous ai invités" : "je t'ai invité"} dans "${nom}" sur l'appli Gestion locative${role === "lecteur" ? " (en lecture seule)" : ""}.\n\n1. ${pl ? "Ouvrez" : "Ouvre"} ce lien : ${LIEN_APPLI}\n2. ${pl ? "Touchez" : "Touche"} "Continuer avec Google" (ou "Pas de compte Google ? Recevoir un code par e-mail") avec ${pl ? "l'adresse à laquelle je vous ai invités" : "l'adresse " + emails[0]}.\n3. ${pl ? "Vous arrivez" : "Tu arrives"} directement dans l'espace.\n\nSur iPhone, ${pl ? "ouvrez" : "ouvre"} le lien dans Safari pour pouvoir installer l'appli sur l'écran d'accueil.${qui ? "\n\n" + qui : ""}`;
+}
+function envoyerInvitation(emails, role) {
+  const txt = texteInvitation(emails, role);
+  modal(emails.length > 1 ? `${emails.length} personnes invitées` : "Invitation enregistrée", `<div class="full">${grosMsg("attention", "📤 Dernière étape : préviens-les", `Elles ne reçoivent rien automatiquement. Envoie-leur ce message (WhatsApp, SMS ou e-mail). Elles devront se connecter avec <b>${emails.map(esc).join(", ")}</b>, sinon elles ne verront pas l'espace.`)}
+    <textarea id="txtInvit" rows="9" style="width:100%" aria-label="Message d'invitation">${esc(txt)}</textarea>
+    <div class="row" style="margin-top:10px">${navigator.share ? `<button type="button" class="primary" onclick="navigator.share({ text: document.getElementById('txtInvit').value }).catch(() => {})">📤 Envoyer (WhatsApp, SMS…)</button>` : ""}<button type="button" onclick="copierTexte(document.getElementById('txtInvit').value)">📋 Copier le message</button>
+    <a class="btn" href="mailto:${encodeURIComponent(emails.join(","))}?subject=${encodeURIComponent("Invitation : " + (S.sci.nom || "gestion locative"))}&body=${encodeURIComponent(txt)}">✉️ Par e-mail</a></div></div>`, () => true, { ok: "Fermer", lecture: true });
 }
 async function retirerMembre(uid) { confirmer("Retirer cette personne de l'espace ? Elle ne verra plus rien.", async () => { const r = await SB.from("membres").delete().match({ espace_id: ESPACE, user_id: uid }); if (r.error) toast(r.error.message); chargerMembres(); }); }
 async function annulerInvitation(id) { await SB.from("invitations").delete().eq("id", id); chargerMembres(); }
 function sectionMembres() {
   setTimeout(chargerMembres, 0);
   return `<section class="card"><h2>👤 Membres de l'espace</h2>
-    <p class="note">Chaque membre voit tout cet espace sur son propre téléphone. "Peut modifier" : comme toi. "Lecture seule" : il regarde les chiffres et les documents, sans rien changer ni envoyer (parfait pour un associé ou le comptable). Pour inviter quelqu'un : entre son e-mail, puis envoie-lui le lien de l'appli.</p>
+    <p class="note">Chaque membre voit tout cet espace sur son propre téléphone. "Peut modifier" : comme toi. "Lecture seule" : il regarde les chiffres et les documents, sans rien changer ni envoyer (parfait pour un associé ou le comptable). Pour inviter : entre une ou plusieurs adresses e-mail, puis envoie le message que l'appli prépare.</p>
+    ${estProprio() ? `<p class="note">🔒 Les <b>crédits IA</b> (analyse du Drive, lecture des baux) sont à toi : tes associés ne peuvent pas les utiliser.</p>` : ""}
     <div id="membres">${listeMembres()}</div>
-    <form class="row" style="margin-top:12px" onsubmit="event.preventDefault();inviter(this)"><input name="email" id="inv_email" type="email" required placeholder="email@exemple.fr" aria-label="E-mail de la personne à inviter" style="flex:1;min-width:200px"><select name="role" aria-label="Ce qu'elle peut faire" style="flex:1;min-width:160px"><option value="membre">Peut modifier</option><option value="lecteur">Lecture seule (associé, comptable)</option></select><button class="primary">Inviter</button></form>
+    <form class="row" style="margin-top:12px" onsubmit="event.preventDefault();inviter(this)"><input name="email" id="inv_email" type="text" inputmode="email" autocomplete="off" required placeholder="email@exemple.fr (plusieurs : séparés par une virgule)" aria-label="E-mail des personnes à inviter" style="flex:1;min-width:200px"><select name="role" aria-label="Ce qu'elle peut faire" style="flex:1;min-width:160px"><option value="membre">Peut modifier</option><option value="lecteur">Lecture seule (associé, comptable)</option></select><button class="primary">Inviter</button></form>
     <div class="row" style="margin-top:12px"><button class="small" onclick="partagerLien()">📤 Partager le lien de l'appli</button><button class="small ghost" onclick="choisirEspace()">Mes espaces</button></div>
   </section>`;
 }
 function partagerLien() {
-  const url = location.origin + location.pathname;
+  const url = LIEN_APPLI;
   if (navigator.share) navigator.share({ title: "Appli de gestion locative", text: "Ouvre ce lien (sur iPhone : dans Safari), suis les étapes pour installer l'appli, puis connecte-toi avec ton e-mail :", url }).catch(() => {});
   else copierTexte(url);
 }
@@ -3615,7 +3634,7 @@ function editBail(id, bienId, pre) {
   if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
   if (!S.biens.length) { confirmer("Ajoutez d'abord un bien.", () => editBien()); return; }
   modal(id ? "Modifier le locataire" : "Nouveau locataire", `
-    ${id ? "" : `<div class="full"><button type="button" class="primary" onclick="remplirDepuisBail(this)">🤖 Remplir depuis le bail (PDF ou photo)</button><div class="note" id="bailLu" aria-live="polite"></div></div>`}
+    ${id ? "" : `<div class="full"><button type="button" class="primary" onclick="remplirDepuisBail(this)">${SB && !estProprio() ? "📄" : "🤖"} Remplir depuis le bail (PDF ou photo)</button><div class="note" id="bailLu" aria-live="polite"></div></div>`}
     <fieldset><legend>Locataire</legend>
     ${fld("Nom et prénom", "nom", b.nom, "text", "", "required")}${fld("Colocataire(s) / co-titulaire(s)", "colocataires", b.colocataires)}
     ${fld("Téléphone", "tel", b.tel, "tel")}${fld("E-mail", "email", b.email, "email")}
@@ -4444,7 +4463,7 @@ function sectionIA() {
   if (!r) return `<section class="card ia-card"><h2>🤖 Laisser l'IA organiser</h2>
     <p class="note">Elle regarde les noms de tes dossiers et propose : quel dossier correspond à quel logement, les logements à créer, les anciens locataires. Tu valides avant que quoi que ce soit change.</p>
     ${erreur}${bloque ? msgBlocage(c) : c && !c.illimite ? grosMsg("attention", `⚠️ ${plur(c.par_mois, "analyse")} par mois`, `${resteIA(c)} Partage d'abord tous tes dossiers, puis lance une seule analyse.`) : ""}
-    ${bouton("primary big", "🤖 Analyser mon Drive")}</section>`;
+    ${bouton("primary big", "🤖 Analyser mon Drive")}<p class="note" style="margin-top:8px">🔒 Ces crédits sont à toi : tes associés ne peuvent pas les utiliser.</p></section>`;
   const bienDe = x => x.bien_id && bien(x.bien_id) ? x.bien_id : ((S.biens.find(bi => x.bien_a_creer && normTxt(bi.nom) === normTxt(x.bien_a_creer)) || {}).id || "");
   const P = propositionsIA(), info = [...(r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))).map(x => { const bid = bienDe(x), fb = bid && bailDansDrive(x.nom); return `<li class="deux"><span class="tx">👤 Locataire actuel probable : <b>${esc(x.nom)}</b>${bid ? " · " + esc(bien(bid).nom) : x.bien_a_creer ? " · " + esc(x.bien_a_creer) + " (logement à créer d'abord)" : ""}<small>${esc(x.raison || "")}</small></span>${bid ? `<span class="acts-li">${fb ? `<button type="button" class="small primary" onclick="creerDepuisBailDrive('${fb.id}','${bid}')">🤖 Créer depuis son bail</button>` : `<button type="button" class="small" onclick="editBail(null,'${bid}')">Ajouter</button>`}</span>` : ""}</li>`; }),
     ...(r.biens_sans_dossier || []).filter(x => bien(x.bien_id)).map(x => `<li><span class="tx">❓ <b>${esc(bien(x.bien_id).nom)}</b> : aucun dossier trouvé<small>${esc(x.remarque || "")}</small></span></li>`)];
@@ -5309,7 +5328,8 @@ async function remplirDepuisBail(btn) {
   const f = document.getElementById("mform"), info = x => { const n = document.getElementById("bailLu"); if (n) n.textContent = x; };
   const file = await choisirFichier("application/pdf,image/*"); if (!file) return;
   btn.disabled = true;
-  if (SB && !MCP && ESPACE) {
+  if (SB && !MCP && ESPACE && !estProprio()) info("L'IA est réservée au propriétaire de l'espace : lecture simple du bail…");
+  if (SB && !MCP && ESPACE && estProprio()) {
     info("🤖 L'IA lit le bail… (30 secondes environ)");
     try { const j = await lireBailIA(file, file.type || ""); remplirFormBail(f, j.bail, j.credits); btn.disabled = false; return; }
     catch (e) { info((e.raison ? e.message : "L'IA n'a pas pu lire le bail (" + e.message + ").") + " Lecture simple à la place…"); }

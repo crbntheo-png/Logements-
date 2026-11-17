@@ -34,6 +34,12 @@ Règle pour chaque session :
 
 ## Historique
 
+### 18/11/2026 — nouveaux utilisateurs, invitations, IA réservée au propriétaire
+- Vérifié de bout en bout avec de vrais comptes neufs (test50, 11/11) : connexion → "Bienvenue / Créer mon espace" → propriétaire ; crédits normaux pour tout nouveau compte (2/jour, 5/mois d'analyses ; 15 lectures de documents/mois ; budget global 3 $/mois) ; Théo seul sans limite (IA_SANS_LIMITE).
+- Invitations : plusieurs adresses d'un coup (séparées par virgules ou espaces), puis fenêtre "📤 Dernière étape : préviens-les" en grand, avec un message prêt (lien https://sci-gestion-locative.com, nom de l'espace, adresse à utiliser, tutoiement ou vouvoiement selon le nombre) : Envoyer (WhatsApp, SMS…), Copier, Par e-mail. "Partager le lien" donne toujours le nouveau domaine.
+- Crédits IA réservés au propriétaire de l'espace : le serveur `ia` (v6) vérifie `est_proprietaire` (403 "réservée au propriétaire" sinon) ; dans l'appli, un associé a la lecture simple du bail, sans IA ; Réglages › Membres et la carte IA disent "les crédits IA sont à toi".
+- test9 (ancien test d'invitation du 13/11) échoue aussi sans ces changements : obsolète, remplacé par test50.
+
 ### 18/11/2026 — l'IA lit les baux et remplit la fiche du locataire
 - Comparaison avec Qalimo (qalimo.fr) : l'appli a déjà relances en 3 niveaux, quittances, avis d'échéance, IRL, régularisation, états des lieux, candidats, aide à la déclaration. Manquent surtout : signature électronique et recommandé en ligne (services payants), synchronisation bancaire sans Pennylane (compte chez un fournisseur à ouvrir). Choix de la mise en prod : créer un locataire depuis son bail, sans rien taper (Qalimo fait tout saisir).
 - Serveur `ia` (v5) : action `bail` (Claude Opus 5.5, sortie JSON imposée) : 21 champs (locataires, colocataires, contact, adresse précédente, type, date d'effet, loyer HC, charges et mode, jour de paiement, dépôt, IRL, révision, garant, Visale, clauses particulières, adresse du logement, remarques). Texte du PDF envoyé quand il est lisible (moins cher), sinon le PDF scanné ou la photo. Compteur séparé : 10 lectures par jour, 15 par mois (IA_DOCS_JOUR / IA_DOCS_MOIS), même budget global ; lecture ratée non comptée (supabase/ia_docs.sql).
