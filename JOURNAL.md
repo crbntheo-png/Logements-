@@ -38,7 +38,7 @@ Page visuelle : https://claude.ai/artifact/VDxQf3ztq7bFiADKC77K6o. Devant les au
 
 Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 1. ✅ (18/11) **Signature au doigt** (EDL, bail, avenant) : zone de signature sur l'écran pour bailleur et locataire, ajoutée au PDF (jsPDF addImage) avec date, heure, nom ; PDF signé rangé dans le logement.
-2. **Quittance automatique à réception du loyer** (Pennylane) : envoi seul ou après accord (choix dans Réglages).
+2. ✅ (18/11) **Quittance automatique à réception du loyer** (Pennylane) : envoi seul ou après accord (choix dans Réglages).
 3. **Espace locataire simple** : lien privé par locataire (sans compte) : quittances, bail, ce qu'il doit, signaler un problème avec photo. 2 sessions.
 4. **IA lit tous les papiers** (taxe foncière, assurance, DPE, factures) : remplit montant, échéance, logement. Crédits "lectures de documents".
 5. **Trésorerie 12 mois** + alerte de seuil.
@@ -48,6 +48,14 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — feuille de route, étape 2 : quittance dès que le loyer arrive
+- Quand la banque (Pennylane) montre un loyer payé en entier (`rapprocherBanque` garde maintenant la liste `RECUS`), l'appli réagit, seulement pour les loyers qui viennent d'arriver (jamais l'arriéré) :
+  - option arrêtée (par défaut) : message "💶 Loyer de Jean reçu : 500 €" avec le bouton "Envoyer la quittance" (ouvre la fenêtre habituelle, on valide) ;
+  - option activée (Réglages › 🧾 Quittances automatiques, propriétaire seulement, Gmail branché avec Google) : la quittance part toute seule au locataire, message "🧾 1 quittance envoyée automatiquement (Marie)". Pas de double envoi (quittance notée envoyée), rien pour un paiement partiel, rien chez un associé (ni son appareil ni son Gmail).
+- Limite : ça se fait quand le propriétaire ouvre l'appli (synchro de la banque), pas la nuit appli fermée. Le faire côté serveur demanderait de fabriquer le PDF sur le serveur.
+- Tests : test55 (vraie base, envoi simulé, aucun vrai e-mail) 11/11 ; test5, test38, test53 OK. En ligne.
+- Pas vérifié : avec un vrai virement sur le compte de GTP.
 
 ### 18/11/2026 — feuille de route, étape 1 : signer au doigt
 - Bouton "✍️ Signer" sur les documents qui ont une zone de signature : bail, état des lieux, avenant, plan d'apurement (pas sur les quittances ni les courriers). Une ligne par signataire (bailleur, locataire), nom prérempli et modifiable, cadre où l'on signe au doigt, Effacer / Valider. Refusé sans dessin ou sans nom.

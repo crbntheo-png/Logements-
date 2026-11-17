@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "4884d1a", "date": "2026-11-17T22:31"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "91fc0ec", "date": "2026-11-17T22:37"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -937,6 +937,7 @@ async function chargerBanque(actualiser) {
     if (ESPACE !== id) return;
     BANQUE = { etat: "ok", lien: l.data || null, comptes: c.data || [], ops: (o.data || []).map(x => ({ ...x, montant: +x.montant, tx_id: String(x.tx_id) })) };
     const n = rapprocherBanque(); if (n) toast(`🏦 ${n} virement${n > 1 ? "s" : ""} de locataire reconnu${n > 1 ? "s" : ""} et enregistré${n > 1 ? "s" : ""}`);
+    if (RECUS.length) setTimeout(() => apresLoyersRecus(), n ? 2500 : 0);
   } catch (e) { BANQUE.etat = "erreur"; }
   if (MODE === "partage") render();
 }
@@ -974,9 +975,41 @@ function rapprocherBanque() {
     }
     lies.add(op.tx_id); n++;
   }
+  RECUS = soldes;
   if (n) save();
   else if (modif) save();
   return n;
+}
+/* Loyers payés en entier que la banque vient de montrer : quittance envoyée toute seule (option du propriétaire)
+   ou proposée en un geste. Seulement ceux qui viennent d'arriver, jamais l'arriéré. */
+let RECUS = [];
+const quittanceAutoPossible = () => !!(S.sci.quittanceAuto && estProprio() && GMAIL && GMAIL.mode === "google");
+async function apresLoyersRecus() {
+  const L = RECUS.map(([id, m]) => { const b = bail(id), e = b && echeance(b, m); return e && qAFaire(e) ? { b, m, e } : null; }).filter(Boolean); RECUS = [];
+  if (!L.length) return;
+  const avec = L.filter(x => x.b.email), noms = L.map(x => nomCourt(x.b.nom)).join(", ");
+  if (quittanceAutoPossible() && avec.length) {
+    let n = 0; for (const x of avec) { if (await envoyerQuittanceValidee(x.b.id, x.m, x.b.email)) n++; else break; }
+    const rate = avec.length - n, sans = L.length - avec.length;
+    toast(n ? `🧾 ${n} quittance${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""} automatiquement (${avec.slice(0, n).map(x => nomCourt(x.b.nom)).join(", ")})${rate ? ` · ${rate} non envoyée${rate > 1 ? "s" : ""}` : ""}${sans ? ` · ${sans} sans e-mail` : ""}` : "🧾 Quittance automatique pas envoyée : vérifie ton Gmail (Réglages › Envoi des e-mails).");
+    return;
+  }
+  toastActions(L.length > 1 ? `💶 ${L.length} loyers reçus (${noms})` : `💶 Loyer de ${noms} reçu : ${eur(L[0].e.du)}`, [[L.length > 1 ? "Envoyer les quittances" : "Envoyer la quittance", "envoyerToutesQuittances()"]]);
+}
+function basculerQuittanceAuto(c) {
+  S.sci.quittanceAuto = c.checked; save();
+  toast(c.checked ? "✓ Les quittances partiront toutes seules dès que le loyer arrive sur le compte" : "Quittances automatiques arrêtées : l'appli te les proposera");
+  const z = document.getElementById("qauto-etat"); if (z) z.innerHTML = etatQuittanceAuto();
+  const r = document.querySelector("#rgl-quittances summary small"); if (r) r.textContent = c.checked ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive";
+}
+const etatQuittanceAuto = () => S.sci.quittanceAuto ? grosMsg("ok", "✅ Activé", "Dès que Pennylane montre le loyer payé en entier, la quittance part au locataire depuis ton Gmail. Seulement les nouveaux loyers, jamais les anciens. Ça se fait quand tu ouvres l'appli (pas de nuit, appli fermée).") : `<p class="note">Arrêté : quand un loyer arrive, l'appli te propose d'envoyer la quittance en un geste.</p>`;
+function sectionQuittanceAuto() {
+  if (!estProprio() || !SB) return "";
+  return `<section class="card"><h2>🧾 Quittances automatiques</h2>
+    <label class="fl chk"><input type="checkbox" id="qauto" ${S.sci.quittanceAuto ? "checked" : ""} onchange="basculerQuittanceAuto(this)"> <span>Envoyer la quittance toute seule dès que le loyer arrive sur le compte</span></label>
+    <div id="qauto-etat">${etatQuittanceAuto()}</div>
+    ${GMAIL && GMAIL.mode === "google" ? "" : `<p class="note">⚠️ Il faut d'abord brancher ton Gmail (rubrique Envoi des e-mails) : les quittances partent de ton adresse.</p>`}
+    ${BANQUE.lien ? "" : `<p class="note">⚠️ Il faut la banque branchée (Réglages › Banque › Pennylane) : c'est elle qui montre que le loyer est arrivé.</p>`}</section>`;
 }
 const ilYa = d => { const m = Math.round((Date.now() - new Date(d)) / 60000); return m < 2 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `le ${fds(new Date(d))}`; };
 function carteBanqueAccueil() {
@@ -3491,6 +3524,7 @@ function pageReglages() {
       : rubrique("drive", "📁", "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
     rubrique("banque", "🏦", "Banque", BANQUE.lien ? `Pennylane branché${BANQUE.lien.erreur ? " · ⚠️ à rebrancher" : ""}` : "Pas branchée · Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
+    estProprio() && SB ? rubrique("quittances", "🧾", "Quittances automatiques", S.sci.quittanceAuto ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive", sansCarte(sectionQuittanceAuto())) : "",
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
