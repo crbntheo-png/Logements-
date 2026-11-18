@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "3267a5c", "date": "2026-11-18T19:17"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "a8f083b", "date": "2026-11-18T19:24"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -179,6 +179,8 @@ button.small .ic { width: 16px; height: 16px; }
 .nv-ico { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-size: 1.2rem; background: var(--accent-soft); }
 .nv-liste { list-style: none; margin: 0; padding: 0; display: grid; } .nv-liste li { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); } .nv-liste li:last-child { border-bottom: 0; }
 .nv-liste .tx { display: grid; gap: 2px; min-width: 0; } .nv-liste small { color: var(--muted); line-height: 1.4; } .nv-liste a { font-weight: 600; font-size: .9rem; }
+#app .portails-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 4px; box-shadow: inset 0 0 0 1.5px var(--accent-soft), var(--sh-1); } #app .portails-cta .tx { flex: 1 1 200px; display: grid; gap: 2px; min-width: 0; } #app .portails-cta small { color: var(--muted); } #app .portails-cta .row { width: 100%; }
+.ajout-doc { display: grid; gap: 12px; } .ajout-doc .btn { justify-content: center; }
 .cand-piece span { display: block; font-weight: 400; } .cand-piece small { color: var(--muted); }
 .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.info { background: var(--surface-3); color: var(--muted); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
@@ -2584,6 +2586,8 @@ function render0() {
   else if (h === "historique") html = pageHistorique();
   else if (h === "bientot") html = pageBientot();
   else if (h === "nouveautes") html = pageNouveautes();
+  else if (h === "partage") html = pagePartageRecu();
+  else if (h === "ajouter-doc") html = pageAjouterDoc();
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
@@ -2820,6 +2824,8 @@ function pageAccueil(T) {
   </section>
   ${SB && ESPACES.length > 1 ? `<a class="card banque-mini" href="#tous"><span class="bq-ico" aria-hidden="true">🏢</span><span class="tx"><small>Tous mes espaces</small><b>${ESPACES.length} espaces sur un écran</b><small>Loyers, retards et urgences de chacun</small></span></a>` : ""}${carteBanqueAccueil()}${carteActivite()}
   <section><div class="sec-head"><h2 class="sec">Locataires <span class="count">${actifs.length}</span></h2><button class="small" onclick="editBail()">➕ Ajouter</button></div>
+    ${(() => { if (!SB || LECTURE || S.faits.portailsMasque) return ""; const sans = actifs.filter(b => isActive(b) && !b.portail); if (!sans.length) return "";
+      return `<div class="card portails-cta"><span class="nv-ico" aria-hidden="true">🔗</span><span class="tx"><b>${sans.length === actifs.length ? "Aucun locataire n'a encore son espace" : `${sans.length} locataire${sans.length > 1 ? "s n'ont" : " n'a"} pas encore son espace`}</b><small>Quittances, bail, attestation d'assurance, signature à distance, signaler un problème : tout en un lien.</small></span><div class="row"><button class="small primary" onclick="creerTousPortails()">Créer ${sans.length > 1 ? "les " + sans.length + " espaces" : "son espace"}</button><button class="small ghost" onclick="S.faits.portailsMasque=iso(TODAY);save();render()">Plus tard</button></div></div>`; })()}
     <div class="tiles">${actifs.map(b => [b, ({ retard: 0, partiel: 1, etale: 2, avenir: 3, paye: 4 })[(echeance(b, CUR) || {}).statut] ?? 5]).sort((x, y) => x[1] - y[1]).map(x => carteLocataire(x[0])).join("")}
     ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span class="who"><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="tile-state"><i class="dot"></i>Disponible</div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">➕ Mettre un locataire</button></div></article>`).join("")}</div>
     ${anciens.length ? `<details class="anciens"><summary>${ic("chevR", "s")} Anciens locataires (${anciens.length})</summary><ul class="todo">${anciens.map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${esc(bienLabel(bien(b.bienId)))} · parti le ${fds(b.dateSortie)}</small></span>${ic("chevR", "chev")}</li>`).join("")}</ul></details>` : ""}
@@ -3624,10 +3630,11 @@ function sectionBoite() {
   if (BOITE.etat === "inconnu") { setTimeout(chargerBoite, 0); return ""; }
   if (BOITE.etat !== "ok") return "";
   const R = recusBoite(), moi = (SB_USER && SB_USER.email) || "ton adresse";
-  if (!BOITE.code) return LECTURE ? "" : `<section class="card boite"><h2>📨 Ta boîte à documents</h2><p class="note">Une adresse e-mail rien qu'à toi : <b>transfère-y tes factures, avis de taxe foncière, attestations d'assurance…</b> Ils arrivent ici tout seuls, et l'IA peut les lire et les ranger dans le bon logement.</p><div class="row"><button class="primary" onclick="creerBoite()">Créer mon adresse</button></div></section>`;
-  const adr = `${BOITE.code}@${DOMAINE_BOITE}`;
   const ligne = f => `<li class="lr"><div class="lr-main"><span class="ico-cat" aria-hidden="true">${/pdf/.test(f.type) ? "📄" : "🖼️"}</span><span class="tx"><b>${esc(f.nom)}</b><small>${f.de ? "de " + esc(f.de) + " · " : ""}${fds(P(f.date))}${f.objet ? " · « " + esc(f.objet.slice(0, 50)) + " »" : ""}</small></span></div>
     <div class="actions-courtes">${estProprio() ? `<button class="small primary" onclick="lireDocIA({ fichier: '${f.id}' })">🤖 Lire et ranger</button>` : ""}<button class="small" onclick="rangerRecu('${f.id}')">🏠 Ranger</button><button class="small ghost" onclick="ouvrirDocument('${f.id}')">Ouvrir</button><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></div></li>`;
+  if (!BOITE.code) return LECTURE ? "" : `<section class="card boite"><h2>📨 Ta boîte à documents</h2><p class="note">Une adresse e-mail rien qu'à toi : <b>transfère-y tes factures, avis de taxe foncière, attestations d'assurance…</b> Ils arrivent ici tout seuls, et l'IA peut les lire et les ranger dans le bon logement.</p><div class="row"><button class="primary" onclick="creerBoite()">Créer mon adresse</button></div>${R.length ? `<h3>À ranger</h3><ul class="lr-list">${R.map(ligne).join("")}</ul>` : ""}</section>`;
+  const adr = `${BOITE.code}@${DOMAINE_BOITE}`;
+
   return `<section class="card boite"><div class="sec-head"><h2>📨 Ta boîte à documents${R.length ? ` <span class="count">${R.length}</span>` : ""}</h2></div>
     <p class="note">Transfère-y factures et avis : ils arrivent ici.</p>
     <div class="boite-adr"><b>${esc(adr)}</b><button class="small" onclick="copierTexte('${esc(adr)}')">Copier</button></div>
@@ -5003,6 +5010,27 @@ async function creerPortail(bailId) {
   const r = await SB.from("portails_locataire").insert({ jeton_hash: h, espace_id: ESPACE, bail_id: b.id, donnees: donneesPortail(b) });
   if (r.error) { toast("Création impossible : " + r.error.message); return; }
   b.portail = jeton; delete PORTAIL_PUBLIE[b.id]; save(); render(); ouvrirPortail(bailId);
+}
+/* Tous les locataires d'un coup : un espace chacun, puis un message prêt à envoyer à chacun */
+const msgPortail = b => `Bonjour ${nomCourt(b.nom).split(" ")[0]},\n\nVoici votre espace locataire : vos quittances, votre bail, ce qui reste à payer, l'envoi de votre attestation d'assurance et un bouton pour me signaler un problème.\n\n${LIEN_PORTAIL(b.portail)}\n\nCe lien est personnel, ne le partagez pas.`;
+async function creerTousPortails() {
+  const L = S.baux.filter(b => isActive(b) && !b.portail); let n = 0;
+  toast(`Création de ${L.length} espace${L.length > 1 ? "s" : ""}…`);
+  for (const b of L) { const jeton = b64url(crypto.getRandomValues(new Uint8Array(32))), h = await sha256hex(jeton);
+    await SB.from("portails_locataire").delete().eq("espace_id", ESPACE).eq("bail_id", b.id);
+    const r = await SB.from("portails_locataire").insert({ jeton_hash: h, espace_id: ESPACE, bail_id: b.id, donnees: donneesPortail(b) });
+    if (!r.error) { b.portail = jeton; delete PORTAIL_PUBLIE[b.id]; n++; } }
+  save(); render(); envoyerTousPortails(n);
+}
+function envoyerTousPortails(n) {
+  const L = S.baux.filter(b => isActive(b) && b.portail).sort((a, b) => a.nom.localeCompare(b.nom));
+  modal("🔗 Espaces locataires", `<div class="full">${grosMsg("ok", n ? `✅ ${n} espace${n > 1 ? "s" : ""} créé${n > 1 ? "s" : ""}` : "Leurs espaces", "Envoie maintenant son lien à chacun : le message est prêt, tu choisis WhatsApp, SMS ou e-mail.")}</div>
+    <ul class="full todo plat portails-l">${L.map(b => `<li>${avatar(b.nom)}<span class="tx"><b>${esc(nomCourt(b.nom))}</b><small id="pe_${b.id}">${b.portailEnvoye ? "Envoyé le " + fds(b.portailEnvoye) : (b.telephone || b.email || "Pas de téléphone ni d'e-mail : copie le message")}</small></span><button type="button" class="small ${b.portailEnvoye ? "" : "primary"}" onclick="envoyerLienPortail('${b.id}')">📲 ${b.portailEnvoye ? "Renvoyer" : "Envoyer"}</button></li>`).join("")}</ul>`, () => true, { ok: "Fermer", lecture: true });
+}
+function envoyerLienPortail(bailId) {
+  const b = bail(bailId); if (!b || !b.portail) return;
+  partagerTexte("Votre espace locataire", msgPortail(b), b.telephone, b.email);
+  b.portailEnvoye = iso(TODAY); save(); const el = document.getElementById("pe_" + bailId); if (el) el.textContent = "Envoyé le " + fds(b.portailEnvoye);
 }
 async function desactiverPortail(bailId) {
   const b = bail(bailId); if (!b) return;
@@ -6845,6 +6873,49 @@ function padSignatureLocataire(id) {
       fermerSigPad(); closeOverlay(); const j = await appelLocataire({ action: "voir" }); LOC = { etat: "ok", ...j }; render(); toast("✓ Signé ! Votre propriétaire est prévenu");
     } catch (e) { toast(e.message); bt.disabled = false; bt.textContent = "Signer"; }
   };
+}
+
+/* ================= Partager vers l'appli, et photo d'une facture =================
+   "Partager › Gestion locative" (Gmail, WhatsApp, photos…) : sw.js garde les fichiers sur le téléphone, puis l'appli
+   les dépose dans la boîte à documents ("À ranger"), où l'IA peut les lire et les ranger. Même chose pour la photo
+   prise depuis le raccourci de l'icône. */
+let RECU = { etat: "" };
+async function deposerDansBoite(fichiers, de) {
+  let n = 0;
+  for (const f of fichiers) {
+    const type = f.type || "application/octet-stream"; if (!/^(application\/pdf|image\/)/.test(type)) continue;
+    const blob = /^image\//.test(type) && !/heic/.test(type) ? await (async () => { try { const d = await photoReduite(f); return await (await fetch(d)).blob(); } catch (e) { return f; } })() : f;
+    const ext = /pdf/.test(type) ? "pdf" : /png/.test(blob.type) ? "png" : /heic/.test(type) ? "heic" : "jpg", chemin = `${ESPACE}/partages/${uid()}.${ext}`;
+    const up = await SB.storage.from("documents").upload(chemin, blob, { contentType: blob.type || type }); if (up.error) throw up.error;
+    S.fichiers.push({ id: uid(), boite: true, bienId: "", nom: (f.name || "Document").replace(/\.[a-z0-9]+$/i, "") || "Document", chemin, type: blob.type || type, taille: blob.size, date: iso(TODAY), de }); n++;
+  }
+  if (n) save(); return n;
+}
+async function traiterPartageRecu() {
+  if (RECU.etat) return; RECU = { etat: "en cours" }; render();
+  try {
+    const c = await caches.open("partages"), cles = await c.keys(), fs = [];
+    for (const k of cles) { const r = await c.match(k); if (!r) continue; const b = await r.blob(); fs.push(new File([b], decodeURIComponent(r.headers.get("X-Nom") || "document"), { type: r.headers.get("Content-Type") || b.type })); }
+    const n = fs.length ? await deposerDansBoite(fs, "ton téléphone (partage)") : 0;
+    for (const k of cles) await c.delete(k);
+    RECU = { etat: "fini" }; toast(n ? `📥 ${n} document${n > 1 ? "s" : ""} reçu${n > 1 ? "s" : ""} : à ranger ci-dessous` : "Rien reçu : partage un PDF ou une photo.");
+    view.docVue = ""; view.docQ = ""; location.hash = "docs"; setTimeout(() => { RECU = { etat: "" }; const el = document.querySelector(".boite"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 400);
+  } catch (e) { RECU = { etat: "erreur", msg: e.message || String(e) }; render(); }
+}
+function pagePartageRecu() {
+  if (MODE === "partage" && SB && ESPACE && !RECU.etat) setTimeout(traiterPartageRecu, 0);
+  return RECU.etat === "erreur" ? `<div class="empty">Le document n'a pas pu être reçu : ${esc(RECU.msg)} <a href="#docs">Retour</a></div>` : `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Réception du document…</div>`;
+}
+function pageAjouterDoc() {
+  return `<a class="back" href="#docs">← Documents</a><div class="head"><div><h1>📸 Facture ou document</h1><p>Prends-le en photo ou choisis le fichier : il arrive dans ta boîte à documents, et l'IA peut le lire et le ranger dans le bon logement.</p></div></div>
+  <section class="card ajout-doc"><label class="btn primary big">📸 Prendre en photo<input type="file" accept="image/*" capture="environment" hidden onchange="ajouterDocRapide(this)"></label>
+    <label class="btn big">📄 Choisir un fichier (PDF, photo)<input type="file" accept="image/*,application/pdf" multiple hidden onchange="ajouterDocRapide(this)"></label>
+    <p class="note">Astuce : depuis Gmail ou WhatsApp, touche <b>Partager › Gestion locative</b> sur une pièce jointe, ça marche aussi (appli installée sur le téléphone).</p></section>`;
+}
+async function ajouterDocRapide(inp) {
+  const fs = [...inp.files]; if (!fs.length) return; if (!SB || !ESPACE) { toast("Connecte-toi d'abord."); return; }
+  toast("Envoi…"); try { const n = await deposerDansBoite(fs, "ton téléphone"); toast(`📥 ${n} document${n > 1 ? "s" : ""} dans ta boîte : à ranger`); view.docVue = ""; location.hash = "docs"; setTimeout(() => { const el = document.querySelector(".boite"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 400); }
+  catch (e) { toast("Envoi impossible : " + (e.message || e)); }
 }
 
 /* ================= Canal "Quoi de neuf" =================

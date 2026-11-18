@@ -1,10 +1,21 @@
-// Garde l'appli disponible même avec une connexion faible. Version 3267a5c
-const V = "gestion-3267a5c";
+// Garde l'appli disponible même avec une connexion faible. Version a8f083b
+const V = "gestion-a8f083b";
 const FICHIERS = ["./", "./index.html", "./supabase.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(FICHIERS.map(f => new Request(f, { cache: "reload" }))))); self.skipWaiting(); });
-self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); });
+self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== "partages").map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener("fetch", e => {
   const u = new URL(e.request.url);
+  // Partager › Gestion locative : les fichiers sont gardés sur le téléphone, l'appli les dépose ensuite dans la boîte à documents
+  if (e.request.method === "POST" && u.origin === location.origin && u.pathname.endsWith("/partage-recu")) {
+    e.respondWith((async () => {
+      try { const fd = await e.request.formData(), c = await caches.open("partages"); let i = 0;
+        for (const f of fd.getAll("fichiers")) { if (!f || !f.size) continue;
+          await c.put(new Request("./partage/" + Date.now() + "-" + (i++)), new Response(f, { headers: { "Content-Type": f.type || "application/octet-stream", "X-Nom": encodeURIComponent(f.name || "document") } })); }
+      } catch (x) {}
+      return Response.redirect("./#partage", 303);
+    })());
+    return;
+  }
   if (e.request.method !== "GET" || u.origin !== location.origin || u.pathname.endsWith("/version.json")) return; // version.json : toujours en ligne
   // Ouverture instantanée : la copie gardée sur l'appareil d'abord, la version en ligne est rangée pour la prochaine fois
   const net = fetch(e.request).then(r => { if (r.ok) { const c = r.clone(); caches.open(V).then(ca => ca.put(e.request, c)); } return r; });

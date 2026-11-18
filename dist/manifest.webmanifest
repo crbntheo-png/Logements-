@@ -18,9 +18,9 @@
  ],
  "shortcuts": [
   {
-   "name": "À faire",
-   "short_name": "À faire",
-   "url": "./#afaire",
+   "name": "Photo d'une facture ou d'un document",
+   "short_name": "Facture / document",
+   "url": "./#ajouter-doc",
    "icons": [
     {
      "src": "icon-192.png",
@@ -40,9 +40,9 @@
    ]
   },
   {
-   "name": "Compta",
-   "short_name": "Compta",
-   "url": "./#compta",
+   "name": "À faire",
+   "short_name": "À faire",
+   "url": "./#afaire",
    "icons": [
     {
      "src": "icon-192.png",
@@ -51,6 +51,30 @@
    ]
   }
  ],
+ "share_target": {
+  "action": "./partage-recu",
+  "method": "POST",
+  "enctype": "multipart/form-data",
+  "params": {
+   "title": "title",
+   "text": "text",
+   "url": "url",
+   "files": [
+    {
+     "name": "fichiers",
+     "accept": [
+      "application/pdf",
+      "image/*",
+      ".pdf",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".heic"
+     ]
+    }
+   ]
+  }
+ },
  "icons": [
   {
    "src": "icon-192.png",

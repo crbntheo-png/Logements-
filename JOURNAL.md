@@ -74,6 +74,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — espaces de tous les locataires en un geste ; Partager vers l'appli ; raccourcis de l'icône
+- Accueil › Locataires : carte "Aucun locataire n'a encore son espace" → "Créer les N espaces" (un lien par locataire actif), puis liste avec "📲 Envoyer" (message prêt, WhatsApp/SMS/e-mail, sinon copié) et "Envoyé le …" (`b.portailEnvoye`). "Plus tard" la masque. GTP : 5 locataires, aucun espace créé pour l'instant (à faire par Théo).
+- Partager › Gestion locative (appli installée, Android) : `share_target` dans le manifeste (build.py), sw.js garde les fichiers (cache "partages", conservé aux mises à jour), l'appli les dépose dans la boîte à documents "À ranger" (dossier `partages/` du stockage) ; l'IA peut les lire et les ranger. La boîte montre "À ranger" même sans adresse e-mail créée.
+- Raccourcis de l'icône (appui long) : "Photo d'une facture ou d'un document" (#ajouter-doc : photo réduite ou PDF → boîte), Loyers, À faire.
+- Canal : 2 nouveautés publiées, 1 notification envoyée ("Partager vers l'appli") : 2 téléphones, réponse 200 — première vraie notification du canal.
+- Testé : test79 10/10 (espaces, partage reçu par sw.js, photo), test5, 53, 56, 77. En ligne (manifeste vérifié en ligne).
+- Pas vérifié : le partage depuis un vrai Android (iPhone ne propose pas le partage vers une appli web), la réception de la notification sur les téléphones.
+
 ### 18/11/2026 — canal "🆕 Quoi de neuf"
 - Table `nouveautes` (supabase/nouveautes.sql), lue par tous les utilisateurs connectés. Page `#nouveautes` (groupée par jour), bandeau sur l'accueil tant qu'il y a du neuf pas vu sur ce téléphone, rubrique "🆕 Quoi de neuf" dans Réglages › Ton appli, type de notification "Nouveautés de l'appli" (push oui, mail non).
 - Publier : `python3 tests/nouveaute.py ID "émoji" "Titre" "Phrase simple" "#page" --annoncer` (notifier, action `nouveaute`, une seule fois par ID grâce à `annonce_le`). Règle ajoutée dans CLAUDE.md.

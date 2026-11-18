@@ -123,10 +123,13 @@ def main():
         "orientation": "any",
         "categories": ["finance", "productivity", "business"],
         "shortcuts": [
-            {"name": "À faire", "short_name": "À faire", "url": "./#afaire", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
+            {"name": "Photo d'une facture ou d'un document", "short_name": "Facture / document", "url": "./#ajouter-doc", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
             {"name": "Loyers du mois", "short_name": "Loyers", "url": "./#loyers", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]},
-            {"name": "Compta", "short_name": "Compta", "url": "./#compta", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]}
+            {"name": "À faire", "short_name": "À faire", "url": "./#afaire", "icons": [{"src": "icon-192.png", "sizes": "192x192"}]}
         ],
+        # "Partager › Gestion locative" depuis Gmail, WhatsApp, les photos… : reçu par sw.js, déposé dans la boîte à documents
+        "share_target": {"action": "./partage-recu", "method": "POST", "enctype": "multipart/form-data",
+            "params": {"title": "title", "text": "text", "url": "url", "files": [{"name": "fichiers", "accept": ["application/pdf", "image/*", ".pdf", ".jpg", ".jpeg", ".png", ".heic"]}]}},
         "icons": [
             {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
             {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
@@ -140,9 +143,20 @@ def main():
 const V = "gestion-{version}";
 const FICHIERS = ["./", "./index.html", "./supabase.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", e => {{ e.waitUntil(caches.open(V).then(c => c.addAll(FICHIERS.map(f => new Request(f, {{ cache: "reload" }}))))); self.skipWaiting(); }});
-self.addEventListener("activate", e => {{ e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); }});
+self.addEventListener("activate", e => {{ e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V && k !== "partages").map(k => caches.delete(k))))); self.clients.claim(); }});
 self.addEventListener("fetch", e => {{
   const u = new URL(e.request.url);
+  // Partager › Gestion locative : les fichiers sont gardés sur le téléphone, l'appli les dépose ensuite dans la boîte à documents
+  if (e.request.method === "POST" && u.origin === location.origin && u.pathname.endsWith("/partage-recu")) {{
+    e.respondWith((async () => {{
+      try {{ const fd = await e.request.formData(), c = await caches.open("partages"); let i = 0;
+        for (const f of fd.getAll("fichiers")) {{ if (!f || !f.size) continue;
+          await c.put(new Request("./partage/" + Date.now() + "-" + (i++)), new Response(f, {{ headers: {{ "Content-Type": f.type || "application/octet-stream", "X-Nom": encodeURIComponent(f.name || "document") }} }})); }}
+      }} catch (x) {{}}
+      return Response.redirect("./#partage", 303);
+    }})());
+    return;
+  }}
   if (e.request.method !== "GET" || u.origin !== location.origin || u.pathname.endsWith("/version.json")) return; // version.json : toujours en ligne
   // Ouverture instantanée : la copie gardée sur l'appareil d'abord, la version en ligne est rangée pour la prochaine fois
   const net = fetch(e.request).then(r => {{ if (r.ok) {{ const c = r.clone(); caches.open(V).then(ca => ca.put(e.request, c)); }} return r; }});
