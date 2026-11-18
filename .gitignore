@@ -6,3 +6,4 @@ tests/gtp.json
 tests/shots*/
 tests/vendor/
 node_modules/
+email-worker/node_modules/

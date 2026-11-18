@@ -1,0 +1,8 @@
+# Boîte à documents : reçoit les e-mails envoyés à code@sci-gestion-locative.com (Cloudflare Email Routing, règle "catch-all"
+# vers ce programme) et transmet les pièces jointes au serveur de l'appli (fonction Supabase "boite").
+name = "boite-documents"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+workers_dev = false
+[vars]
+SUPABASE_URL = "https://bcfcrqmpeyaoovluvhhn.supabase.co"

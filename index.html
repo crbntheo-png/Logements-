@@ -521,6 +521,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .paper th, .paper td { border: 1px solid #999; padding: 6px 10px; color: var(--paper-ink); background: transparent; text-transform: none; letter-spacing: 0; font: 13.5px Georgia, serif; }
 .paper .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
 .paper .sign div { min-height: 90px; }
+.boite-adr { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1.5px dashed var(--accent); border-radius: 12px; word-break: break-all; } .boite .actions-courtes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
@@ -912,7 +913,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
-  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000);
+  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
 /* ================= Banque (via Pennylane, lue par le serveur) ================= */
@@ -3279,6 +3280,61 @@ async function apercuRelances() {
       : `<div class="full">${grosMsg("ok", "Aucune relance demain", "Personne n'est en retard de 3 à 25 jours sans avoir déjà reçu le rappel prévu.")}</div>`, () => true, { ok: "Fermer", lecture: true });
   } catch (e) { toast("Aperçu impossible : " + e.message); }
 }
+/* ================= Boîte à documents : une adresse e-mail par espace ================= */
+let BOITE = { etat: "inconnu" };
+const DOMAINE_BOITE = "sci-gestion-locative.com";
+async function chargerBoite() {
+  if (!SB || !ESPACE) return; const id = ESPACE; BOITE = { etat: "chargement" };
+  const r = await SB.from("boites").select("code, expediteurs").eq("espace_id", id).maybeSingle();
+  if (ESPACE !== id) return; BOITE = r.error ? { etat: "erreur" } : { etat: "ok", ...(r.data || {}) }; render();
+}
+const recusBoite = () => (S.fichiers || []).filter(f => f.boite && !f.bienId);
+function sectionBoite() {
+  if (!SB) return "";
+  if (BOITE.etat === "inconnu") { setTimeout(chargerBoite, 0); return ""; }
+  if (BOITE.etat !== "ok") return "";
+  const R = recusBoite(), moi = (SB_USER && SB_USER.email) || "ton adresse";
+  if (!BOITE.code) return LECTURE ? "" : `<section class="card boite"><h2>📨 Ta boîte à documents</h2><p class="note">Une adresse e-mail rien qu'à toi : <b>transfère-y tes factures, avis de taxe foncière, attestations d'assurance…</b> Ils arrivent ici tout seuls, et l'IA peut les lire et les ranger dans le bon logement.</p><div class="row"><button class="primary" onclick="creerBoite()">Créer mon adresse</button></div></section>`;
+  const adr = `${BOITE.code}@${DOMAINE_BOITE}`;
+  const ligne = f => `<li class="lr"><div class="lr-main"><span class="ico-cat" aria-hidden="true">${/pdf/.test(f.type) ? "📄" : "🖼️"}</span><span class="tx"><b>${esc(f.nom)}</b><small>${f.de ? "de " + esc(f.de) + " · " : ""}${fds(P(f.date))}${f.objet ? " · « " + esc(f.objet.slice(0, 50)) + " »" : ""}</small></span></div>
+    <div class="actions-courtes">${estProprio() ? `<button class="small primary" onclick="lireDocIA({ fichier: '${f.id}' })">🤖 Lire et ranger</button>` : ""}<button class="small" onclick="rangerRecu('${f.id}')">🏠 Ranger</button><button class="small ghost" onclick="ouvrirDocument('${f.id}')">Ouvrir</button><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></div></li>`;
+  return `<section class="card boite"><div class="sec-head"><h2>📨 Ta boîte à documents${R.length ? ` <span class="count">${R.length}</span>` : ""}</h2></div>
+    <div class="boite-adr"><b>${esc(adr)}</b><button class="small" onclick="copierTexte('${esc(adr)}')">Copier</button></div>
+    <p class="note">Transfère tes factures et avis à cette adresse, <b>depuis ${esc(moi)}</b> (ou l'adresse d'un associé). Les e-mails des autres sont refusés${(BOITE.expediteurs || []).length ? `, sauf : ${BOITE.expediteurs.map(esc).join(", ")}` : ""}. <a href="#" onclick="event.preventDefault();expediteursBoite()">Autoriser une autre adresse (syndic, comptable…)</a></p>
+    ${R.length ? `<h3>À ranger</h3><ul class="lr-list">${R.map(ligne).join("")}</ul>` : `<p class="note small">Rien à ranger pour l'instant.</p>`}</section>`;
+}
+async function creerBoite() {
+  const base = slug(S.sci.nom || "espace").toLowerCase().slice(0, 20).replace(/-+$/, "") || "espace";
+  for (let k = 0; k < 4; k++) {
+    const code = base + "-" + b64url(crypto.getRandomValues(new Uint8Array(4))).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5).padEnd(5, "x");
+    const r = await SB.from("boites").insert({ code, espace_id: ESPACE });
+    if (!r.error) { BOITE = { etat: "ok", code, expediteurs: [] }; render(); toast("✓ Ton adresse : " + code + "@" + DOMAINE_BOITE); return; }
+    if (!/duplicate|unique/i.test(r.error.message)) { toast("Création impossible : " + r.error.message); return; }
+  }
+}
+function expediteursBoite() {
+  modal("Qui peut déposer des documents ?", `<p class="full note">Toi et tes associés, depuis l'adresse de votre compte, c'est automatique. Ajoute ici d'autres adresses (une par ligne) : ton syndic, ton comptable, un artisan…</p>
+    <label class="fl full">Autres adresses autorisées<textarea name="ex" id="boite_ex" placeholder="syndic@exemple.fr">${esc((BOITE.expediteurs || []).join("\n"))}</textarea></label>`,
+    async d => { const L = String(d.ex || "").split(/[\s,;]+/).map(x => x.trim().toLowerCase()).filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+      const r = await SB.from("boites").update({ expediteurs: L }).eq("espace_id", ESPACE); if (r.error) { toast("Impossible : " + r.error.message); return; } BOITE.expediteurs = L; render(); toast("✓ Enregistré"); return true; }, { ok: "Enregistrer", lecture: true });
+}
+function rangerRecu(id) {
+  const f = S.fichiers.find(x => x.id === id); if (!f) return;
+  if (!S.biens.length) { toast("Ajoute d'abord un logement."); return; }
+  modal(`🏠 Ranger « ${esc(f.nom)} »`, `${sel("Logement", "bienId", "", S.biens.map(b => [b.id, b.nom]))}${sel("Catégorie", "cat", f.cat || "Autre", CATS_DOC.map(c => [c, c]))}
+    ${sel("Concerne", "bailId", "", [["", "Le logement en général"], ...S.baux.map(b => [b.id, b.nom + (bien(b.bienId) ? " · " + bien(b.bienId).nom : "")])])}${fld("Nom", "nom", f.nom, "text", "full")}`,
+    d => { const b = bail(d.bailId); Object.assign(f, { bienId: b ? b.bienId : d.bienId, cat: d.cat, nom: d.nom || f.nom }, qui(d.bailId)); toast("✓ Rangé dans " + (bien(f.bienId) || {}).nom); }, { ok: "Ranger" });
+}
+/* Après lecture par l'IA, un document pas encore rangé va tout seul dans le bon logement et la bonne catégorie */
+const CAT_DOC_IA = { taxe_fonciere: "Taxe foncière", dpe: "Diagnostics (DPE…)", attestation_assurance_locataire: "Locataire (pièces, garant…)", assurance_proprietaire: "Assurance", facture: "Factures et travaux", charges_copropriete: "Copropriété", bail: "Bail" };
+function rangerApresLecture(d, ctx, bid) {
+  const f = ctx.fichierId && S.fichiers.find(x => x.id === ctx.fichierId); if (!f || f.bienId) return;
+  let bienId = bid, bailId = "";
+  if (d.type === "attestation_assurance_locataire") { const a = " " + normTxt(d.assure_nom).replace(/[^A-Z0-9]+/g, " ") + " "; const c = S.baux.filter(b => motsDe(b.nom).some(m => m.length > 2 && a.includes(" " + m + " "))); if (c.length === 1) { bailId = c[0].id; bienId = c[0].bienId; } }
+  if (!bienId) return;
+  Object.assign(f, { bienId, cat: CAT_DOC_IA[d.type] || f.cat || "Autre" }, bailId ? { bailId } : {}); save();
+  setTimeout(() => toast(`📁 Rangé dans ${bien(bienId).nom} · ${f.cat}`), 1500);
+}
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -4371,7 +4427,7 @@ async function lireDocIA(src) {
     if (/pdf/.test(type)) { let t = ""; try { t = await texteToutPdf(bl); } catch (e) {} if (t.replace(/\s/g, "").length > 500) corps.texte = t; else { if (bl.size > 15e6) throw new Error("PDF scanné trop lourd (15 Mo maximum)."); corps.fichier_b64 = await b64Blob(bl); corps.type = "application/pdf"; } }
     else { const r = /^image\/(jpeg|png|webp)$/.test(type) && bl.size < 3e6 ? bl : await reduirePhoto(bl); corps.fichier_b64 = await b64Blob(r); corps.type = r.type || "image/jpeg"; }
     const j = await fnIA(corps);
-    appliquerLectureDoc(j.doc, { bienId, bailId, nom }, j.credits);
+    appliquerLectureDoc(j.doc, { bienId, bailId, nom, fichierId: src.fichier || "" }, j.credits);
   } catch (e) { toast(e.message || "L'IA n'a pas pu lire ce document."); }
 }
 function grosMsgToast() { modal("🤖 Lecture par l'IA", `<div class="full">${grosMsg("stop", "⛔ Plus de lecture de document ce mois-ci", "Tes crédits reviennent le 1er du mois. En attendant, remplis à la main.")}</div>`, () => true, { ok: "Fermer", lecture: true }); }
@@ -4386,6 +4442,7 @@ function choisirBienPuis(titre, texte, bienId, suite) {
 function appliquerLectureDoc(d, ctx, credits) {
   if (!d) return;
   const bid = ctx.bienId || bienDuBail({ adresse_logement: d.adresse_logement }), rem = d.remarques ? " ⚠️ " + d.remarques : "", reste = resteDocsTxt(credits);
+  rangerApresLecture(d, ctx, bid);
   const bandeau = (f, titre, texte) => { if (!f) return; f.insertAdjacentHTML("afterbegin", `<div class="full">${grosMsg("attention", titre, esc(texte))}</div>`); };
   if (d.type === "taxe_fonciere") {
     const an = +d.annee > 2000 ? +d.annee : TODAY.getFullYear();
@@ -5235,6 +5292,7 @@ function pageDocsDrive() {
   const vieux = !complet && pret && tous.some(d => d.type === "choix" && !nbDans(d.id));
   return `<div class="head"><div><h1>Documents</h1><p>Les dossiers de ton Drive que tu partages avec l'appli. Elle ne voit rien d'autre.</p></div>
     <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
+  ${sectionBoite()}
   <section class="card"><div class="sec-head"><h2>📁 Mes dossiers Drive</h2></div>
     ${tous.length || seuls.length ? `<ul class="lr-list">${tous.map(d => ligneDos(d, nbDans(d.id))).join("")}${seuls.length ? ligneDos({ id: "_seuls", nom: "Fichiers choisis un par un", ico: "📄" }, seuls.length) : ""}</ul>`
       : `<p class="note">Partage les dossiers de tes locations avec l'appli, <b>comme avec un associé</b> : elle les lit en <b>lecture seule</b>, sous-dossiers compris, et range chaque document dans le bon logement. Rien d'autre de ton Drive.</p>`}
@@ -6124,6 +6182,7 @@ function pageLegal() {
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
   ${b("🔗 Espace locataire", `<p>Si tu crées un lien pour un locataire, il voit seulement ce qui le concerne : son logement, ce qu'il doit, ses quittances des 12 derniers mois, son bail et ses états des lieux, et les problèmes qu'il a signalés. Rien sur les autres locataires, la compta ou la banque. Le lien est secret (le serveur n'en garde qu'une empreinte) ; tu peux le désactiver à tout moment depuis sa fiche. Les photos qu'il envoie sont rangées dans les documents de ton espace.</p>`)}
+  ${b("📨 Boîte à documents et agenda", `<p>Si tu crées ta boîte à documents, les e-mails envoyés à ton adresse passent par Cloudflare (qui héberge le domaine) ; seules leurs pièces jointes PDF et photos sont gardées, dans les documents de ton espace. Les e-mails venant d'une adresse que tu n'as pas autorisée sont refusés. Le lien de ton agenda est secret : il ne montre que les dates (loyers attendus, échéances), et tu peux le désactiver à tout moment.</p>`)}
   ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement. Si tu demandes à l'IA de <b>lire un document</b> (bail, avis de taxe foncière, facture, DPE, attestation d'assurance), le contenu de <b>ce document seulement</b> est envoyé à Anthropic, au moment où tu le demandes, pour remplir l'appli. Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
   ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}

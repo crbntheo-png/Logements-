@@ -107,6 +107,13 @@ Deno.serve(async (req) => {
     for (const s1 of subs1 || []) await webpush.sendNotification({ endpoint: s1.endpoint, keys: { p256dh: s1.p256dh, auth: s1.auth } }, JSON.stringify({ titre: "🆘 " + titre, texte: String(sg.message || "").slice(0, 120), url: "./", tag: "sig-" + sg.id })).catch(() => {});
     return rep({ ok: true });
   }
+  if (corps.boite && !seulUser) {
+    // documents reçus dans la boîte à documents de l'espace : notification à tous les membres
+    const { data: mb } = await admin.from("membres").select("user_id").eq("espace_id", corps.boite);
+    for (const m of mb || []) { const { data: ss } = await admin.from("push_abonnements").select("*").eq("user_id", m.user_id);
+      for (const x of ss || []) await webpush.sendNotification({ endpoint: x.endpoint, keys: { p256dh: x.p256dh, auth: x.auth } }, JSON.stringify({ titre: `📨 ${corps.n} document${corps.n > 1 ? "s" : ""} reçu${corps.n > 1 ? "s" : ""} par e-mail`, texte: String(corps.objet || "À ranger dans l'appli"), url: "./#docs", tag: "boite-" + corps.boite })).catch(() => {}); }
+    return rep({ ok: true });
+  }
   if (corps.demande && !seulUser) {
     // problème signalé par un locataire depuis son espace : notification à tous les membres, e-mail au propriétaire (depuis son Gmail)
     const { data: d } = await admin.from("demandes_locataire").select("id, espace_id, nom, texte, photo").eq("id", corps.demande).maybeSingle();

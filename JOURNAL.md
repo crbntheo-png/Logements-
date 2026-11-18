@@ -11,6 +11,8 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Boîte à documents (Théo, 2 min)** : activer Email Routing sur sci-gestion-locative.com et envoyer l'adresse catch-all au Worker "boite-documents" (étapes dans l'Historique du 18/11, "boîte à documents").
+
 - [ ] **Partage de dossiers (Théo)** : partager "02 - GTP Invest" avec `lecture-dossiers@gestion-locative-drive.iam.gserviceaccount.com` (Lecteur), puis Docs › + Ajouter un dossier › C'est fait. Ensuite Docs › "Retirer cet accès" (lecture de tout le Drive, essai du 17/11).
 - [ ] **Domaine sci-gestion-locative.com (Théo, ce soir)** : 1) Search Console › propriété "Domaine" `sci-gestion-locative.com` ; 2) client OAuth : ajouter les origines https://sci-gestion-locative.com et https://www.sci-gestion-locative.com ; 3) tester la connexion Google sur https://sci-gestion-locative.com ; 4) Branding : page d'accueil https://sci-gestion-locative.com/presentation, confidentialité https://sci-gestion-locative.com/confidentialite, domaine autorisé `sci-gestion-locative.com`, puis "J'ai corrigé les problèmes". Ensuite (Claude) : renvoyer automatiquement pages.dev vers le nouveau domaine, puis retirer pages.dev chez Google.
 - [ ] **Google (Théo), dans cet ordre** : 1) https://console.cloud.google.com/auth/branding (nom, e-mail, page d'accueil, https://gestion-locative-sci.pages.dev/confidentialite, domaine autorisé `gestion-locative-sci.pages.dev`) ; 2) https://console.cloud.google.com/auth/audience › Publier ; 3) activer https://console.cloud.google.com/apis/library/gmail.googleapis.com et https://console.cloud.google.com/apis/library/picker.googleapis.com ; 4) dans l'appli : se connecter avec Google, brancher Gmail, Débrancher puis Connecter le Drive, "Choisir mes documents". Ensuite : retirer le code de connexion par e-mail (dernier envoi Brevo) et le crochet `envoyer_code_auth`.
@@ -48,6 +50,15 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — boîte à documents par e-mail
+- Docs › "📨 Ta boîte à documents" › "Créer mon adresse" : une adresse par espace (ex. gtp-invest-xxxxx@sci-gestion-locative.com, table `boites`, `supabase/boite.sql`). On y transfère factures, avis, attestations : les pièces jointes PDF et photos arrivent dans "À ranger" (documents `boite: true`, sans logement), avec l'expéditeur et l'objet ; notification à tous les membres.
+- Seuls les membres de l'espace (adresse du compte ou Gmail branché) et les adresses ajoutées ("Autoriser une autre adresse" : syndic, comptable…) peuvent déposer ; les autres sont refusés avec un message.
+- "🤖 Lire et ranger" : l'IA lit le document, ouvre le bon formulaire rempli ET range le fichier dans le bon logement et la bonne catégorie (`rangerApresLecture`). "🏠 Ranger" à la main, Ouvrir, ✕.
+- Chaîne : Cloudflare Email Routing (règle "catch-all") → programme Cloudflare `boite-documents` (dossier `email-worker/`, postal-mime, déployé) → fonction Supabase `boite` (clé `BOITE_SECRET`, dans `.env`, les secrets Supabase et le programme Cloudflare).
+- Tests : test62 (vraie base, vraie IA pour 1 document) 15/15 ; programme Cloudflare testé avec un vrai e-mail au format brut (PDF envoyé en "octet-stream" reconnu, logo du mail ignoré, majuscules, refus 403/422). En ligne.
+- **À faire par Théo (2 minutes, le jeton Cloudflare n'a pas ce droit)** : 1) https://dash.cloudflare.com/ad8f78937df88f2398700f8584351cfc/sci-gestion-locative.com/email/routing/overview › "Activer Email Routing" › "Ajouter les enregistrements et activer" ; 2) onglet "Règles de routage" › "Adresse catch-all" › Modifier › Action "Envoyer à un Worker" › "boite-documents" › Enregistrer, puis activer la règle. Ensuite : Docs › Créer mon adresse, et s'envoyer une facture pour essayer.
+- Pas vérifié : la réception d'un vrai e-mail (en attente de l'activation ci-dessus).
 
 ### 18/11/2026 — agenda abonné (Google Agenda, iPhone, Outlook)
 - Réglages › "📅 Dans ton agenda" › "Abonner mon agenda" (aussi dans le menu rapide) : un lien secret par espace (`supabase/agenda.sql`, table `agendas`, empreinte du jeton seulement) lu par la fonction `agenda` (sans connexion, `?j=…`, text/calendar). Boutons Google Agenda (`calendar.google.com/calendar/r?cid=webcal://…`), iPhone / Mac (webcal), Outlook, Copier, Désactiver, "lu il y a…".
