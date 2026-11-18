@@ -47,6 +47,11 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 6. ✅ (18/11) **Activité entre associés** ("X a marqué le loyer payé").
 7. ✅ (18/11) **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
 
+Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅ agenda abonné, ✅ boîte à documents par e-mail (reste l'activation Cloudflare par Théo), ✅ import depuis un tableur. À faire ensuite, dans l'ordre :
+8. **Assistant IA "Pose ta question"** (comme Rentila) : question libre, réponse avec les données de l'espace (dettes, échéances, baux) et les règles de la loi de 1989 ; quota à part (nouvelle colonne dans `ia_usage`).
+9. **Brancher l'appli sur Claude / ChatGPT (MCP)** (comme Rentila) : serveur MCP en fonction Supabase, lecture seule d'abord (loyers, retards, locataires, documents), lien secret par espace.
+10. **Tous mes espaces sur un écran** (SCI + nom propre).
+
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
