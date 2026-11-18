@@ -53,6 +53,16 @@ Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅
 9. ✅ (18/11) **Brancher l'appli sur Claude / ChatGPT (MCP)** (comme Rentila) : serveur MCP en fonction Supabase, lecture seule d'abord (loyers, retards, locataires, documents), lien secret par espace.
 10. ✅ (18/11) **Tous mes espaces sur un écran** (SCI + nom propre).
 
+Vague 3 (objectif de Théo : plus de comptable, tout depuis la banque ; GTP est une SCI à l'IS) — dans l'ordre :
+11. **Chaque opération de banque classée** (entrées comprises : loyers, dépôts, apports d'associés), compteur "il reste N opérations à classer".
+12. **Une facture pour chaque dépense** (boîte à documents + IA relient facture et paiement ; liste "pièces manquantes").
+13. **Amortissements** par composants (terrain non amorti, gros œuvre, toiture, installations, agencements, frais d'achat, travaux d'amélioration) : dotations annuelles automatiques.
+14. **Clôture** : bilan, compte de résultat, IS (15 % / 25 %) et acomptes ; mois clôturés verrouillés (plus aucune modification automatique).
+15. **Liasse 2065 + 2033 préremplies** (case par case) ; télétransmission via un partenaire agréé EDI à étudier (payant).
+16. **AG d'approbation** : rapport de gestion + PV, signés au doigt.
+17. **2026 en parallèle du comptable** pour comparer ; arrêt du comptable en 2027 si identique.
+Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec validation par un expert-comptable).
+
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
