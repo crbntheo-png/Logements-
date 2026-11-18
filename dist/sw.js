@@ -1,5 +1,5 @@
-// Garde l'appli disponible même avec une connexion faible. Version 047157b
-const V = "gestion-047157b";
+// Garde l'appli disponible même avec une connexion faible. Version 9713fda
+const V = "gestion-9713fda";
 const FICHIERS = ["./", "./index.html", "./supabase.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(FICHIERS.map(f => new Request(f, { cache: "reload" }))))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); });
