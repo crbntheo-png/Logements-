@@ -74,6 +74,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — validation Google : où on en est ; page de confidentialité complétée
+- Google a répondu le 17/11 (20 h 08 UTC) "[Action Needed] Your Google APIs Verification Request" (projet gestion-locative-514614, n° 502656965437) : liste de contrôle, il faut RÉPONDRE au mail pour que l'examen reprenne. Réponse en anglais proposée à Théo (pas envoyée : attend son accord ; brouillon Gmail possible).
+- /confidentialite : section anglaise "Google user data — summary for Google reviewers" (scopes, accès, usage, transfert, protection, conservation/suppression, phrase Limited Use) + banque en direct (Enable Banking, DSP2, lecture seule). En ligne, vérifié.
+- À vérifier par Théo : la vidéo montre l'écran d'autorisation en entier et l'e-mail dans "Envoyés" ; statut "En production" (https://console.cloud.google.com/auth/audience).
+- Vraie appli : conseil Google Play d'abord (paquet TWA, 25 $ une fois ; compte personnel = test fermé 12 personnes × 14 jours, compte société avec D-U-N-S = non) ; App Store plus tard (99 $/an, notifications natives à adapter, risque de refus 4.2).
+
 ### 18/11/2026 — Réglages classés par importance ; banque "pourquoi et est-ce sûr" ; iPhone (champs)
 - Réglages : "⚡ À régler en premier (N)" (La SCI incomplète, Banque, Google Drive, Envoi des e-mails pas encore faits, bordure orange), puis L'essentiel, Automatique, Ton appli, En plus, Zone sensible.
 - Banque : bloc "🔒 Pourquoi brancher ta banque, et est-ce sûr ?" (`explicationBanque`) dans la fenêtre de connexion, Réglages › Banque et Compta › Banque (carte ouverte d'office, "Relier ma banque" proposé avant le relevé). Texte honnête : lecture seule, aucun virement possible, codes chez la banque, DSP2 / prestataire agréé, données visibles des seuls membres, ni consultées ni revendues, 180 jours, débranchable.
