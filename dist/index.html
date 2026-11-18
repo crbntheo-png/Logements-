@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "428c50c", "date": "2026-11-17T23:09"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "b307007", "date": "2026-11-18T07:32"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -546,6 +546,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .paper th, .paper td { border: 1px solid #999; padding: 6px 10px; color: var(--paper-ink); background: transparent; text-transform: none; letter-spacing: 0; font: 13.5px Georgia, serif; }
 .paper .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
 .paper .sign div { min-height: 90px; }
+.apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
 .treso-d summary { cursor: pointer; font-weight: 650; } .tbl-scroll { overflow-x: auto; } .treso-t { width: 100%; border-collapse: collapse; font-size: .82rem; font-variant-numeric: tabular-nums; } .treso-t th, .treso-t td { padding: 6px 6px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; } .treso-t th:first-child, .treso-t td:first-child { text-align: left; } .treso-t tr.neg td { color: var(--bad); }
@@ -3003,7 +3004,7 @@ function pageBail(id) {
   return `<div><a class="back" href="#locataires">← Accueil</a>
   <div class="profil">${avatar(b.nom)}<div><h1>${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div></div></div>
   <div class="contacts">${b.tel ? `<a class="chip" href="tel:${esc(b.tel.replace(/\s/g, ""))}">📞 ${esc(b.tel)}</a>` : ""}${b.email ? `<button class="chip" onclick="copierTexte('${esc(b.email)}')">✉️ ${esc(b.email)}</button>` : `<button class="chip" onclick="editBail('${b.id}')">✉️ Ajouter l'e-mail</button>`}</div>
-  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button>${menuPlus([["📝 Générer le bail", `docBailOpen('${b.id}')`], ["📈 Réviser le loyer", `revision('${b.id}')`], ["✍️ Avenant au bail", `avenant('${b.id}')`], ["🔑 Il s'en va (départ)", `finBail('${b.id}')`], SB && !LECTURE ? ["🔗 Son espace locataire", `ouvrirPortail('${b.id}')`] : null])}</div>
+  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button>${menuPlus([["📝 Générer le bail", `docBailOpen('${b.id}')`], ["📈 Réviser le loyer", `revision('${b.id}')`], ["✍️ Avenant au bail", `avenant('${b.id}')`], ["🔑 Il s'en va (départ)", `finBail('${b.id}')`], SB && !LECTURE ? ["🔗 Son espace locataire", `ouvrirPortail('${b.id}')`] : null, S.sci.relanceAuto && !LECTURE ? [b.sansRelanceAuto ? "🔔 Remettre les relances automatiques" : "🔕 Pas de relance automatique pour lui", `basculerRelanceBail('${b.id}')`] : null])}</div>
   <div class="kpis">
     <div class="kpi"><span>Loyer actuel</span><b>${eur(l.hc + l.ch)}</b><small>${eur(l.hc)} + ${eur(l.ch)} de charges</small></div>
     ${(() => { const pe = planEtat(b), suit = pe && !pe.fait && pe.ok; return `<div class="kpi ${dette && !suit ? "bad" : ""}"><span>Doit</span><b>${eur(dette)}</b><small>${!dette ? "rien, tout est payé" : suit ? "étalé, il suit l'accord" : "loyers en retard"}</small></div>`; })()}
@@ -3273,6 +3274,36 @@ function dejaEcrit(adr) {
   return x ? { qui: prenomMembre(x.qui), quand: x.quand, objet: x.data.objet } : null;
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && SB && ESPACE && MODE === "partage") chargerActivite(); });
+/* ================= Relances automatiques (envoyées chaque matin par le serveur, depuis le Gmail du propriétaire) ================= */
+const etatRelanceAuto = () => S.sci.relanceAuto ? grosMsg("ok", "✅ Activées", "Chaque matin vers 7 h, un locataire en retard reçoit un rappel gentil 3 jours après la date prévue, puis un 2e rappel plus ferme au 8e jour. Tu reçois une notification à chaque envoi.")
+  : `<p class="note">Arrêtées : l'appli te prévient des retards, et tu relances toi-même.</p>`;
+function sectionRelanceAuto() {
+  if (!estProprio() || !SB) return "";
+  return `<section class="card"><h2>🔁 Relances automatiques</h2>
+    <label class="fl chk"><input type="checkbox" id="rauto" ${S.sci.relanceAuto ? "checked" : ""} onchange="basculerRelanceAuto(this)"> <span>Relancer tout seul les loyers en retard (J+3 puis J+8)</span></label>
+    <div id="rauto-etat">${etatRelanceAuto()}</div>
+    <ul class="note"><li>Envoyé depuis ton Gmail, avec ton prénom, comme si tu l'écrivais.</li><li>Jamais de mise en demeure automatique : ça, c'est toi qui décides.</li><li>Rien pendant un accord d'étalement, rien pour une vieille dette, rien sans e-mail du locataire.</li><li>Pour un locataire à part : sa fiche › Plus › "Pas de relance automatique pour lui".</li></ul>
+    ${GMAIL && GMAIL.mode === "google" ? "" : `<p class="note">⚠️ Il faut d'abord brancher ton Gmail (rubrique Envoi des e-mails) : les relances partent de ton adresse.</p>`}
+    <div class="row"><button type="button" class="small" onclick="apercuRelances()">👀 Voir ce qui partirait demain matin</button></div></section>`;
+}
+function basculerRelanceAuto(c) {
+  S.sci.relanceAuto = c.checked; save();
+  toast(c.checked ? "✓ Relances automatiques activées : 1er passage demain matin" : "Relances automatiques arrêtées");
+  const z = document.getElementById("rauto-etat"); if (z) z.innerHTML = etatRelanceAuto();
+  const r = document.querySelector("#rgl-relances summary small"); if (r) r.textContent = c.checked ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même";
+}
+function basculerRelanceBail(id) { const b = bail(id); if (!b) return; b.sansRelanceAuto = !b.sansRelanceAuto; save(); render(); toast(b.sansRelanceAuto ? `🔕 Plus de relance automatique pour ${nomCourt(b.nom)}` : `🔔 Relances automatiques remises pour ${nomCourt(b.nom)}`); }
+async function apercuRelances() {
+  toast("Calcul…");
+  try {
+    const s0 = (await SB.auth.getSession()).data.session;
+    const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/notifier", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s0 && s0.access_token) }, body: JSON.stringify({ essai: true, simulerRelances: true, espace: ESPACE }) });
+    const j = await r.json(); if (!r.ok || !j.ok) throw new Error(j.erreur || "Erreur " + r.status);
+    modal("👀 Relances de demain matin", j.plan.length ? `<div class="full">${grosMsg("attention", `${j.plan.length} relance${j.plan.length > 1 ? "s" : ""} partirai${j.plan.length > 1 ? "ent" : "t"} demain`, j.actif ? "Si le loyer arrive d'ici là, rien ne part." : "Seulement si tu actives l'option.")}</div>
+      ${j.plan.map(x => `<div class="full"><b>${esc(x.nom)}</b> · ${esc(x.email)} · ${x.niveau ? "2e rappel" : "rappel gentil"}<pre class="apercu-mail">Objet : ${esc(x.objet)}\n\n${esc(x.texte)}</pre></div>`).join("")}`
+      : `<div class="full">${grosMsg("ok", "Aucune relance demain", "Personne n'est en retard de 3 à 25 jours sans avoir déjà reçu le rappel prévu.")}</div>`, () => true, { ok: "Fermer", lecture: true });
+  } catch (e) { toast("Aperçu impossible : " + e.message); }
+}
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -3654,6 +3685,7 @@ function pageReglages() {
     rubrique("banque", "🏦", "Banque", BANQUE.lien ? `Pennylane branché${BANQUE.lien.erreur ? " · ⚠️ à rebrancher" : ""}` : "Pas branchée · Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
     estProprio() && SB ? rubrique("quittances", "🧾", "Quittances automatiques", S.sci.quittanceAuto ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive", sansCarte(sectionQuittanceAuto())) : "",
+    estProprio() && SB ? rubrique("relances", "🔁", "Relances automatiques", S.sci.relanceAuto ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même", sansCarte(sectionRelanceAuto())) : "",
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))

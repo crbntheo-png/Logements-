@@ -34,6 +34,28 @@ function echeance(b: any, m: string, pays: any[], auj: Date) {
   return { du, paye, reste: r2(Math.max(0, du - paye)), statut, due, jours: Math.floor((+auj - +due) / 864e5) };
 }
 
+// ---- Relances automatiques (option du propriétaire) : J+3 message gentil, J+8 message ferme. Jamais la mise en demeure.
+// Seulement les retards récents (pas de "petit oubli ?" pour une dette de 2 mois), pas pendant un accord d'étalement, pas sans e-mail.
+const fmD = (m: string) => MOIS[+m.slice(5, 7) - 1] + " " + m.slice(0, 4);
+const fdD = (d: Date) => String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0") + "/" + d.getFullYear();
+const isoD = (d: Date) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+function planRelances(baux: any[], pays: any[], relances: any[], sci: any, auj: Date, CUR: string) {
+  const out: any[] = [], g = (sci && sci.gerant) || "", iban = sci && sci.iban ? `\n\nPour rappel, le virement se fait sur le compte ${sci.iban}${sci.nom ? " (" + sci.nom + ")" : ""}.` : "";
+  for (const b of baux) {
+    if (!b.email || b.sansRelanceAuto || (b.dateSortie && P(b.dateSortie) < auj)) continue;
+    for (const m of [addM(CUR, -1), CUR]) {
+      const e = echeance(b, m, pays, auj); if (!e || e.statut !== "retard") continue;
+      const deja = relances.filter((r: any) => r.bailId === b.id && r.mois === m).sort((a: any, c: any) => String(a.date).localeCompare(String(c.date)));
+      const p = prenom(b.nom), niv = deja.length;
+      if (niv === 0 && e.jours >= 3 && e.jours <= 10)
+        out.push({ b, m, e, niv, objet: `Loyer de ${fmD(m)}`, texte: `Bonjour ${p},\n\nPetit message au cas où : je n'ai pas encore vu passer le loyer de ${fmD(m)} (${eur(e.reste)}). C'est peut-être un simple oubli. Si c'est déjà fait, ne tiens pas compte de ce message !${iban}\n\nMerci et bonne journée,\n${g}` });
+      else if (niv === 1 && e.jours >= 8 && e.jours <= 25 && (+auj - +P(String(deja[0].date))) / 864e5 >= 4)
+        out.push({ b, m, e, niv, objet: `Loyer de ${fmD(m)} toujours en attente`, texte: `Bonjour ${p},\n\nLe loyer de ${fmD(m)} (${eur(e.reste)}) n'est toujours pas réglé, il était à payer le ${fdD(e.due)}. Merci de faire le virement dans les prochains jours, ou de m'appeler si tu as une difficulté : on peut trouver une solution.${iban}\n\n${g}` });
+    }
+  }
+  return out;
+}
+
 // ---- Envoi depuis le Gmail branché de la personne (droit "envoyer" seulement). Aucun envoi par un serveur commun. ----
 const enTete = (s: string) => /^[\x20-\x7e]*$/.test(s) ? s : "=?UTF-8?B?" + b64u8(new TextEncoder().encode(s)) + "?=";
 function b64u8(u8: Uint8Array) { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000)); return btoa(s); }
@@ -64,6 +86,15 @@ Deno.serve(async (req) => {
     const { data: u } = await admin.auth.getUser((req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, ""));
     if (!u?.user || !corps.essai) return rep({ erreur: "Accès refusé" }, 401);
     seulUser = u.user.id;
+  }
+  if (seulUser && corps.simulerRelances && corps.espace) {
+    const { data: mb } = await admin.from("membres").select("user_id").eq("espace_id", corps.espace).eq("user_id", seulUser).maybeSingle();
+    if (!mb) return rep({ erreur: "Accès refusé" }, 403);
+    const { data: dd } = await admin.from("docs").select("coll, data").eq("espace_id", corps.espace).in("coll", ["baux", "paiements", "meta", "relances"]);
+    const pick = (c: string) => (dd || []).filter((x: any) => x.coll === c).map((x: any) => x.data), meta0 = (pick("meta")[0] || {});
+    const a0 = paris(); a0.setHours(12, 0, 0, 0);
+    const plan = planRelances(pick("baux"), pick("paiements"), pick("relances"), meta0.sci || {}, a0, mk(a0));
+    return rep({ ok: true, actif: !!(meta0.sci && meta0.sci.relanceAuto), plan: plan.map((x: any) => ({ bailId: x.b.id, nom: x.b.nom, email: x.b.email, mois: x.m, niveau: x.niv, objet: x.objet, texte: x.texte })) });
   }
   webpush.setVapidDetails(APP, Deno.env.get("VAPID_PUBLIC")!, Deno.env.get("VAPID_PRIVATE")!);
   if (corps.signalement && !seulUser) {
@@ -101,7 +132,7 @@ Deno.serve(async (req) => {
   const bilan: any[] = [];
   const { data: espaces } = await admin.from("espaces").select("id, nom");
   for (const esp of espaces || []) {
-    const { data: membres } = await admin.from("membres").select("user_id, email").eq("espace_id", esp.id);
+    const { data: membres } = await admin.from("membres").select("user_id, email, role").eq("espace_id", esp.id);
     const users = (membres || []).map((m: any) => m.user_id).filter((u: string) => !seulUser || u === seulUser);
     if (!users.length) continue;
     const { data: docs } = await admin.from("docs").select("coll, data").eq("espace_id", esp.id).in("coll", ["baux", "paiements", "meta"]);
@@ -126,6 +157,20 @@ Deno.serve(async (req) => {
         nPush += await envoyerPush(users, { titre: `📊 ${titre}`, texte: `${eur(rec)} reçus sur ${eur(att)} · ${nomEsp}`, url: "./#locataires", tag: "res-" + esp.id });
         for (const m of (membres || []).filter((m: any) => users.includes(m.user_id) && pref(m.user_id).resume && m.email))
           await envoyerParGmail(admin, m.user_id, [m.email], titre + " · " + nomEsp, texte).catch(() => {}); // sans Gmail branché : pas d'e-mail, l'alerte sur le téléphone suffit
+      }
+    }
+    // 4. Relances automatiques, envoyées depuis le Gmail du propriétaire (option dans Réglages)
+    const pr = (membres || []).find((m: any) => m.role === "proprietaire");
+    if (!seulUser && meta.sci && meta.sci.relanceAuto && pr) {
+      const { data: rl } = await admin.from("docs").select("data").eq("espace_id", esp.id).eq("coll", "relances");
+      for (const x of planRelances(baux, pays, (rl || []).map((r: any) => r.data), meta.sci, auj, CUR)) {
+        if (await dejaEnvoye(`rauto-${esp.id}-${x.b.id}-${x.m}-${x.niv}`)) continue;
+        try { await envoyerParGmail(admin, pr.user_id, [x.b.email], x.objet, x.texte); }
+        catch (err: any) { nPush += await envoyerPush([pr.user_id], { titre: `⚠️ Relance automatique pas envoyée (${prenom(x.b.nom)})`, texte: String(err?.message || err).slice(0, 120), url: "./#reglages", tag: "rauto-ko-" + x.b.id }); continue; }
+        const id = "ra-" + crypto.randomUUID().slice(0, 12);
+        await admin.from("docs").insert({ espace_id: esp.id, coll: "relances", doc_id: id, data: { id, bailId: x.b.id, mois: x.m, niveau: x.niv, date: isoD(auj), auto: true } });
+        await admin.from("envois").insert({ espace_id: esp.id, par: pr.user_id, destinataires: [x.b.email], objet: x.objet });
+        nPush += await envoyerPush(users, { titre: `🔁 Relance automatique envoyée à ${prenom(x.b.nom)}`, texte: `${x.niv ? "2e rappel" : "Rappel gentil"} · ${eur(x.e.reste)} · loyer de ${fmD(x.m)}`, url: `./#bail-${x.b.id}`, tag: "rauto-" + x.b.id });
       }
     }
     bilan.push({ espace: nomEsp, push: nPush });

@@ -49,6 +49,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — relances automatiques (comme Qalimo)
+- Réglages › "🔁 Relances automatiques" (propriétaire) : chaque matin (tâche `notifier` v13), un locataire en retard reçoit depuis le Gmail du propriétaire un rappel gentil à J+3 (jusqu'à J+10), puis un 2e rappel ferme à J+8 (jusqu'à J+25) si le 1er date d'au moins 4 jours. Mêmes mots que les relances de l'appli, prénom du propriétaire, IBAN rappelé. Jamais la mise en demeure. Rien pendant un accord d'étalement, rien sans e-mail, rien pour un locataire exclu (fiche › Plus › "Pas de relance automatique pour lui").
+- Chaque relance envoyée est notée dans l'appli (relance du mois, `auto: true`), dans le journal des envois (anti-doublon entre associés) et annoncée par une notification ; si Gmail refuse, notification "pas envoyée".
+- "👀 Voir ce qui partirait demain matin" : aperçu exact des e-mails (le serveur calcule sans rien envoyer ; refusé sans connexion ou à un non-membre).
+- Tests : test60 (vraie base, aucun e-mail envoyé) 11/11 ; test5, test53 OK. En ligne.
+- Pas vérifié : un vrai envoi (le compte de test n'a pas de Gmail). 1er passage réel : le matin qui suit l'activation.
+
 ### 18/11/2026 — feuille de route, étape 7 : surveillance de l'appli
 - GitHub Action `.github/workflows/surveillance.yml`, chaque jour à 6 h 17 UTC (7 h 17 à Paris en hiver), et à la demande (onglet Actions › Surveillance de l'appli › Run workflow) : la page https://sci-gestion-locative.com s'ouvre et contient l'appli ; l'adresse pages.dev s'ouvre ; la base répond (requête légère sur `espaces`, qui évite aussi la mise en pause du projet Supabase gratuit) ; la fonction `locataire` refuse un faux lien (404). Si une étape échoue, GitHub envoie un e-mail. La clé utilisée est la clé publique lue sur la page (aucun secret).
 - Essai des 4 vérifications depuis la machine de session : page ok, pages.dev ok, base 200, fonction 404. 1er passage sur GitHub lancé à la main le 18/11 : réussi (https://github.com/crbntheo-png/Logements-/actions/runs/44197732192).
