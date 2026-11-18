@@ -24,5 +24,9 @@
 - SQL sur Supabase : `python3 tests/sql.py fichier.sql` ou `python3 tests/sql.py "requête"`.
 - Comptes de test : test-a@gestion-test.fr et test-b@gestion-test.fr.
 
+## Canal "Quoi de neuf" (obligatoire)
+- Après chaque mise en ligne d'une nouveauté visible : `python3 tests/nouveaute.py ID "émoji" "Titre court" "Une phrase simple, en tutoyant : ce que ça change." "#page" --annoncer`.
+- Mots simples, pas de jargon, une seule phrase. `--annoncer` envoie une notification à tous les utilisateurs (une seule fois par ID). Pas pour une simple correction invisible.
+
 ## En fin de session
 - Ajouter une entrée en haut de l'Historique de `JOURNAL.md`, mettre à jour "À faire", commit et push.

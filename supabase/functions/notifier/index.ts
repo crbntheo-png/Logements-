@@ -82,7 +82,7 @@ let A_BLANC = false; // tournée « à blanc » (essai technique) : tout est cal
 // ---- Préférences de chacun : par type d'alerte, sur le téléphone (push) et/ou par e-mail (mail) ----
 const TYPES_NOTIF: Record<string, { push: boolean; mail: boolean }> = {
   loyer_recu: { push: true, mail: false }, retard: { push: true, mail: false }, relance_auto: { push: true, mail: false }, demande: { push: true, mail: true },
-  candidature: { push: true, mail: true }, signature: { push: true, mail: true }, depot: { push: true, mail: false }, boite: { push: true, mail: false }, resume: { push: true, mail: false }, banque: { push: true, mail: true }, echeances: { push: true, mail: false },
+  candidature: { push: true, mail: true }, signature: { push: true, mail: true }, depot: { push: true, mail: false }, nouveautes: { push: true, mail: false }, boite: { push: true, mail: false }, resume: { push: true, mail: false }, banque: { push: true, mail: true }, echeances: { push: true, mail: false },
 };
 function veutDe(p: any, type: string, canal: "push" | "mail") {
   if (canal === "push" && p && p.push === false) return false; // interrupteur général du téléphone
@@ -154,6 +154,19 @@ Deno.serve(async (req) => {
     const titre = `🔧 ${d.nom || "Un locataire"} signale un problème`, texte = String(d.texte || "").replace(/\s+/g, " ").slice(0, 140);
     await alerter(admin, d.espace_id, "demande", { titre, texte, url: "./#afaire", tag: "dem-" + d.id }, { titre, texte: `${d.nom || "Un locataire"} a signalé un problème depuis son espace locataire :\n\n${d.texte}\n\n${d.photo ? "Une photo est jointe à la demande : ouvre l'appli pour la voir.\n\n" : ""}Ouvre l'appli : ${APP}/#afaire` });
     return rep({ ok: true });
+  }
+  if (corps.nouveaute && !seulUser) {
+    // canal "Quoi de neuf" : une notification à chaque utilisateur (une seule fois par nouveauté), sauf s'il l'a coupée
+    const { data: nv } = await admin.from("nouveautes").select("*").eq("id", corps.nouveaute).maybeSingle();
+    if (!nv || nv.annonce_le) return rep({ ok: true, rien: true });
+    const { data: subs } = await admin.from("push_abonnements").select("*"); const users = [...new Set((subs || []).map((x: any) => x.user_id))];
+    const { data: prefs } = await admin.from("notif_prefs").select("*").in("user_id", users.length ? users : ["00000000-0000-0000-0000-000000000000"]);
+    const P = (u: string) => (prefs || []).find((x: any) => x.user_id === u) || null; let n = 0;
+    for (const x of (subs || []).filter((s: any) => veutDe(P(s.user_id), "nouveautes", "push"))) {
+      try { await webpush.sendNotification({ endpoint: x.endpoint, keys: { p256dh: x.p256dh, auth: x.auth } }, JSON.stringify({ titre: `${nv.icone} Nouveau : ${nv.titre}`, texte: nv.texte, url: "./#nouveautes", tag: "nv-" + nv.id })); n++; }
+      catch (e: any) { if (e.statusCode === 404 || e.statusCode === 410) await admin.from("push_abonnements").delete().eq("endpoint", x.endpoint); } }
+    await admin.from("nouveautes").update({ annonce_le: new Date().toISOString() }).eq("id", nv.id);
+    return rep({ ok: true, envoyes: n });
   }
   if (corps.depot && !seulUser) {
     const { data: d } = await admin.from("depots_locataire").select("id, espace_id, bail_id, type, nom").eq("id", corps.depot).maybeSingle();

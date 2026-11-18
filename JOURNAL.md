@@ -74,6 +74,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — canal "🆕 Quoi de neuf"
+- Table `nouveautes` (supabase/nouveautes.sql), lue par tous les utilisateurs connectés. Page `#nouveautes` (groupée par jour), bandeau sur l'accueil tant qu'il y a du neuf pas vu sur ce téléphone, rubrique "🆕 Quoi de neuf" dans Réglages › Ton appli, type de notification "Nouveautés de l'appli" (push oui, mail non).
+- Publier : `python3 tests/nouveaute.py ID "émoji" "Titre" "Phrase simple" "#page" --annoncer` (notifier, action `nouveaute`, une seule fois par ID grâce à `annonce_le`). Règle ajoutée dans CLAUDE.md.
+- Rempli avec les 10 nouveautés du 18/11, SANS notification (annonce_le posé). La prochaine nouveauté sera la première notifiée.
+- Testé : test78 8/8, test5. En ligne. Pas vérifié : la réception réelle de la notification sur un téléphone (aucune envoyée pour l'instant).
+
 ### 18/11/2026 — le locataire dépose son attestation d'assurance ; listes "Choisir…"
 - Espace locataire : carte "🛡️ Mon assurance habitation" (encadrée tant qu'elle manque) : photo ou PDF envoyé par la fonction `locataire` (action "deposer", table `depots_locataire`, supabase/depots_locataire.sql), notification "🛡️ X a envoyé son attestation" (type `depot`). Le portail publie la date de fin connue.
 - Propriétaire : le dépôt arrive tout seul dans les documents du logement (catégorie Locataire), puis À faire urgent "🛡️ Jean a envoyé son attestation d'assurance" : "🤖 Lire la date" (IA), "Voir", "C'est bon" (date de fin, sans redemander de ranger). La tâche "Attestation d'assurance habitation" propose d'abord "📲 Lui demander (son espace)" (espace créé tout seul, message prêt) et s'efface pendant qu'une attestation attend.
