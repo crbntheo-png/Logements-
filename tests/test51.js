@@ -32,7 +32,8 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.evaluate(() => closeOverlay());
   // entrée depuis la page Docs et le bouton « ? »
   await p.evaluate(() => { DOCS = { etat: 'pret', fichiers: [], dossiers: {} }; DRIVEG = { etat: 'non' }; go('docs'); render(); }); await p.waitForTimeout(400);
-  t(await p.isVisible('text=Demande-nous de le brancher'), 'Docs : « Tes documents sont ailleurs ? Demande-nous de le brancher »');
+  await p.locator('.menu-plus summary').last().click(); await p.waitForTimeout(200); // rangé dans "Plus" depuis le 18/11
+  t(await p.isVisible('text=Mes documents sont ailleurs'), 'Docs › Plus : « Mes documents sont ailleurs (Dropbox…) »');
   // page admin (données simulées)
   await p.evaluate(() => { ADMIN = true; const o = SB.rpc; SB.rpc = (n, a) => n === 'demandes_integrations' ? Promise.resolve({ data: [{ appli: 'Dropbox', nb: 3, personnes: 2, demandes: [{ email: 'a@b.fr', message: 'Dropbox — tous mes baux y sont', importance: 'indispensable', date: '2026-11-18T10:00:00Z' }] }, { appli: 'Qonto', nb: 1, personnes: 1, demandes: [{ email: 'c@d.fr', message: 'Qonto — mon compte de SCI', importance: 'pratique', date: '2026-11-17T10:00:00Z' }] }], error: null }) : o(n, a); INTEG = null; location.hash = 'integrations'; });
   await p.waitForTimeout(800);

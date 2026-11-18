@@ -16,7 +16,8 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
     S.baux.push({ id: 'l1', bienId: 'b1', nom: 'Jean Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save();
     DRIVEG = { etat: 'non' }; go('docs'); render(); });
   await p.waitForTimeout(500);
-  t(await p.isVisible('button:has-text("Importer un .zip")'), 'bouton « Importer un .zip » même sans Drive connecté');
+  await p.locator('.menu-plus summary').last().click(); await p.waitForTimeout(200); // rangé dans "Plus" depuis le 18/11
+  t(await p.isVisible('button:has-text("Importer un .zip")'), 'bouton « Importer un .zip » même sans Drive connecté (menu Plus)');
   await p.click('button:has-text("Importer un .zip")'); await p.waitForTimeout(300);
   await p.screenshot({ path: __dirname + '/b46-aide.png' });
   t(await p.isVisible('#overlay >> text=clic droit'), 'explique comment télécharger le dossier depuis le Drive');

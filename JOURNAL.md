@@ -57,7 +57,7 @@ Vague 4 — PRIORITÉ depuis le 18/11 (Théo : "une interface fluide, intuitive,
 18. ✅ (18/11) Compta en 4 onglets (Résumé, Banque, Dépenses, Comptable), écrans plus propres (bouton "?" en haut, Réglages en 4 groupes, plus de clignotement, menu Plus, banque par pages).
 19. ✅ (18/11) **Congé donné par le bailleur** (vente, reprise, motif sérieux) : lettre + date limite + offre de vente (Rentila : 30 courriers types).
 20. ✅ (18/11) **Suivi des interventions** : demande du locataire → artisan prévenu, date, réglé, facture ; dans À faire jusqu'à la fin.
-21. **Candidatures en ligne** : lien pour déposer le dossier, pièces vérifiées, loyer < 1/3 des revenus (Rentila, Qalimo). Les candidats existent déjà par logement : à ouvrir aux candidats eux-mêmes.
+21. ✅ (18/11) **Candidatures en ligne** : lien pour déposer le dossier, pièces vérifiées, loyer < 1/3 des revenus (Rentila, Qalimo). Les candidats existent déjà par logement : à ouvrir aux candidats eux-mêmes.
 22. **Tableau de bord par logement** : occupation, rentabilité (prix d'achat repris de l'acte par l'IA), prochain événement.
 
 Vague 3 — EN PAUSE (plus de comptable, tout depuis la banque ; GTP est une SCI à l'IS) — dans l'ordre :
@@ -73,6 +73,12 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — candidatures en ligne ; Docs épurée ; Compta sans chevauchement
+- Candidatures (Vague 4, étape 21) : fiche logement › Relouer › "🔗 Recevoir les dossiers en ligne" → lien public `#candidature=JETON` (tables `annonces_publiques`, `candidatures` : supabase/candidature.sql ; fonction `candidature`, verify_jwt=false). Le candidat voit l'annonce (sans l'adresse exacte), dépose nom, contact, situation, revenus, garantie, message et pièces (autorisées par la loi, 5 Mo chacune, photos réduites), accord obligatoire. Notification "🙋 Nouvelle candidature" (type `candidature` dans notifier). Propriétaire : À faire "🙋 Candidature de X · logement · taux d'effort", dossier (pièces en liens temporaires, ce qui manque), "➕ Garder" (ajouté aux candidats du logement, avec ses pièces) ou "Pas retenu" (pièces effacées). L'annonce se met à jour toute seule ; lien désactivable.
+- Docs (captures de Théo) : vue d'ensemble = recherche + tuiles "Par logement" (+ "Pas encore rangés", "Tout le Drive") + 5 derniers ajoutés ; la liste complète n'apparaît que sur demande ou en cherchant. Drive avant la boîte à documents ; "un par un", ".zip" et "ailleurs" rangés dans "Plus" ; adresse de la boîte sur une ligne, explication repliée ; carte "Ton Drive est à jour" retirée ; bilan de l'IA replié sur une ligne. Page : plus de 10 écrans → 2.
+- Compta : les cartes d'un onglet se chevauchaient (pas d'espace entre elles) : corrigé.
+- Testé : test75 19/19 (candidatures, vrai serveur), test45, 46, 47, 51 (adaptés au menu Plus), 5, 43, 56, 73. Non vérifiables aujourd'hui : test48/49/52 (crédits IA du compte de test épuisés pour la journée), test57/62/65 (déjà en échec avant, services extérieurs). 11 espaces de test oubliés supprimés (GTP et NIMAR intacts). En ligne.
 
 ### 18/11/2026 — congé donné par le bailleur (Vague 4, étape 19)
 - Fiche du locataire › Plus › "📤 Lui donner congé (vente, reprise)", et bouton "📤 Préparer un congé" sur la tâche "Fin de période du bail" tant qu'il est temps.
