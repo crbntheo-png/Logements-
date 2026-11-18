@@ -240,6 +240,13 @@ details.menu-plus { position: relative; display: inline-block; }
 details.menu-plus > summary { list-style: none; cursor: pointer; }
 details.menu-plus > summary::-webkit-details-marker { display: none; }
 details.menu-plus .menu { position: absolute; z-index: 30; top: calc(100% + 6px); right: 0; max-width: calc(100vw - 32px); min-width: 240px; background: var(--surface); border-radius: 14px; box-shadow: var(--sh-3, 0 10px 30px rgba(0,0,0,.18)); padding: 6px; display: flex; flex-direction: column; }
+details.menu-plus .menu.a-gauche { right: auto; left: 0; }
+.bq-filtre { display: flex; gap: 4px; padding: 4px; margin: 4px 0 6px; border-radius: 12px; background: var(--surface-2); width: 100%; }
+#app .bq-filtre button { flex: 1; min-height: 36px; padding: 6px 8px; border: 0; box-shadow: none; background: none; border-radius: 9px; font-weight: 600; color: var(--muted); }
+#app .bq-filtre button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 4px; }
+.pager span { display: grid; text-align: center; } .pager small { color: var(--muted); font-size: 12px; }
+#app .pager button { min-width: 48px; font-size: 20px; line-height: 1; } #app .pager button:disabled { opacity: .35; }
 details.menu-plus .menu button, details.menu-plus .menu a { justify-content: flex-start; text-align: left; background: none; box-shadow: none; border: 0; padding: 11px 12px; border-radius: 10px; width: 100%; }
 details.menu-plus .menu button:hover, details.menu-plus .menu a:hover { background: var(--surface-2); }
 .biens-l .lr-main .tx small.loc { color: var(--acc, inherit); }
@@ -926,7 +933,7 @@ function memoriserCache() {
 }
 function oublierCache() { clearTimeout(CACHE_T); try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(KEY); } catch (e) {} }
 function ouvrirDepuisCache(c) {
-  ESPACE = c.espace; ESPACES = c.espaces || []; S = blank(); synced = {}; APERCU = true;
+  ESPACE = c.espace; ESPACES = c.espaces || []; S = blank(); synced = {}; APERCU = true; BANQUE = lireCache("banque", ESPACE) || BANQUE; MEMBRES = lireCache("membres", ESPACE);
   Object.entries(c.synced).forEach(([k, j]) => { const i = k.indexOf("/"); try { appliquerLigne({ coll: k.slice(0, i), doc_id: k.slice(i + 1), data: JSON.parse(j) }); } catch (e) {} });
   appliquerFile();
   LECTURE = !!c.lecture; document.body.classList.toggle("lecture", LECTURE);
@@ -951,7 +958,7 @@ async function ouvrirEspace(id, enFond) {
   if (SB_CANAL) { try { SB.removeChannel(SB_CANAL); } catch (e) {} SB_CANAL = null; }
   ESPACE = id; try { localStorage.setItem("gestion-sci-espace", id); } catch (e) {}
   if (!enFond) { S = blank(); synced = {}; LECTURE = false; document.body.classList.remove("lecture"); DOCS = { etat: "vide", fichiers: [], dossiers: {} }; }
-  MEMBRES = null; HEBDO = { etat: "inconnu" };
+  MEMBRES = lireCache("membres", id); if (MEMBRES) majRole(); BANQUE = lireCache("banque", id) || { etat: "chargement", ops: [], comptes: [], lien: null }; HEBDO = { etat: "inconnu" };
   const lignes = []; let ok = true;
   for (let de = 0; ; de += 1000) {
     const r = await SB.from("docs").select("coll, doc_id, data").eq("espace_id", id).range(de, de + 999);
@@ -979,12 +986,16 @@ async function ouvrirEspace(id, enFond) {
   MODE = "partage"; if (enFond) remoteChanged(); else render();
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
-  BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
+  chargerBanque(true);
   DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; setTimeout(retourBanque, 800); chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000); CONNECTEUR_PUBLIE = ""; setTimeout(publierConnecteur, 7000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
 /* ================= Banque (via Pennylane, lue par le serveur) ================= */
 let BANQUE = { etat: "vide", ops: [], comptes: [], lien: null };
+/* Ce qui vient du serveur après l'ouverture (banque, associés) est gardé sur le téléphone : au rechargement la page
+   s'affiche tout de suite complète, au lieu de se réorganiser 3 secondes plus tard. On relit quand même en fond. */
+function lireCache(quoi, esp) { try { const v = JSON.parse(localStorage.getItem(`gestion-sci-cache-${quoi}-${esp}`) || "null"); return v && typeof v === "object" ? v : null; } catch (e) { return null; } }
+function ecrireCache(quoi, esp, v) { try { localStorage.setItem(`gestion-sci-cache-${quoi}-${esp}`, JSON.stringify(v)); } catch (e) {} }
 async function chargerBanque(actualiser) {
   if (!SB || !ESPACE) return; const id = ESPACE;
   try {
@@ -998,6 +1009,7 @@ async function chargerBanque(actualiser) {
     if (directe && pl) { try { const r = await SB.rpc("banque_pennylane_comparaison", { e: id }); if (r.data) { opsTous = opsTous.filter(x => x.source !== "pennylane").concat((r.data.ops || []).map(x => ({ ...x, montant: +x.montant, source: "pennylane" }))); comptesTous = comptesTous.filter(x => x.source !== "pennylane").concat((r.data.comptes || []).map(x => ({ ...x, source: "pennylane" }))); } } catch (e) {} }
     BANQUE = { etat: "ok", directe, pennylane: pl, principal: src, lien: directe ? { source: "enablebanking", derniere_synchro: directe.derniere_synchro, erreur: directe.erreur } : pl,
       comptes: comptesTous.filter(x => x.source === src), ops: opsTous.filter(x => x.source === src), comptesTous, opsTous, relue: BANQUE.relue };
+    ecrireCache("banque", id, { ...BANQUE, relue: false });
     if (directe && actualiser && !BANQUE.relue && (!directe.derniere_synchro || Date.now() - new Date(directe.derniere_synchro) > 6 * 3600e3)) { BANQUE.relue = true; fnBanque({ action: "actualiser", espace: id }).then(j => { if (j.n) chargerBanque(false); }, () => {}); }
     const n = rapprocherBanque(); if (n) toast(`🏦 ${n} virement${n > 1 ? "s" : ""} de locataire reconnu${n > 1 ? "s" : ""} et enregistré${n > 1 ? "s" : ""}`);
     if (RECUS.length) setTimeout(() => apresLoyersRecus(), n ? 2500 : 0);
@@ -1166,11 +1178,17 @@ function sectionBanque() {
     <p class="note">Pas de bouton d'export dans ta banque ? Sélectionne les lignes du relevé à l'écran, copie-les et colle-les dans la case prévue : ça marche aussi.</p>
     <div class="row"><button class="primary" onclick="importerReleve()">🏦 Importer le relevé</button></div>
     ${SB && estProprio() ? `<div class="penny-cta"><b>Tu utilises Pennylane ?</b> Tout devient automatique : l'appli lit ton compte toute seule, toutes les heures.<button class="small primary" onclick="assistantPennylane()">Brancher Pennylane</button></div>` : ""}</div></details>`;
-  const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), ops = BANQUE.ops.slice(0, view.banqueTout ? 400 : 25);
+  const PAR_PAGE = 8, filtre = view.banqueFiltre || "tout";
+  const tous = BANQUE.ops.filter(o => filtre === "tout" || (filtre === "entrees" ? o.montant > 0 : o.montant < 0));
+  const nbPages = Math.max(1, Math.ceil(tous.length / PAR_PAGE)), page = Math.min(view.banquePage || 0, nbPages - 1);
+  const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), ops = tous.slice(page * PAR_PAGE, page * PAR_PAGE + PAR_PAGE);
+  const filtreBtn = (k, t) => `<button type="button" class="${filtre === k ? "on" : ""}" aria-pressed="${filtre === k}" onclick="view.banqueFiltre='${k}';view.banquePage=0;render()">${t}</button>`;
   const lies = new Map(S.paiements.filter(p => p.tx).map(p => [String(p.tx), p]));
   return `<section class="card banque"><div class="bq-head"><div><h2>🏦 Compte bancaire</h2><p class="note">${BANQUE.comptes.map(c => esc(c.nom)).join(" · ")} · mis à jour ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0]?.maj_le || Date.now())}${BANQUE.lien.erreur ? ` · ⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p></div><b class="bq-solde">${eur(solde)}</b></div>
+    <div class="seg bq-filtre" role="group" aria-label="Quelles opérations">${filtreBtn("tout", "Tout")}${filtreBtn("entrees", "Entrées")}${filtreBtn("sorties", "Sorties")}</div>
     <ul class="ops">${ops.map(o => { const p = lies.get(o.tx_id), b = p && bail(p.bailId); return `<li><span class="op-d">${fds(o.date).slice(0, 5)}</span><span class="tx"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span>${b ? `<small class="lien">✓ Loyer ${esc(nomCourt(b.nom))}</small>` : ""}</span><b class="${o.montant > 0 ? "pos" : "neg"}">${o.montant > 0 ? "+" : "−"}${eur(Math.abs(o.montant))}</b></li>`; }).join("")}</ul>
-    <div class="row"><button class="small" onclick="actualiserBanque(this)">↻ Actualiser</button>${BANQUE.ops.length > 25 ? `<button class="small ghost" onclick="view.banqueTout=!view.banqueTout;render()">${view.banqueTout ? "Moins" : "Tout voir"}</button>` : ""}<button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div></section>`;
+    ${nbPages > 1 ? `<div class="pager" role="navigation" aria-label="Pages des opérations"><button type="button" class="small" ${page ? "" : "disabled"} onclick="view.banquePage=${page - 1};render()" aria-label="Page précédente">‹</button><span><b>Page ${page + 1} sur ${nbPages}</b><small>${tous.length} opération${tous.length > 1 ? "s" : ""}</small></span><button type="button" class="small" ${page < nbPages - 1 ? "" : "disabled"} onclick="view.banquePage=${page + 1};render()" aria-label="Page suivante">›</button></div>` : ""}
+    <div class="row"><button class="small" onclick="actualiserBanque(this)">↻ Actualiser</button><button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div></section>`;
 }
 /* ================= Brancher Pennylane, pas à pas (pour n'importe qui) ================= */
 // Deux cas : la personne a accès à Pennylane (dirigeant ou comptable interne) ; ou c'est son comptable qui gère.
@@ -1428,7 +1446,7 @@ function choisirEspace() {
 let MEMBRES = null;
 async function chargerMembres() {
   const [m, i] = await Promise.all([SB.from("membres").select("user_id, email, role").eq("espace_id", ESPACE), SB.from("invitations").select("*").eq("espace_id", ESPACE)]);
-  MEMBRES = { membres: m.data || [], invitations: i.data || [] }; majRole();
+  if (m.error) return; MEMBRES = { membres: m.data || [], invitations: i.data || [] }; ecrireCache("membres", ESPACE, MEMBRES); majRole();
   const el = document.getElementById("membres"); if (el) el.innerHTML = listeMembres();
 }
 function listeMembres() {
@@ -3217,6 +3235,9 @@ function pageLoyers() {
 }
 
 /* ================= Listes compactes (une ligne par élément, lisibles sur téléphone) ================= */
+/* Un menu "Plus" près du bord gauche s'ouvrirait hors de l'écran : on l'aligne alors à gauche */
+document.addEventListener("toggle", e => { const d = e.target; if (!d.matches || !d.matches("details.menu-plus") || !d.open) return;
+  const m = d.querySelector(".menu"); if (!m) return; m.classList.remove("a-gauche"); if (m.getBoundingClientRect().left < 8) m.classList.add("a-gauche"); }, true);
 const menuPlus = (items, label = "Plus") => `<details class="menu-plus" onclick="event.stopPropagation()"><summary class="btn small">${label} ▾</summary><div class="menu">${items.filter(Boolean).map(([t, f]) => `<button type="button" onclick="this.closest('details').open=false;${f}">${t}</button>`).join("")}</div></details>`;
 document.addEventListener("click", ev => { document.querySelectorAll("details.menu-plus[open]").forEach(d => { if (!d.contains(ev.target)) d.open = false; }); });
 /* Ce qui se passe pour un loyer, en mots simples */
@@ -3780,7 +3801,7 @@ function sectionCloture() {
       <p>Quand un mois est vérifié (loyers reçus, dépenses rangées), tu le <b>clôtures</b>. Ensuite plus personne ne peut le modifier par erreur : ni un associé, ni l'appli toute seule (pointage de la banque), ni un vieux téléphone pas à jour.</p>
       <p>Ça protège tes comptes, comme un comptable qui "arrête" ses mois. Un loyer d'octobre payé en novembre reste possible à noter : il compte en novembre.</p>
       <p>Besoin de corriger ? Le propriétaire rouvre le dernier mois clôturé, corrige, puis le reclôture.</p></details>
-    ${pro ? `<div class="row">${peutClore ? `<button class="small primary" onclick="cloturerMois('${suivant}')">🔒 Clôturer ${c ? "aussi " : "jusqu'à "}${esc(fm(suivant))}</button>` : ""}${c ? `<button class="small" onclick="rouvrirMois()">🔓 Rouvrir ${esc(fm(c))}</button>` : ""}</div>`
+    ${!MEMBRES ? "" : pro ? `<div class="row">${peutClore ? `<button class="small primary" onclick="cloturerMois('${suivant}')">🔒 Clôturer ${c ? "aussi " : "jusqu'à "}${esc(fm(suivant))}</button>` : ""}${c ? `<button class="small" onclick="rouvrirMois()">🔓 Rouvrir ${esc(fm(c))}</button>` : ""}</div>`
       : `<p class="note small">Seul le propriétaire (${esc(nomProprio())}) peut clôturer ou rouvrir un mois.</p>`}
   </section>`;
 }
