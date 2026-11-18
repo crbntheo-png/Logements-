@@ -394,7 +394,37 @@ details.pq summary::-webkit-details-marker { display: none; } details.pq p { mar
 .tons { gap: 6px; margin: 6px 0; }
 .parcours .etapes { list-style: none; margin: 10px 0 0; padding: 0; } .parcours .etape .note { margin: 4px 0 8px; }
 tr.pire td { background: var(--bad-soft); }
-input.auto, select.auto { background: var(--warn-soft); }
+input.auto, select.auto, textarea.auto { background: var(--warn-soft); }
+.auto-aide { background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 6px; font-size: .9rem; }
+.auto-aide p { margin: 0; color: var(--ink-2); line-height: 1.4; }
+.auto-aide .row { margin-top: 4px; }
+details.plus-infos { border: 1px solid var(--line); border-radius: var(--r); padding: 0; }
+details.plus-infos > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: grid; gap: 2px; }
+details.plus-infos > summary::-webkit-details-marker { display: none; }
+details.plus-infos > summary small { color: var(--ink-3, var(--ink-2)); font-weight: 500; font-size: .8rem; }
+details.plus-infos[open] > summary { border-bottom: 1px solid var(--line); }
+.pi-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 14px; }
+.pi-grid .full { grid-column: 1 / -1; }
+@media (max-width: 560px) { .pi-grid { grid-template-columns: minmax(0, 1fr); } }
+.dpe-choix { display: grid; gap: 8px; font-size: .88rem; }
+.dpe-chips { display: grid; gap: 6px; }
+.dpe-chip { justify-content: flex-start; text-align: left; height: auto; min-height: 46px; padding: 8px 12px; gap: 10px; background: var(--surface-2); white-space: normal; font-weight: 500; }
+.dpe-chip small { display: block; color: var(--ink-2); font-size: .76rem; }
+.dpe-chip.on { outline: 2px solid var(--accent); background: var(--accent-soft); }
+.suites { display: grid; gap: 8px; }
+.suite { justify-content: flex-start; text-align: left; height: auto; min-height: 60px; padding: 10px 12px; gap: 12px; background: var(--surface-2); white-space: normal; border-radius: var(--r); width: 100%; }
+.suite.reco { outline: 2px solid var(--accent); background: var(--accent-soft); }
+.suite .tx { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.suite .tx small { color: var(--ink-2); font-weight: 500; font-size: .8rem; line-height: 1.35; }
+.suite .chev { flex: none; opacity: .5; }
+button.suite, button.dpe-chip { text-align: left !important; justify-content: flex-start !important; } /* le téléphone centre les boutons par défaut */
+.suite-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); box-shadow: var(--sh-1); font-size: 1.2rem; flex: none; }
+.bienvenue { display: grid; gap: 10px; }
+.bienvenue h2 { margin: 0; }
+.bienvenue > p { margin: 0; }
+.a-completer .barre { margin: 6px 0 4px; }
+.a-completer ul.todo li .tx small { display: block; }
+details.pli-mini > summary { cursor: pointer; font-size: .85rem; color: var(--accent); padding: 6px 0; }
 body.lecture #app .row > button, body.lecture #app .acts, body.lecture #app .tile .row, body.lecture #app .todo li > button, body.lecture .top-acts .primary, body.lecture .top-acts [aria-label="Ajouter"], body.lecture .hero .cta, body.lecture #app .card form button, body.lecture .parcours .row { display: none !important; }
 .todo.plat { box-shadow: none; border: 1px solid var(--line); } .todo.plat li { min-height: 52px; } .money { font-variant-numeric: tabular-nums; white-space: nowrap; }
 details.pli > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 0; }
@@ -2751,7 +2781,8 @@ function boutonAide() {
   if (b) b.hidden = !visible;
 }
 function pageBienvenue() {
-  return `<div class="greet"><h1>Bienvenue 👋</h1><p>En quelques étapes, l'appli tient tes loyers, tes quittances, tes documents et ta compta. Chaque étape te dit pourquoi elle compte.</p></div>
+  return `<div class="greet"><h1>Bienvenue 👋</h1><p>On commence par tes logements. Ensuite l'appli suit tes loyers, prépare quittances et relances, et range tes papiers.</p></div>
+  ${LECTURE ? "" : `<section class="card bienvenue"><h2>🏢 Crée tes logements</h2><p class="note">Choisis le plus simple pour toi. Tu pourras tout corriger ensuite, et rien n'est envoyé à personne sans ton accord.</p>${choixCreerBiens()}</section>`}
   ${blocGuide(false).replace('<button class="small ghost" onclick="S.faits.guideMasque=iso(TODAY);save();render()">Masquer ce guide</button>', '<a class="btn small ghost" href="#aide">Comment ça marche ?</a>')}
   ${SB ? "" : `<div class="banner" style="background:var(--surface);box-shadow:var(--sh-1)"><span>✨ Envie de voir à quoi ça ressemble d'abord ?</span><button class="small" onclick="chargerDemo()">Charger un exemple</button></div>`}`;
 }
@@ -3065,8 +3096,8 @@ async function envoyerDocument(bienId, d, f) {
   const ext = (f.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, ""), chemin = `${ESPACE}/${bienId}/${uid()}.${ext}`;
   const r = await SB.storage.from("documents").upload(chemin, f, { contentType: f.type || "application/octet-stream" });
   if (r.error) { toast("Envoi impossible : " + r.error.message); return; }
-  S.fichiers.push(Object.assign({ id: uid(), bienId, cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) }, qui(d.bailId)));
-  save(); render(); toast("✓ Document ajouté");
+  const id = uid(); S.fichiers.push(Object.assign({ id, bienId, cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) }, qui(d.bailId)));
+  save(); render(); if (!d.discret) toast("✓ Document ajouté"); return id;
 }
 function ajouterLienDoc(bienId, bailId, cat) {
   const baux = S.baux.filter(b => b.bienId === bienId);
@@ -3130,6 +3161,7 @@ function pageBien(id) {
     </div>
     ${blocRentaNette(bi)}
     <div class="stack">
+    ${carteACompleter(bi)}
     <section class="card"><h2>🏠 Le logement</h2><div class="bien"><dl>
       <dt>Type</dt><dd>${esc(bi.type || "—")} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</dd>
       <dt>Surface</dt><dd>${bi.surface ? esc(bi.surface) + " m²" : "—"}${bi.pieces ? " · " + esc(bi.pieces) + " pièce(s)" : ""}</dd>
@@ -3294,15 +3326,15 @@ function rangerPropositions(liste) {
   save(); render(); toast(`✓ ${liste.length} document${liste.length > 1 ? "s" : ""} rangé${liste.length > 1 ? "s" : ""}`);
 }
 function pageBiens() {
-  return `<div class="head"><div><h1>Biens</h1><p>Touche un logement pour tout voir : locataire, documents, historique.</p></div><div class="row"><button class="primary" onclick="editBien()">+ Ajouter</button>${SB && estProprio() && !LECTURE ? `<button onclick="importerTableur()">📊 Depuis un tableur</button>` : ""}</div></div>
+  return `<div class="head"><div><h1>Biens</h1><p>${S.biens.length ? "Touche un logement pour tout voir : locataire, documents, ce qui manque." : "Tes logements, avec leurs papiers et leurs locataires."}</p></div><div class="row"><button class="primary" onclick="editBien()">+ Ajouter</button>${SB && estProprio() && !LECTURE ? `<button onclick="importerTableur()">📊 Depuis un tableur</button>` : ""}</div></div>
   ${S.biens.length ? `<ul class="lr-list biens-l">${S.biens.map(bi => {
     const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null, e = b && echeance(b, CUR), nDocs = S.fichiers.filter(f => f.bienId === bi.id).length;
-    const alerte = !bi.dpe ? "DPE à noter" : bi.dpe === "G" || bi.dpe === "F" ? `DPE ${bi.dpe} : attention` : "";
+    const manque = LECTURE ? 0 : aCompleterBien(bi).L.length, alerte = bi.dpe === "G" || bi.dpe === "F" ? `DPE ${bi.dpe} : attention` : manque ? `${manque} info${manque > 1 ? "s" : ""} à compléter` : "";
     return `<li class="lr"><div class="lr-main" onclick="go('bien-${bi.id}')" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span>
       <span class="tx"><b>${esc(bi.nom)}</b><small>${b ? `${esc(nomCourt(b.nom))} · ${eur(l.hc + l.ch)}/mois` : "Vide · à louer"}${nDocs ? ` · ${nDocs} doc${nDocs > 1 ? "s" : ""}` : ""}${alerte ? ` · ${alerte}` : ""}</small></span>
       <span class="lr-r">${b ? (e ? pillStatut(e) : `<span class="pill ok">Loué</span>`) : `<span class="pill warn">Vide</span>`}</span>${ic("chevR", "chev")}</div>
       ${b ? "" : `<div class="lr-acts"><button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button></div>`}</li>`;
-  }).join("")}</ul>` : `<div class="empty">Aucun bien. Ajoute ton premier logement.</div>`}`;
+  }).join("")}</ul>` : `<section class="card bienvenue"><h2>🏢 Crée tes logements</h2><p class="note">Choisis la façon la plus simple pour toi. Tu pourras tout corriger ensuite.</p>${choixCreerBiens()}</section>`}`;
 }
 
 function pageBail(id) {
@@ -3669,7 +3701,8 @@ function rangerRecu(id) {
 /* Après lecture par l'IA, un document pas encore rangé va tout seul dans le bon logement et la bonne catégorie */
 const CAT_DOC_IA = { taxe_fonciere: "Taxe foncière", dpe: "Diagnostics (DPE…)", attestation_assurance_locataire: "Locataire (pièces, garant…)", assurance_proprietaire: "Assurance", facture: "Factures et travaux", charges_copropriete: "Copropriété", bail: "Bail" };
 function rangerApresLecture(d, ctx, bid) {
-  const f = ctx.fichierId && S.fichiers.find(x => x.id === ctx.fichierId); if (!f || f.bienId) return;
+  const f = ctx.fichierId && S.fichiers.find(x => x.id === ctx.fichierId); if (!f) return;
+  if (f.bienId) { if (f.cat === "Autre" && CAT_DOC_IA[d.type]) { f.cat = CAT_DOC_IA[d.type]; save(); } return; }
   let bienId = bid, bailId = "";
   if (d.type === "attestation_assurance_locataire") { const a = " " + normTxt(d.assure_nom).replace(/[^A-Z0-9]+/g, " ") + " "; const c = S.baux.filter(b => motsDe(b.nom).some(m => m.length > 2 && a.includes(" " + m + " "))); if (c.length === 1) { bailId = c[0].id; bienId = c[0].bienId; } }
   if (!bienId) return;
@@ -4511,7 +4544,7 @@ function brancherAutoAdresse() {
       boite.hidden = !L.length;
       boite.querySelectorAll("button").forEach(b => b.onclick = () => { const a = L[+b.dataset.i];
         champ.value = a.rue; const cp = document.getElementById("f_cp"), vi = document.getElementById("f_ville"); if (cp) cp.value = a.cp; if (vi) vi.value = a.ville;
-        fixe("banId", a.banId); fixe("lat", a.lat); fixe("lon", a.lon); boite.hidden = true; });
+        fixe("banId", a.banId); fixe("lat", a.lat); fixe("lon", a.lon); boite.hidden = true; champ.dispatchEvent(new CustomEvent("adresse-choisie", { detail: a })); });
     }, 350);
   });
   champ.addEventListener("blur", () => setTimeout(() => boite.hidden = true, 250));
@@ -4555,6 +4588,7 @@ async function trouverDpe(bienId, numero) {
     d => { if (!DPE_L.length) return; const x = DPE_L[+d.dpe]; if (!x) { toast("Choisis ton DPE dans la liste."); return false; }
       const avantDpe = bi.dpe; setTimeout(() => revisionDebloquee(bi.id, avantDpe), 300);
       Object.assign(bi, { dpe: x.etiquette_dpe || "", dpeGes: x.etiquette_ges || "", dpeValidite: x.date_fin_validite_dpe || "", dpeDate: x.date_etablissement_dpe || "", dpeNumero: x.numero_dpe });
+      if (!(+bi.surface > 0) && +x.surface_habitable_logement > 0) bi.surface = Math.round(+x.surface_habitable_logement * 10) / 10;
       toast(`✓ DPE ${x.etiquette_dpe} noté pour ${bi.nom}`); },
     { ok: L.length ? "Utiliser ce DPE" : "Fermer" });
 }
@@ -4592,40 +4626,165 @@ function supprimerBien(id) {
     S.biens = S.biens.filter(x => x.id !== id); S.fichiers = S.fichiers.filter(f => f.bienId !== id); S.edl = (S.edl || []).filter(e => e.bienId !== id);
     save(); go("biens"); render(); toast(`🗑 « ${bi.nom} » supprimé`); });
 }
+/* Ajouter ou modifier un logement : l'essentiel d'abord, le reste replié.
+   L'adresse choisie dans la liste va chercher le DPE (surface, classe) dans la base publique de l'ADEME ;
+   un papier du logement (DPE, bail, taxe foncière…) peut aussi tout remplir via l'IA. Rien n'est gardé sans "Enregistrer". */
+const TYPE_COURT = { Appartement: "Appart", Maison: "Maison", Studio: "Studio", Local: "Local", "Parking / garage": "Parking" };
+function nomAuto(type, ville, adresse) {
+  const base = `${TYPE_COURT[type] || "Logement"} ${ville || String(adresse || "").replace(/^\d+\s*(bis|ter)?\s*/i, "").slice(0, 24)}`.trim();
+  let n = base, k = 2; while (S.biens.some(x => x.nom === n)) n = `${base} ${k++}`;
+  return n;
+}
+let BIEN_DOC = null, DPE_F = [];
 function editBien(id) {
-  const b = id ? bien(id) : {};
-  modal(id ? "Modifier le bien" : "Nouveau bien", `
-    ${fld("Nom court (ex : Appart Agon 1)", "nom", b.nom, "text", "", "required")}
-    ${sel("Type", "type", b.type || "Appartement", ["Appartement", "Maison", "Studio", "Local", "Parking / garage"].map(x => [x, x]))}
-    ${fld("Adresse (tape-la : l'appli te la propose)", "adresse", b.adresse, "text", "full")}${fld("Code postal", "cp", b.cp)}${fld("Ville", "ville", b.ville)}
+  const b = id ? bien(id) : {}, nouveau = !id, iaOk = SB && estProprio() && !LECTURE && !MCP;
+  BIEN_DOC = null; DPE_F = [];
+  modal(id ? "Modifier le logement" : "Nouveau logement", `
+    ${nouveau ? `<div class="full auto-aide"><b>⚡ L'appli remplit pour toi</b>
+      <p>Tape l'adresse et touche-la dans la liste : l'appli retrouve toute seule la surface et le DPE (base publique de l'État).</p>
+      ${iaOk ? `<p>Ou donne-lui un papier du logement (DPE, bail, taxe foncière, acte d'achat) : l'IA le lit et remplit.</p><div class="row"><button type="button" class="small primary" onclick="remplirBienDepuisDoc(this)">📄 Remplir avec un document</button></div>` : ""}
+      <div class="note" id="bienLu" aria-live="polite"></div></div>` : ""}
+    ${fld("Adresse (tape-la : l'appli te la propose)", "adresse", b.adresse, "text", "full", 'placeholder="ex : 12 rue de la Mer"')}${fld("Code postal", "cp", b.cp, "text", "", 'inputmode="numeric"')}${fld("Ville", "ville", b.ville)}
     <input type="hidden" name="banId" value="${esc(b.banId || "")}"><input type="hidden" name="lat" value="${esc(b.lat || "")}"><input type="hidden" name="lon" value="${esc(b.lon || "")}">
+    <input type="hidden" name="dpeGes" value="${esc(b.dpeGes || "")}"><input type="hidden" name="dpeDate" value="${esc(b.dpeDate || "")}">
+    <div class="full" id="dpeTrouves" aria-live="polite"></div>
+    ${fld("Nom court, pour le reconnaître (ex : Appart Agon 1)", "nom", b.nom, "text", "full", nouveau ? 'placeholder="Laisse vide : l\'appli en propose un"' : "required")}
+    ${sel("Type", "type", b.type || "Appartement", ["Appartement", "Maison", "Studio", "Local", "Parking / garage"].map(x => [x, x]))}
+    ${sel("Loué", "meuble", b.meuble || "vide", [["vide", "Vide (non meublé)"], ["meuble", "Meublé"]])}
     ${fld("Surface habitable (m²)", "surface", b.surface, "number")}${fld("Nombre de pièces", "pieces", b.pieces, "number")}
-    ${sel("Loué", "meuble", b.meuble || "vide", [["vide", "Vide (non meublé)"], ["meuble", "Meublé"]])}${fld("Année de construction", "annee", b.annee, "number")}
+    <details class="full plus-infos" ${id ? "open" : ""}><summary><b>➕ Plus d'infos</b><small>Facultatif : DPE, assurance, prix d'achat, chauffage… Tu pourras le faire plus tard.</small></summary><div class="pi-grid">
     ${sel("Classe DPE", "dpe", b.dpe || "", [["", "—"], ...["A", "B", "C", "D", "E", "F", "G"].map(x => [x, x])])}${fld("DPE valable jusqu'au", "dpeValidite", b.dpeValidite, "date")}
     ${fld("Numéro du DPE (13 caractères, en haut du DPE)", "dpeNumero", b.dpeNumero, "text", "full", 'maxlength="13" autocapitalize="characters" spellcheck="false" placeholder="ex : 2350E1960061Z"')}
-    ${fld("Échéance assurance PNO", "pnoEcheance", b.pnoEcheance, "date")}${fld("Loyer indicatif HC (€)", "loyerRef", b.loyerRef, "number")}
-    ${fld("Prix d'achat, frais compris (€) — pour la rentabilité", "prixAchat", b.prixAchat, "number", "full")}
+    ${fld("Année de construction", "annee", b.annee, "number")}${fld("Loyer indicatif HC (€)", "loyerRef", b.loyerRef, "number")}
+    ${fld("Échéance assurance PNO", "pnoEcheance", b.pnoEcheance, "date")}${fld("Prix d'achat, frais compris (€)", "prixAchat", b.prixAchat, "number")}
     ${sel("Chauffage", "chauffage", b.chauffage || "", [["", "—"], ...ENERGIES])}${sel("Eau chaude", "eauChaude", b.eauChaude || "", [["", "—"], ...ENERGIES])}
-    ${sel("Immeuble", "regimeImm", b.regimeImm || (b.type === "Maison" ? "mono" : ""), [["", "—"], ["copro", "En copropriété"], ["mono", "Monopropriété (un seul propriétaire)"]])}
+    ${sel("Immeuble", "regimeImm", b.regimeImm || (b.type === "Maison" ? "mono" : ""), [["", "—"], ["copro", "En copropriété"], ["mono", "Monopropriété (un seul propriétaire)"]], "full")}
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
-    ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}`,
+    ${area("Notes (syndic, compteurs, codes, artisans…)", "notes", b.notes)}</div></details>`,
     d => {
       d.dpeNumero = String(d.dpeNumero || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
-      if (d.dpeNumero && d.dpeNumero.length !== 13) { toast("Le numéro du DPE fait 13 caractères (lettres et chiffres)."); return false; }
+      if (d.dpeNumero && d.dpeNumero.length !== 13) { toast("Le numéro du DPE fait 13 caractères (lettres et chiffres)."); const pl = document.querySelector("#mform .plus-infos"); if (pl) pl.open = true; return false; }
+      d.nom = String(d.nom || "").trim();
+      if (!d.nom) { if (!String(d.adresse || "").trim() && !String(d.ville || "").trim()) { toast("Donne au moins l'adresse ou un nom au logement."); return false; } d.nom = nomAuto(d.type, d.ville, d.adresse); }
       const avantDpe = id ? b.dpe : "";
-      if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); apresModifDrive();
-      if (id) setTimeout(() => revisionDebloquee(id, avantDpe), 300);
+      if (id) { Object.assign(b, d); setTimeout(() => revisionDebloquee(id, avantDpe), 300); }
+      else { const nid = uid(), doc = BIEN_DOC; S.biens.push({ id: nid, ...d }); BIEN_DOC = null;
+        if (doc && SB) setTimeout(() => envoyerDocument(nid, { cat: doc.cat, nom: "", bailId: "", discret: true }, doc.file).then(x => x && toast("📁 Le document est rangé dans le logement")), 600);
+        setTimeout(() => { go("bien-" + nid); setTimeout(() => apresNouveauBien(nid), 150); }, 30); }
+      apresModifDrive();
     },
-    Object.assign({ after: () => brancherAutoAdresse() }, id ? { del: () => { closeOverlay(); supprimerBien(id); } } : {}));
+    Object.assign({ after: f => { brancherAutoAdresse();
+      document.getElementById("f_adresse").addEventListener("adresse-choisie", e => { const a = e.detail;
+        if (nouveau && !f.nom.value.trim()) { f.nom.value = nomAuto(f.type.value, a.ville, a.rue); f.nom.classList.add("auto"); }
+        if (!id || !b.dpe) dpeDansFormulaire(a.banId); }); } }, id ? { del: () => { closeOverlay(); supprimerBien(id); } } : {}));
+}
+/* DPE trouvés à l'adresse choisie, proposés dans le formulaire : un geste remplit surface et DPE */
+async function dpeDansFormulaire(banId) {
+  const zone = document.getElementById("dpeTrouves"); if (!zone || !banId) return;
+  zone.innerHTML = `<p class="note">🔎 Je cherche le DPE à cette adresse…</p>`;
+  let L = []; try { L = await dpeListe(`identifiant_ban:"${banId}"`); } catch (e) { zone.innerHTML = ""; return; }
+  if (!document.body.contains(zone)) return;
+  const f = document.getElementById("mform"), s = f ? +f.surface.value || 0 : 0;
+  L.sort((a, b) => (s ? Math.abs((a.surface_habitable_logement || 999) - s) - Math.abs((b.surface_habitable_logement || 999) - s) : 0) || String(b.date_etablissement_dpe).localeCompare(String(a.date_etablissement_dpe)));
+  DPE_F = L.slice(0, 8);
+  if (!DPE_F.length) { zone.innerHTML = `<p class="note">Pas de DPE récent à cette adresse dans la base de l'État. Tu pourras l'ajouter plus tard avec une photo du DPE.</p>`; return; }
+  zone.innerHTML = `<div class="dpe-choix"><b>🔎 ${DPE_F.length > 1 ? `${DPE_F.length} logements trouvés à cette adresse : touche le tien` : "Trouvé à cette adresse : c'est le tien ?"}</b>
+    <div class="dpe-chips">${DPE_F.map((x, i) => `<button type="button" class="dpe-chip" onclick="utiliserDpeForm(${i},this)"><span class="pill ${x.etiquette_dpe === "G" ? "bad" : x.etiquette_dpe === "F" ? "warn" : "info"}">${esc(x.etiquette_dpe || "?")}</span><span>${x.surface_habitable_logement ? `<b>${String(x.surface_habitable_logement).replace(".", ",")} m²</b>` : ""}${x.complement_adresse_logement ? " · " + esc(String(x.complement_adresse_logement).slice(0, 30)) : ""}<small>${esc(x.type_batiment || "")} · DPE du ${fds(x.date_etablissement_dpe)}</small></span></button>`).join("")}</div>
+    <small class="note">Ça remplit la surface et le DPE. Pas le tien ? Ignore, rien n'est rempli.</small></div>`;
+}
+function utiliserDpeForm(i, bt) {
+  const x = DPE_F[i], f = document.getElementById("mform"); if (!x || !f) return;
+  const t = /maison/i.test(x.type_batiment || "") ? "Maison" : /appartement/i.test(x.type_batiment || "") && f.type.value !== "Studio" ? "Appartement" : "";
+  surligner(f, [["surface", +x.surface_habitable_logement > 0 ? Math.round(+x.surface_habitable_logement * 10) / 10 : ""], ["dpe", x.etiquette_dpe || ""], ["dpeValidite", x.date_fin_validite_dpe || ""], ["dpeNumero", x.numero_dpe || ""], ["type", t]]);
+  f.dpeGes.value = x.etiquette_ges || ""; f.dpeDate.value = x.date_etablissement_dpe || "";
+  if (t && f.nom.classList.contains("auto")) f.nom.value = nomAuto(t, f.ville.value, f.adresse.value);
+  document.querySelectorAll(".dpe-chip.on").forEach(c => c.classList.remove("on")); if (bt) bt.classList.add("on");
+  const pl = f.querySelector(".plus-infos"); if (pl) pl.open = true;
+  toast(`✓ Surface et DPE ${x.etiquette_dpe || ""} remplis : vérifie les cases en jaune`);
+}
+/* Un papier du logement (DPE, bail, taxe foncière, acte…) lu par l'IA pour remplir la fiche ; il sera rangé dans le logement */
+async function remplirBienDepuisDoc(btn) {
+  const f = document.getElementById("mform"), info = t => { const n = document.getElementById("bienLu"); if (n) n.textContent = t; };
+  if (iaSansCredit()) { info("Plus de lecture par l'IA ce mois-ci : tape l'adresse, l'appli cherche quand même le DPE."); return; }
+  const file = await choisirFichier("application/pdf,image/*"); if (!file) return;
+  btn.disabled = true; info("🤖 L'IA lit le document… (20 secondes environ)");
+  try {
+    const j = await fnIA(await corpsLectureIA(file, file.type || "", file.name)), d = j.doc || {}, faits = [];
+    if (!document.body.contains(f)) return;
+    let banId = "";
+    if (d.adresse_logement) {
+      const a = (await chercherAdresses(d.adresse_logement, 1).catch(() => []))[0];
+      const poser = (k, v) => { if (v) { f[k].value = v; f[k].classList.add("auto"); } }; // sans relancer la liste d'adresses
+      if (a && a.score >= 0.5) { poser("adresse", a.rue); poser("cp", a.cp); poser("ville", a.ville); f.banId.value = a.banId; f.lat.value = a.lat; f.lon.value = a.lon; banId = a.banId; }
+      else { const m = String(d.adresse_logement).match(/^(.*?)[,\s]+(\d{5})\s+(.+)$/); if (m) { poser("adresse", m[1].trim()); poser("cp", m[2]); poser("ville", m[3].trim()); } else poser("adresse", d.adresse_logement); }
+      faits.push("adresse");
+    }
+    if (+d.surface > 0) { surligner(f, [["surface", +d.surface]]); faits.push("surface"); }
+    if (+d.pieces > 0) { surligner(f, [["pieces", Math.round(+d.pieces)]]); faits.push("pièces"); }
+    if (d.dpe_classe) { surligner(f, [["dpe", d.dpe_classe], ["dpeValidite", dateOk(d.dpe_validite)], ["dpeNumero", String(d.dpe_numero || "").toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 13)]]); f.dpeGes.value = d.dpe_ges || ""; f.dpeDate.value = dateOk(d.dpe_date); faits.push("DPE " + d.dpe_classe); const pl = f.querySelector(".plus-infos"); if (pl) pl.open = true; }
+    if (!f.nom.value.trim() && (f.ville.value || f.adresse.value)) { f.nom.value = nomAuto(f.type.value, f.ville.value, f.adresse.value); f.nom.classList.add("auto"); }
+    BIEN_DOC = { file, cat: CAT_DOC_IA[d.type] || (/acte|vente|notari/i.test(d.resume || "") ? "Acte d'achat / prêt" : "Autre") };
+    info(faits.length ? `✓ Rempli : ${faits.join(", ")}. Vérifie les cases en jaune. Le document sera rangé dans ce logement.${resteDocsTxt(j.credits)}` : `Je n'ai pas trouvé l'adresse dans ce document : tape-la à la main.${resteDocsTxt(j.credits)}`);
+    if (banId && !d.dpe_classe) dpeDansFormulaire(banId);
+  } catch (e) { info((e.message || "L'IA n'a pas pu lire ce document") + " : tape l'adresse à la place."); }
+  btn.disabled = false;
+}
+const carteChoix = (ico, t, s, f, cls = "") => `<button type="button" class="suite ${cls}" onclick="${f}"><span class="suite-ico" aria-hidden="true">${ico}</span><span class="tx"><b>${t}</b><small>${s}</small></span>${ic("chevR", "chev")}</button>`;
+/* Les 3 façons de créer ses logements, expliquées (accueil d'un nouveau venu, page Biens vide) */
+function choixCreerBiens() {
+  const ia = SB && estProprio() && !LECTURE;
+  return `<div class="suites">
+    ${ia ? carteChoix("🤖", "Depuis ton Google Drive", "Le plus rapide : l'IA lit tes dossiers, crée les logements et les locataires, range les papiers. Tu valides avant.", "go('docs')", "reco") : ""}
+    ${carteChoix("📍", "À partir de l'adresse", "Un logement à la fois : tape l'adresse, la surface et le DPE se remplissent tout seuls.", "editBien()")}
+    ${ia ? carteChoix("📊", "Depuis un tableur", "Tu as un fichier Excel ou l'export d'une autre appli ? L'IA comprend les colonnes.", "importerTableur()") : ""}
+  </div>`;
+}
+/* Ce qui manque sur la fiche d'un logement, avec le geste qui le remplit (souvent tout seul) */
+function aCompleterBien(bi) {
+  const ia = SB && estProprio(), L = [], tf = (S.taxes || []).some(t => t.bienId === bi.id);
+  const c = (ok, ico, t, s, btn, f) => { if (!ok) L.push({ ico, t, s, btn, f }); };
+  c(bi.adresse && bi.cp && bi.ville, "📍", "L'adresse complète", "Elle sert au bail, au DPE et aux risques.", "Compléter", `editBien('${bi.id}')`);
+  c(bi.dpe && bi.surface, "⚡", !bi.dpe ? "Le DPE" : "La surface", "Obligatoire dans le bail. L'appli le retrouve toute seule dans la base de l'État.", "🔎 Retrouver", `trouverDpe('${bi.id}')`);
+  c(tf, "🏛", "La taxe foncière", ia ? "Donne l'avis (photo ou PDF) : l'IA lit le total et les ordures ménagères à récupérer." : "Pour récupérer les ordures ménagères sur le locataire.", ia ? "📷 Donner l'avis" : "Renseigner", ia ? `lirePapierBien('${bi.id}')` : `taxeFonciere('${bi.id}')`);
+  c(bi.risquesVerifies, "🌊", "Les risques (inondation, radon…)", "À joindre à chaque nouveau bail. Vérifié en 1 minute, gratuit.", "Vérifier", `etatRisques('${bi.id}')`);
+  c(bi.pnoEcheance, "🛡", "L'assurance du logement (PNO)", "Sa date d'échéance, pour être prévenu à temps.", "Noter", `editBien('${bi.id}')`);
+  c(bi.prixAchat, "💶", "Le prix d'achat", "Pour voir ce que le logement te rapporte vraiment.", "Ajouter", `editBien('${bi.id}')`);
+  return { L, pct: Math.round((6 - L.length) / 6 * 100) };
+}
+function carteACompleter(bi) {
+  if (LECTURE) return ""; const { L, pct } = aCompleterBien(bi); if (!L.length) return "";
+  const li = x => `<li><span class="ico" aria-hidden="true">${x.ico}</span><span class="tx"><b>${x.t}</b><small>${x.s}</small></span><button class="small" onclick="${x.f}">${x.btn}</button></li>`;
+  return `<section class="card a-completer"><h2>✨ Fiche remplie à ${pct} %</h2>
+    <div class="barre"><i style="width:${pct}%"></i></div>
+    <ul class="todo">${L.slice(0, 3).map(li).join("")}</ul>
+    ${L.length > 3 ? `<details class="pli-mini"><summary>Voir les ${L.length - 3} autres</summary><ul class="todo">${L.slice(3).map(li).join("")}</ul></details>` : ""}</section>`;
+}
+/* Juste après la création d'un logement : la suite la plus utile, expliquée */
+function apresNouveauBien(id) {
+  const bi = bien(id); if (!bi) return;
+  const ch = (ico, t, s, f) => carteChoix(ico, t, s, "closeOverlay();" + f);
+  modal("✓ Logement ajouté", `<div class="full">${grosMsg("ok", `🎉 ${esc(bi.nom)} est créé`, "Et maintenant, le plus utile :")}</div>
+    <div class="full suites">
+      ${ch("👤", "Mettre le locataire", SB && estProprio() ? "Donne le bail (PDF ou photo) : l'IA remplit nom, dates, loyer et dépôt." : "Nom, date d'entrée, loyer : l'appli calcule ensuite chaque mois.", `editBail(null,'${id}')`)}
+      ${SB ? ch("📄", "Donner ses papiers", estProprio() ? "DPE, taxe foncière, assurance : l'IA les lit, remplit la fiche et les range." : "Bail, DPE, assurance : tout rangé dans le logement.", estProprio() ? `lirePapierBien('${id}')` : `ajouterDocument('${id}','')`) : ""}
+      ${ch("➕", "Ajouter un autre logement", "Même chose : l'adresse suffit pour commencer.", "editBien()")}
+    </div>`, () => true, { ok: "Plus tard", lecture: true });
+}
+/* Un papier pour ce logement : rangé dedans, puis lu par l'IA (taxe foncière, DPE, assurance, facture…) */
+async function lirePapierBien(bienId, bailId) {
+  if (!SB) { toast("Disponible dans l'appli installée."); return; }
+  const file = await choisirFichier("application/pdf,image/*"); if (!file) return;
+  const fid = await envoyerDocument(bienId, { cat: "Autre", nom: "", bailId: bailId || "", discret: true }, file); if (!fid) return;
+  if (estProprio() && !iaSansCredit()) lireDocIA({ fichier: fid }); else toast("✓ Document rangé dans le logement");
 }
 
 function editBail(id, bienId, pre) {
   const b = id ? bail(id) : { bienId: bienId || (S.biens[0] || {}).id, typeBail: "vide", jourPaiement: 5, dateEntree: iso(TODAY), suiviDepuis: CUR, chargesMode: "provision", revisable: true };
   if (!id && b.bienId) { const bi = bien(b.bienId); if (bi) { b.typeBail = bi.meuble === "meuble" ? "meuble" : "vide"; b.loyerHC = bi.loyerRef || ""; } }
   if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
-  if (!S.biens.length) { confirmer("Ajoutez d'abord un bien.", () => editBien()); return; }
+  if (!S.biens.length) { confirmer("Ajoute d'abord le logement : le locataire y sera rattaché.", () => editBien()); return; }
   modal(id ? "Modifier le locataire" : "Nouveau locataire", `
-    ${id ? "" : `<div class="full"><button type="button" class="primary" onclick="remplirDepuisBail(this)">${SB && !estProprio() ? "📄" : "🤖"} Remplir depuis le bail (PDF ou photo)</button><div class="note" id="bailLu" aria-live="polite"></div></div>`}
+    ${id ? "" : `<div class="full auto-aide"><b>⚡ Le plus rapide : donne le bail</b><p>PDF ou photo : ${SB && !MCP && estProprio() ? "l'IA" : "l'appli"} remplit nom, dates, loyer, charges et dépôt. Les cases remplies passent en jaune : tu vérifies, puis Enregistrer.</p><div class="row"><button type="button" class="small primary" onclick="remplirDepuisBail(this)">${SB && !estProprio() ? "📄" : "🤖"} Remplir depuis le bail</button></div><div class="note" id="bailLu" aria-live="polite"></div></div>`}
     <fieldset><legend>Locataire</legend>
     ${fld("Nom et prénom", "nom", b.nom, "text", "", "required")}${fld("Colocataire(s) / co-titulaire(s)", "colocataires", b.colocataires)}
     ${fld("Téléphone", "tel", b.tel, "tel")}${fld("E-mail", "email", b.email, "email")}
@@ -5173,13 +5332,18 @@ async function lireDocIA(src) {
       toast("🤖 L'IA lit « " + nom + " »… (20 secondes environ)");
       bl = await blobDrive({ id: f.id, mimeType: f.type, partage: f.partage }); type = /google-apps/.test(f.type) ? "application/pdf" : (f.type || bl.type);
     }
-    const corps = { action: "doc", espace: ESPACE, nom };
-    if (/pdf/.test(type)) { let t = ""; try { t = await texteToutPdf(bl); } catch (e) {} if (t.replace(/\s/g, "").length > 500) corps.texte = t; else { if (bl.size > 15e6) throw new Error("PDF scanné trop lourd (15 Mo maximum)."); corps.fichier_b64 = await b64Blob(bl); corps.type = "application/pdf"; } }
-    else { const r = /^image\/(jpeg|png|webp)$/.test(type) && bl.size < 3e6 ? bl : await reduirePhoto(bl); corps.fichier_b64 = await b64Blob(r); corps.type = r.type || "image/jpeg"; }
-    const j = await fnIA(corps);
+    const j = await fnIA(await corpsLectureIA(bl, type, nom));
     appliquerLectureDoc(j.doc, { bienId, bailId, nom, fichierId: src.fichier || "" }, j.credits);
   } catch (e) { toast(e.message || "L'IA n'a pas pu lire ce document."); }
 }
+/* Ce qu'on envoie à l'IA pour lire un papier : le texte d'un PDF s'il en a, sinon l'image ou le scan */
+async function corpsLectureIA(bl, type, nom) {
+  const corps = { action: "doc", espace: ESPACE, nom };
+  if (/pdf/.test(type)) { let t = ""; try { t = await texteToutPdf(bl); } catch (e) {} if (t.replace(/\s/g, "").length > 500) corps.texte = t; else { if (bl.size > 15e6) throw new Error("PDF scanné trop lourd (15 Mo maximum)."); corps.fichier_b64 = await b64Blob(bl); corps.type = "application/pdf"; } }
+  else { const r = /^image\/(jpeg|png|webp)$/.test(type) && bl.size < 3e6 ? bl : await reduirePhoto(bl); corps.fichier_b64 = await b64Blob(r); corps.type = r.type || "image/jpeg"; }
+  return corps;
+}
+const iaSansCredit = () => IA.credits && (iaBloquee(IA.credits) || (!IA.credits.illimite && IA.credits.docs_restants <= 0));
 function grosMsgToast() { modal("🤖 Lecture par l'IA", `<div class="full">${grosMsg("stop", "⛔ Plus de lecture de document ce mois-ci", "Tes crédits reviennent le 1er du mois. En attendant, remplis à la main.")}</div>`, () => true, { ok: "Fermer", lecture: true }); }
 const resteDocsTxt = c => c && !c.illimite && c.docs_restants !== undefined ? ` Il te reste ${c.docs_restants} lecture${c.docs_restants > 1 ? "s" : ""} ce mois-ci.` : "";
 const dateOk = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") ? v : "";

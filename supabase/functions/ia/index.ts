@@ -61,14 +61,14 @@ Recopie exactement ce qui est écrit, sans rien inventer : chaîne vide "" ou 0 
 const DATE = { type: "string" }, CLASSE = { type: "string", enum: ["A", "B", "C", "D", "E", "F", "G", ""] };
 const S_DOC = {
   type: "object", additionalProperties: false,
-  required: ["type", "resume", "adresse_logement", "date_document", "annee", "montant_total", "montant_teom", "fournisseur", "objet", "categorie", "dpe_classe", "dpe_ges", "dpe_numero", "dpe_date", "dpe_validite", "assure_nom", "assurance_fin", "remarques"],
+  required: ["type", "resume", "adresse_logement", "date_document", "annee", "montant_total", "montant_teom", "fournisseur", "objet", "categorie", "dpe_classe", "dpe_ges", "dpe_numero", "dpe_date", "dpe_validite", "assure_nom", "assurance_fin", "surface", "pieces", "remarques"],
   properties: {
     type: { type: "string", enum: ["taxe_fonciere", "dpe", "attestation_assurance_locataire", "assurance_proprietaire", "facture", "charges_copropriete", "bail", "autre"] },
     resume: { type: "string" }, adresse_logement: { type: "string" }, date_document: DATE, annee: { type: "number" },
     montant_total: { type: "number" }, montant_teom: { type: "number" }, fournisseur: { type: "string" }, objet: { type: "string" },
     categorie: { type: "string", enum: ["Taxe foncière", "Charges de copropriété", "Assurance propriétaire (PNO)", "Assurance loyers impayés", "Travaux d'entretien / réparation", "Travaux d'amélioration", "Diagnostics", "Honoraires (comptable, notaire, avocat…)", "Eau / électricité / gaz", "Autre"] },
     dpe_classe: CLASSE, dpe_ges: CLASSE, dpe_numero: { type: "string" }, dpe_date: DATE, dpe_validite: DATE,
-    assure_nom: { type: "string" }, assurance_fin: DATE, remarques: { type: "string" },
+    assure_nom: { type: "string" }, assurance_fin: DATE, surface: { type: "number" }, pieces: { type: "number" }, remarques: { type: "string" },
   },
 };
 const CONSIGNE_DOC = `Tu lis un document reçu par un propriétaire bailleur (souvent une SCI) pour le ranger au bon endroit dans son appli de gestion locative.
@@ -83,6 +83,7 @@ Recopie exactement ce qui est écrit, sans rien inventer : "" ou 0 quand l'infor
 - categorie : la catégorie de dépense qui convient le mieux (Travaux d'entretien / réparation pour une réparation, Travaux d'amélioration pour un équipement neuf ou une rénovation).
 - dpe_* : seulement pour un DPE : classe énergie, classe climat (GES), numéro ADEME (13 caractères), date d'établissement, date de fin de validité.
 - assure_nom / assurance_fin : seulement pour l'attestation d'un locataire : nom de l'assuré et date de fin de la période couverte.
+- surface / pieces : surface habitable du logement en m² et nombre de pièces principales, seulement s'ils sont écrits (DPE, bail, acte de vente), sinon 0.
 - remarques : 1 phrase sur ce qui est illisible ou incertain, sinon "".`;
 // Lecture d'un tableur (Excel, export d'une autre appli) : logements et locataires à créer
 const S_TAB = {

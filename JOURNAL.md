@@ -74,6 +74,17 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — logements remplis tout seuls, parcours d'un nouveau venu expliqué
+- Nouveau logement : l'essentiel d'abord (adresse, nom, type, meublé, surface, pièces), le reste replié dans "➕ Plus d'infos". Adresse touchée dans la liste → l'appli cherche les DPE à cette adresse (base ADEME) et propose "touche le tien" : surface, classe, numéro, validité remplis en jaune. Nom proposé tout seul ("Appart Agon-Coutainville", numéroté si déjà pris).
+- "📄 Remplir avec un document" (propriétaire, appli en ligne) : l'IA lit un DPE, bail, taxe foncière ou acte et remplit adresse, surface, pièces, DPE ; le document est rangé dans le logement à l'enregistrement. Fonction `ia` : le schéma "doc" renvoie aussi `surface` et `pieces` (déployée, version 12).
+- Après création : "Et maintenant ?" (mettre le locataire avec le bail lu par l'IA, donner ses papiers, autre logement).
+- Fiche d'un logement : carte "✨ Fiche remplie à X %" (adresse, DPE/surface, taxe foncière, risques, PNO, prix d'achat) avec le bouton qui remplit (souvent tout seul). Liste des biens : "N infos à compléter".
+- Accueil d'un nouveau venu et page Biens vide : "Crée tes logements" avec 3 façons expliquées (Drive recommandé, adresse, tableur). Formulaire locataire : "Le plus rapide : donne le bail" expliqué.
+- "Retrouver le DPE" sur la fiche remplit aussi la surface si elle manque. Un papier lu par l'IA depuis un logement change sa catégorie "Autre" en la bonne.
+- Tests : test84 (nouveau, 37 vérifications, services publics simulés) OK ; test5, test40 OK ; test57 (vraie IA) 12 OK après remise à zéro du quota du compte de test ; test85 (nouveau, vraie IA : un DPE remplit adresse, surface 38 m², 2 pièces, DPE E) OK. test37 ne passe pas ici : le service d'adresses de l'État n'est pas joignable depuis la machine de test (pas lié à la modif).
+- En ligne (https://sci-gestion-locative.com), annoncé dans le canal Quoi de neuf (logements-auto). 3 espaces "Test IA papiers" laissés par les tests (compte test-a) supprimés.
+- Pas vérifié : la recherche de DPE sur un vrai téléphone avec la vraie base ADEME (simulée dans les tests, l'ADEME n'est pas joignable depuis la machine de test).
+
 ### 18/11/2026 — validation Google : où on en est ; page de confidentialité complétée
 - Google a répondu le 17/11 (20 h 08 UTC) "[Action Needed] Your Google APIs Verification Request" (projet gestion-locative-514614, n° 502656965437) : liste de contrôle, il faut RÉPONDRE au mail pour que l'examen reprenne. Réponse en anglais proposée à Théo (pas envoyée : attend son accord ; brouillon Gmail possible).
 - /confidentialite : section anglaise "Google user data — summary for Google reviewers" (scopes, accès, usage, transfert, protection, conservation/suppression, phrase Limited Use) + banque en direct (Enable Banking, DSP2, lecture seule). En ligne, vérifié.
