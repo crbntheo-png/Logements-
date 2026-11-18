@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "5b2d2df", "date": "2026-11-18T18:38"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "9603a62", "date": "2026-11-18T18:48"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1033,7 +1033,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   chargerBanque(true);
-  CANDS = []; ANNONCE_PUBLIEE = {}; setTimeout(chargerCandidatures, 400); SIGD = []; setTimeout(chargerSignaturesDistance, 600); setTimeout(publierAnnonces, 5500);
+  CANDS = []; ANNONCE_PUBLIEE = {}; setTimeout(chargerCandidatures, 400); SIGD = []; setTimeout(chargerSignaturesDistance, 600); setTimeout(chargerDepots, 800); setTimeout(publierAnnonces, 5500);
   DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; setTimeout(retourBanque, 800); chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000); CONNECTEUR_PUBLIE = ""; setTimeout(publierConnecteur, 7000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
@@ -1181,7 +1181,7 @@ function sectionSorties(y) {
   const groupes = Object.entries(G).sort((a, b) => (a[0] === "À classer" ? -1 : b[0] === "À classer" ? 1 : 0) || b[1].L.length - a[1].L.length);
   const ligne = ({ o, c }, k) => `<li><input type="hidden" name="grp_${o.tx_id}" value="${esc(k)}"><label class="chk"><input type="checkbox" name="ok_${o.tx_id}" ${c.cat ? "checked" : ""} aria-label="Ranger cette dépense"></label><div class="tx"><div class="sl-h"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span><b class="neg">−${eur(-o.montant)}</b></div>
       <small>${fds(o.date)}${c.appris ? " · d'après ton choix précédent" : ""}</small>
-      <div class="sl-sel"><select name="cat_${o.tx_id}" aria-label="Catégorie"><option value="">— choisis la catégorie —</option>${CATS.map(x => `<option ${x === c.cat ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      <div class="sl-sel"><select name="cat_${o.tx_id}" aria-label="Catégorie"><option value="">Choisir…</option>${CATS.map(x => `<option ${x === c.cat ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
       <select name="bien_${o.tx_id}" aria-label="Logement">${optsBien.map(([v, l]) => `<option value="${v}" ${v === c.bienId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
       <button type="button" class="small ghost" onclick="ignorerSortie('${o.tx_id}')" title="Ce n'est pas une dépense (virement entre tes comptes, erreur…)">Pas une dépense</button></div></div></li>`;
   return `<section class="card sorties" id="sorties"><h2>🧾 Ranger tes dépenses de ${y}</h2>
@@ -1239,7 +1239,7 @@ function sectionEntrees(y) {
   if (!SB || !BANQUE.lien) return "";
   const L = entreesAClasser(y); if (!L.length) return "";
   const tot = r2(L.reduce((t, o) => t + o.montant, 0)), assoc = nomsAssocies();
-  const options = c => `<option value="">— c'est quoi ? —</option>${CATS_ENTREE.map(([x]) => x === "Apport d'un associé" && assoc.length
+  const options = c => `<option value="" disabled selected hidden>Choisir…</option>${CATS_ENTREE.map(([x]) => x === "Apport d'un associé" && assoc.length
     ? assoc.map(n => `<option value="apport|${esc(n)}" ${c.cat === x && c.qui === n ? "selected" : ""}>👤 Apport de ${esc(n)}</option>`).join("")
     : `<option value="${esc(x)}" ${c.cat === x ? "selected" : ""}>${ICO_ENT(x)} ${esc(x)}</option>`).join("")}`;
   const G = {}; L.forEach(o => { const c = classerEntree(o), k = c.cat || "À classer"; (G[k] = G[k] || []).push({ o, c }); });
@@ -1956,10 +1956,10 @@ function docDemandeAssurance(bailId) {
   showDoc(html, { titre: "Demande d'attestation d'assurance", fichier: `Demande-assurance-${slug(b.nom)}`, to: b.email, bailId: b.id,
     email: { objet: "Votre attestation d'assurance habitation", corps: `Bonjour ${prenomL},\n\nComme chaque année, pouvez-vous nous envoyer l'attestation d'assurance habitation du logement ? C'est une page que votre assureur vous donne (souvent dans votre espace en ligne). Une photo ou un PDF suffit, en réponse à ce message.\n\nMerci d'avance,\n${S.sci.gerant || ""}` } });
 }
-function assuranceRecue(bailId) {
+function assuranceRecue(bailId, dejaRangee) {
   const b = bail(bailId);
   modal(`Attestation reçue — ${esc(b.nom)}`, `<p class="full note">Indique jusqu'à quand il est assuré (c'est écrit sur l'attestation). L'appli te rappellera de redemander la suivante un mois avant.</p>${fld("Assuré jusqu'au", "fin", b.assuranceFin || iso(addDays(TODAY, 365)), "date", "", "required")}<p class="full note">Tu peux aussi ranger l'attestation dans ses documents juste après.</p>`,
-    d => { b.assuranceFin = d.fin; toast("C'est noté"); setTimeout(() => confirmer("Ranger aussi l'attestation (photo ou PDF) dans ses documents ?", () => ajouterDocument(b.bienId, b.id, "Locataire (pièces, garant…)")), 400); });
+    d => { b.assuranceFin = d.fin; toast("C'est noté"); if (!dejaRangee) setTimeout(() => confirmer("Ranger aussi l'attestation (photo ou PDF) dans ses documents ?", () => ajouterDocument(b.bienId, b.id, "Locataire (pièces, garant…)")), 400); });
 }
 function docPointLocataire(bailId) {
   const b = bail(bailId), p = planEtat(b), e = echeance(b, CUR), l = loyerAt(b, CUR), loyer = r2(l.hc + l.ch), dette = p ? p.dette : detteBail(b);
@@ -2069,6 +2069,9 @@ function taches() {
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
       acts: [[`Garder ${mA}`, `garderPaiement('${x.cle}','A')`, "primary"], [`Garder ${mB}`, `garderPaiement('${x.cle}','B')`], ["Ce sont 2 paiements", `pasUnDoublon('${x.cle}')`]] }); });
+  depotsAVoir().forEach(f => { const b = bail(f.bailId) || {};
+    add({ bailId: f.bailId, key: "depv-" + f.id, prio: "urgent", date: P(f.date) || TODAY, t: `🛡️ ${esc(nomCourt(b.nom || "Le locataire"))} a envoyé son attestation d'assurance`, d: "Depuis son espace locataire. L'IA peut lire la date de fin pour toi.",
+      acts: [estProprio() ? ["🤖 Lire la date", `traiterDepot('${f.id}','ia')`, "primary"] : null, ["Voir", `traiterDepot('${f.id}','voir')`], ["C'est bon", `traiterDepot('${f.id}','ok')`]].filter(Boolean) }); });
   (SIGD || []).forEach(x => { const b = bail(x.bail_id) || {};
     if (x.statut === "signe") add({ bailId: x.bail_id, key: "sigd-" + x.id, prio: "urgent", date: new Date(x.signe_le), t: `✍️ ${esc(nomCourt(b.nom || x.nom_locataire || "Le locataire"))} a signé « ${esc(x.titre)} »`, d: `À distance, ${ilYa(x.signe_le)}. Range le PDF signé dans le logement.`, acts: [["Voir et ranger le PDF", `ouvrirSigneDistance('${x.id}')`, "primary"]] });
     else if (x.statut === "attente") { const j = daysBetween(new Date(x.cree_le), TODAY); add({ bailId: x.bail_id, key: "sigd-att-" + x.id + "-" + (j >= 3 ? "r" : ""), prio: j >= 3 ? "soon" : "info", date: new Date(x.cree_le), t: `⏳ « ${esc(x.titre)} » attend la signature de ${esc(nomCourt(b.nom || ""))}`, d: j >= 3 ? `Envoyé il y a ${j} jours : un petit rappel ?` : "Dans son espace locataire.", acts: [["📲 Lui rappeler", `rappelSignature('${x.id}')`], ["Retirer", `annulerSignatureDistance('${x.id}')`]] }); }
@@ -2136,11 +2139,11 @@ function taches() {
     // 5. Attestation d'assurance habitation
     if (actif && b.typeBail !== "mobilite") {
       const fin = P(b.assuranceFin); const k = "ass-" + b.id + "-" + (b.assuranceFin || "x");
-      if ((!fin || fin <= addDays(TODAY, 30)) && !fait(k))
+      if ((!fin || fin <= addDays(TODAY, 30)) && !fait(k) && !depotsAVoir().some(f => f.bailId === b.id))
         add({ bailId: b.id, key: k, prio: fin && fin < TODAY || !fin ? "soon" : "info", date: fin || TODAY, done: true,
           t: `Attestation d'assurance habitation : ${esc(b.nom)}`,
           d: (fin ? `Son assurance se termine le ${fd(fin)}. ` : "Tu n'as pas encore son attestation d'assurance. ") + "À lui demander une fois par an.",
-          acts: [["Lui demander", `docDemandeAssurance('${b.id}')`, "primary"], ["Je l'ai reçue", `assuranceRecue('${b.id}')`]] });
+          acts: [SB ? ["📲 Lui demander (son espace)", `demanderAssuranceEspace('${b.id}')`, "primary"] : ["Lui demander", `docDemandeAssurance('${b.id}')`, "primary"], SB ? ["Lettre", `docDemandeAssurance('${b.id}')`] : null, ["Je l'ai reçue", `assuranceRecue('${b.id}')`]].filter(Boolean) });
     }
     // 6. Départ / état des lieux / dépôt de garantie
     if (b.dateSortie) {
@@ -4944,7 +4947,7 @@ function donneesPortail(b) {
   const docs = (S.fichiers || []).filter(f => f.bailId === b.id && f.chemin && !f.ancienId && /^(Bail|État des lieux)$/.test(f.cat)).slice(-30).map(f => ({ nom: f.nom, cat: f.cat, date: f.date || "", chemin: f.chemin }));
   return { v: 1, maj: new Date().toISOString(), locataire: b.nom, bailleur: estPerso() ? (S.sci.gerant || S.sci.nom || "") : (S.sci.nom || ""), contact: { tel: S.sci.telephone || "", email: S.sci.email || "" },
     logement: adresseBien(bi), loyer: { hc: +b.loyerHC || 0, charges: +b.charges || 0, jour: +b.jourPaiement || 1 }, iban: S.sci.iban || "",
-    dette, prochain: proch ? { m: proch.m, montant: proch.reste, date: iso(proch.dueDate) } : null, mois, docs,
+    dette, prochain: proch ? { m: proch.m, montant: proch.reste, date: iso(proch.dueDate) } : null, mois, docs, assurance: { fin: b.assuranceFin || "" },
     suivi: Object.fromEntries((bi.travaux || []).filter(t => t.demandeId && t.statut !== "fini").map(t => [String(t.demandeId), { etat: t.statut === "devis" ? "Pris en charge" : t.statut === "encours" ? "En cours" : "Artisan prévu", date: t.statut === "prevu" && t.date ? t.date : "" }])) };
 }
 function planifierPortails() { if (!SB || !ESPACE || LECTURE || !S.baux.some(b => b.portail)) return; clearTimeout(PORTAIL_T); PORTAIL_T = setTimeout(publierPortails, 1500); }
@@ -5047,6 +5050,10 @@ function pageLocataire() {
       ${D.prochain ? `<li><span class="tx"><b>Prochain loyer</b><small>avant le ${fds(P(D.prochain.date))}</small></span><b>${eur(D.prochain.montant)}</b></li>` : ""}
       ${D.iban ? `<li><span class="tx"><b>IBAN pour le virement</b><small class="iban">${esc(D.iban)}</small></span><button type="button" class="small" onclick="copierTexte('${esc(D.iban)}')">Copier</button></li>` : ""}</ul></section>
     ${(LOC.a_signer || []).length ? `<section class="card loc-card loc-asigner"><h2>✍️ À signer</h2><ul class="loc-l">${LOC.a_signer.map(x => `<li><span class="tx"><b>${esc(x.titre)}</b><small>${x.statut === "attente" ? "Envoyé " + ilYa(x.cree_le) : "Signé " + ilYa(x.signe_le)}</small></span>${x.statut === "attente" ? `<button type="button" class="small primary" onclick="lireASigner('${x.id}')">Lire et signer</button>` : `<span class="pill ok">✓ Signé</span>`}</li>`).join("")}</ul></section>` : ""}
+    ${(() => { const fin = D.assurance && D.assurance.fin, okA = fin && P(fin) > addDays(TODAY, 30), dep = (LOC.depots || []).find(x => x.type === "assurance" && x.statut === "nouveau" || x.type === "assurance" && Date.now() - new Date(x.cree_le) < 7 * 864e5);
+      return `<section class="card loc-card ${okA || dep ? "" : "loc-asigner"}"><h2>🛡️ Mon assurance habitation</h2>
+      ${dep ? `<p>✅ Attestation envoyée ${ilYa(dep.cree_le)}. Merci !</p>` : okA ? `<p>✅ Valable jusqu'au ${fd(P(fin))}. Merci !</p>` : `<p class="note">${fin ? `Votre assurance se termine le ${fd(P(fin))}.` : "Votre propriétaire n'a pas encore votre attestation."} Elle est obligatoire chaque année : envoyez-la ici en photo ou en PDF.</p>`}
+      <form class="f" onsubmit="event.preventDefault();envoyerAssuranceLocataire(this)"><label class="fl full">${okA || dep ? "Envoyer une nouvelle attestation" : "Mon attestation (photo ou PDF)"}<input type="file" name="f" id="loc_ass" accept="image/*,application/pdf" required></label><div class="full"><button class="${okA || dep ? "" : "primary"}" id="loc_ass_btn">Envoyer</button></div></form></section>`; })()}
     <section class="card loc-card"><h2>🧾 Mes quittances</h2>${q ? `<ul class="loc-l">${q}</ul>` : `<p class="note">Rien pour l'instant.</p>`}</section>
     ${docs ? `<section class="card loc-card"><h2>📄 Mes documents</h2><ul class="loc-l">${docs}</ul></section>` : ""}
     <section class="card loc-card"><h2>🔧 Signaler un problème</h2><p class="note">Fuite, panne, chauffage… Votre propriétaire est prévenu tout de suite.</p>
@@ -6760,6 +6767,42 @@ async function ouvrirSigneDistance(id) {
   CURDOC.base = x.base_html; CURDOC.sigs = Object.assign({}, x.sigs || {}, { [x.index_locataire]: Object.assign({}, x.signature, { ref: x.empreinte.slice(0, 10) }) });
   CURDOC.sigDistance = true; CURDOC.sigDistanceId = x.id; CURDOC.range = false; appliquerSignatures(); panneauSignature();
 }
+/* ---- Attestation d'assurance déposée par le locataire ---- */
+async function envoyerAssuranceLocataire(f) {
+  const x = f.f.files[0]; if (!x) return; const bt = document.getElementById("loc_ass_btn"); bt.disabled = true; bt.textContent = "Envoi…";
+  try {
+    let data; if (x.type === "application/pdf") { if (x.size > 6e6) throw new Error("PDF trop lourd : prenez plutôt une photo de l'attestation."); data = await lireFichierDataUrl(x); } else data = await photoReduite(x);
+    await appelLocataire({ action: "deposer", type: "assurance", nom: x.name, data });
+    const j = await appelLocataire({ action: "voir" }); LOC = { etat: "ok", ...j }; render(); toast("✓ Envoyée : votre propriétaire est prévenu");
+  } catch (e) { toast(e.message); bt.disabled = false; bt.textContent = "Envoyer"; }
+}
+/* Côté propriétaire : les dépôts arrivent dans les documents du logement, puis une tâche propose de lire la date avec l'IA */
+async function chargerDepots() {
+  if (!SB || !ESPACE || LECTURE) return; const id = ESPACE;
+  const r = await SB.from("depots_locataire").select("*").eq("espace_id", id).eq("statut", "nouveau").order("cree_le").limit(50);
+  if (ESPACE !== id || r.error || !(r.data || []).length) return; let n = 0;
+  for (const d of r.data) { const b = bail(d.bail_id); if (!b) continue;
+    if (!S.fichiers.some(f => f.depotId === d.id)) { S.fichiers.push({ id: uid(), bienId: b.bienId, bailId: b.id, cat: "Locataire (pièces, garant…)", nom: `${d.type === "assurance" ? "Attestation d'assurance envoyée" : "Document envoyé"} par ${nomCourt(b.nom)} (${fds(d.cree_le.slice(0, 10))})`, chemin: d.chemin, type: d.mime || "", date: d.cree_le.slice(0, 10), depotId: d.id, depotType: d.type, parLocataire: true }); n++; }
+    await SB.from("depots_locataire").update({ statut: "traite" }).eq("id", d.id); }
+  if (n) { save(); render(); }
+}
+const depotsAVoir = () => S.fichiers.filter(f => f.parLocataire && !f.vu);
+function traiterDepot(fid, quoi) {
+  const f = S.fichiers.find(x => x.id === fid); if (!f) return;
+  if (quoi === "voir") { ouvrirDocument(fid); return; }
+  f.vu = true; save(); render();
+  if (quoi === "ia") lireDocIA({ fichier: fid }); else if (quoi === "ok") assuranceRecue(f.bailId, true);
+}
+function demanderAssuranceEspace(bailId) {
+  const b = bail(bailId); if (!b) return;
+  const go = () => partagerTexte("Attestation d'assurance habitation", `Bonjour ${nomCourt(b.nom).split(" ")[0]},\n\nPouvez-vous m'envoyer votre attestation d'assurance habitation de cette année ? Le plus simple : une photo depuis votre espace locataire, rubrique « Mon assurance habitation » :\n\n${LIEN_PORTAIL(b.portail)}\n\nMerci !`, b.telephone, b.email);
+  if (b.portail) { go(); return; }
+  (async () => { const jeton = b64url(crypto.getRandomValues(new Uint8Array(32))), h = await sha256hex(jeton);
+    await SB.from("portails_locataire").delete().eq("espace_id", ESPACE).eq("bail_id", b.id);
+    const r = await SB.from("portails_locataire").insert({ jeton_hash: h, espace_id: ESPACE, bail_id: b.id, donnees: donneesPortail(b) }); if (r.error) { toast("Impossible : " + r.error.message); return; }
+    b.portail = jeton; delete PORTAIL_PUBLIE[b.id]; save(); toast("Son espace locataire est créé"); go(); })();
+}
+
 /* ---- Côté locataire : lire et signer ---- */
 const sansScript = h => String(h || "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/ on[a-z]+="[^"]*"/gi, "");
 function lireASigner(id) {
@@ -7078,6 +7121,7 @@ const TYPES_NOTIF = [
   ["retard", "⏰", "Loyer en retard", "Pas reçu 3 jours après la date prévue", true, false],
   ["relance_auto", "🔁", "Relance automatique envoyée", "Quand l'appli relance un locataire pour toi", true, false],
   ["demande", "🔧", "Problème signalé par un locataire", "Fuite, panne… depuis son espace locataire", true, true],
+  ["depot", "🛡️", "Attestation envoyée par un locataire", "Il la dépose depuis son espace locataire", true, false],
   ["signature", "✍️", "Document signé à distance", "Un locataire signe un document depuis son espace", true, true],
   ["candidature", "🙋", "Nouvelle candidature", "Un candidat dépose son dossier depuis le lien de ton annonce", true, true],
   ["boite", "📨", "Document reçu par e-mail", "Dans ta boîte à documents, à ranger", true, false],

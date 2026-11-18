@@ -74,6 +74,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — le locataire dépose son attestation d'assurance ; listes "Choisir…"
+- Espace locataire : carte "🛡️ Mon assurance habitation" (encadrée tant qu'elle manque) : photo ou PDF envoyé par la fonction `locataire` (action "deposer", table `depots_locataire`, supabase/depots_locataire.sql), notification "🛡️ X a envoyé son attestation" (type `depot`). Le portail publie la date de fin connue.
+- Propriétaire : le dépôt arrive tout seul dans les documents du logement (catégorie Locataire), puis À faire urgent "🛡️ Jean a envoyé son attestation d'assurance" : "🤖 Lire la date" (IA), "Voir", "C'est bon" (date de fin, sans redemander de ranger). La tâche "Attestation d'assurance habitation" propose d'abord "📲 Lui demander (son espace)" (espace créé tout seul, message prêt) et s'efface pendant qu'une attestation attend.
+- Listes de classement (Compta) : "— c'est quoi ? —" et "— choisis la catégorie —" remplacés par "Choisir…".
+- Testé : test77 12/12 ; test5, 56, 72, 76 OK. En ligne.
+
 ### 18/11/2026 — signature à distance, gratuite (idée n°1 de la liste "branchements et praticité")
 - Dans le panneau "✍️ Signer" de tout document à signer (bail, avenant, état des lieux) : "📲 Lui faire signer à distance". Le document (avec la signature du bailleur s'il a signé) part dans l'espace locataire (créé tout seul s'il n'existe pas), rubrique "✍️ À signer" ; message prêt à envoyer (WhatsApp, SMS, e-mail).
 - Le locataire lit le document, signe avec le doigt, coche "lu et approuvé". Preuve gardée : empreinte SHA-256 du document, date, heure, IP, appareil (table `signatures_distance`, supabase/signature_distance.sql ; fonction `locataire` action "signer"). Un membre ne peut changer que le statut (droits par colonne) ; pas de double signature ; rien de lisible sans lien.

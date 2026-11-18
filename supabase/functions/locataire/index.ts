@@ -39,6 +39,24 @@ Deno.serve(async (req) => {
     return rep({ ok: true, id: d.id });
   }
 
+  if (c.action === "deposer") {
+    // le locataire envoie un document (attestation d'assurance habitation) : PDF ou photo, 6 Mo au plus
+    const m = /^data:(application\/pdf|image\/jpeg|image\/png|image\/webp);base64,([A-Za-z0-9+/=]+)$/.exec(String(c.data || ""));
+    if (!m) return rep({ erreur: "Fichier illisible : envoyez un PDF ou une photo." }, 400);
+    if (m[2].length > 8_000_000) return rep({ erreur: "Fichier trop lourd : prenez plutôt une photo de l'attestation." }, 413);
+    const depuis = new Date(Date.now() - 864e5).toISOString();
+    const { count } = await admin.from("depots_locataire").select("id", { count: "exact", head: true }).eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).gte("cree_le", depuis);
+    if ((count || 0) >= 10) return rep({ erreur: "Trop d'envois aujourd'hui : réessayez demain." }, 429);
+    const ext = { "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }[m[1]], chemin = `${p.espace_id}/locataires/${crypto.randomUUID()}.${ext}`;
+    const up = await admin.storage.from("documents").upload(chemin, Uint8Array.from(atob(m[2]), x => x.charCodeAt(0)), { contentType: m[1] });
+    if (up.error) return rep({ erreur: "Envoi impossible, réessayez dans un moment." }, 500);
+    const type = c.type === "assurance" ? "assurance" : "autre", nom = String(c.nom || "").slice(0, 120) || (type === "assurance" ? "Attestation d'assurance" : "Document");
+    const { data: d, error } = await admin.from("depots_locataire").insert({ espace_id: p.espace_id, bail_id: p.bail_id, type, nom, chemin, mime: m[1] }).select("id").single();
+    if (error) return rep({ erreur: "Envoi impossible, réessayez dans un moment." }, 500);
+    try { await fetch(url + "/functions/v1/notifier", { method: "POST", headers: { "Content-Type": "application/json", "x-cle-cron": Deno.env.get("CLE_CRON_NOTIFIER") || "" }, body: JSON.stringify({ depot: d.id }) }); } catch (_) { /* envoyé quand même */ }
+    return rep({ ok: true });
+  }
+
   if (c.action === "signer") {
     // signature à distance d'un document envoyé par le propriétaire (bail, avenant, état des lieux)
     const id = String(c.id || ""), nom = String(c.nom || "").trim().slice(0, 120);
@@ -71,5 +89,6 @@ Deno.serve(async (req) => {
   const { docs: _d, ...reste } = don;
   const { data: sig } = await admin.from("signatures_distance").select("id, titre, base_html, sigs, index_locataire, nom_locataire, statut, signe_le, cree_le").eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).in("statut", ["attente", "signe", "range"]).order("cree_le", { ascending: false }).limit(10);
   const a_signer = (sig || []).map((x: any) => x.statut === "attente" ? x : { id: x.id, titre: x.titre, statut: x.statut, signe_le: x.signe_le, cree_le: x.cree_le });
-  return rep({ ok: true, donnees: reste, docs, demandes: dem || [], a_signer });
+  const { data: dep } = await admin.from("depots_locataire").select("id, type, nom, statut, cree_le").eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).order("cree_le", { ascending: false }).limit(10);
+  return rep({ ok: true, donnees: reste, docs, demandes: dem || [], a_signer, depots: dep || [] });
 });
