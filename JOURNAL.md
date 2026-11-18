@@ -55,7 +55,7 @@ Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅
 
 Vague 4 — PRIORITÉ depuis le 18/11 (Théo : "une interface fluide, intuitive, qui sert vraiment à la gestion locative, pas à remplacer le comptable pour le moment") :
 18. ✅ (18/11) Compta en 4 onglets (Résumé, Banque, Dépenses, Comptable), écrans plus propres (bouton "?" en haut, Réglages en 4 groupes, plus de clignotement, menu Plus, banque par pages).
-19. **Congé donné par le bailleur** (vente, reprise, motif sérieux) : lettre + date limite + offre de vente (Rentila : 30 courriers types).
+19. ✅ (18/11) **Congé donné par le bailleur** (vente, reprise, motif sérieux) : lettre + date limite + offre de vente (Rentila : 30 courriers types).
 20. ✅ (18/11) **Suivi des interventions** : demande du locataire → artisan prévenu, date, réglé, facture ; dans À faire jusqu'à la fin.
 21. **Candidatures en ligne** : lien pour déposer le dossier, pièces vérifiées, loyer < 1/3 des revenus (Rentila, Qalimo). Les candidats existent déjà par logement : à ouvrir aux candidats eux-mêmes.
 22. **Tableau de bord par logement** : occupation, rentabilité (prix d'achat repris de l'acte par l'IA), prochain événement.
@@ -73,6 +73,13 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — congé donné par le bailleur (Vague 4, étape 19)
+- Fiche du locataire › Plus › "📤 Lui donner congé (vente, reprise)", et bouton "📤 Préparer un congé" sur la tâche "Fin de période du bail" tant qu'il est temps.
+- Calcul : fin du bail (période de 3 ou 6 ans selon SCI familiale / non familiale / perso, 1 an meublé), date limite = 6 mois avant (vide) ou 3 mois (meublé) ; si c'est trop tard, l'appli le dit et prend la fin suivante. Bail mobilité / étudiant : pas de congé (message).
+- Trois motifs : vente (prix obligatoire ; offre au locataire en vide, art. 15-II), reprise (bénéficiaire, lien, adresse, justification obligatoire ; refusée pour une SCI non familiale), motif légitime et sérieux (faits). Lettre art. 15 (vide) ou 25-8 (meublé), notice d'information mentionnée pour vente/reprise en vide (lien Legifrance JORFTEXT000036236664), conseils d'envoi (recommandé AR, commissaire de justice, main propre), avertissement locataire protégé (+65 ans). Congé noté sur le bail (`b.conge`).
+- Testé : `tests/test74.js` 14/14 ; pas de régression : test5, 56, 73. En ligne.
+- Pas fait : la notice officielle n'est pas générée dans le PDF (lien vers Legifrance à imprimer et joindre).
 
 ### 18/11/2026 — suivi des interventions (Vague 4, étape 20)
 - Demande du locataire (À faire › Voir) : bouton "🛠 En faire une intervention" → fiche pré-remplie (texte, "Signalé par…"), artisan choisi dans le carnet d'adresses (Réglages › La SCI) avec son e-mail rempli tout seul, statut (À organiser / Artisan prévu / En cours / Fini), date de passage.

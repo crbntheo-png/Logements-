@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "85e9e5c", "date": "2026-11-18T17:22"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "2fdc6e9", "date": "2026-11-18T17:27"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2146,7 +2146,7 @@ function taches() {
         add({ bailId: b.id, key: k, prio: "soon", date: ech2, done: true, t: `Fin du bail étudiant de ${esc(b.nom)} le ${fd(ech2)}`, d: "Le bail étudiant de 9 mois se termine sans reconduction. Prévoir l'état des lieux de sortie ou un nouveau bail.", acts: [] });
       else if (b.typeBail !== "mobilite" && b.typeBail !== "etudiant" && daysBetween(TODAY, lim) <= 45 && !fait(k))
         add({ bailId: b.id, key: k, prio: TODAY > lim ? "info" : "soon", date: lim, done: true, t: `Fin de période du bail de ${esc(b.nom)} le ${fd(ech2)}`,
-          d: TODAY > lim ? `Rien à faire : le bail se renouvelle tout seul le ${fd(ech2)}. Le délai pour donner congé (vente, reprise) est passé : il fallait l'envoyer avant le ${fd(lim)}.` : `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: [] });
+          d: TODAY > lim ? `Rien à faire : le bail se renouvelle tout seul le ${fd(ech2)}. Le délai pour donner congé (vente, reprise) est passé : il fallait l'envoyer avant le ${fd(lim)}.` : `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: TODAY > lim ? [] : [["📤 Préparer un congé", `congeBailleur('${b.id}')`]] });
     }
     // 8. Régularisation annuelle des charges
     if ((b.chargesMode || "provision") === "provision" && (+b.charges > 0 || (b.revisions || []).some(r => +r.charges > 0 && r.depuis <= (y - 1) + "-12"))) {
@@ -3274,7 +3274,7 @@ function pageBail(id) {
   return `<div><a class="back" href="#locataires">← Accueil</a>
   <div class="profil">${avatar(b.nom)}<div><h1>${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div></div></div>
   <div class="contacts">${b.tel ? `<a class="chip" href="tel:${esc(b.tel.replace(/\s/g, ""))}">📞 ${esc(b.tel)}</a>` : ""}${b.email ? `<button class="chip" onclick="copierTexte('${esc(b.email)}')">✉️ ${esc(b.email)}</button>` : `<button class="chip" onclick="editBail('${b.id}')">✉️ Ajouter l'e-mail</button>`}</div>
-  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button>${menuPlus([["📝 Générer le bail", `docBailOpen('${b.id}')`], ["📈 Réviser le loyer", `revision('${b.id}')`], ["✍️ Avenant au bail", `avenant('${b.id}')`], ["🔑 Il s'en va (départ)", `finBail('${b.id}')`], SB && !LECTURE ? ["🔗 Son espace locataire", `ouvrirPortail('${b.id}')`] : null, S.sci.relanceAuto && !LECTURE ? [b.sansRelanceAuto ? "🔔 Remettre les relances automatiques" : "🔕 Pas de relance automatique pour lui", `basculerRelanceBail('${b.id}')`] : null])}</div>
+  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button>${menuPlus([["📝 Générer le bail", `docBailOpen('${b.id}')`], ["📈 Réviser le loyer", `revision('${b.id}')`], ["✍️ Avenant au bail", `avenant('${b.id}')`], ["🔑 Il s'en va (départ)", `finBail('${b.id}')`], !LECTURE && b.typeBail !== "mobilite" && b.typeBail !== "etudiant" ? ["📤 Lui donner congé (vente, reprise)", `congeBailleur('${b.id}')`] : null, SB && !LECTURE ? ["🔗 Son espace locataire", `ouvrirPortail('${b.id}')`] : null, S.sci.relanceAuto && !LECTURE ? [b.sansRelanceAuto ? "🔔 Remettre les relances automatiques" : "🔕 Pas de relance automatique pour lui", `basculerRelanceBail('${b.id}')`] : null])}</div>
   <div class="kpis">
     <div class="kpi"><span>Loyer actuel</span><b>${eur(l.hc + l.ch)}</b><small>${eur(l.hc)} + ${eur(l.ch)} de charges</small></div>
     ${(() => { const pe = planEtat(b), suit = pe && !pe.fait && pe.ok; return `<div class="kpi ${dette && !suit ? "bad" : ""}"><span>Doit</span><b>${eur(dette)}</b><small>${!dette ? "rien, tout est payé" : suit ? "étalé, il suit l'accord" : "loyers en retard"}</small></div>`; })()}
@@ -6475,6 +6475,56 @@ function comparerEdl(bailId) {
     <label class="fl full">Retenues sur le dépôt<textarea name="ret" rows="4" placeholder="Trou dans le mur du séjour ; 80">${esc(ret.map(x => x.l + " ; " + (x.v ? String(x.v).replace(".", ",") : "")).join("\n"))}</textarea></label><div class="full calc" id="retCalc"></div>`,
     d => { const b = bail(bailId), l = lireLignes(d.ret), tot = r2(l.reduce((s, x) => s + x.v, 0)); b.retenues = l; b.depotRetenu = tot; b.depotMotif = l.map(x => `${x.l} : ${eur(x.v)}`).join("\n"); toast(tot ? `${eur(tot)} retenus · ${eur(Math.max(0, (+b.depot || 0) - tot))} à rendre` : "Aucune retenue : tout le dépôt est à rendre"); setTimeout(() => docRestitution(b.id), 60); },
     { ok: "Préparer le décompte", after: f => { const c = () => { const t = r2(lireLignes(f.ret.value).reduce((s, x) => s + x.v, 0)); document.getElementById("retCalc").innerHTML = `Dépôt ${eur(b.depot || 0)} − retenues ${eur(t)} = <b>${eur(Math.max(0, (+b.depot || 0) - t))} à rendre</b>`; }; f.addEventListener("input", c); c(); } });
+}
+/* ================= Congé donné par le bailleur (vente, reprise, motif légitime) =================
+   Loi du 6 juillet 1989 : art. 15 (vide : 6 mois avant la fin du bail, notice d'information jointe pour vente ou reprise)
+   et art. 25-8 (meublé : 3 mois avant). Une SCI ne reprend pour habiter que si elle est familiale. */
+const LIEN_NOTICE_CONGE = "https://www.legifrance.gouv.fr/loda/id/JORFTEXT000036236664", LIEN_SP_CONGE = "https://www.service-public.gouv.fr/particuliers/vosdroits/F929";
+function infoConge(b) {
+  const du = dureeBail(b), preavis = b.typeBail === "meuble" ? 3 : 6; let ech = addMonthsDate(P(b.dateEntree), du.mois);
+  while (ech < TODAY) ech = addMonthsDate(ech, du.mois);
+  let lim = addMonthsDate(ech, -preavis), rate = null;
+  if (TODAY > lim) { rate = { ech, lim }; ech = addMonthsDate(ech, du.mois); lim = addMonthsDate(ech, -preavis); }
+  return { ech, lim, preavis, rate, meuble: b.typeBail === "meuble" };
+}
+function congeBailleur(bailId) {
+  const b = bail(bailId); if (!b) return;
+  if (b.typeBail === "mobilite" || b.typeBail === "etudiant") { toast(b.typeBail === "mobilite" ? "Un bail mobilité se termine tout seul à sa date de fin : pas de congé à donner." : "Un bail étudiant de 9 mois se termine tout seul : pas de congé à donner."); return; }
+  const c = infoConge(b), sciNonFam = !estPerso() && !S.sci.familiale, j = daysBetween(TODAY, c.lim);
+  const motifs = [["vente", "🏷️ Je vends le logement"], ["reprise", "🏠 Je le reprends pour y habiter (moi ou un proche)"], ["motif", "⚖️ Motif légitime et sérieux (impayés, troubles…)"]];
+  modal(`📤 Donner congé à ${esc(nomCourt(b.nom))}`, `<div class="full">${grosMsg(j < 30 ? "attention" : "ok", `Fin du bail le ${fd(c.ech)}`, `Le congé doit arriver chez ${esc(nomCourt(b.nom).split(" ")[0])} <b>avant le ${fd(c.lim)}</b> (${c.preavis} mois avant)${j >= 0 ? `, dans ${j} jour${j > 1 ? "s" : ""}` : ""}.${c.rate ? ` Trop tard pour la fin du ${fd(c.rate.ech)} : le bail sera reconduit, la prochaine fin possible est celle-ci.` : ""}`)}</div>
+    ${sel("Pourquoi ?", "motif", "vente", motifs, "full")}
+    <div class="full cg cg-vente">${fld("Prix de vente proposé au locataire (€)", "prix", "", "number")}${c.meuble ? `<p class="note">Logement meublé : pas d'offre de vente obligatoire au locataire.</p>` : `${area("Conditions de la vente (facultatif)", "conditions", "")}<p class="note">Logement vide : le locataire est prioritaire pour acheter, à ce prix, pendant les 2 premiers mois du préavis.</p>`}</div>
+    <div class="full cg cg-reprise" hidden>${sciNonFam ? `<p class="note">⚠️ <b>Une SCI qui n'est pas familiale ne peut pas reprendre un logement pour y habiter.</b> Choisis la vente ou un motif légitime, ou vérifie dans Réglages › La SCI si ta SCI est familiale.</p>` : ""}
+      ${fld("Qui va habiter le logement ?", "benef", estPerso() ? (S.sci.gerant || "") : "")}${sel("Lien avec le bailleur", "lien", "moi", estPerso() ? [["moi", "Moi-même"], ["conjoint", "Mon conjoint, partenaire de PACS ou concubin"], ["enfant", "Mon enfant"], ["parent", "Mon père ou ma mère"], ["autre", "Autre parent ou allié"]] : [["moi", "Un associé de la SCI"], ["conjoint", "Le conjoint d'un associé"], ["enfant", "L'enfant d'un associé"], ["parent", "Le parent d'un associé"]])}
+      ${fld("Son adresse actuelle", "adrBenef", "", "text", "full")}${area("Pourquoi cette reprise est réelle et sérieuse (obligatoire)", "justif", "", 'placeholder="Ex. : mon fils commence ses études à Rennes en septembre 2027."')}</div>
+    <div class="full cg cg-motif" hidden>${area("Le motif, précisément (dates, faits)", "motifTxt", "", 'placeholder="Ex. : loyers impayés de mars à juin 2026 malgré la mise en demeure du 2 juillet 2026."')}<p class="note">Il faut pouvoir le prouver (relances, mises en demeure, plaintes de voisins…).</p></div>
+    <p class="full note">📮 À envoyer en <b>lettre recommandée avec accusé de réception</b>, par commissaire de justice ou en main propre contre signature. C'est la date de <b>réception</b> qui compte : garde de l'avance.${c.meuble ? "" : ` Pour une vente ou une reprise, joins la <a href="${LIEN_NOTICE_CONGE}" target="_blank" rel="noopener">notice d'information officielle</a>.`} Locataire de plus de 65 ans aux revenus modestes : il est protégé, renseigne-toi d'abord (<a href="${LIEN_SP_CONGE}" target="_blank" rel="noopener">service-public.gouv.fr</a>).</p>`,
+    d => {
+      if (d.motif === "vente" && !(+d.prix > 0)) { toast("Indique le prix de vente proposé au locataire."); return false; }
+      if (d.motif === "reprise" && sciNonFam) { toast("Une SCI non familiale ne peut pas reprendre pour habiter."); return false; }
+      if (d.motif === "reprise" && (!d.benef || !d.justif)) { toast("Indique qui va habiter et pourquoi (obligatoire)."); return false; }
+      if (d.motif === "motif" && !d.motifTxt) { toast("Décris le motif précisément."); return false; }
+      setTimeout(() => docConge(bailId, d), 60);
+    }, { ok: "Préparer la lettre", after: () => { const f = document.querySelector("#overlay [name=motif]"); const maj = () => document.querySelectorAll("#overlay .cg").forEach(x => { x.hidden = !x.classList.contains("cg-" + f.value); }); f.onchange = maj; maj(); } });
+}
+function docConge(bailId, d) {
+  const b = bail(bailId), bi = bien(b.bienId) || {}, c = infoConge(b), art = c.meuble ? "article 25-8" : "article 15";
+  const LIENS = { moi: estPerso() ? "moi-même" : "associé(e) de la SCI", conjoint: estPerso() ? "mon conjoint (ou partenaire, concubin notoire)" : "conjoint d'un associé", enfant: estPerso() ? "mon enfant" : "enfant d'un associé", parent: estPerso() ? "mon ascendant" : "ascendant d'un associé", autre: "membre de ma famille" };
+  const objet = d.motif === "vente" ? "congé pour vente" : d.motif === "reprise" ? "congé pour reprise" : "congé pour motif légitime et sérieux";
+  const corps = d.motif === "vente"
+    ? `<p>Ce congé est motivé par ma décision de <b>vendre le logement</b>.</p>${c.meuble ? "" : `<p>Conformément à l'article 15-II de la loi du 6 juillet 1989, je vous offre en priorité d'acquérir ce logement au prix de <b>${eur(+d.prix)}</b>${d.conditions ? `, aux conditions suivantes : ${esc(d.conditions)}` : ""}. Cette offre vaut pendant les deux premiers mois du délai de préavis. Si vous l'acceptez, vous disposez d'un délai de deux mois à compter de l'envoi de votre réponse pour réaliser la vente, porté à quatre mois si vous recourez à un prêt.</p>`}`
+    : d.motif === "reprise"
+      ? `<p>Ce congé est motivé par ma décision de <b>reprendre le logement pour y habiter</b>${d.lien === "moi" && estPerso() ? "" : ` au bénéfice de <b>${esc(d.benef)}</b> (${LIENS[d.lien] || ""})`}${d.adrBenef ? `, demeurant actuellement ${esc(d.adrBenef)}` : ""}${d.lien === "moi" && estPerso() ? ` (${esc(d.benef || S.sci.gerant || "")})` : ""}.</p><p>Cette décision est réelle et sérieuse : ${esc(d.justif)}</p>`
+      : `<p>Ce congé est motivé par un <b>motif légitime et sérieux</b> : ${esc(d.motifTxt)}</p>`;
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p class="note-doc">Lettre recommandée avec accusé de réception</p><p><b>Objet : ${objet} (${art} de la loi n° 89-462 du 6 juillet 1989)</b></p><p>Madame, Monsieur,</p>
+  <p>Vous êtes locataire du logement situé ${esc(adresseBien(bi))}, en vertu d'un bail ${c.meuble ? "meublé" : "vide"} prenant effet le ${fd(b.dateEntree)}.</p>
+  <p>Par la présente, je vous donne congé de ce logement pour le terme de votre bail, soit le <b>${fd(c.ech)}</b>.</p>${corps}
+  <p>À l'expiration du délai de préavis, vous serez déchu(e) de tout titre d'occupation du logement. Nous conviendrons ensemble de la date de l'état des lieux de sortie et de la remise des clés.</p>
+  ${!c.meuble && d.motif !== "motif" ? `<p>Vous trouverez jointe à ce courrier la notice d'information relative aux obligations du bailleur et aux voies de recours et d'indemnisation du locataire (arrêté du 13 décembre 2017).</p>` : ""}
+  <p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`;
+  b.conge = { motif: d.motif, prepare: iso(TODAY), fin: iso(c.ech), limite: iso(c.lim) }; save();
+  showDoc(html, { titre: "Congé du bailleur", fichier: `Conge-${d.motif}-${slug(b.nom)}`, to: b.email, bailId: b.id, email: { objet: "Congé de votre logement", corps: `Bonjour,\n\nVous trouverez ci-joint le congé de votre logement pour le ${fd(c.ech)}. Il vous est aussi adressé par lettre recommandée avec accusé de réception.\n\nCordialement` } });
 }
 function docRestitution(bailId) {
   const b = bail(bailId), l = b.retenues || [], tot = r2(l.reduce((s, x) => s + x.v, 0)), rendu = r2(Math.max(0, (+b.depot || 0) - tot)), lim = b.dateSortie ? addMonthsDate(P(b.dateSortie), tot ? 2 : 1) : null;
