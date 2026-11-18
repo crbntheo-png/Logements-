@@ -550,6 +550,11 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .bientot { display: grid; gap: 10px; } .bientot-c { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; } .bientot-c .tx { flex: 1; min-width: 200px; display: grid; gap: 2px; } .bientot-c .tx p { margin: 0; } .bientot-c .tx small { color: var(--muted); font-weight: 600; } .bientot-ico { font-size: 1.6rem; line-height: 1; } .bientot-c.choisi { outline: 2px solid var(--accent); }
 .bq-choix { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; } #overlay .bq-l, .bq-l { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; text-align: left; min-height: 0; height: auto; } #overlay .bq-l input, .bq-l input { width: 18px; height: 18px; min-height: 0; flex: 0 0 auto; margin: 0; padding: 0; } .bq-l span { flex: 1; min-width: 0; } .bq-l img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; } .bq-l:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .bq-blocs { display: grid; gap: 10px; margin-bottom: 10px; } .bq-bloc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); } .bq-bloc.ok { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); } .bq-bloc.warn { border-color: var(--warn); background: var(--warn-soft); } .bq-bloc p { margin: 0; }
+.classement .cl-h { display: flex; gap: 12px; align-items: center; } .classement h2 { margin: 0 0 2px; font-size: 1.05rem; } .classement .cl-h p { margin: 0; color: var(--muted); font-size: .9rem; }
+.classement .cl-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--accent-soft); }
+.classement .cl-pct { margin-left: auto; white-space: nowrap; flex: none; font-size: 1.3rem; color: var(--accent); } .classement .tx { min-width: 0; }
+.cl-barre { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 12px 0 4px; } .cl-barre i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.classement .row { margin-top: 10px; } .classement.fini .cl-pct { color: var(--ok, var(--accent)); }
 .sorties-expl { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; margin: 4px 0 12px; } .sorties-expl p { margin: 0; font-size: .9rem; line-height: 1.45; } .sorties-expl .small { color: var(--muted); font-size: .8rem; }
 .sortie-g { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; background: var(--surface); } .sortie-g > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; } .sortie-g > summary::-webkit-details-marker { display: none; } .sortie-g > summary .tx { flex: 1; display: grid; min-width: 0; } .sortie-g > summary small { color: var(--muted); } .sortie-g[open] > summary .chev { transform: rotate(90deg); } .sortie-g > .sortie-l, .sortie-g > .row, .sortie-g > .note { padding: 0 12px; } .sortie-g > .row { padding-bottom: 12px; } .sortie-g.a-classer { border-color: var(--warn); } .sorties-bas { margin-top: 10px; } .sorties-masq { margin: 4px 2px 12px; }
 .cloture .clo-h { display: flex; gap: 12px; align-items: flex-start; } .cloture .clo-h h2 { margin: 0 0 2px; } .cloture .clo-h p { margin: 0; color: var(--muted); }
@@ -1137,7 +1142,7 @@ function sectionSorties(y) {
       <div class="sl-sel"><select name="cat_${o.tx_id}" aria-label="Catégorie"><option value="">— choisis la catégorie —</option>${CATS.map(x => `<option ${x === c.cat ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
       <select name="bien_${o.tx_id}" aria-label="Logement">${optsBien.map(([v, l]) => `<option value="${v}" ${v === c.bienId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
       <button type="button" class="small ghost" onclick="ignorerSortie('${o.tx_id}')" title="Ce n'est pas une dépense (virement entre tes comptes, erreur…)">Pas une dépense</button></div></div></li>`;
-  return `<section class="card sorties"><h2>🧾 Ranger tes dépenses de ${y}</h2>
+  return `<section class="card sorties" id="sorties"><h2>🧾 Ranger tes dépenses de ${y}</h2>
     <div class="sorties-expl">
       <p><b>C'est quoi ?</b> Ta banque montre <b>${L.length} paiement${L.length > 1 ? "s" : ""}</b> (${eur(tot)}) que l'appli n'a pas encore rangés dans sa compta.</p>
       <p><b>À quoi ça sert ?</b> Savoir ce que te rapporte vraiment chaque logement, préparer ta déclaration et prévoir ta trésorerie.</p>
@@ -1165,6 +1170,87 @@ function validerSorties(f, groupe) {
     toast(n ? `✓ ${n} dépense${n > 1 ? "s" : ""} rangée${n > 1 ? "s" : ""} dans la compta` + (sansCat ? ` · ${sansCat} sans catégorie laissée${sansCat > 1 ? "s" : ""} de côté` : "") : "Coche des lignes et choisis leur catégorie.");
   });
 }
+/* ================= Chaque opération de la banque a sa place =================
+   Sorties : rangées en dépenses (ci-dessus). Entrées : loyers (reliés tout seuls) ou classées ici
+   (apport d'un associé, déblocage de prêt, dépôt de garantie…). Le choix est gardé dans S.banqueVus[tx] = { e: catégorie, qui }. */
+const CATS_ENTREE = [["Loyer d'un locataire", "🏠"], ["Location courte durée (Airbnb…)", "🛏️"], ["Apport d'un associé", "👤"], ["Déblocage de prêt", "🏦"], ["Dépôt de garantie reçu", "🔑"], ["Remboursement ou avoir", "↩️"], ["Aide ou subvention (CAF…)", "🤝"], ["Virement entre mes comptes", "🔁"], ["Autre recette", "➕"]];
+const ICO_ENT = c => (CATS_ENTREE.find(x => x[0] === c) || [, "❓"])[1];
+const nomsAssocies = () => (S.sci.associes || []).map(a => a.nom).filter(Boolean);
+function classerEntree(o) {
+  const lib = " " + normTxt(o.libelle).replace(/[^A-Z0-9]+/g, " ") + " ", regle = (S.sci.reglesEntrees || {})[motifBanque(o.libelle)];
+  if (regle) return { ...regle, appris: true };
+  if (/ DEBLOC/.test(lib)) return { cat: "Déblocage de prêt" };
+  if (/ (CAUTION|DEPOT DE GARANTIE|GARANTIE) /.test(lib)) return { cat: "Dépôt de garantie reçu" };
+  if (/ (CAF|MSA|ALLOCATION|APL) /.test(lib)) return { cat: "Aide ou subvention (CAF…)" };
+  if (/ (RETRO|RETROCESSION|REMB|REMBT|RBT|REMBOURSEMENT|AVOIR|RESTITUTION|REGUL) /.test(lib)) return { cat: "Remboursement ou avoir" };
+  if (/ (AIRBNB|BOOKING|ABRITEL|HOMEAWAY|VRBO|GITES) /.test(lib)) return { cat: "Location courte durée (Airbnb…)" };
+  if (bailDuVirement(o)) return { cat: "Loyer d'un locataire" };
+  const qui = nomsAssocies().find(n => normTxt(n).replace(/[^A-Z0-9]+/g, " ").split(" ").filter(m => m.length >= 3 && !MOTS_VIDES.has(m)).some(m => lib.includes(" " + m + " ")));
+  if (qui) return { cat: "Apport d'un associé", qui };
+  return { cat: "" };
+}
+function entreesAClasser(y) {
+  const lies = new Set(S.paiements.flatMap(p => [p.tx, p.txAutre]).filter(Boolean).map(String)), vus = S.banqueVus || {};
+  return BANQUE.ops.filter(o => o.montant > 0 && o.date.startsWith(String(y)) && !lies.has(String(o.tx_id)) && !vus[o.tx_id]);
+}
+function sectionEntrees(y) {
+  if (!SB || !BANQUE.lien) return "";
+  const L = entreesAClasser(y); if (!L.length) return "";
+  const tot = r2(L.reduce((t, o) => t + o.montant, 0)), assoc = nomsAssocies();
+  const options = c => `<option value="">— c'est quoi ? —</option>${CATS_ENTREE.map(([x]) => x === "Apport d'un associé" && assoc.length
+    ? assoc.map(n => `<option value="apport|${esc(n)}" ${c.cat === x && c.qui === n ? "selected" : ""}>👤 Apport de ${esc(n)}</option>`).join("")
+    : `<option value="${esc(x)}" ${c.cat === x ? "selected" : ""}>${ICO_ENT(x)} ${esc(x)}</option>`).join("")}`;
+  const G = {}; L.forEach(o => { const c = classerEntree(o), k = c.cat || "À classer"; (G[k] = G[k] || []).push({ o, c }); });
+  const groupes = Object.entries(G).sort((a, b) => (a[0] === "À classer" ? -1 : b[0] === "À classer" ? 1 : 0) || b[1].length - a[1].length);
+  const ligne = ({ o, c }, k) => `<li><input type="hidden" name="grp_${o.tx_id}" value="${esc(k)}"><label class="chk"><input type="checkbox" name="ok_${o.tx_id}" ${c.cat ? "checked" : ""} aria-label="Classer cette entrée"></label><div class="tx"><div class="sl-h"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR)\s+/i, ""))}</span><b class="pos">+${eur(o.montant)}</b></div>
+      <small>${fds(o.date)}${c.appris ? " · d'après ton choix précédent" : ""}</small>
+      <div class="sl-sel"><select name="cat_${o.tx_id}" aria-label="Ce que c'est" onchange="this.closest('li').querySelector('input[type=checkbox]').checked=!!this.value">${options(c)}</select></div></div></li>`;
+  return `<section class="card sorties entrees" id="entrees"><h2>💶 Ranger tes entrées d'argent de ${y}</h2>
+    <div class="sorties-expl">
+      <p><b>C'est quoi ?</b> <b>${L.length} entrée${L.length > 1 ? "s" : ""}</b> sur ton compte (${eur(tot)}) pas encore classées. L'appli a deviné la plupart : vérifie et valide.</p>
+      <p><b>À quoi ça sert ?</b> Un apport d'associé ou un prêt n'est pas un revenu : sans ce classement, la compta de fin d'année serait fausse. C'est ce que fait ton comptable aujourd'hui.</p>
+      <p><b>Que fait le bouton ?</b> Il note juste ce qu'est chaque entrée dans l'appli. <b>Rien ne change à ta banque ni à Pennylane.</b> Tu peux annuler juste après.</p>
+    </div>
+    <form onsubmit="event.preventDefault();validerEntrees(this)">${groupes.map(([k, g]) => { const t = r2(g.reduce((a, x) => a + x.o.montant, 0));
+      return `<details class="sortie-g ${k === "À classer" ? "a-classer" : ""}" ${k === "À classer" || groupes.length === 1 ? "open" : ""}><summary><span class="ico-cat" aria-hidden="true">${ICO_ENT(k)}</span><span class="tx"><b>${esc(k)}</b><small>${g.length} entrée${g.length > 1 ? "s" : ""} · ${eur(t)}</small></span>${ic("chevR", "chev")}</summary>
+        <ul class="ops sortie-l">${g.map(x => ligne(x, k)).join("")}</ul>
+        <div class="row"><button type="button" class="small primary" onclick="validerEntrees(this.form, '${esc(k).replace(/'/g, "\\'")}')">Classer ${g.length > 1 ? "ces " + g.length : "cette entrée"}</button></div></details>`; }).join("")}
+    <div class="row sorties-bas"><button class="primary">Tout classer (lignes cochées)</button></div></form></section>`;
+}
+function validerEntrees(f, groupe) {
+  const d = Object.fromEntries(new FormData(f).entries()); let n = 0, sansCat = 0;
+  avecAnnuler(() => {
+    const vus = Object.assign({}, S.banqueVus), regles = Object.assign({}, S.sci.reglesEntrees);
+    BANQUE.ops.forEach(o => {
+      if (!d["ok_" + o.tx_id] || (groupe && d["grp_" + o.tx_id] !== groupe)) return;
+      const v = d["cat_" + o.tx_id]; if (!v) { sansCat++; return; }
+      const [cat, qui] = v.startsWith("apport|") ? ["Apport d'un associé", v.slice(7)] : [v, ""];
+      vus[o.tx_id] = qui ? { e: cat, qui } : { e: cat };
+      const auto = classerEntree(o); if (cat !== auto.cat || (qui || "") !== (auto.qui || "")) regles[motifBanque(o.libelle)] = qui ? { cat, qui } : { cat };
+      n++;
+    });
+    S.banqueVus = vus; S.sci.reglesEntrees = regles; save(); render();
+    toast(n ? `✓ ${n} entrée${n > 1 ? "s" : ""} classée${n > 1 ? "s" : ""}` + (sansCat ? ` · ${sansCat} sans choix laissée${sansCat > 1 ? "s" : ""} de côté` : "") : "Coche des lignes et dis ce que c'est.");
+  });
+}
+/* Le compteur : combien d'opérations de l'année ont leur place */
+function etatClassement(y) {
+  const tous = BANQUE.ops.filter(o => o.date.startsWith(String(y)) && o.montant !== 0);
+  const e = entreesAClasser(y).length, s = sortiesAClasser(y).length, reste = e + s;
+  return { total: tous.length, reste, e, s, pct: tous.length ? Math.floor((tous.length - reste) / tous.length * 100) : 100 };
+}
+function sectionClassement(y) {
+  if (!SB || !BANQUE.lien || !BANQUE.ops.length) return "";
+  const c = etatClassement(y); if (!c.total) return "";
+  const fini = !c.reste;
+  return `<section class="card classement ${fini ? "fini" : ""}"><div class="cl-h"><span class="cl-ico" aria-hidden="true">${fini ? "✅" : "🧮"}</span><div class="tx">
+      <h2>${fini ? `Toute la banque de ${y} est classée` : `Il reste ${c.reste} opération${c.reste > 1 ? "s" : ""} à classer`}</h2>
+      <p>${c.total - c.reste} sur ${c.total} opérations de ${y} ont leur place dans la compta.</p></div><b class="cl-pct">${c.pct} %</b></div>
+    <div class="cl-barre" role="progressbar" aria-valuenow="${c.pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Opérations classées"><i style="width:${c.pct}%"></i></div>
+    ${fini ? `<p class="note small">C'est la base pour te passer du comptable : chaque euro qui entre ou sort a une explication.</p>` : `<div class="row">${c.e ? `<button class="small" onclick="allerA('entrees')">💶 ${c.e} entrée${c.e > 1 ? "s" : ""}</button>` : ""}${c.s ? `<button class="small" onclick="${S.sci.sortiesMasquees ? "S.sci.sortiesMasquees=false;save();render();setTimeout(()=>allerA('sorties'),50)" : "allerA('sorties')"}">🧾 ${c.s} dépense${c.s > 1 ? "s" : ""}</button>` : ""}</div>`}
+  </section>`;
+}
+function allerA(id) { const el = document.getElementById(id) || document.querySelector("." + id); if (!el) return; el.scrollIntoView({ behavior: "smooth", block: "start" }); }
 function ignorerSortie(tx) { avecAnnuler(() => { S.banqueVus = Object.assign({}, S.banqueVus, { [tx]: "ignore" }); save(); render(); toast("Noté : ce n'est pas une dépense"); }); }
 function sectionBanque() {
   if (!SB || !BANQUE.lien) return `<details class="card rgl install-tuto"><summary><span class="rgl-ico" aria-hidden="true">🏦</span><span class="tx"><b>Ta banque dans l'appli</b><small>Les loyers se cochent tout seuls · comment faire</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
@@ -1938,6 +2024,8 @@ function taches() {
     if (BANQUE.lien.erreur || j <= 15) add({ key: "bq-renouv-" + (fin ? iso(fin) : "err"), prio: BANQUE.lien.erreur || j <= 3 ? "urgent" : "soon", date: TODAY, t: BANQUE.lien.erreur ? "🏦 Ta banque ne répond plus : reconnecte-la" : `🏦 Renouvelle l'accès à ta banque (fin ${j > 0 ? "dans " + j + " jour" + (j > 1 ? "s" : "") : "aujourd'hui"})`, d: BANQUE.lien.erreur ? esc(BANQUE.lien.erreur) : "Les banques demandent ton accord tous les 6 mois. 1 minute : tu te reconnectes sur le site de ta banque.", acts: [["Reconnecter", "relierBanque()", "primary"]] });
   }
   if (SB && BANQUE.directe && BANQUE.pennylane && estProprio()) { let c = null; try { c = comparaisonBanques(); } catch (e) {} if (c && c.ecarts) add({ key: "bq-ecarts-" + c.ecarts + "-" + c.periode, prio: "soon", date: TODAY, done: true, t: `🔎 ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""} entre ta banque et Pennylane`, d: `Sur la période ${c.periode} : ${c.seulBanque.length} seulement à la banque, ${c.seulPennylane.length} seulement dans Pennylane.`, acts: [["Voir", "voirComparaison()", "primary"]] }); }
+  if (SB && BANQUE.lien && BANQUE.ops.length && estProprio()) { const c = etatClassement(y);
+    if (c.reste) add({ key: "bq-classer-" + mk(TODAY) + "-" + c.reste, prio: "info", date: TODAY, t: `🧮 ${c.reste} opération${c.reste > 1 ? "s" : ""} de la banque à classer`, d: `${c.pct} % de ${y} a déjà sa place dans la compta${c.e ? ` · ${c.e} entrée${c.e > 1 ? "s" : ""} (apport, prêt…)` : ""}${c.s ? ` · ${c.s} dépense${c.s > 1 ? "s" : ""}` : ""}. C'est ce qui permettra de te passer du comptable.`, acts: [["Classer", "location.hash='compta';setTimeout(()=>allerA('" + (c.e ? "entrees" : "sorties") + "'),300)", "primary"]] }); }
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
       acts: [[`Garder ${mA}`, `garderPaiement('${x.cle}','A')`, "primary"], [`Garder ${mB}`, `garderPaiement('${x.cle}','B')`], ["Ce sont 2 paiements", `pasUnDoublon('${x.cle}')`]] }); });
@@ -3852,6 +3940,8 @@ function pageCompta() {
   ${aideDeclaration(y, lignes, tot)}
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${y === TODAY.getFullYear() ? sectionBanque() + sectionTreso() : ""}
+  ${sectionClassement(y)}
+  ${sectionEntrees(y)}
   ${sectionSorties(y)}
   ${sectionCloture()}
   ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}

@@ -54,7 +54,7 @@ Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅
 10. ✅ (18/11) **Tous mes espaces sur un écran** (SCI + nom propre).
 
 Vague 3 (objectif de Théo : plus de comptable, tout depuis la banque ; GTP est une SCI à l'IS) — dans l'ordre :
-11. **Chaque opération de banque classée** (entrées comprises : loyers, dépôts, apports d'associés), compteur "il reste N opérations à classer".
+11. ✅ (18/11) **Chaque opération de banque classée** (entrées comprises : loyers, dépôts, apports d'associés), compteur "il reste N opérations à classer".
 12. **Une facture pour chaque dépense** (boîte à documents + IA relient facture et paiement ; liste "pièces manquantes").
 13. **Amortissements** par composants (terrain non amorti, gros œuvre, toiture, installations, agencements, frais d'achat, travaux d'amélioration) : dotations annuelles automatiques.
 14. **Clôture** : ✅ (18/11) mois clôturés verrouillés. Reste : bilan, compte de résultat, IS (15 % / 25 %) et acomptes.
@@ -66,6 +66,13 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — chaque opération de la banque a sa place ; affichage Compta réparé
+- Compta : carte compteur "🧮 Il reste N opérations à classer" (barre, %), boutons vers les entrées ou les dépenses ; tâche "🧮 N opérations de la banque à classer" dans À faire (propriétaire).
+- Nouvelle carte "💶 Ranger tes entrées d'argent" (comme les dépenses) : l'appli devine loyer d'un locataire (même avant le suivi), Airbnb/Booking, apport d'un associé (nom dans le libellé, choix "Apport de X"), déblocage de prêt, dépôt de garantie, remboursement/avoir, CAF ; retient les corrections (`S.sci.reglesEntrees`). Classement gardé dans `S.banqueVus[tx] = { e, qui }` : ne crée ni loyer ni dépense. Sur les données GTP : 28 entrées devinées sur 31.
+- Affichage : plus de clignotement au rechargement (banque et associés gardés sur le téléphone : `lireCache`/`ecrireCache`) ; menu "Plus" qui sortait de l'écran à gauche (s'aligne tout seul) ; opérations bancaires par pages de 8 avec filtre Tout / Entrées / Sorties.
+- Testé : `tests/test72.js` 14/14 ; reproductions sur une copie privée des données GTP (supprimée ensuite, GTP intact : 302 lignes) ; pas de régression (test5, 53, 67, 70, 71). En ligne.
+- Pas vérifié : l'affichage sur les téléphones de Théo et Gab.
 
 ### 18/11/2026 — mois clôturés (verrou)
 - Compta › carte "🔒 Mois clôturés" (après "Ranger tes dépenses") : le propriétaire clôture mois par mois ("Clôturer aussi novembre 2026") ou rouvre le dernier ("Rouvrir octobre 2026"). Avant de clôturer, l'appli prévient s'il reste des dépenses de la banque pas rangées ou des entrées pas reliées à un loyer.
