@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "3a9a638", "date": "2026-11-18T09:01"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "421f26e", "date": "2026-11-18T12:09"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -559,6 +559,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .tous-ret, .tous-urg { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .88rem; } .tous-ret li { display: flex; align-items: center; gap: 8px; } .tous-ret li b { margin-left: auto; color: var(--bad); font-variant-numeric: tabular-nums; } .tous-ok { margin: 0; color: var(--ok); font-weight: 650; font-size: .9rem; }
 .bientot { display: grid; gap: 10px; } .bientot-c { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; } .bientot-c .tx { flex: 1; min-width: 200px; display: grid; gap: 2px; } .bientot-c .tx p { margin: 0; } .bientot-c .tx small { color: var(--muted); font-weight: 600; } .bientot-ico { font-size: 1.6rem; line-height: 1; } .bientot-c.choisi { outline: 2px solid var(--accent); }
 .bq-choix { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; } #overlay .bq-l, .bq-l { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; text-align: left; min-height: 0; height: auto; } #overlay .bq-l input, .bq-l input { width: 18px; height: 18px; min-height: 0; flex: 0 0 auto; margin: 0; padding: 0; } .bq-l span { flex: 1; min-width: 0; } .bq-l img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; } .bq-l:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.bq-blocs { display: grid; gap: 10px; margin-bottom: 10px; } .bq-bloc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); } .bq-bloc.ok { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); } .bq-bloc.warn { border-color: var(--warn); background: var(--warn-soft); } .bq-bloc p { margin: 0; }
 .apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
@@ -960,10 +961,15 @@ async function chargerBanque(actualiser) {
   if (!SB || !ESPACE) return; const id = ESPACE;
   try {
     if (actualiser) await SB.rpc("banque_actualiser", { e: id });
-    const [l, c, o] = await Promise.all([SB.from("banque_liens").select("*").eq("espace_id", id).maybeSingle(), SB.from("banque_comptes").select("*").eq("espace_id", id), SB.from("banque").select("tx_id, date, montant, libelle").eq("espace_id", id).order("date", { ascending: false }).limit(400)]);
+    const [l, d, c, o] = await Promise.all([SB.from("banque_liens").select("*").eq("espace_id", id).maybeSingle(), SB.from("banque_directe").select("banque, valide_jusqua, derniere_synchro, erreur, comptes").eq("espace_id", id).maybeSingle(),
+      SB.from("banque_comptes").select("*").eq("espace_id", id), SB.from("banque").select("tx_id, date, montant, libelle, source").eq("espace_id", id).order("date", { ascending: false }).limit(800)]);
     if (ESPACE !== id) return;
-    BANQUE = { etat: "ok", lien: l.data || null, comptes: c.data || [], ops: (o.data || []).map(x => ({ ...x, montant: +x.montant, tx_id: String(x.tx_id) })) };
-    if (BANQUE.lien && BANQUE.lien.source === "enablebanking") { SB.from("banque_directe").select("banque, valide_jusqua").eq("espace_id", id).maybeSingle().then(r => { BANQUE.directe = r.data; }, () => {}); if (actualiser && !BANQUE.relue && (!BANQUE.lien.derniere_synchro || Date.now() - new Date(BANQUE.lien.derniere_synchro) > 6 * 3600e3)) { BANQUE.relue = true; fnBanque({ action: "actualiser", espace: id }).then(j => { if (j.n) chargerBanque(false); }, () => {}); } }
+    // deux sources possibles : la banque directe est la référence pour pointer les loyers ; Pennylane sert à comparer
+    const directe = d.data && (d.data.comptes || []).length ? d.data : null, pl = l.data || null, src = directe ? "enablebanking" : "pennylane";
+    const opsTous = (o.data || []).map(x => ({ ...x, montant: +x.montant, tx_id: String(x.tx_id), source: x.source || "pennylane" })), comptesTous = (c.data || []).map(x => ({ ...x, source: x.source || "pennylane" }));
+    BANQUE = { etat: "ok", directe, pennylane: pl, principal: src, lien: directe ? { source: "enablebanking", derniere_synchro: directe.derniere_synchro, erreur: directe.erreur } : pl,
+      comptes: comptesTous.filter(x => x.source === src), ops: opsTous.filter(x => x.source === src), comptesTous, opsTous, relue: BANQUE.relue };
+    if (directe && actualiser && !BANQUE.relue && (!directe.derniere_synchro || Date.now() - new Date(directe.derniere_synchro) > 6 * 3600e3)) { BANQUE.relue = true; fnBanque({ action: "actualiser", espace: id }).then(j => { if (j.n) chargerBanque(false); }, () => {}); }
     const n = rapprocherBanque(); if (n) toast(`🏦 ${n} virement${n > 1 ? "s" : ""} de locataire reconnu${n > 1 ? "s" : ""} et enregistré${n > 1 ? "s" : ""}`);
     if (RECUS.length) setTimeout(() => apresLoyersRecus(), n ? 2500 : 0);
   } catch (e) { BANQUE.etat = "erreur"; }
@@ -982,18 +988,35 @@ function bailDuVirement(op) {
   });
   return cands.length === 1 ? cands[0] : null;
 }
+/* Un virement vu par les deux sources (Pennylane et banque directe) ne compte qu'une fois : si un paiement créé depuis la source principale
+   double un paiement déjà relié à l'autre source (même locataire, même montant, à 12 jours près), on garde l'ancien et on le relie. */
+function dedoublonnerPaiements() {
+  if (!BANQUE.ops.length) return false;
+  const ids = new Set(BANQUE.ops.map(o => String(o.tx_id))), groupe = f => { const g = {}; S.paiements.filter(f).forEach(p => { const k = p.lot || ("tx" + p.tx); (g[k] = g[k] || []).push(p); }); return Object.values(g); };
+  const nouveaux = groupe(p => p.tx && ids.has(String(p.tx))), anciens = groupe(p => p.tx && !ids.has(String(p.tx)));
+  let modif = false; const pris = new Set();
+  for (const G of nouveaux) {
+    const tot = r2(G.reduce((s, p) => s + +p.montant, 0)), b = G[0].bailId, d = P(G[0].date);
+    const H = anciens.find(h => !pris.has(h) && h[0].bailId === b && Math.abs(r2(h.reduce((s, p) => s + +p.montant, 0)) - tot) < 0.01 && Math.abs(daysBetween(P(h[0].date), d)) <= 12);
+    if (!H) continue;
+    pris.add(H); const tx = G[0].tx; S.paiements = S.paiements.filter(p => !G.includes(p)); H.forEach(p => { p.txAutre = p.tx; p.tx = tx; }); modif = true;
+  }
+  return modif;
+}
 /* Enregistre les virements des locataires comme paiements (sans doublon avec ce qui a été saisi à la main) */
 function rapprocherBanque() {
-  let n = 0, modif = false; const soldes = [];
+  let n = 0, modif = dedoublonnerPaiements(); const soldes = [];
+  const ids = new Set(BANQUE.ops.map(o => String(o.tx_id)));
   const lies = new Set(S.paiements.filter(p => p.tx).map(p => String(p.tx)));
   for (const op of BANQUE.ops.slice().sort((a, b) => a.date.localeCompare(b.date))) {
     if (!(op.montant > 0) || lies.has(op.tx_id)) continue;
     const b = bailDuVirement(op); if (!b) continue;
     const debut = b.suiviDepuis || mk(P(b.dateEntree)); if (op.date.slice(0, 7) < debut || P(op.date) < P(b.dateEntree)) continue;
     // déjà saisi à la main ? même montant, à 12 jours près, pas encore relié à un virement
-    const lot = {}; S.paiements.filter(p => p.bailId === b.id && !p.tx && Math.abs(daysBetween(P(p.date), P(op.date))) <= 12).forEach(p => { const k = p.lot || p.id; (lot[k] = lot[k] || []).push(p); });
+    // déjà saisi à la main, ou déjà relié au même virement vu par l'autre source (Pennylane / banque directe) : on relie, on ne recompte pas
+    const lot = {}; S.paiements.filter(p => p.bailId === b.id && (!p.tx || !ids.has(String(p.tx))) && Math.abs(daysBetween(P(p.date), P(op.date))) <= 12).forEach(p => { const k = p.lot || p.id; (lot[k] = lot[k] || []).push(p); });
     const manuel = Object.values(lot).find(ps => Math.abs(ps.reduce((s, p) => s + +p.montant, 0) - op.montant) < 0.01);
-    if (manuel) { manuel.forEach(p => p.tx = op.tx_id); lies.add(op.tx_id); modif = true; continue; }
+    if (manuel) { manuel.forEach(p => { if (p.tx && String(p.tx) !== String(op.tx_id)) p.txAutre = p.tx; p.tx = op.tx_id; }); lies.add(op.tx_id); modif = true; continue; }
     let reste = r2(op.montant);
     for (const x of ordreImputation(b, op.date.slice(0, 7), addM(op.date.slice(0, 7), 1))) {
       if (reste <= 0) break; if (x.reste <= 0) continue;
@@ -1156,12 +1179,40 @@ async function brancherPennylane(jeton) {
 function sectionBanqueReglages() {
   if (!SB) return `<p class="note">La banque se branche dans l'appli installée.</p>`;
   if (!estProprio()) return `<p class="note">La banque de l'espace est branchée et gérée par le propriétaire (<b>${esc(nomProprio())}</b>).</p>`;
-  if (BANQUE.lien && BANQUE.lien.source === "enablebanking") return `<p class="note">✅ Ta banque est reliée en direct${BANQUE.comptes.length ? " : " + BANQUE.comptes.map(c => esc(c.nom)).join(", ") : ""}. Lecture toutes les 6 heures (les banques limitent à 4 lectures par jour)${BANQUE.lien.derniere_synchro ? " · dernière " + ilYa(BANQUE.lien.derniere_synchro) : ""}.${BANQUE.directe && BANQUE.directe.valide_jusqua ? `<br>Accord de ta banque valable jusqu'au <b>${fds(new Date(BANQUE.directe.valide_jusqua))}</b> : l'appli te préviendra pour le renouveler.` : ""}${BANQUE.lien.erreur ? `<br>⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p>
-    <div class="row">${BANQUE.lien.erreur ? `<button class="small primary" onclick="relierBanque()">Reconnecter ma banque</button>` : `<button class="small" onclick="actualiserDirecte(this)">↻ Relire maintenant</button>`}<button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="debrancherDirecte()">Débrancher</button></div>`;
-  if (BANQUE.lien) return `<p class="note">✅ Branchée sur Pennylane${BANQUE.comptes.length ? " : " + BANQUE.comptes.map(c => esc(c.nom)).join(", ") : ""}. Lecture toutes les heures.${BANQUE.lien.erreur ? `<br>⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p>
-    <div class="row">${BANQUE.lien.erreur ? `<button class="small primary" onclick="assistantPennylane()">Rebrancher avec un nouveau jeton</button>` : ""}<button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div><p class="note small">Tu préfères lire ta banque en direct, sans Pennylane ? <a href="#" onclick="event.preventDefault();relierBanque()">Relier ma banque directement</a> (remplace Pennylane pour la banque).</p>`;
-  return `<p class="note">Les loyers reçus se cochent tout seuls et la compta se remplit. Avec Pennylane, c'est automatique ; sinon, tu peux importer le relevé de ta banque une fois par mois.</p>
-    <div class="row"><button class="small primary" onclick="relierBanque()">🏦 Relier ma banque</button><button class="small" onclick="assistantPennylane()">Brancher Pennylane</button><button class="small ghost" onclick="importerReleve()">Importer un relevé</button></div>`;
+  const D = BANQUE.directe, PL = BANQUE.pennylane, nomsDe = src => (BANQUE.comptesTous || []).filter(c => c.source === src).map(c => esc(c.nom)).join(", ");
+  const blocD = D ? `<div class="bq-bloc ok"><b>🏦 Ta banque en direct</b> <span class="pill ok">référence</span><p class="note">${esc(D.banque || "")}${nomsDe("enablebanking") ? " · " + nomsDe("enablebanking") : ""}. Lue toutes les 6 heures${D.derniere_synchro ? " · dernière " + ilYa(D.derniere_synchro) : ""}. Accord jusqu'au <b>${D.valide_jusqua ? fds(new Date(D.valide_jusqua)) : "?"}</b>.${D.erreur ? `<br>⚠️ ${esc(D.erreur)}` : ""}</p>
+      <div class="row">${D.erreur ? `<button class="small primary" onclick="relierBanque()">Reconnecter ma banque</button>` : `<button class="small" onclick="actualiserDirecte(this)">↻ Relire maintenant</button>`}<button class="small ghost" onclick="debrancherDirecte()">Débrancher</button></div></div>`
+    : `<div class="bq-bloc"><b>🏦 Ta banque en direct</b><p class="note">Les virements arrivent tout seuls depuis ta banque (lecture seule, gratuit).</p><div class="row"><button class="small primary" onclick="relierBanque()">🏦 Relier ma banque</button></div></div>`;
+  const blocP = PL ? `<div class="bq-bloc ok"><b>📒 Pennylane</b> ${D ? `<span class="pill">pour comparer</span>` : `<span class="pill ok">référence</span>`}<p class="note">${nomsDe("pennylane") || "Branché"}. Lu toutes les heures${PL.derniere_synchro ? " · dernière " + ilYa(PL.derniere_synchro) : ""}.${PL.erreur ? `<br>⚠️ ${esc(PL.erreur)}` : ""}</p>
+      <div class="row">${PL.erreur ? `<button class="small primary" onclick="assistantPennylane()">Rebrancher avec un nouveau jeton</button>` : ""}<button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div></div>`
+    : `<div class="bq-bloc"><b>📒 Pennylane</b><p class="note">${D ? "Branche aussi Pennylane pour <b>comparer</b> : l'appli te signale tout décalage entre ta banque et ta compta." : "Ta compta Pennylane lit déjà ta banque : l'appli peut s'en servir."}</p><div class="row"><button class="small ${D ? "primary" : ""}" onclick="assistantPennylane()">Brancher Pennylane (lecture seule)</button></div></div>`;
+  const cmp = D && PL ? comparaisonBanques() : null;
+  const blocC = cmp ? `<div class="bq-bloc ${cmp.ecarts ? "warn" : "ok"}"><b>🔎 Ta banque et Pennylane</b><p class="note">${cmp.ecarts ? `⚠️ <b>${cmp.ecarts} décalage${cmp.ecarts > 1 ? "s" : ""}</b>` : "✅ Tout concorde"} sur la période commune (${cmp.periode}) : ${cmp.paires} opération${cmp.paires > 1 ? "s" : ""} identique${cmp.paires > 1 ? "s" : ""}.${cmp.ecartSolde ? ` Soldes : ${eur(cmp.soldeB)} à la banque, ${eur(cmp.soldeP)} dans Pennylane.` : ""}</p><div class="row"><button class="small ${cmp.ecarts ? "primary" : ""}" onclick="voirComparaison()">Voir le détail</button></div></div>` : "";
+  return `<div class="bq-blocs">${blocD}${blocP}${blocC}</div><div class="row"><button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="importerReleve()">Importer un relevé</button></div>`;
+}
+/* Comparer ta banque (directe) et Pennylane : mêmes opérations sur la période commune ? */
+function comparaisonBanques() {
+  const A = (BANQUE.opsTous || []).filter(o => o.source === "enablebanking"), B = (BANQUE.opsTous || []).filter(o => o.source === "pennylane");
+  if (!A.length || !B.length) return null;
+  const dmin = [A, B].map(L => L.reduce((m, o) => o.date < m ? o.date : m, "9999")).sort()[1], dmax0 = [A, B].map(L => L.reduce((m, o) => o.date > m ? o.date : m, "0000")).sort()[0];
+  const dmax = iso(addDays(P(dmax0), -3)), debut = iso(addDays(P(dmin), 7)); // Pennylane date souvent quelques jours après la banque
+  if (dmax < debut) return null;
+  // on rapproche sur tout l'historique (à 7 jours près), mais on ne compte les décalages que dans la période commune
+  const dans = o => o.date >= debut && o.date <= dmax, a = A.slice().sort((x, y) => x.date.localeCompare(y.date)), b = B.map(o => ({ ...o, pris: false }));
+  const seulBanque = [], paires = [];
+  a.forEach(o => { const m = b.filter(x => !x.pris && Math.abs(x.montant - o.montant) < 0.01 && Math.abs(daysBetween(P(x.date), P(o.date))) <= 7).sort((x, y) => Math.abs(daysBetween(P(x.date), P(o.date))) - Math.abs(daysBetween(P(y.date), P(o.date))))[0];
+    if (m) { m.pris = true; if (dans(o) || dans(m)) paires.push([o, m]); } else if (dans(o)) seulBanque.push(o); });
+  const seulPennylane = b.filter(x => !x.pris && dans(x)), som = src => r2((BANQUE.comptesTous || []).filter(c => c.source === src).reduce((s, c) => s + (+c.solde || 0), 0));
+  const soldeB = som("enablebanking"), soldeP = som("pennylane");
+  return { periode: `${fds(P(debut))} → ${fds(P(dmax))}`, paires: paires.length, seulBanque, seulPennylane, ecarts: seulBanque.length + seulPennylane.length, soldeB, soldeP, ecartSolde: Math.abs(soldeB - soldeP) >= 0.01 };
+}
+function voirComparaison() {
+  const c = comparaisonBanques(); if (!c) { toast("Pas encore assez d'opérations des deux côtés pour comparer."); return; }
+  const ligne = o => `<li><span class="tx"><b class="${o.montant < 0 ? "neg" : "pos"}">${o.montant > 0 ? "+" : ""}${eur(o.montant)}</b> · ${fds(P(o.date))}<small>${esc(String(o.libelle || "").slice(0, 90))}</small></span></li>`;
+  modal("🔎 Ta banque et Pennylane", `<div class="full">${c.ecarts ? grosMsg("attention", `⚠️ ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""}`, `Du ${c.periode} : ${c.paires} opérations identiques des deux côtés. Les opérations ci-dessous n'apparaissent que d'un côté (oubli de Pennylane, opération en double, ou montant différent).`) : grosMsg("ok", "✅ Tout concorde", `Du ${c.periode} : les ${c.paires} opérations sont les mêmes à la banque et dans Pennylane.`)}</div>
+    ${c.seulBanque.length ? `<div class="full"><h3>Seulement à la banque (${c.seulBanque.length})</h3><p class="note small">Pennylane ne les a pas (encore) : vérifie qu'elles sont bien dans ta compta.</p><ul class="todo">${c.seulBanque.map(ligne).join("")}</ul></div>` : ""}
+    ${c.seulPennylane.length ? `<div class="full"><h3>Seulement dans Pennylane (${c.seulPennylane.length})</h3><p class="note small">Ta banque ne les montre pas : doublon ou saisie à la main dans Pennylane ?</p><ul class="todo">${c.seulPennylane.map(ligne).join("")}</ul></div>` : ""}
+    <div class="full"><p class="note">Soldes : <b>${eur(c.soldeB)}</b> à la banque · <b>${eur(c.soldeP)}</b> dans Pennylane${c.ecartSolde ? ` (écart ${eur(r2(c.soldeB - c.soldeP))} : souvent les derniers jours pas encore passés dans Pennylane)` : " ✓"}.</p></div>`, () => true, { ok: "Fermer", lecture: true });
 }
 async function brancherBanque(f) {
   const bt = document.getElementById("bq_btn"); bt.disabled = true; bt.textContent = "Connexion…";
@@ -1170,7 +1221,7 @@ async function brancherBanque(f) {
   toast(`Banque branchée : ${r.data} opérations lues`); await chargerBanque(false);
 }
 async function actualiserBanque(bt) { bt.disabled = true; bt.textContent = "Mise à jour…"; await chargerBanque(true); }
-function debrancherBanque() { if (!estProprio()) { toast(msgProprio("débrancher la banque")); return; } confirmer("Débrancher la banque ? Les opérations affichées seront effacées de l'appli (les loyers déjà enregistrés restent).", async () => { await SB.rpc("banque_debrancher", { e: ESPACE }); BANQUE = { etat: "ok", ops: [], comptes: [], lien: null }; render(); }); }
+function debrancherBanque() { if (!estProprio()) { toast(msgProprio("débrancher la banque")); return; } confirmer("Débrancher Pennylane ? Les opérations venues de Pennylane seront effacées de l'appli (les loyers déjà enregistrés restent, ta banque directe aussi).", async () => { await SB.rpc("banque_debrancher", { e: ESPACE }); await chargerBanque(false); render(); toast("✓ Pennylane débranché"); }); }
 function appliquerLigne(l) {
   if (!l || !l.coll) return false;
   const k = l.coll + "/" + l.doc_id, j = JSON.stringify(l.data);
@@ -1816,6 +1867,7 @@ function taches() {
     const fin = BANQUE.directe && BANQUE.directe.valide_jusqua ? new Date(BANQUE.directe.valide_jusqua) : null, j = fin ? Math.ceil((fin - TODAY) / 864e5) : 99;
     if (BANQUE.lien.erreur || j <= 15) add({ key: "bq-renouv-" + (fin ? iso(fin) : "err"), prio: BANQUE.lien.erreur || j <= 3 ? "urgent" : "soon", date: TODAY, t: BANQUE.lien.erreur ? "🏦 Ta banque ne répond plus : reconnecte-la" : `🏦 Renouvelle l'accès à ta banque (fin ${j > 0 ? "dans " + j + " jour" + (j > 1 ? "s" : "") : "aujourd'hui"})`, d: BANQUE.lien.erreur ? esc(BANQUE.lien.erreur) : "Les banques demandent ton accord tous les 6 mois. 1 minute : tu te reconnectes sur le site de ta banque.", acts: [["Reconnecter", "relierBanque()", "primary"]] });
   }
+  if (SB && BANQUE.directe && BANQUE.pennylane && estProprio()) { let c = null; try { c = comparaisonBanques(); } catch (e) {} if (c && c.ecarts) add({ key: "bq-ecarts-" + c.ecarts + "-" + c.periode, prio: "soon", date: TODAY, done: true, t: `🔎 ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""} entre ta banque et Pennylane`, d: `Sur la période ${c.periode} : ${c.seulBanque.length} seulement à la banque, ${c.seulPennylane.length} seulement dans Pennylane.`, acts: [["Voir", "voirComparaison()", "primary"]] }); }
   (DEMANDES || []).forEach(d => { const b = bail(d.bail_id);
     add({ bailId: d.bail_id, key: "dem-" + d.id, prio: "urgent", date: new Date(d.cree_le), t: `🔧 ${esc(nomCourt(d.nom || (b && b.nom) || "Un locataire"))} signale un problème`, d: `"${esc(String(d.texte).slice(0, 140))}"${d.photo ? " · 📷 photo" : ""} · ${ilYa(d.cree_le)}`, acts: [["Voir", `voirDemande(${d.id})`, "primary"]] }); });
   // 1. Impayés
@@ -3584,7 +3636,7 @@ async function relierBanque() {
   modal("🏦 Relier ma banque", `<div class="full">${grosMsg("attention", "Lecture seule, par la voie officielle", "Tu te connectes sur le site de ta banque (l'appli ne voit jamais tes codes). L'appli lit seulement les soldes et les opérations : elle ne peut faire aucun virement. Accord valable 6 mois, renouvelable.")}</div>
     <label class="fl full">Ta banque<input id="bq_q" type="search" placeholder="Crédit Mutuel, BNP, Boursorama…" autocomplete="off"></label><div class="full" id="bq_liste"><p class="note">Chargement des banques…</p></div>
     ${sel("Type de compte", "type", estPerso() ? "personal" : "business", [["business", "Compte professionnel (SCI, société)"], ["personal", "Compte personnel"]])}
-    <p class="full note small">Gratuit, avec Enable Banking (prestataire agréé). ${BANQUE.lien && BANQUE.lien.source !== "enablebanking" ? "⚠️ Ça remplace Pennylane pour la banque de cet espace." : ""}</p>`,
+    <p class="full note small">Gratuit, avec Enable Banking (prestataire agréé). ${BANQUE.pennylane ? "Pennylane reste branché : l'appli compare les deux et te signale les décalages." : ""}</p>`,
     (d, f) => { const b = f.querySelector("input[name=bq]:checked"); if (!b) { toast("Choisis ta banque."); return false; } setTimeout(() => partirVersBanque(b.value, d.type), 50); return true; }, { ok: "Continuer vers ma banque", lecture: true,
     after: async () => {
       try { if (!BANQUES) BANQUES = (await fnBanque({ action: "banques" })).banques; } catch (e) { document.getElementById("bq_liste").innerHTML = `<p class="note">⚠️ ${esc(e.message)}</p>`; return; }
@@ -3610,7 +3662,7 @@ async function retourBanque() {
   } catch (e) { modal("🏦 Banque pas reliée", `<div class="full">${grosMsg("stop", "Ça n'a pas marché", esc(e.message))}</div>`, () => true, { ok: "Fermer", lecture: true }); }
 }
 async function actualiserDirecte(bt) { if (bt) { bt.disabled = true; bt.textContent = "Lecture…"; } try { const j = await fnBanque({ action: "actualiser", espace: ESPACE, force: true }); toast(j.erreur ? "⚠️ " + j.erreur : `✓ ${j.n} opérations relues`); } catch (e) { toast(e.message); } await chargerBanque(false); render(); }
-function debrancherDirecte() { confirmer("Débrancher ta banque ? L'accès est retiré chez la banque et les opérations affichées sont effacées de l'appli (les loyers déjà enregistrés restent).", async () => { try { await fnBanque({ action: "debrancher", espace: ESPACE }); } catch (e) { toast(e.message); return; } BANQUE = { etat: "ok", ops: [], comptes: [], lien: null }; render(); toast("✓ Banque débranchée"); }); }
+function debrancherDirecte() { confirmer("Débrancher ta banque ? L'accès est retiré chez la banque et les opérations affichées sont effacées de l'appli (les loyers déjà enregistrés restent).", async () => { try { await fnBanque({ action: "debrancher", espace: ESPACE }); } catch (e) { toast(e.message); return; } await chargerBanque(false); render(); toast("✓ Banque directe débranchée"); }); }
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -3989,7 +4041,7 @@ function pageReglages() {
     rubrique("membres", "👤", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
     estProprio() ? rubrique("drive", "📁", "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · seulement les dossiers choisis` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
       : rubrique("drive", "📁", "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
-    rubrique("banque", "🏦", "Banque", BANQUE.lien ? `Pennylane branché${BANQUE.lien.erreur ? " · ⚠️ à rebrancher" : ""}` : "Pas branchée · Pennylane ou relevé", sectionBanqueReglages()),
+    rubrique("banque", "🏦", "Banque", [BANQUE.directe ? "Banque en direct" + (BANQUE.directe.erreur ? " ⚠️" : "") : "", BANQUE.pennylane ? "Pennylane" + (BANQUE.pennylane.erreur ? " ⚠️" : "") : ""].filter(Boolean).join(" + ") + (BANQUE.directe && BANQUE.pennylane ? (() => { const c = comparaisonBanques(); return c ? (c.ecarts ? ` · ⚠️ ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""}` : " · ✅ concordent") : ""; })() : "") || "Pas branchée · ta banque, Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
     estProprio() && SB ? rubrique("quittances", "🧾", "Quittances automatiques", S.sci.quittanceAuto ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive", sansCarte(sectionQuittanceAuto())) : "",
     estProprio() && SB ? rubrique("relances", "🔁", "Relances automatiques", S.sci.relanceAuto ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même", sansCarte(sectionRelanceAuto())) : "",

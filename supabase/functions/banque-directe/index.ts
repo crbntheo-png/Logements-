@@ -34,7 +34,7 @@ async function synchro(admin: any, e: string) {
     if (b.s === 429) { erreur = null; break; } // la banque limite à 4 lectures par jour sans toi : on réessaie plus tard
     const bal = (b.j.balances || []); const pref = ["CLBD", "ITAV", "XPCD", "ITBD", "CLAV", "OPBD"]; bal.sort((x: any, y: any) => (pref.indexOf(x.balance_type) + 99) % 99 - (pref.indexOf(y.balance_type) + 99) % 99);
     const solde = bal[0] ? +bal[0].balance_amount.amount : null;
-    await admin.from("banque_comptes").upsert({ espace_id: e, compte_id: cid, nom: c.nom, solde, maj_le: new Date().toISOString() });
+    await admin.from("banque_comptes").upsert({ espace_id: e, compte_id: cid, nom: c.nom, solde, maj_le: new Date().toISOString(), source: "enablebanking" });
     let suite: string | null = null, pages = 0;
     do {
       const t = await eb(`/accounts/${c.uid}/transactions?date_from=${depuis}${suite ? "&continuation_key=" + encodeURIComponent(suite) : ""}`);
@@ -47,13 +47,13 @@ async function synchro(admin: any, e: string) {
         const qui = x.credit_debit_indicator === "CRDT" ? x.debtor?.name : x.creditor?.name;
         const libelle = [qui, ...(x.remittance_information || [])].filter(Boolean).join(" · ").slice(0, 300) || x.bank_transaction_code?.description || "Opération";
         const ref = x.entry_reference || x.transaction_id || `${date}|${m}|${libelle}`;
-        lignes.push({ espace_id: e, tx_id: await num("eb-" + c.uid + "-" + ref), date, montant: Math.round(m * 100) / 100, libelle, compte: cid });
+        lignes.push({ espace_id: e, tx_id: await num("eb-" + c.uid + "-" + ref), date, montant: Math.round(m * 100) / 100, libelle, compte: cid, source: "enablebanking" });
       }
       if (lignes.length) { const r = await admin.from("banque").upsert(lignes); if (!r.error) n += lignes.length; }
       suite = t.j.continuation_key || null; pages++;
     } while (suite && pages < 10);
   }
-  await admin.from("banque_liens").upsert({ espace_id: e, source: "enablebanking", derniere_synchro: erreur ? undefined : new Date().toISOString(), erreur });
+  await admin.from("banque_directe").update(erreur ? { erreur } : { erreur: null, derniere_synchro: new Date().toISOString() }).eq("espace_id", e);
   return { n, erreur };
 }
 Deno.serve(async (req) => {
@@ -83,9 +83,7 @@ Deno.serve(async (req) => {
       const { data: ancien } = await admin.from("banque_directe").select("session_id").eq("espace_id", bd.espace_id).maybeSingle();
       await admin.from("banque_directe").update({ session_id: s.j.session_id, comptes, etat: null, valide_jusqua: s.j.access?.valid_until || null, maj_le: new Date().toISOString() }).eq("espace_id", bd.espace_id);
       if (ancien?.session_id && ancien.session_id !== s.j.session_id) await eb(`/sessions/${ancien.session_id}`, { method: "DELETE" }).catch(() => {});
-      // la banque directe remplace Pennylane pour cet espace
-      try { await admin.rpc("banque_vider_pennylane", { e: bd.espace_id }); } catch (_) { /* rien à vider */ }
-      await admin.from("banque_liens").upsert({ espace_id: bd.espace_id, source: "enablebanking", branche_le: new Date().toISOString(), erreur: null });
+      // Pennylane reste branché s'il l'était : les deux sources sont gardées et comparées dans l'appli
       const r = await synchro(admin, bd.espace_id);
       return rep({ ok: true, espace: bd.espace_id, comptes: comptes.length, operations: r.n, erreur: r.erreur });
     }
@@ -102,15 +100,15 @@ Deno.serve(async (req) => {
       await admin.from("banque_directe").upsert({ espace_id: e, banque: a.name, type_compte: type, etat, maj_le: new Date().toISOString() }, { onConflict: "espace_id", ignoreDuplicates: false });
       return rep({ ok: true, url: r.j.url });
     }
-    if (c.action === "actualiser") { const { data: l } = await admin.from("banque_liens").select("derniere_synchro, source").eq("espace_id", e).maybeSingle();
-      if (!l || l.source !== "enablebanking") return rep({ ok: true, n: 0 });
+    if (c.action === "actualiser") { const { data: l } = await admin.from("banque_directe").select("derniere_synchro, session_id").eq("espace_id", e).maybeSingle();
+      if (!l || !l.session_id) return rep({ ok: true, n: 0 });
       if (l.derniere_synchro && Date.now() - new Date(l.derniere_synchro).getTime() < 6 * 3600e3 && !c.force) return rep({ ok: true, n: 0, recent: true });
       return rep({ ok: true, ...(await synchro(admin, e)) }); }
     if (c.action === "debrancher") {
       const { data: bd } = await admin.from("banque_directe").select("session_id").eq("espace_id", e).maybeSingle();
       if (bd?.session_id) await eb(`/sessions/${bd.session_id}`, { method: "DELETE" }).catch(() => {});
       await admin.from("banque_directe").delete().eq("espace_id", e);
-      await admin.from("banque").delete().eq("espace_id", e); await admin.from("banque_comptes").delete().eq("espace_id", e); await admin.from("banque_liens").delete().eq("espace_id", e);
+      await admin.from("banque").delete().eq("espace_id", e).eq("source", "enablebanking"); await admin.from("banque_comptes").delete().eq("espace_id", e).eq("source", "enablebanking");
       return rep({ ok: true });
     }
     return rep({ erreur: "Action inconnue" }, 400);

@@ -149,7 +149,8 @@ Deno.serve(async (req) => {
     let nPush = 0;
     // 1. Virements reçus ces 2 derniers jours (lus par la banque)
     const hier = new Date(+auj - 2 * 864e5).toISOString().slice(0, 10);
-    const { data: ops } = await admin.from("banque").select("tx_id, date, montant, libelle").eq("espace_id", esp.id).gt("montant", 0).gte("date", hier);
+    const { data: bd } = await admin.from("banque_directe").select("session_id").eq("espace_id", esp.id).maybeSingle();
+    const { data: ops } = await admin.from("banque").select("tx_id, date, montant, libelle").eq("espace_id", esp.id).eq("source", bd?.session_id ? "enablebanking" : "pennylane").gt("montant", 0).gte("date", hier);
     for (const o of ops || []) if (!(await dejaEnvoye("vir-" + esp.id + "-" + o.tx_id)))
       nPush += await envoyerPush(users, { titre: `💶 ${eur(+o.montant)} reçus`, texte: `${String(o.libelle).replace(/^VIR( INST)?\s*/i, "").slice(0, 60)} · ${nomEsp}`, url: "./#locataires", tag: "vir-" + o.tx_id });
     // 2. Loyer pas reçu 3 jours après la date prévue
