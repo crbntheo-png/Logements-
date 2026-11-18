@@ -57,6 +57,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — ranger l'appli avec Claude (connecteur en écriture, sur autorisation)
+- Demande de Théo : que chaque utilisateur branche SON Claude et range son espace avec lui (documents, logements…), sans que Claude voie comment l'appli est faite. Claude ne reçoit que des outils décrits en français et les données de l'espace, jamais le code ni la base (vérifié : rien sur la fabrication dans les consignes ni la liste des outils).
+- Réglages › Brancher sur Claude : interrupteur "🧹 Autoriser Claude à ranger avec moi" (coupé par défaut, propriétaire seulement : RPC `connecteur_ecriture`, colonne `ecriture`, les éditeurs ne peuvent plus changer que les chiffres publiés ; `supabase/connecteur_ecriture.sql`). Une fois autorisé : message tout prêt à coller dans Claude ("Range mon appli… montre-moi d'abord ton plan… attends mon OK").
+- Fonction `mcp` : 6 outils d'écriture en plus des 9 de lecture (seulement si autorisé) : creer_logement, creer_locataire (suivi des loyers à partir du prochain loyer à payer), ajouter_document (lien Drive ou https, catégorie, locataire), ranger_document (documents "à ranger"), ajouter_depense, ajouter_rappel. Logement et locataire trouvés par leur nom (ou une partie), refus clair si ambigu ou inconnu ; pas de doublon (logement, locataire, même lien, même dépense). Aucun outil pour supprimer, payer ou envoyer. Invite MCP "ranger_mon_appli". Consigne à Claude : montrer son plan et attendre l'accord.
+- Ce que Claude crée arrive en direct dans l'appli (marqué `parClaude`) et s'affiche sur l'accueil ("🤖 Ce que Claude a rangé", ou dans l'activité des associés). Confidentialité complétée.
+- Tests : test68 (vraie base, vraie fonction, appels comme Claude) 23/23 ; test5, test53, test59, test65 OK. En ligne.
+- Pas vérifié : une vraie séance de rangement dans claude.ai avec le Drive de Théo.
+
 ### 18/11/2026 — Compta : "Ranger tes dépenses" expliqué et regroupé ; couleurs des Réglages
 - Retour de Théo sur "37 sorties d'argent à mettre en compta" : incompréhensible (quoi cocher, que fait le bouton, trop de lignes). La carte devient "🧾 Ranger tes dépenses de 2026" avec une explication en 3 questions (C'est quoi ? À quoi ça sert ? Que fait le bouton ? — rien ne change à la banque ni à Pennylane, annulable). Les lignes sont **regroupées par catégorie** (repliées ; "À classer" ouvert et en orange en premier), avec "Ranger ces N" par groupe et "Tout ranger" ; "Ignorer" devient "Pas une dépense" ; avec Pennylane branché : "Masquer : mon comptable s'en occupe" (réaffichable).
 - Correction de classement : "ECH PRET INT" (≈ 1 540 €) = échéance complète de prêt, plus "Intérêts d'emprunt" (ça gonflait les intérêts déductibles) → "Échéance de prêt (capital + intérêts, à ventiler)".
