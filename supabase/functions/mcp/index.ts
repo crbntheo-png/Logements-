@@ -92,6 +92,8 @@ async function ecrire(admin: any, e: string, nom: string, a: any, cx: any) {
   if (nom === "ajouter_depense") {
     if (!dateOk(a.date)) return err("date doit être au format AAAA-MM-JJ."); if (!(+a.montant > 0)) return err("montant doit être positif.");
     if (!CATS.includes(a.categorie)) return err("Catégorie inconnue. Choix : " + CATS.join(", "));
+    const clo = (await admin.from("espaces").select("cloture_jusqua").eq("id", e).maybeSingle()).data?.cloture_jusqua;
+    if (clo && a.date.slice(0, 7) <= clo) return err(`Le mois ${a.date.slice(0, 7)} est clôturé dans l'appli (jusqu'à ${clo} inclus) : rien n'a été ajouté. Le propriétaire peut le rouvrir dans Compta s'il faut vraiment ajouter cette dépense.`);
     let bienId = ""; if (a.logement) { const t = trouver(await lire("biens"), a.logement, "logement"); if (t.e) return err(t.e); bienId = t.x.id; }
     const D = await lire("depenses"); if (D.some((x: any) => x.date === a.date && Math.abs(+x.montant - +a.montant) < 0.01 && (x.bienId || "") === bienId)) return R({ ok: true, deja: true, info: "Une dépense du même montant à la même date existe déjà : rien ajouté." });
     const dep = { id: uidc(), date: a.date, montant: Math.round(+a.montant * 100) / 100, categorie: a.categorie, bienId, libelle: String(a.libelle).slice(0, 80), recuperable: false };

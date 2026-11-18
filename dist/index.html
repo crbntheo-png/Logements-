@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "9713fda", "date": "2026-11-18T14:01"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "0994996", "date": "2026-11-18T15:19"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -570,6 +570,9 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .bq-blocs { display: grid; gap: 10px; margin-bottom: 10px; } .bq-bloc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); } .bq-bloc.ok { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); } .bq-bloc.warn { border-color: var(--warn); background: var(--warn-soft); } .bq-bloc p { margin: 0; }
 .sorties-expl { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; margin: 4px 0 12px; } .sorties-expl p { margin: 0; font-size: .9rem; line-height: 1.45; } .sorties-expl .small { color: var(--muted); font-size: .8rem; }
 .sortie-g { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; background: var(--surface); } .sortie-g > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; } .sortie-g > summary::-webkit-details-marker { display: none; } .sortie-g > summary .tx { flex: 1; display: grid; min-width: 0; } .sortie-g > summary small { color: var(--muted); } .sortie-g[open] > summary .chev { transform: rotate(90deg); } .sortie-g > .sortie-l, .sortie-g > .row, .sortie-g > .note { padding: 0 12px; } .sortie-g > .row { padding-bottom: 12px; } .sortie-g.a-classer { border-color: var(--warn); } .sorties-bas { margin-top: 10px; } .sorties-masq { margin: 4px 2px 12px; }
+.cloture .clo-h { display: flex; gap: 12px; align-items: flex-start; } .cloture .clo-h h2 { margin: 0 0 2px; } .cloture .clo-h p { margin: 0; color: var(--muted); }
+.cloture .clo-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.cloture .clo-aide { margin: 10px 0; } .cloture .clo-aide summary { cursor: pointer; color: var(--accent); font-weight: 600; } .cloture .clo-aide p { margin: 8px 0 0; } .cloture .row { margin-top: 10px; }
 .notif-tel { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); margin-bottom: 10px; flex-wrap: wrap; } .notif-tel.ok { background: var(--ok-soft); } .notif-tel .tx { flex: 1; min-width: 180px; display: grid; } .notif-tel small { color: var(--muted); } .notif-tel-i { font-size: 1.5rem; }
 .notif-raccourcis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; } .notif-raccourcis button { padding-left: 6px; padding-right: 6px; } .notif-ico, .notif-h, .notif-tel-i { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
 .notif-tab { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 8px; } .notif-l { display: grid; grid-template-columns: 1fr 52px 52px; align-items: center; gap: 4px; padding: 10px 12px; border-top: 1px solid var(--line); } .notif-l:first-child { border-top: 0; }
@@ -833,9 +836,39 @@ const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== unde
    l'historique dit alors « l'appli (automatiquement) » et non le nom de la personne dont le téléphone était ouvert. */
 let AUTO = false;
 function saveAuto() { AUTO = true; try { save(); } finally { AUTO = false; } }
+/* ================= Mois clôturés =================
+   Le propriétaire clôture les mois vérifiés : plus aucun paiement ni dépense daté de ces mois ne peut changer
+   (ni à la main, ni par l'appli toute seule). Le serveur fait la même vérification, même pour un vieux téléphone. */
+const COLLS_CLOS = new Set(["paiements", "depenses"]);
+const moisCompta = it => it ? String(it.date || it.mois || "").slice(0, 7) : "";
+const clotureJusqua = () => SB ? ((ESPACES.find(e => e.id === ESPACE) || {}).cloture_jusqua || "") : (S.sci.cloture || "");
+const moisClos = m => { const c = clotureJusqua(); return !!(c && m && String(m).slice(0, 7) <= c); };
+const estClos = it => moisClos(moisCompta(it));
+/* Retire de la liste des changements ce qui touche un mois clôturé, et remet l'affichage comme avant */
+function garderClotures() {
+  if (!clotureJusqua()) return 0;
+  let n = 0;
+  COLLS_CLOS.forEach(c => {
+    const vus = new Set();
+    S[c] = (S[c] || []).map(it => {
+      const p = c + "/" + it.id; vus.add(p);
+      let avant = null; try { avant = synced[p] ? JSON.parse(synced[p]) : null; } catch (e) {}
+      const j = JSON.stringify(it); if (synced[p] === j) return it;
+      if (!estClos(avant) && !estClos(it)) return it;
+      n++; return avant;  // modif ou ajout dans un mois clôturé : on revient à l'état d'avant (rien pour un ajout)
+    }).filter(Boolean);
+    Object.keys(synced).filter(p => p.startsWith(c + "/") && !vus.has(p)).forEach(p => {
+      let avant = null; try { avant = JSON.parse(synced[p]); } catch (e) {}
+      if (estClos(avant)) { n++; S[c].push(avant); }  // suppression dans un mois clôturé : on remet
+    });
+  });
+  return n;
+}
 function save() {
   if (MEMO) MEMO = new Map();
   if (LECTURE && SB) { revenirAuxDonneesEnLigne(); toast("👀 Tu es en lecture seule : rien n'a été modifié."); setTimeout(render, 0); return; }
+  if (MODE === "partage") { const nClos = garderClotures();
+    if (nClos) { setTimeout(render, 0); if (!AUTO) toast(`🔒 ${nClos > 1 ? nClos + " changements refusés" : "Changement refusé"} : c'est dans un mois clôturé (jusqu'à fin ${fm(clotureJusqua())}). Le propriétaire peut le rouvrir dans Compta.`); } }
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
   if (MODE !== "partage") return;
   const changes = [];
@@ -929,7 +962,7 @@ async function apresConnexion(user, enFond) {
   try { await SB.rpc("accepter_invitations"); } catch (e) {}
   SB.from("gmail_comptes").select("adresse,mode").eq("user_id", user.id).maybeSingle().then(g => { GMAIL = g.data || null; }, () => {});
   chargerEtatDrive(user); chargerPartage(); SB.rpc("est_admin").then(r => { ADMIN = !!r.data; }, () => {});
-  const r = await SB.from("espaces").select("id, nom, cree_le").order("cree_le");
+  const r = await SB.from("espaces").select("id, nom, cree_le, cloture_jusqua").order("cree_le");
   if (r.error) { if (enFond) { toast("📴 Pas de connexion : tu vois tes données de la dernière ouverture."); return; } MODE = "connexion"; render(); toast("Impossible de charger tes espaces : " + r.error.message); return; }
   ESPACES = r.data || [];
   if (enFond && ESPACES.some(e => e.id === ESPACE)) return ouvrirEspace(ESPACE, true);
@@ -1039,7 +1072,7 @@ function rapprocherBanque() {
   const ids = new Set(BANQUE.ops.map(o => String(o.tx_id)));
   const lies = new Set(S.paiements.filter(p => p.tx).map(p => String(p.tx)));
   for (const op of BANQUE.ops.slice().sort((a, b) => a.date.localeCompare(b.date))) {
-    if (!(op.montant > 0) || lies.has(op.tx_id)) continue;
+    if (!(op.montant > 0) || lies.has(op.tx_id) || moisClos(op.date)) continue;
     const b = bailDuVirement(op); if (!b) continue;
     const debut = b.suiviDepuis || mk(P(b.dateEntree)); if (op.date.slice(0, 7) < debut || P(op.date) < P(b.dateEntree)) continue;
     // déjà saisi à la main ? même montant, à 12 jours près, pas encore relié à un virement
@@ -3762,6 +3795,51 @@ function restaurerHisto(id) {
   });
   setTimeout(chargerHistorique, 1500);
 }
+function sectionCloture() {
+  if (!SB) return "";
+  const c = clotureJusqua(), dernier = addM(mk(TODAY), -1), suivant = c ? addM(c, 1) : dernier, pro = estProprio();
+  const peutClore = suivant <= dernier;
+  return `<section class="card cloture"><div class="clo-h"><span class="clo-ico" aria-hidden="true">🔒</span><div><h2>Mois clôturés</h2>
+    <p>${c ? `Clôturé jusqu'à fin <b>${fm(c)}</b> : les loyers et dépenses de ces mois ne peuvent plus changer.` : "Aucun mois clôturé pour l'instant."}</p></div></div>
+    <details class="clo-aide"><summary>C'est quoi, à quoi ça sert ?</summary>
+      <p>Quand un mois est vérifié (loyers reçus, dépenses rangées), tu le <b>clôtures</b>. Ensuite plus personne ne peut le modifier par erreur : ni un associé, ni l'appli toute seule (pointage de la banque), ni un vieux téléphone pas à jour.</p>
+      <p>Ça protège tes comptes, comme un comptable qui "arrête" ses mois. Un loyer d'octobre payé en novembre reste possible à noter : il compte en novembre.</p>
+      <p>Besoin de corriger ? Le propriétaire rouvre le dernier mois clôturé, corrige, puis le reclôture.</p></details>
+    ${pro ? `<div class="row">${peutClore ? `<button class="small primary" onclick="cloturerMois('${suivant}')">🔒 Clôturer ${c ? "aussi " : "jusqu'à "}${esc(fm(suivant))}</button>` : ""}${c ? `<button class="small" onclick="rouvrirMois()">🔓 Rouvrir ${esc(fm(c))}</button>` : ""}</div>`
+      : `<p class="note small">Seul le propriétaire (${esc(nomProprio())}) peut clôturer ou rouvrir un mois.</p>`}
+  </section>`;
+}
+/* Ce qui reste à vérifier dans un mois, à dire avant de clôturer */
+function resteAVerifier(m) {
+  const L = [];
+  if (BANQUE.lien) { const n = sortiesAClasser(+m.slice(0, 4)).filter(o => (o.date || "") <= m + "-31").length; if (n) L.push(`${n} dépense${n > 1 ? "s" : ""} de la banque pas encore rangée${n > 1 ? "s" : ""} jusqu'à ${fm(m)}`); }
+  if (BANQUE.lien && BANQUE.ops) { const n = BANQUE.ops.filter(o => o.montant > 0 && (o.date || "") <= m + "-31" && (o.date || "").slice(0, 4) === m.slice(0, 4) && !S.paiements.some(p => String(p.tx) === String(o.tx_id) || String(p.txAutre) === String(o.tx_id))).length; if (n) L.push(`${n} entrée${n > 1 ? "s" : ""} d'argent pas reliée${n > 1 ? "s" : ""} à un loyer`); }
+  return L;
+}
+function cloturerMois(m) {
+  if (!estProprio()) { toast(msgProprio("clôturer un mois")); return; }
+  const reste = resteAVerifier(m);
+  confirmer(`Clôturer jusqu'à fin ${fm(m)} ? Les loyers et dépenses datés de ${fm(m)} et avant ne pourront plus être ajoutés, modifiés ni supprimés (tu pourras rouvrir si besoin).${reste.length ? " ⚠️ Attention, il reste : " + reste.join(" ; ") + "." : ""}`, () => changerCloture(m));
+}
+function rouvrirMois() {
+  if (!estProprio()) { toast(msgProprio("rouvrir un mois")); return; }
+  const c = clotureJusqua(), avant = c ? addM(c, -1) : null;
+  confirmer(`Rouvrir ${fm(c)} ? Ses loyers et dépenses pourront de nouveau être modifiés, y compris par l'appli toute seule. Pense à le reclôturer après ta correction.`, () => changerCloture(avant < "2000" ? null : avant));
+}
+async function changerCloture(m) {
+  const r = await SB.rpc("cloturer", { p_espace: ESPACE, p_mois: m });
+  if (r.error) { toast("Impossible : " + r.error.message); return; }
+  const e = ESPACES.find(x => x.id === ESPACE); if (e) e.cloture_jusqua = r.data || null;
+  render(); toast(m ? `🔒 Clôturé jusqu'à fin ${fm(m)}` : "🔓 Plus aucun mois clôturé");
+}
+/* La clôture a pu changer sur le téléphone d'un associé : on la relit au retour dans l'appli */
+async function relireCloture() {
+  if (!SB || !ESPACE) return;
+  const r = await SB.from("espaces").select("cloture_jusqua").eq("id", ESPACE).maybeSingle();
+  const e = ESPACES.find(x => x.id === ESPACE); if (r.error || !r.data || !e || e.cloture_jusqua === r.data.cloture_jusqua) return;
+  e.cloture_jusqua = r.data.cloture_jusqua; render();
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") relireCloture(); });
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -3779,6 +3857,7 @@ function pageCompta() {
   <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${y === TODAY.getFullYear() ? sectionBanque() + sectionTreso() : ""}
   ${sectionSorties(y)}
+  ${sectionCloture()}
   ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
   ${sectionPrets(y)}${sectionAvances()}
   <section><h2 style="margin-bottom:10px">Par logement</h2><ul class="lr-list">${lignes.filter(l => l.loyers || l.charges || l.dep).map(l => `<li class="lr"><div class="lr-main"><span class="tx"><b>${esc(l.nom)}</b><small>loyers ${eur(l.loyers + l.charges)} · dépenses ${eur(l.dep)}</small></span><span class="lr-r"><b class="${l.res < 0 ? "bad-txt" : ""}">${eur(l.res)}</b><small>résultat</small></span></div></li>`).join("")}<li class="lr-total"><span>Total</span><span class="${tot.res < 0 ? "bad-txt" : ""}">${eur(tot.res)}</span></li></ul></section>

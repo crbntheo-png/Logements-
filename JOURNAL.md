@@ -57,7 +57,7 @@ Vague 3 (objectif de Théo : plus de comptable, tout depuis la banque ; GTP est 
 11. **Chaque opération de banque classée** (entrées comprises : loyers, dépôts, apports d'associés), compteur "il reste N opérations à classer".
 12. **Une facture pour chaque dépense** (boîte à documents + IA relient facture et paiement ; liste "pièces manquantes").
 13. **Amortissements** par composants (terrain non amorti, gros œuvre, toiture, installations, agencements, frais d'achat, travaux d'amélioration) : dotations annuelles automatiques.
-14. **Clôture** : bilan, compte de résultat, IS (15 % / 25 %) et acomptes ; mois clôturés verrouillés (plus aucune modification automatique).
+14. **Clôture** : ✅ (18/11) mois clôturés verrouillés. Reste : bilan, compte de résultat, IS (15 % / 25 %) et acomptes.
 15. **Liasse 2065 + 2033 préremplies** (case par case) ; télétransmission via un partenaire agréé EDI à étudier (payant).
 16. **AG d'approbation** : rapport de gestion + PV, signés au doigt.
 17. **2026 en parallèle du comptable** pour comparer ; arrêt du comptable en 2027 si identique.
@@ -66,6 +66,14 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — mois clôturés (verrou)
+- Compta › carte "🔒 Mois clôturés" (après "Ranger tes dépenses") : le propriétaire clôture mois par mois ("Clôturer aussi novembre 2026") ou rouvre le dernier ("Rouvrir octobre 2026"). Avant de clôturer, l'appli prévient s'il reste des dépenses de la banque pas rangées ou des entrées pas reliées à un loyer.
+- Le mois compte d'après la DATE de l'opération (un loyer d'octobre payé le 3/11 compte en novembre : toujours possible à noter).
+- Double verrou : appli (`garderClotures()` dans `save()`, remet l'affichage et prévient) + serveur (`supabase/cloture.sql` : colonne `espaces.cloture_jusqua`, RPC `cloturer` réservée au propriétaire et seulement pour un mois terminé, déclencheur `a_docs_cloture` qui ignore toute écriture paiements/dépenses d'un mois clôturé, journal `clotures_journal`). Le pointage automatique de la banque saute les mois clôturés ; le connecteur Claude refuse une dépense dans un mois clôturé (fonction mcp redéployée).
+- Correction technique en SQL malgré la clôture : `set app.cloture_off = '1'` dans la même session.
+- Testé : `tests/test71.js` 18/18 (appli, écriture directe sur le serveur, pointage auto, mois en cours refusé, non-propriétaire refusé, réouverture, suppression d'un espace clôturé). Pas de régression : test5, 53, 55, 56, 59, 67, 68, 70. En ligne.
+- Pas fait : GTP n'a encore aucun mois clôturé (c'est à Théo de le faire, quand octobre est vérifié).
 
 ### 18/11/2026 — "qui a fait quoi" : la personne OU l'appli toute seule
 - Théo : l'historique disait "Gab a supprimé…" alors que c'était l'appli, toute seule, sur le téléphone de Gab. Corrigé : l'appli signale ses écritures automatiques (en-tête `x-auto` : pointage des virements, quittance automatique, indice IRL ; `saveAuto()`), y compris celles parties plus tard de la file hors-ligne. Le serveur le note (`docs.auto`, `docs_historique.auto`, `docs_supprimes.auto`, `supabase/auto.sql`).
