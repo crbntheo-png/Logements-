@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "a8f083b", "date": "2026-11-18T19:24"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "bee7cc6", "date": "2026-11-18T19:38"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,7 +47,7 @@
   --sh-1: 0 1px 2px rgba(16, 24, 40, .05);
   --sh-2: 0 1px 2px rgba(16, 24, 40, .04), 0 4px 14px rgba(16, 24, 40, .06);
   --sh-3: 0 12px 40px rgba(16, 24, 40, .18);
-  --head-h: 60px; --nav-h: 64px;
+  --head-h: 60px; --nav-h: 64px; --sab: max(0px, calc(env(safe-area-inset-bottom, 0px) - 16px));
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -117,7 +117,7 @@ nav.tabs a.on { background: var(--accent-soft); color: var(--accent); }
 /* Barre du bas (téléphone) */
 #bottomnav { display: none; }
 @media (max-width: 860px) {
-  #bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); padding: 0 max(6px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(6px, env(safe-area-inset-left, 0px)); background: var(--surface-glass); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-top: 1px solid var(--line); }
+  #bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(var(--nav-h) + var(--sab)); padding: 0 max(6px, env(safe-area-inset-right, 0px)) var(--sab) max(6px, env(safe-area-inset-left, 0px)); background: var(--surface); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-top: 1px solid var(--line); }
   #bottomnav a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; height: var(--nav-h); color: var(--muted); font-size: .68rem; font-weight: 700; text-decoration: none; }
   #bottomnav a .ic { width: 23px; height: 23px; }
   #bottomnav a.on { color: var(--accent); }
@@ -128,8 +128,8 @@ nav.tabs a.on { background: var(--accent-soft); color: var(--accent); }
 }
 
 /* Contenu */
-main { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px; display: flex; flex-direction: column; gap: 22px; min-height: calc(100vh - var(--head-h)); }
-@media (max-width: 860px) { main { padding-block: 18px calc(var(--nav-h) + 32px + env(safe-area-inset-bottom, 0px)); gap: 20px; } }
+main { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 64px; display: flex; flex-direction: column; gap: 22px; min-height: calc(100vh - var(--head-h)); min-height: calc(100dvh - var(--head-h)); }
+@media (max-width: 860px) { main { padding-block: 18px calc(var(--nav-h) + 32px + var(--sab)); gap: 20px; } }
 .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .head p { margin-top: 4px; color: var(--muted); }
 .back { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-weight: 650; font-size: .88rem; margin-bottom: 8px; }
@@ -181,6 +181,11 @@ button.small .ic { width: 16px; height: 16px; }
 .nv-liste .tx { display: grid; gap: 2px; min-width: 0; } .nv-liste small { color: var(--muted); line-height: 1.4; } .nv-liste a { font-weight: 600; font-size: .9rem; }
 #app .portails-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 4px; box-shadow: inset 0 0 0 1.5px var(--accent-soft), var(--sh-1); } #app .portails-cta .tx { flex: 1 1 200px; display: grid; gap: 2px; min-width: 0; } #app .portails-cta small { color: var(--muted); } #app .portails-cta .row { width: 100%; }
 .ajout-doc { display: grid; gap: 12px; } .ajout-doc .btn { justify-content: center; }
+body.ptr-actif { overscroll-behavior-y: contain; }
+@media (max-width: 860px) { body.clavier #bottomnav { display: none; } }
+#ptr { position: fixed; left: 50%; top: calc(var(--head-h) + env(safe-area-inset-top, 0px) + 6px); z-index: 25; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--surface); box-shadow: var(--sh-2); display: grid; place-items: center; opacity: 0; transform: translateY(-50px) scale(.6); transition: opacity .15s; pointer-events: none; color: var(--accent); }
+#ptr svg { width: 22px; height: 22px; } #ptr.pret { color: var(--accent); background: var(--accent-soft); } #ptr.tourne svg { animation: ptr-tour .8s linear infinite; }
+@keyframes ptr-tour { to { transform: rotate(360deg); } }
 .cand-piece span { display: block; font-weight: 400; } .cand-piece small { color: var(--muted); }
 .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.info { background: var(--surface-3); color: var(--muted); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
@@ -541,7 +546,7 @@ form.f .full { grid-column: 1 / -1; }
 .choix-plus input, .choix-plus select { width: 100%; min-width: 0; }
 .modal form.f > .full.row:last-child { position: sticky; bottom: -22px; background: var(--surface); padding-block: 14px 22px; margin-bottom: -22px; border-top: 1px solid var(--line); z-index: 2; }
 #fSci > .full.row:last-child { position: sticky; bottom: 0; background: var(--surface); padding-block: 14px; border-top: 1px solid var(--line); z-index: 2; }
-@media (max-width: 860px) { #fSci > .full.row:last-child { bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px)); } }
+@media (max-width: 860px) { #fSci > .full.row:last-child { bottom: calc(var(--nav-h) + var(--sab)); } }
 @media (max-width: 560px) {
   form.f { grid-template-columns: minmax(0, 1fr); }
   .overlay { align-items: flex-end; padding: 0; }
@@ -687,7 +692,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 :root[data-theme="dark"] .toast-undo { color: #0b6b58; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .toast-undo { color: #0b6b58; } }
 :root[data-theme="dark"] .toast-undo:hover { background: rgba(0,0,0,.06); }
-@media (max-width: 860px) { .toast { bottom: calc(var(--nav-h) + 14px + env(safe-area-inset-bottom, 0px)); } }
+@media (max-width: 860px) { .toast { bottom: calc(var(--nav-h) + 14px + var(--sab)); } }
 .loader { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 80px 0; color: var(--muted); font-weight: 650; }
 .spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent); animation: tourne .8s linear infinite; }
 @keyframes tourne { to { transform: rotate(360deg); } }
@@ -715,7 +720,7 @@ input[type=file]::file-selector-button { font: 650 .85rem var(--font); border: 0
 input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 /* Connexion, espaces, installation */
 body.sans-nav header.top nav, body.sans-nav #bottomnav, body.sans-nav .top-acts { visibility: hidden; }
-.auth { min-height: calc(100vh - var(--head-h) - 80px); display: grid; place-items: center; gap: 16px; align-content: center; }
+.auth { min-height: calc(100vh - var(--head-h) - 80px); min-height: calc(100dvh - var(--head-h) - 80px); display: grid; place-items: center; gap: 16px; align-content: center; }
 .auth .install-tuto { text-align: left; }
 .auth .install-tuto h2 { font-size: 18px; margin: 0 0 4px; }
 .auth-card { width: min(420px, 100%); background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--sh-3); padding: 28px 24px; display: flex; flex-direction: column; gap: 14px; text-align: center; }
@@ -931,7 +936,16 @@ function remoteChanged0() {
   render();
 }
 document.addEventListener("focusout", () => setTimeout(() => { const a = document.activeElement; if (pendingRender && document.getElementById("overlay").hidden && document.getElementById("focus").hidden && !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { pendingRender = false; render(); } }, 250));
+/* Revenir sur la page où on était : l'appli installée rouvre toujours sur l'accueil (fermeture, mise à jour, actualisation).
+   On garde la dernière page (6 h) et l'onglet de Compta ; jamais pour les liens locataire / candidat / partage. */
+function memoriserPage() { try { const h = location.hash; if (/^#[a-z]/.test(h) && !/^#(locataire=|candidature=|partage)/.test(h)) localStorage.setItem("gestion-sci-page", JSON.stringify({ h, t: Date.now(), onglet: view.comptaOnglet || "" })); } catch (e) {} }
+function restaurerPage() {
+  try { const m = JSON.parse(localStorage.getItem("gestion-sci-page") || "null"); if (!m || Date.now() - m.t > 6 * 3600e3) return;
+    if (m.onglet && !view.comptaOnglet) view.comptaOnglet = m.onglet;
+    if ((!location.hash || location.hash === "#") && /^#[a-z]/.test(m.h)) history.replaceState(null, "", location.pathname + location.search + m.h); } catch (e) {}
+}
 async function boot() {
+  if (!/^#(locataire=|candidature=|partage)/.test(location.hash)) restaurerPage();
   try { const q = new URLSearchParams(location.search); if (/^eb-/.test(q.get("state") || "")) { sessionStorage.setItem("retour-banque", JSON.stringify({ code: q.get("code") || "", state: q.get("state"), erreur: q.get("error_description") || q.get("error") || "" })); history.replaceState(null, "", location.pathname + location.hash); } } catch (e) {}
   if (/^#locataire=/.test(location.hash) && window.APP_SUPABASE) return demarrerLocataire();
   if (/^#candidature=/.test(location.hash) && window.APP_SUPABASE) return demarrerCandidat();
@@ -2545,7 +2559,7 @@ const ICONES = { locataires: "home", afaire: "tasks", biens: "building", docs: "
 const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
-window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); });
+window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); memoriserPage(); });
 function render() {
   MEMO = new Map();
   try { render0(); } finally { MEMO = null; }
@@ -3117,7 +3131,7 @@ function pageBien(id) {
   const actuel = bailActifDuBien(bi.id), anciens = S.baux.filter(b => b.bienId === bi.id && b !== actuel), l = actuel ? loyerAt(actuel, CUR) : null, r = rendement(bi);
   const tf = (S.taxes || []).filter(t => t.bienId === bi.id).sort((a, b) => b.annee - a.annee)[0];
   return `<div><a class="back" href="#biens">← Biens</a>
-    <div class="head"><div><h1>${esc(bi.nom)}</h1><p>${esc(adresseBien(bi))}</p></div><div class="row"><button onclick="editBien('${bi.id}')">Modifier</button></div></div></div>
+    <div class="head"><div><h1>${esc(bi.nom)}</h1><p>${esc(adresseBien(bi))}</p></div><div class="row"><button onclick="editBien('${bi.id}')">Modifier</button>${LECTURE ? "" : menuPlus([["🗑 Supprimer ce bien", `supprimerBien('${bi.id}')`]])}</div></div></div>
     <div class="kpis">
       <div class="kpi"><span>Occupant</span><b>${actuel ? `<a href="#bail-${actuel.id}">${esc(nomCourt(actuel.nom))}</a>` : "Vide"}</b><small>${actuel ? "depuis le " + fds(actuel.dateEntree) : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button>`}</small></div>
       <div class="kpi"><span>Loyer</span><b>${l ? eur(l.hc + l.ch) : "—"}</b><small>${l ? eur(l.hc) + " HC + " + eur(l.ch) + " de charges" : ""}</small></div>
@@ -4006,7 +4020,7 @@ function pageCompta() {
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
   const onglet = view.comptaOnglet || "resume", annee = y === TODAY.getFullYear();
   const ONG = [["resume", "📊", "Résumé"], ["banque", "🏦", "Banque"], ["depenses", "🧾", "Dépenses"], ["comptable", "📁", "Comptable"]];
-  const barre = `<div class="c-onglets" role="tablist" aria-label="Parties de la compta">${ONG.map(([k, i, t]) => `<button type="button" role="tab" aria-selected="${onglet === k}" class="${onglet === k ? "on" : ""}" onclick="view.comptaOnglet='${k}';render();scrollTo(0,0)"><span aria-hidden="true">${i}</span>${t}</button>`).join("")}</div>`;
+  const barre = `<div class="c-onglets" role="tablist" aria-label="Parties de la compta">${ONG.map(([k, i, t]) => `<button type="button" role="tab" aria-selected="${onglet === k}" class="${onglet === k ? "on" : ""}" onclick="view.comptaOnglet='${k}';render();scrollTo(0,0);memoriserPage()"><span aria-hidden="true">${i}</span>${t}</button>`).join("")}</div>`;
   const corps = {
     resume: () => `<div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${annee ? graphiqueLoyers() : ""}
@@ -4559,6 +4573,14 @@ async function etatRisques(bienId) {
     { ok: "Ranger ce résumé dans le logement" });
 }
 let RISQUES_TMP = null;
+function supprimerBien(id) {
+  const bi = bien(id); if (!bi) return; const L = S.baux.filter(x => x.bienId === id);
+  if (L.length) { modal(`🗑 Supprimer ${esc(bi.nom)}`, `<div class="full">${grosMsg("attention", "Ce bien a des locataires", `${L.map(b => esc(nomCourt(b.nom))).join(", ")} ${L.length > 1 ? "sont rattachés" : "est rattaché"} à ce bien (actuel ou ancien). Supprime d'abord ${L.length > 1 ? "leurs fiches" : "sa fiche"} (fiche du locataire › Modifier › Supprimer), ou garde le bien.`)}</div>`, () => true, { ok: "Compris", lecture: true }); return; }
+  const nd = S.fichiers.filter(f => f.bienId === id).length;
+  confirmer(`Supprimer « ${bi.nom} » ?${nd ? ` Ses ${nd} document${nd > 1 ? "s" : ""} rangé${nd > 1 ? "s" : ""} dans l'appli seront retirés aussi (ils restent dans ton Drive).` : ""} Tu pourras le retrouver dans Réglages › Historique et corbeille.`, () => {
+    S.biens = S.biens.filter(x => x.id !== id); S.fichiers = S.fichiers.filter(f => f.bienId !== id); S.edl = (S.edl || []).filter(e => e.bienId !== id);
+    save(); go("biens"); render(); toast(`🗑 « ${bi.nom} » supprimé`); });
+}
 function editBien(id) {
   const b = id ? bien(id) : {};
   modal(id ? "Modifier le bien" : "Nouveau bien", `
@@ -4583,7 +4605,7 @@ function editBien(id) {
       if (id) Object.assign(b, d); else S.biens.push({ id: uid(), ...d }); apresModifDrive();
       if (id) setTimeout(() => revisionDebloquee(id, avantDpe), 300);
     },
-    Object.assign({ after: () => brancherAutoAdresse() }, id ? { del: () => { if (S.baux.some(x => x.bienId === id)) { toast("Ce bien a des locataires (actuels ou anciens) : il ne peut pas être supprimé."); return; } S.biens = S.biens.filter(x => x.id !== id); }, delMsg: "Supprimer ce bien ?" } : {}));
+    Object.assign({ after: () => brancherAutoAdresse() }, id ? { del: () => { closeOverlay(); supprimerBien(id); } } : {}));
 }
 
 function editBail(id, bienId, pre) {
@@ -6917,6 +6939,37 @@ async function ajouterDocRapide(inp) {
   toast("Envoi…"); try { const n = await deposerDansBoite(fs, "ton téléphone"); toast(`📥 ${n} document${n > 1 ? "s" : ""} dans ta boîte : à ranger`); view.docVue = ""; location.hash = "docs"; setTimeout(() => { const el = document.querySelector(".boite"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 400); }
   catch (e) { toast("Envoi impossible : " + (e.message || e)); }
 }
+
+/* ================= Tirer vers le bas pour actualiser (iPhone comme Android) =================
+   Même geste partout : en haut de la page, on tire, la roue apparaît ; on relâche, l'appli relit les données en ligne
+   (sans recharger toute la page). Désactivé quand une fenêtre est ouverte ou qu'on fait défiler une zone intérieure. */
+let PTR = { y0: null, dy: 0, encours: false };
+if ("ontouchstart" in window) {
+  const saisie = t => t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !/^(checkbox|radio|file|button|submit|range|color)$/.test(t.type || "");
+  addEventListener("focusin", e => { if (saisie(e.target)) document.body.classList.add("clavier"); });
+  addEventListener("focusout", () => setTimeout(() => { if (!saisie(document.activeElement)) document.body.classList.remove("clavier"); }, 80));
+}
+async function rafraichirTout() {
+  if (MODE === "locataire") return demarrerLocataire();
+  if (MODE === "candidat") return demarrerCandidat();
+  if (!SB || !ESPACE || MODE !== "partage") return;
+  NV.etat = "inconnu"; await ouvrirEspace(ESPACE, true); try { await chargerBanque(false); } catch (e) {}
+}
+(function () {
+  if (!("ontouchstart" in window)) return; document.body.classList.add("ptr-actif");
+  const el = document.createElement("div"); el.id = "ptr"; el.setAttribute("aria-hidden", "true");
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>`; document.body.appendChild(el);
+  const SEUIL = 70, libre = t => { if (!document.getElementById("overlay").hidden || document.getElementById("sigpad")) return false; for (let n = t; n && n !== document.body; n = n.parentElement) { if (n.scrollHeight > n.clientHeight + 2 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) return false; } return true; };
+  const montrer = d => { const k = Math.min(d, SEUIL * 1.4); el.style.opacity = String(Math.min(1, k / SEUIL)); el.style.transform = `translateY(${k - 40}px) rotate(${k * 4}deg) scale(${.6 + .4 * Math.min(1, k / SEUIL)})`; el.classList.toggle("pret", d >= SEUIL); };
+  const cacher = () => { el.style.transition = "opacity .2s, transform .2s"; el.style.opacity = "0"; el.style.transform = "translateY(-50px) scale(.6)"; el.classList.remove("pret", "tourne"); setTimeout(() => { el.style.transition = ""; }, 220); };
+  addEventListener("touchstart", e => { if (PTR.encours || window.scrollY > 0 || e.touches.length !== 1 || !libre(e.target)) { PTR.y0 = null; return; } PTR.y0 = e.touches[0].clientY; PTR.dy = 0; }, { passive: true });
+  addEventListener("touchmove", e => { if (PTR.y0 === null) return; PTR.dy = (e.touches[0].clientY - PTR.y0) * .55; if (PTR.dy <= 0 || window.scrollY > 0) { PTR.dy = 0; el.style.opacity = "0"; return; } montrer(PTR.dy); }, { passive: true });
+  addEventListener("touchend", async () => { if (PTR.y0 === null) return; const d = PTR.dy; PTR.y0 = null; PTR.dy = 0;
+    if (d < SEUIL) { cacher(); return; }
+    PTR.encours = true; el.classList.add("tourne"); el.style.opacity = "1"; el.style.transform = `translateY(${SEUIL - 30}px)`;
+    const t0 = Date.now(); try { await rafraichirTout(); } catch (x) {} await new Promise(r => setTimeout(r, Math.max(0, 600 - (Date.now() - t0))));
+    PTR.encours = false; cacher(); }, { passive: true });
+})();
 
 /* ================= Canal "Quoi de neuf" =================
    Chaque mise à jour visible, en une phrase (table "nouveautes", écrite par tests/nouveaute.py). Bandeau sur l'accueil

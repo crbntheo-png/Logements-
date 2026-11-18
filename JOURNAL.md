@@ -74,6 +74,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — iPhone comme Android ; rouvrir sur la même page ; supprimer un bien (Max, SCI NIMAR)
+- iPhone : bande vide sous les icônes du bas réduite (`--sab` = zone d'accueil − 16 px) et fond opaque ; barre du bas cachée pendant la saisie (clavier) ; `100dvh`. Tirer vers le bas pour actualiser, même geste sur iPhone et Android (roue, relit les données sans recharger : `rafraichirTout`, `overscroll-behavior` contient le geste natif).
+- L'appli rouvre sur la dernière page (moins de 6 h) et le même onglet de Compta (`memoriserPage` / `restaurerPage`, jamais pour les liens locataire/candidat/partage).
+- Supprimer un bien : fiche du bien › Plus › "🗑 Supprimer ce bien" (avant : caché en bas de "Modifier"), retour à la liste ; s'il a des locataires, l'appli explique quoi faire. Cas de Max : SCI NIMAR, 4 biens sans locataire, il est propriétaire → il peut maintenant les supprimer (ou Réglages › Zone sensible › Tout effacer pour tout refaire).
+- iPhone : le partage vers l'appli et les raccourcis de l'icône n'existent pas (limite d'Apple) ; équivalent : la boîte à documents par e-mail.
+- Testé : test80 8/8 (iPhone simulé), test81 8/8, + 5, 53, 56, 71, 73, 79. En ligne, annoncé dans le canal (notification).
+- Pas vérifié : sur un vrai iPhone (pas de moteur Safari ici).
+
 ### 18/11/2026 — espaces de tous les locataires en un geste ; Partager vers l'appli ; raccourcis de l'icône
 - Accueil › Locataires : carte "Aucun locataire n'a encore son espace" → "Créer les N espaces" (un lien par locataire actif), puis liste avec "📲 Envoyer" (message prêt, WhatsApp/SMS/e-mail, sinon copié) et "Envoyé le …" (`b.portailEnvoye`). "Plus tard" la masque. GTP : 5 locataires, aucun espace créé pour l'instant (à faire par Théo).
 - Partager › Gestion locative (appli installée, Android) : `share_target` dans le manifeste (build.py), sw.js garde les fichiers (cache "partages", conservé aux mises à jour), l'appli les dépose dans la boîte à documents "À ranger" (dossier `partages/` du stockage) ; l'IA peut les lire et les ranger. La boîte montre "À ranger" même sans adresse e-mail créée.
