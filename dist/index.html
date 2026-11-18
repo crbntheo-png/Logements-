@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "ac88d59", "date": "2026-11-18T19:54"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "45b59fe", "date": "2026-11-18T20:12"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -186,6 +186,20 @@ html:has(body.ptr-actif), body.ptr-actif { overscroll-behavior-y: contain; }
 #ptr { position: fixed; left: 50%; top: calc(var(--head-h) + env(safe-area-inset-top, 0px) + 6px); z-index: 25; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--surface); box-shadow: var(--sh-2); display: grid; place-items: center; opacity: 0; transform: translateY(-50px) scale(.6); transition: opacity .15s; pointer-events: none; color: var(--accent); }
 #ptr svg { width: 22px; height: 22px; } #ptr.pret { color: var(--accent); background: var(--accent-soft); } #ptr.tourne svg { animation: ptr-tour .8s linear infinite; }
 @keyframes ptr-tour { to { transform: rotate(360deg); } }
+/* iPhone seulement (Safari) : sans le style natif (ombre intérieure, date rétrécie et centrée, recherche arrondie) */
+@supports (-webkit-touch-callout: none) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), textarea { -webkit-appearance: none; appearance: none; background-clip: padding-box; }
+  input[type=date], input[type=time], input[type=month], input[type=datetime-local] { display: block; min-width: 0; width: 100%; line-height: 44px; text-align: left; }
+  input::-webkit-date-and-time-value { text-align: left; min-height: 1.5em; }
+  input[type=search] { -webkit-appearance: none; border-radius: 12px; }
+}
+.rgl-a-regler { display: flex; flex-direction: column; gap: 20px; } @media (max-width: 860px) { .rgl-a-regler { gap: 20px; } }
+.rgl-a-regler .group-title { color: var(--warn); } #app .rgl-a-regler .rgl { box-shadow: inset 4px 0 0 var(--warn), var(--sh-1); }
+.bq-pourquoi { border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; margin: 8px 0; background: var(--surface); }
+.bq-pourquoi summary { cursor: pointer; font-weight: 650; color: var(--accent); list-style: none; } .bq-pourquoi summary::-webkit-details-marker { display: none; }
+.bq-pq-t { margin: 12px 0 6px; font-weight: 700; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.bq-pq-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; } .bq-pq-l li { display: flex; gap: 10px; line-height: 1.45; font-size: .92rem; } .bq-pq-l li > span:first-child { flex: none; width: 22px; text-align: center; }
+.bq-direct-cta { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 4px; }
 .cand-piece span { display: block; font-weight: 400; } .cand-piece small { color: var(--muted); }
 .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.info { background: var(--surface-3); color: var(--muted); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
@@ -1316,9 +1330,9 @@ function sectionClassement(y) {
 function allerA(id) { const el = document.getElementById(id) || document.querySelector("." + id); if (!el) return; el.scrollIntoView({ behavior: "smooth", block: "start" }); }
 function ignorerSortie(tx) { avecAnnuler(() => { S.banqueVus = Object.assign({}, S.banqueVus, { [tx]: "ignore" }); save(); render(); toast("Noté : ce n'est pas une dépense"); }); }
 function sectionBanque() {
-  if (!SB || !BANQUE.lien) return `<details class="card rgl install-tuto"><summary><span class="rgl-ico" aria-hidden="true">🏦</span><span class="tx"><b>Ta banque dans l'appli</b><small>Les loyers se cochent tout seuls · comment faire</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
-    <p class="note"><b>Pourquoi :</b> les loyers reçus se cochent tout seuls, les quittances sont prêtes, et la compta se remplit avec tes dépenses. Tu n'as presque plus besoin d'ouvrir l'appli de ta banque.</p>
-    <h3>Le plus simple : ton relevé, une fois par mois (2 minutes)</h3>
+  if (!SB || !BANQUE.lien) return `<details class="card rgl install-tuto" open><summary><span class="rgl-ico" aria-hidden="true">🏦</span><span class="tx"><b>Ta banque dans l'appli</b><small>Les loyers se cochent tout seuls · comment faire</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
+    ${SB && estProprio() ? `<div class="bq-direct-cta"><p class="note"><b>Le plus simple : relier ta banque.</b> Les loyers se cochent tout seuls, gratuitement, en lecture seule.</p>${explicationBanque(false)}<div class="row"><button class="primary" onclick="relierBanque()">🏦 Relier ma banque</button></div><p class="note small" style="margin-top:10px">Tu préfères ne pas la relier ? Ton relevé une fois par mois marche aussi :</p></div>` : `<p class="note"><b>Pourquoi :</b> les loyers reçus se cochent tout seuls, les quittances sont prêtes, et la compta se remplit avec tes dépenses. Tu n'as presque plus besoin d'ouvrir l'appli de ta banque.</p>`}
+    <h3>${SB && estProprio() ? "Ou bien" : "Le plus simple"} : ton relevé, une fois par mois (2 minutes)</h3>
     <ol class="tuto">
       <li>Ouvre le <b>site internet</b> de ta banque (souvent plus complet que l'appli du téléphone) et va sur le compte où arrivent les loyers.</li>
       <li>Cherche un bouton <b>Télécharger</b>, <b>Exporter</b> ou <b>Relevé d'opérations</b> (parfois une petite flèche vers le bas ⬇).</li>
@@ -1398,7 +1412,7 @@ function sectionBanqueReglages() {
   const D = BANQUE.directe, PL = BANQUE.pennylane, nomsDe = src => (BANQUE.comptesTous || []).filter(c => c.source === src).map(c => esc(c.nom)).join(", ");
   const blocD = D ? `<div class="bq-bloc ok"><b>🏦 Ta banque en direct</b> <span class="pill ok">référence</span><p class="note">${esc(D.banque || "")}${nomsDe("enablebanking") ? " · " + nomsDe("enablebanking") : ""}. Lue toutes les 6 heures${D.derniere_synchro ? " · dernière " + ilYa(D.derniere_synchro) : ""}. Accord jusqu'au <b>${D.valide_jusqua ? fds(new Date(D.valide_jusqua)) : "?"}</b>.${D.erreur ? `<br>⚠️ ${esc(D.erreur)}` : ""}</p>
       <div class="row">${D.erreur ? `<button class="small primary" onclick="relierBanque()">Reconnecter ma banque</button>` : `<button class="small" onclick="actualiserDirecte(this)">↻ Relire maintenant</button>`}<button class="small ghost" onclick="debrancherDirecte()">Débrancher</button></div></div>`
-    : `<div class="bq-bloc"><b>🏦 Ta banque en direct</b><p class="note">Les virements arrivent tout seuls depuis ta banque (lecture seule, gratuit).</p><div class="row"><button class="small primary" onclick="relierBanque()">🏦 Relier ma banque</button></div></div>`;
+    : `<div class="bq-bloc"><b>🏦 Ta banque en direct</b><p class="note">Les virements arrivent tout seuls depuis ta banque (lecture seule, gratuit).</p>${explicationBanque(false)}<div class="row"><button class="small primary" onclick="relierBanque()">🏦 Relier ma banque</button></div></div>`;
   const blocP = PL ? `<div class="bq-bloc ok"><b>📒 Pennylane</b> ${D ? `<span class="pill">pour comparer</span>` : `<span class="pill ok">référence</span>`}<p class="note">${nomsDe("pennylane") || "Branché"}. Lu toutes les heures${PL.derniere_synchro ? " · dernière " + ilYa(PL.derniere_synchro) : ""}.${PL.erreur ? `<br>⚠️ ${esc(PL.erreur)}` : ""}</p>
       <div class="row">${PL.erreur ? `<button class="small primary" onclick="assistantPennylane()">Rebrancher avec un nouveau jeton</button>` : ""}<button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div></div>`
     : `<div class="bq-bloc"><b>📒 Pennylane</b><p class="note">${D ? "Branche aussi Pennylane pour <b>comparer</b> : l'appli te signale tout décalage entre ta banque et ta compta." : "Ta compta Pennylane lit déjà ta banque : l'appli peut s'en servir."}</p><div class="row"><button class="small ${D ? "primary" : ""}" onclick="assistantPennylane()">Brancher Pennylane</button></div></div>`;
@@ -3889,9 +3903,25 @@ async function fnBanque(corps) {
   const j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) throw new Error(j.erreur || "Erreur " + r.status); return j;
 }
 let BANQUES = null;
+/* Rassurer avant de brancher sa banque : à quoi ça sert, et pourquoi c'est sûr (honnête : ce que l'appli peut et ne peut pas faire) */
+function explicationBanque(ouvert) {
+  return `<details class="bq-pourquoi" ${ouvert ? "open" : ""}><summary>🔒 Pourquoi brancher ta banque, et est-ce sûr ?</summary>
+    <p class="bq-pq-t">À quoi ça sert</p>
+    <ul class="bq-pq-l"><li><span aria-hidden="true">💶</span><span>Les loyers reçus se cochent <b>tout seuls</b> : plus besoin d'ouvrir ton appli bancaire pour vérifier qui a payé.</span></li>
+      <li><span aria-hidden="true">📄</span><span>Les quittances sont prêtes dès que le loyer arrive, et un retard est repéré le jour même.</span></li>
+      <li><span aria-hidden="true">📊</span><span>Tes dépenses et ta trésorerie se remplissent sans rien saisir.</span></li></ul>
+    <p class="bq-pq-t">Pourquoi c'est sûr</p>
+    <ul class="bq-pq-l"><li><span aria-hidden="true">👀</span><span><b>Lecture seule</b> : l'appli voit tes soldes et tes opérations, c'est tout. Elle ne peut <b>faire aucun virement</b> ni toucher à ton argent.</span></li>
+      <li><span aria-hidden="true">🔑</span><span><b>Tes codes restent chez ta banque</b> : tu te connectes sur le site de ta banque, l'appli ne les voit jamais.</span></li>
+      <li><span aria-hidden="true">🏛</span><span><b>La voie officielle</b> : la règle européenne DSP2, par un prestataire agréé par les autorités financières (Enable Banking). C'est ce qu'utilisent les applis de compta et de budget.</span></li>
+      <li><span aria-hidden="true">🗄</span><span>Tes opérations sont rangées dans <b>ton espace protégé</b> : seuls toi et les associés que tu invites les voient. Elles ne sont ni consultées ni revendues.</span></li>
+      <li><span aria-hidden="true">⏱</span><span>Ton accord dure <b>180 jours</b> au plus. Tu peux tout débrancher en un geste, et ta banque peut aussi le couper.</span></li></ul>
+    <p class="note small">Plus de détails : <a href="#legal">confidentialité</a>.</p></details>`;
+}
 async function relierBanque() {
   if (!SB || !estProprio()) { toast(msgProprio("relier la banque")); return; }
   modal("🏦 Relier ma banque", `<div class="full">${grosMsg("attention", "Lecture seule, par la voie officielle", "Tu te connectes sur le site de ta banque (l'appli ne voit jamais tes codes). L'appli lit seulement les soldes et les opérations : elle ne peut faire aucun virement. Accord valable 6 mois, renouvelable.")}</div>
+    <div class="full">${explicationBanque(false)}</div>
     <label class="fl full">Ta banque<input id="bq_q" type="search" placeholder="Crédit Mutuel, BNP, Boursorama…" autocomplete="off"></label><div class="full" id="bq_liste"><p class="note">Chargement des banques…</p></div>
     ${sel("Type de compte", "type", estPerso() ? "personal" : "business", [["business", "Compte professionnel (SCI, société)"], ["personal", "Compte personnel"]])}
     <p class="full note small">Gratuit, avec Enable Banking (prestataire agréé). ${BANQUE.pennylane ? "Pennylane reste branché : l'appli compare les deux et te signale les décalages." : ""}</p>`,
@@ -4433,8 +4463,14 @@ function pageReglages() {
   // Rangé par usage : [sci, membres, drive, banque, gmail, quittances, relances, bientot, claude, historique, integrations, notif, install] + [agenda, irl, sauv, maj, rappels]
   const [rSci, rMembres, rDrive, rBanque, rGmail, rQuit, rRel, rBientot, rClaude, rHisto, rInteg, rNotif, rInstall] = compte, [rAgenda, rIrl, rSauv, rMaj, rRappels] = outils;
   const groupe = (t, L) => { const h = L.filter(Boolean).join(""); return h ? `<p class="group-title">${t}</p>${h}` : ""; };
-  const groupes = SB ? groupe(estPerso() ? "Toi" : "Ta SCI", [rSci, rMembres]) + groupe("Ce que l'appli fait pour toi", [rQuit, rRel, rNotif, rRappels, rIrl])
-    + groupe("Branchements", [rBanque, rDrive, rGmail, rAgenda, rClaude, rInteg]) + groupe("Ton appli", [SB ? rubrique("nouveautes", "🆕", "Dernières nouveautés de l'appli", (() => { const L = NV.liste.filter(x => x.id !== "canal-nouveautes"); return L.length ? `La plus récente : ${esc(L[0].titre)}${nvNonVues().length ? ` · <b>${nvNonVues().length} pas encore vue${nvNonVues().length > 1 ? "s" : ""}</b>` : ""}` : "Ce qui change dans l'appli, en bref"; })(), `${listeNouveautes(NV.liste.slice(0, 4))}<div class="row"><a class="btn small" href="#nouveautes">Tout voir</a></div>`) : "", rInstall, rMaj, rSauv, rHisto, rBientot])
+  // Classés du plus important au moins important ; ce qui n'est pas encore réglé remonte tout en haut
+  const rNouv = SB ? rubrique("nouveautes", "🆕", "Dernières nouveautés de l'appli", (() => { const L = NV.liste.filter(x => x.id !== "canal-nouveautes"); return L.length ? `La plus récente : ${esc(L[0].titre)}${nvNonVues().length ? ` · <b>${nvNonVues().length} pas encore vue${nvNonVues().length > 1 ? "s" : ""}</b>` : ""}` : "Ce qui change dans l'appli, en bref"; })(), `${listeNouveautes(NV.liste.slice(0, 4))}<div class="row"><a class="btn small" href="#nouveautes">Tout voir</a></div>`) : "";
+  const pasFait = { sci: !(S.sci.nom && S.sci.gerant && S.sci.siege), banque: SB && estProprio() && !BANQUE.lien, drive: SB && estProprio() && !racinesPartagees().length && DRIVEG.etat !== "oui", gmail: SB && !GMAIL };
+  const essentiels = [["sci", rSci], ["banque", rBanque], ["drive", rDrive], ["gmail", rGmail]];
+  const aRegler = essentiels.filter(([k]) => pasFait[k]).map(x => x[1]), regles = essentiels.filter(([k]) => !pasFait[k]).map(x => x[1]);
+  const groupes = SB ? (aRegler.length ? `<div class="rgl-a-regler">${groupe(`⚡ À régler en premier (${aRegler.length})`, aRegler)}</div>` : "") + groupe("L'essentiel", [...regles, rMembres])
+    + groupe("Automatique", [rQuit, rRel, rNotif, rRappels, rIrl]) + groupe("Ton appli", [rInstall, rMaj, rNouv, rSauv, rHisto])
+    + groupe("En plus", [rAgenda, rClaude, rInteg, rBientot])
     : groupe("Ton compte", compte) + groupe("Outils", outils);
   return `<div class="head"><div><h1>Réglages</h1><p>Touche une rubrique pour l'ouvrir.</p></div></div>
   <div class="rgl-aide ${SB ? "" : "seul"}"><a class="rgl-t" href="#aide"><span class="rgl-i i-aide" aria-hidden="true">💬</span><b>Aide</b><small>Comment ça marche</small></a>${SB ? `<button type="button" class="rgl-t" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span class="rgl-i i-bug" aria-hidden="true">🐞</span><b>Un souci</b><small>Ça ne marche pas</small></button><button type="button" class="rgl-t" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span class="rgl-i i-idee" aria-hidden="true">💡</span><b>Une idée</b><small>Améliorer l'appli</small></button>` : ""}</div>

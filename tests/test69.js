@@ -1,4 +1,4 @@
-// Notifications complètes : 8 types × téléphone / e-mail, interrupteurs enregistrés, raccourcis Tout / L'essentiel / Rien. Vraie base, compte de test.
+// Notifications complètes : tous les types × téléphone / e-mail, interrupteurs enregistrés, raccourcis Tout / L'essentiel / Rien. Vraie base, compte de test.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const DIST = path.join(__dirname, '..', 'dist');
@@ -15,8 +15,8 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.evaluate(() => { location.hash = 'reglages'; render(); }); await p.waitForTimeout(500);
   await p.click('#rgl-notif summary'); await p.waitForTimeout(1500);
   const rows = await p.locator('.notif-l:not(.notif-h)').count();
-  t(rows === 8, '8 types d\'alerte');
-  t((await p.locator('.notif-sw').count()) === 16, 'deux interrupteurs par type (📱 et ✉️)');
+  const NT = await p.evaluate(() => TYPES_NOTIF.length); t(rows === NT && NT >= 8, NT + ' types d\'alerte');
+  t((await p.locator('.notif-sw').count()) === NT * 2, 'deux interrupteurs par type (📱 et ✉️)');
   const etat = () => p.evaluate(() => TYPES_NOTIF.map(([k]) => k + ':' + (veutNotif(k, 'push') ? 'P' : '-') + (veutNotif(k, 'mail') ? 'M' : '-')).join(' '));
   console.log(await etat());
   t(/demande:PM/.test(await etat()) && /loyer_recu:P-/.test(await etat()), 'réglages par défaut sensés (problème locataire : téléphone + e-mail ; loyer reçu : téléphone)');
@@ -31,12 +31,13 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.evaluate(async () => { NOTIF = { etat: '?', prefs: null }; await chargerNotif(); }); await p.waitForTimeout(500);
   t(/loyer_recu:-- /.test(await etat()) && /retard:PM/.test(await etat()), 'gardé après rechargement');
   await p.click('.notif-raccourcis button:nth-child(2)'); await p.waitForTimeout(800);
-  t((await etat()) === 'loyer_recu:-- retard:P- relance_auto:-- demande:PM boite:-- resume:-- banque:PM echeances:--', '"L\'essentiel" : retards, problèmes des locataires, banque');
+  const attendu = await p.evaluate(() => TYPES_NOTIF.map(([k, , , , , m]) => k + ':' + (ESSENTIEL_NOTIF.includes(k) ? 'P' + (m ? 'M' : '-') : '--')).join(' '));
+  t((await etat()) === attendu && /retard:P- /.test(attendu) && /demande:PM/.test(attendu) && /banque:PM/.test(attendu), '"L\'essentiel" : retards, problèmes des locataires, banque');
   await p.click('.notif-raccourcis button:nth-child(3)'); await p.waitForTimeout(800);
   t(!/P|M/.test((await etat()).replace(/[a-z_]+:/g, '')), '"Rien" : tout coupé');
   await p.click('.notif-raccourcis button:nth-child(1)'); await p.waitForTimeout(800);
   t(/loyer_recu:P- .*demande:PM .*banque:PM/.test(await etat()), '"Tout" : tout sur le téléphone, e-mail pour l\'important');
-  t(/8 alertes sur 8/.test(await p.locator('#rgl-notif summary').innerText()), 'résumé de la rubrique à jour ("8 alertes sur 8")');
+  t(new RegExp(NT + ' alertes sur ' + NT).test(await p.locator('#rgl-notif summary').innerText()), 'résumé de la rubrique à jour ("' + NT + ' alertes sur ' + NT + '")');
   t(!errs.length, 'aucune erreur JS ' + errs.join(' | '));
   await p.evaluate(async () => { await SB.from('notif_prefs').delete().eq('user_id', SB_USER.id); await SB.from('espaces').delete().eq('id', ESPACE); });
   console.log(`\n${ok} OK, ${ko} KO`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);

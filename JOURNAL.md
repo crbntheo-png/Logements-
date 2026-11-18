@@ -74,6 +74,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — Réglages classés par importance ; banque "pourquoi et est-ce sûr" ; iPhone (champs)
+- Réglages : "⚡ À régler en premier (N)" (La SCI incomplète, Banque, Google Drive, Envoi des e-mails pas encore faits, bordure orange), puis L'essentiel, Automatique, Ton appli, En plus, Zone sensible.
+- Banque : bloc "🔒 Pourquoi brancher ta banque, et est-ce sûr ?" (`explicationBanque`) dans la fenêtre de connexion, Réglages › Banque et Compta › Banque (carte ouverte d'office, "Relier ma banque" proposé avant le relevé). Texte honnête : lecture seule, aucun virement possible, codes chez la banque, DSP2 / prestataire agréé, données visibles des seuls membres, ni consultées ni revendues, 180 jours, débranchable.
+- iPhone (Safari seulement, `@supports (-webkit-touch-callout: none)`) : plus d'ombre intérieure des champs, dates alignées à gauche et pleine largeur, recherche non arrondie. Les autres "petits bugs" vus par Théo : en attente de captures.
+- Tests : test83 4/4, test69 adapté aux 12 types d'alerte (11/11), 5, 67, 78, 80, 82. En ligne, annoncé.
+
 ### 18/11/2026 — SCI NIMAR (Max) : analyse IA ratée à cause du défaut "sous-dossiers"
 - Analyse lancée à 20 h 39 (avant la correction) : l'IA a écrit "Le sous-dossier 10_Lots est vide, donc aucun dossier ne peut être relié à un seul logement" → aucun lien dossier ↔ bien, fichiers restés "pas encore rangés", pas de locataires proposés. Il lui reste 1 analyse aujourd'hui (2 par jour). À faire (Max) : mettre l'appli à jour, Docs › relancer l'analyse, valider les liens, puis "Créer depuis son bail" et "Lire et ranger". (Rendre l'analyse ratée : pas fait, demande l'accord de Théo.)
 

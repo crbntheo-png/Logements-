@@ -1,0 +1,30 @@
+// Banque : explication "Pourquoi brancher ta banque, et est-ce sûr ?" dans la fenêtre de connexion, Réglages › Banque et Compta.
+const { chromium, devices } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const DIST = path.join(__dirname, '..', 'dist');
+const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
+let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK ' : 'KO ') + m); };
+(async () => {
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
+  const p = await (await b.newContext({ ...devices['iPhone 13'], ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort());
+  await p.route('**/functions/v1/banque-directe', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ banques: [{ nom: 'Crédit Mutuel' }, { nom: 'BNP Paribas' }] }) }));
+  await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
+  await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
+  await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test banque pourquoi'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
+  const ESP = await p.evaluate(() => ESPACE);
+  await p.evaluate(async () => { await chargerMembres(); BANQUE = { etat: 'ok', ops: [], comptes: [], lien: null }; view.comptaOnglet = 'banque'; go('compta'); render(); }); await p.waitForTimeout(500);
+  let txt = await p.locator('#app').innerText();
+  t(/Le plus simple : relier ta banque/.test(txt) && /Pourquoi brancher ta banque, et est-ce sûr/.test(txt), 'Compta › Banque : "Relier ma banque" + "🔒 Pourquoi brancher ta banque, et est-ce sûr ?"');
+  await p.evaluate(() => relierBanque()); await p.waitForTimeout(800);
+  await p.locator('#overlay .bq-pourquoi summary').click(); await p.waitForTimeout(200);
+  const ov = await p.locator('#overlay').innerText();
+  t(/Lecture seule/.test(ov) && /faire aucun virement/.test(ov) && /Tes codes restent chez ta banque/.test(ov) && /180 jours/.test(ov) && /ni consultées ni revendues/.test(ov), 'fenêtre de connexion : lecture seule, aucun virement, codes chez la banque, 180 jours, données protégées');
+  await p.screenshot({ path: __dirname + '/shots73/banque-pourquoi.png', fullPage: false });
+  await p.evaluate(() => { closeOverlay(); go('reglages'); render(); view.rgl = { banque: true }; render(); }); await p.waitForTimeout(300);
+  t(/Pourquoi brancher ta banque/.test(await p.locator('#rgl-banque').innerText()), 'Réglages › Banque : la même explication');
+  t(!errs.length, 'aucune erreur JS ' + errs.join(' | '));
+  await p.evaluate(async esp => { await SB.from('espaces').delete().eq('id', esp); }, ESP);
+  console.log(`\n${ok} OK, ${ko} KO`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);
+})().catch(e => { console.log('FATAL', e.message); process.exit(1); });
