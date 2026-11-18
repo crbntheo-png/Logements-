@@ -56,7 +56,7 @@ Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅
 Vague 4 — PRIORITÉ depuis le 18/11 (Théo : "une interface fluide, intuitive, qui sert vraiment à la gestion locative, pas à remplacer le comptable pour le moment") :
 18. ✅ (18/11) Compta en 4 onglets (Résumé, Banque, Dépenses, Comptable), écrans plus propres (bouton "?" en haut, Réglages en 4 groupes, plus de clignotement, menu Plus, banque par pages).
 19. **Congé donné par le bailleur** (vente, reprise, motif sérieux) : lettre + date limite + offre de vente (Rentila : 30 courriers types).
-20. **Suivi des interventions** : demande du locataire → artisan prévenu, date, réglé, facture ; dans À faire jusqu'à la fin.
+20. ✅ (18/11) **Suivi des interventions** : demande du locataire → artisan prévenu, date, réglé, facture ; dans À faire jusqu'à la fin.
 21. **Candidatures en ligne** : lien pour déposer le dossier, pièces vérifiées, loyer < 1/3 des revenus (Rentila, Qalimo). Les candidats existent déjà par logement : à ouvrir aux candidats eux-mêmes.
 22. **Tableau de bord par logement** : occupation, rentabilité (prix d'achat repris de l'acte par l'IA), prochain événement.
 
@@ -73,6 +73,15 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — suivi des interventions (Vague 4, étape 20)
+- Demande du locataire (À faire › Voir) : bouton "🛠 En faire une intervention" → fiche pré-remplie (texte, "Signalé par…"), artisan choisi dans le carnet d'adresses (Réglages › La SCI) avec son e-mail rempli tout seul, statut (À organiser / Artisan prévu / En cours / Fini), date de passage.
+- À faire : une ligne "🛠 Fuite… · Studio" par intervention pas finie (la demande n'apparaît plus en double) ; passage dépassé → "c'est fini ?" avec "✓ C'est fini" ; "À organiser" depuis plus de 14 jours → "relancer l'artisan ?".
+- Dans la fiche : "📲 Prévenir l'artisan" (adresse, locataire et son téléphone, problème) et "📲 Prévenir le locataire" (date de passage), par le partage du téléphone (WhatsApp, SMS, e-mail) : rien ne part sans toi.
+- Fini (+ facture) : dépense en compta, demande réglée, le locataire voit "✓ Réglé". Avant ça, son espace montre "🛠 Pris en charge / Artisan prévu · passage prévu le …".
+- Carte du logement renommée "🛠 Travaux et interventions".
+- Testé : `tests/test73.js` 16/16 (parcours complet, vrai serveur, vrai espace locataire) ; pas de régression : test5, 56, 72. En ligne.
+- Pas vérifié : le partage sur un vrai téléphone (WhatsApp/SMS).
 
 ### 18/11/2026 — appli plus fluide (demande de Théo : la compta n'est pas la priorité)
 - Compta en 4 onglets (`view.comptaOnglet` : resume, banque, depenses, comptable). Hauteur sur téléphone : 7 249 px → 2 112 px. Les liens vers Compta ouvrent le bon onglet (banque-mini, trésorerie, "Voir les opérations", sorties à mettre en compta).

@@ -2032,7 +2032,11 @@ function taches() {
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
       acts: [[`Garder ${mA}`, `garderPaiement('${x.cle}','A')`, "primary"], [`Garder ${mB}`, `garderPaiement('${x.cle}','B')`], ["Ce sont 2 paiements", `pasUnDoublon('${x.cle}')`]] }); });
-  (DEMANDES || []).forEach(d => { const b = bail(d.bail_id);
+  travauxOuverts().forEach(({ bi, t }) => { const dt = t.date ? P(t.date) : null, passe = dt && dt < TODAY && t.statut !== "devis", vieux = t.statut === "devis" && t.cree && daysBetween(P(t.cree), TODAY) > 14;
+    add({ bailId: t.bailId, key: "trv-" + t.id + "-" + t.statut + "-" + (t.date || ""), prio: passe || vieux ? "soon" : "info", date: dt || TODAY, t: `🛠 ${esc(t.titre)} · ${esc(bi.nom)}`,
+      d: passe ? `Le passage était prévu le ${fds(t.date)} : c'est fini ?` : vieux ? `À organiser depuis ${daysBetween(P(t.cree), TODAY)} jours : relancer l'artisan ?` : `${(STATUTS_TRAVAUX.find(x => x[0] === t.statut) || ["", ""])[1]}${t.artisan ? " · " + esc(t.artisan) : ""}${dt ? " · passage le " + fds(t.date) : ""}`,
+      acts: [passe ? ["✓ C'est fini", `editTravaux('${bi.id}','${t.id}',{statut:'fini'})`, "primary"] : ["Suivre", `editTravaux('${bi.id}','${t.id}')`, "primary"], t.artisan || t.contact ? ["📲 Artisan", `prevenirArtisan('${bi.id}','${t.id}')`] : null].filter(Boolean) }); });
+  (DEMANDES || []).filter(d => !interventionDeDemande(d.id)).forEach(d => { const b = bail(d.bail_id);
     add({ bailId: d.bail_id, key: "dem-" + d.id, prio: "urgent", date: new Date(d.cree_le), t: `🔧 ${esc(nomCourt(d.nom || (b && b.nom) || "Un locataire"))} signale un problème`, d: `"${esc(String(d.texte).slice(0, 140))}"${d.photo ? " · 📷 photo" : ""} · ${ilYa(d.cree_le)}`, acts: [["Voir", `voirDemande(${d.id})`, "primary"]] }); });
   // 1. Impayés
   S.baux.forEach(b => { const p = planEtat(b); if (!p || p.fait || fait("pt-" + b.id + "-" + CUR)) return;
@@ -4889,7 +4893,8 @@ function donneesPortail(b) {
   const docs = (S.fichiers || []).filter(f => f.bailId === b.id && f.chemin && !f.ancienId && /^(Bail|État des lieux)$/.test(f.cat)).slice(-30).map(f => ({ nom: f.nom, cat: f.cat, date: f.date || "", chemin: f.chemin }));
   return { v: 1, maj: new Date().toISOString(), locataire: b.nom, bailleur: estPerso() ? (S.sci.gerant || S.sci.nom || "") : (S.sci.nom || ""), contact: { tel: S.sci.telephone || "", email: S.sci.email || "" },
     logement: adresseBien(bi), loyer: { hc: +b.loyerHC || 0, charges: +b.charges || 0, jour: +b.jourPaiement || 1 }, iban: S.sci.iban || "",
-    dette, prochain: proch ? { m: proch.m, montant: proch.reste, date: iso(proch.dueDate) } : null, mois, docs };
+    dette, prochain: proch ? { m: proch.m, montant: proch.reste, date: iso(proch.dueDate) } : null, mois, docs,
+    suivi: Object.fromEntries((bi.travaux || []).filter(t => t.demandeId && t.statut !== "fini").map(t => [String(t.demandeId), { etat: t.statut === "devis" ? "Pris en charge" : t.statut === "encours" ? "En cours" : "Artisan prévu", date: t.statut === "prevu" && t.date ? t.date : "" }])) };
 }
 function planifierPortails() { if (!SB || !ESPACE || LECTURE || !S.baux.some(b => b.portail)) return; clearTimeout(PORTAIL_T); PORTAIL_T = setTimeout(publierPortails, 1500); }
 async function publierPortails() {
@@ -4950,7 +4955,8 @@ async function voirDemande(id) {
   modal(`🔧 ${esc(nomCourt(d.nom || b.nom || "Locataire"))}`, `<p class="full note">Signalé ${ilYa(d.cree_le)}${b.bienId ? " · " + esc((bien(b.bienId) || {}).nom || "") : ""}</p>
     <blockquote class="full demande-txt">${esc(d.texte)}</blockquote>${photo ? `<img class="full demande-photo" src="${esc(photo)}" alt="Photo envoyée par le locataire">` : ""}
     <div class="full row">${b.telephone ? `<a class="btn" href="tel:${esc(b.telephone)}">📞 Appeler</a>` : ""}${b.email ? `<a class="btn" href="mailto:${esc(b.email)}?subject=${encodeURIComponent("Votre demande")}">✉️ Répondre</a>` : ""}</div>
-    <p class="full note">"C'est réglé" la retire de À faire ; le locataire voit "Réglé" dans son espace.</p>`,
+    <div class="full row"><button type="button" onclick="interventionDepuisDemande(${id})">🛠 ${interventionDeDemande(id) ? "Voir l'intervention" : "En faire une intervention"}</button></div>
+    <p class="full note">Une intervention suit l'artisan et la date de passage jusqu'à la fin. Petit souci déjà résolu ? "C'est réglé" : le locataire voit "Réglé" dans son espace.</p>`,
     () => { traiterDemande(id); return true; }, { ok: "✓ C'est réglé", lecture: true });
 }
 async function traiterDemande(id) {
@@ -4980,7 +4986,9 @@ function pageLocataire() {
     : grosMsg("ok", "✅ Vous êtes à jour", "Merci ! Aucun loyer en retard.");
   const q = (D.mois || []).map((e, i) => `<li><span class="tx"><b style="text-transform:capitalize">${fm(e.m)}</b><small>${eur(e.du)} · ${nomJ[e.statut] || e.statut}${e.reste > 0 && e.statut !== "avenir" ? " · reste " + eur(e.reste) : ""}</small></span>${e.quittance ? `<button type="button" class="small" onclick="pdfLocataire(${i})">📄 Quittance</button>` : `<small class="loc-sans">${e.statut === "paye" ? "" : "pas de quittance"}</small>`}</li>`).join("");
   const docs = (LOC.docs || []).map(d => `<li><span class="tx"><b>${esc(d.nom)}</b><small>${esc(d.cat)}${d.date ? " · " + fds(P(d.date)) : ""}</small></span><a class="btn small" href="${esc(d.url)}" target="_blank" rel="noopener">Ouvrir</a></li>`).join("");
-  const dem = (LOC.demandes || []).map(d => `<li><span class="tx"><b>${esc(String(d.texte).slice(0, 80))}</b><small>Envoyée ${ilYa(d.cree_le)}</small></span><span class="pill ${d.statut === "traite" ? "ok" : ""}">${d.statut === "traite" ? "✓ Réglé" : "Envoyée"}</span></li>`).join("");
+  const suivi = (D && D.suivi) || {};
+  const dem = (LOC.demandes || []).map(d => { const sv = d.statut !== "traite" && suivi[String(d.id)];
+    return `<li><span class="tx"><b>${esc(String(d.texte).slice(0, 80))}</b><small>Envoyée ${ilYa(d.cree_le)}${sv && sv.date ? ` · passage prévu le ${esc(fds(sv.date))}` : ""}</small></span><span class="pill ${d.statut === "traite" ? "ok" : sv ? "info" : ""}">${d.statut === "traite" ? "✓ Réglé" : sv ? "🛠 " + esc(sv.etat) : "Envoyée"}</span></li>`; }).join("");
   return `<div class="loc-page">
     <section class="card loc-card"><p class="note">Bonjour ${esc(nomCourt(D.locataire || ""))}</p><h1 class="loc-t">Mon logement</h1><p>${esc(D.logement || "")}</p><p class="note">Propriétaire : ${esc(D.bailleur || "")}${D.contact && D.contact.tel ? ` · <a href="tel:${esc(D.contact.tel)}">${esc(D.contact.tel)}</a>` : ""}${D.contact && D.contact.email ? ` · <a href="mailto:${esc(D.contact.email)}">${esc(D.contact.email)}</a>` : ""}</p></section>
     <section class="card loc-card">${situ}
@@ -6499,24 +6507,58 @@ function sectionLocation(bi) {
 }
 
 /* ================= Travaux ================= */
-const STATUTS_TRAVAUX = [["devis", "Devis demandé"], ["prevu", "Prévu"], ["encours", "En cours"], ["fini", "Fini"]];
-function editTravaux(bienId, tid) {
-  const bi = bien(bienId), t = tid ? (bi.travaux || []).find(x => x.id === tid) : { statut: "devis", date: iso(TODAY) };
-  modal(tid ? "Travaux" : "Nouveaux travaux", `${fld("Quoi ?", "titre", t.titre, "text", "full", 'required placeholder="Remplacer le chauffe-eau"')}
-    ${fld("Artisan", "artisan", t.artisan)}${fld("Téléphone / e-mail", "contact", t.contact)}
-    ${sel("Où en est-on ?", "statut", t.statut, STATUTS_TRAVAUX)}${fld("Date", "date", t.date, "date")}
+const STATUTS_TRAVAUX = [["devis", "À organiser (devis demandé)"], ["prevu", "Artisan prévu"], ["encours", "En cours"], ["fini", "Fini"]];
+/* ================= Suivi des interventions =================
+   Une demande du locataire (ou un souci repéré) devient une intervention du logement : artisan, date de passage, fin.
+   Tant que ce n'est pas fini, c'est dans À faire. À la fin : la facture va en compta et le locataire voit "Réglé". */
+const travauxOuverts = () => S.biens.flatMap(bi => (bi.travaux || []).filter(t => t.statut !== "fini").map(t => ({ bi, t })));
+const interventionDeDemande = id => { for (const bi of S.biens) { const t = (bi.travaux || []).find(x => String(x.demandeId) === String(id)); if (t) return { bi, t }; } return null; };
+function msgArtisan(bi, t) {
+  const b = t.bailId ? bail(t.bailId) : bailActifDuBien(bi.id);
+  return `Bonjour${t.artisan ? " " + t.artisan.split(/\s+/)[0] : ""},\n\nPouvez-vous intervenir pour : ${t.titre}\nAdresse : ${adresseBien(bi)}${b ? `\nLocataire : ${nomCourt(b.nom)}${b.telephone ? " · " + b.telephone : ""}` : ""}${t.notes ? "\n\n" + t.notes : ""}\n\nMerci de me dire quand vous pouvez passer.\n${S.sci.gerant || S.sci.nom || ""}`;
+}
+function msgLocataireTravaux(bi, t) {
+  const b = t.bailId ? bail(t.bailId) : bailActifDuBien(bi.id);
+  return `Bonjour${b ? " " + nomCourt(b.nom).split(" ")[0] : ""},\n\nPour : ${t.titre}\n${t.artisan ? t.artisan + " passera" : "L'artisan passera"}${t.date ? " le " + fd(P(t.date)) : " bientôt (je vous confirme la date)"}.\n\nMerci de me dire si ça vous convient.\n${S.sci.gerant || S.sci.nom || ""}`;
+}
+function partagerTexte(titre, txt, tel, email) {
+  if (navigator.share) { navigator.share({ title: titre, text: txt }).catch(() => {}); return; }
+  if (email) { location.href = `mailto:${email}?subject=${encodeURIComponent(titre)}&body=${encodeURIComponent(txt)}`; return; }
+  if (tel) { location.href = `sms:${tel}?&body=${encodeURIComponent(txt)}`; return; }
+  copierTexte(txt);
+}
+function prevenirArtisan(bienId, tid) { const bi = bien(bienId), t = (bi.travaux || []).find(x => x.id === tid); if (!t) return;
+  const c = String(t.contact || ""), email = /@/.test(c) ? c.trim() : "", tel = /\d{6,}/.test(c.replace(/\s/g, "")) && !email ? c.replace(/\s/g, "") : "";
+  partagerTexte("Intervention : " + t.titre, msgArtisan(bi, t), tel, email); }
+function prevenirLocataireTravaux(bienId, tid) { const bi = bien(bienId), t = (bi.travaux || []).find(x => x.id === tid); if (!t) return; const b = t.bailId ? bail(t.bailId) : bailActifDuBien(bi.id);
+  partagerTexte("Intervention dans votre logement", msgLocataireTravaux(bi, t), b && b.telephone, b && b.email); }
+function interventionDepuisDemande(id) {
+  const d = DEMANDES.find(x => x.id === id); if (!d) return; const b = bail(d.bail_id); if (!b) { toast("Locataire introuvable"); return; }
+  closeOverlay(); const deja = interventionDeDemande(id);
+  if (deja) { editTravaux(deja.bi.id, deja.t.id); return; }
+  editTravaux(b.bienId, null, { titre: String(d.texte).replace(/\s+/g, " ").slice(0, 70), notes: `Signalé par ${nomCourt(b.nom)} le ${fds(d.cree_le.slice(0, 10))} : ${d.texte}`, demandeId: d.id, bailId: b.id });
+}
+function editTravaux(bienId, tid, pre) {
+  const bi = bien(bienId), t0 = tid ? (bi.travaux || []).find(x => x.id === tid) : { statut: "devis", date: "" }, t = Object.assign({}, t0, pre || {});
+  const artisans = (S.sci.contacts || []).filter(c => c.nom), dem = t.demandeId ? DEMANDES.find(x => String(x.id) === String(t.demandeId)) : null;
+  modal(tid ? "🛠 Intervention" : "🛠 Nouvelle intervention", `${dem || t.demandeId ? `<p class="full note">🔧 Demande du locataire${dem ? " : « " + esc(String(dem.texte).slice(0, 120)) + " »" : ""}. Quand tu passes à "Fini", il voit "Réglé" dans son espace.</p>` : ""}
+    ${fld("Quoi ?", "titre", t.titre, "text", "full", 'required placeholder="Fuite sous l\'évier"')}
+    ${fld("Artisan", "artisan", t.artisan, "text", "", artisans.length ? 'list="artisans_l" autocomplete="off" onchange="const c=(S.sci.contacts||[]).find(x=>x.nom===this.value);if(c&&c.email&&!this.form.contact.value)this.form.contact.value=c.email"' : "")}${artisans.length ? `<datalist id="artisans_l">${artisans.map(c => `<option value="${esc(c.nom)}">${esc(c.role || "")}</option>`).join("")}</datalist>` : ""}${fld("Téléphone / e-mail de l'artisan", "contact", t.contact)}
+    ${sel("Où en est-on ?", "statut", t.statut, STATUTS_TRAVAUX)}${fld("Date de passage", "date", t.date, "date")}
+    ${tid ? `<div class="full row trv-prev"><button type="button" class="small" onclick="prevenirArtisan('${bienId}','${tid}')">📲 Prévenir l'artisan</button><button type="button" class="small" onclick="prevenirLocataireTravaux('${bienId}','${tid}')">📲 Prévenir le locataire</button></div>` : ""}
     ${fld("Montant du devis (€)", "devis", t.devis, "number")}${fld("Montant de la facture (€)", "facture", t.facture, "number")}
     ${sel("Type", "cat", t.cat || "Travaux d'entretien / réparation", [["Travaux d'entretien / réparation", "Entretien / réparation"], ["Travaux d'amélioration", "Amélioration"]])}${fld("Garantie jusqu'au", "garantie", t.garantie, "date")}
     ${area("Notes", "notes", t.notes)}<p class="full note">Quand tu indiques la facture, l'appli l'ajoute aussi aux dépenses de la compta.</p>`,
-    d => { const bi = bien(bienId); bi.travaux = bi.travaux || []; const o = Object.assign(tid ? t : { id: uid() }, d); if (!tid) bi.travaux.push(o);
+    d => { const bi = bien(bienId); bi.travaux = bi.travaux || []; const o = Object.assign(tid ? t0 : { id: uid(), ...(pre && pre.demandeId ? { demandeId: pre.demandeId, bailId: pre.bailId } : {}), cree: iso(TODAY) }, d); if (!tid) bi.travaux.push(o);
+      if (o.statut === "fini") { if (!o.date) o.date = iso(TODAY); if (o.demandeId && DEMANDES.some(x => String(x.id) === String(o.demandeId))) setTimeout(() => traiterDemande(o.demandeId), 0); }
       if (+d.facture > 0) { const dep = S.depenses.find(x => x.travauxId === o.id); const val = { date: d.date || iso(TODAY), montant: r2(+d.facture), categorie: d.cat, bienId, libelle: `${d.titre}${d.artisan ? " · " + d.artisan : ""}`, travauxId: o.id, recuperable: false };
         if (dep) Object.assign(dep, val); else S.depenses.push({ id: uid(), ...val }); }
-      toast(+d.facture > 0 ? "Travaux enregistrés · facture ajoutée à la compta" : "Travaux enregistrés"); },
+      toast(o.statut === "fini" ? (o.demandeId ? "✓ Intervention finie · le locataire voit \"Réglé\"" : "✓ Intervention finie") + (+d.facture > 0 ? " · facture en compta" : "") : +d.facture > 0 ? "Intervention enregistrée · facture ajoutée à la compta" : !tid ? "Intervention enregistrée : elle reste dans À faire jusqu'à la fin" : "Intervention enregistrée"); },
     tid ? { del: () => { const bi = bien(bienId); bi.travaux = bi.travaux.filter(x => x.id !== tid); } } : {});
 }
 function sectionTravaux(bi) {
   const L = (bi.travaux || []).slice().sort((a, b) => (a.statut === "fini") - (b.statut === "fini") || String(b.date).localeCompare(String(a.date)));
-  return `<section class="card"><div class="sec-head"><h2>🛠 Travaux</h2><button class="small" onclick="editTravaux('${bi.id}')">+ Travaux</button></div>
+  return `<section class="card"><div class="sec-head"><h2>🛠 Travaux et interventions</h2><button class="small" onclick="editTravaux('${bi.id}')">+ Intervention</button></div>
     ${L.length ? `<ul class="todo plat">${L.map(t => `<li><span class="ico" aria-hidden="true">${t.statut === "fini" ? "✅" : "🛠"}</span><span class="tx"><a href="#" onclick="event.preventDefault();editTravaux('${bi.id}','${t.id}')">${esc(t.titre)}</a><small>${(STATUTS_TRAVAUX.find(x => x[0] === t.statut) || ["", ""])[1]}${t.artisan ? " · " + esc(t.artisan) : ""}${+t.facture ? " · facture " + eur(t.facture) : +t.devis ? " · devis " + eur(t.devis) : ""}${t.garantie ? " · garantie jusqu'au " + fds(t.garantie) : ""}</small></span></li>`).join("")}</ul>` : `<p class="note">Devis, artisan, facture et garantie au même endroit. La facture passe toute seule dans la compta.</p>`}</section>`;
 }
 
