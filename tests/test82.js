@@ -1,0 +1,46 @@
+// Drive : l'IA reçoit les fichiers des sous-dossiers (un dossier "Lot 1" rangé en profondeur n'est pas vide), les dossiers
+// les plus hauts sont gardés en priorité (plus de coupe alphabétique), pas de proposition pour un sous-dossier déjà couvert ;
+// Réglages › Google Drive dit "dossier partagé" au lieu de "Pas connecté".
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path');
+const DIST = path.join(__dirname, '..', 'dist');
+const types = { '.html': 'text/html', '.js': 'application/javascript', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'text/plain' }); fs.createReadStream(f).pipe(r); }).listen(8099);
+let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK ' : 'KO ') + m); };
+(async () => {
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
+  const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort());
+  await p.route('**/functions/v1/partage', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ pret: true, adresse: 'lecture@x.iam.gserviceaccount.com' }) }));
+  await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
+  await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
+  await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test drive profond'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
+  const ESP = await p.evaluate(() => ESPACE);
+  const r = await p.evaluate(async () => { await chargerMembres();
+    S.biens.push({ id: 'b1', nom: 'Lot 1', adresse: '1 rue', cp: '35000', ville: 'Rennes' }, { id: 'b2', nom: 'Lot 2', adresse: '1 rue', cp: '35000', ville: 'Rennes' });
+    const D = {}, F = []; const dos = (id, chemin, anc) => { D[id] = { titre: chemin.slice(-1)[0], chemin, ancetres: anc }; };
+    dos('imm', ['Immeuble'], []); dos('lot1', ['Immeuble', 'Lot 1'], ['imm']); dos('bail1', ['Immeuble', 'Lot 1', 'Bail'], ['imm', 'lot1']); dos('edl1', ['Immeuble', 'Lot 1', 'EDL'], ['imm', 'lot1']);
+    dos('lot2', ['Immeuble', 'Lot 2'], ['imm']); dos('d2', ['Immeuble', 'Lot 2', 'Docs'], ['imm', 'lot2']); dos('y24', ['Immeuble', 'Lot 2', 'Docs', '2024'], ['imm', 'lot2', 'd2']);
+    const fic = (id, titre, anc) => F.push({ id, titre, chemin: anc.map(a => D[a].titre), ancetres: anc, parent: anc.slice(-1)[0] });
+    ['Bail Jean.pdf', 'Avenant.pdf', 'Quittance.pdf'].forEach((x, i) => fic('fb' + i, x, ['imm', 'lot1', 'bail1'])); ['EDL entrée.pdf', 'EDL sortie.pdf'].forEach((x, i) => fic('fe' + i, x, ['imm', 'lot1', 'edl1'])); fic('fd', 'DPE.pdf', ['imm', 'lot2', 'd2', 'y24']);
+    for (let i = 0; i < 560; i++) dos('a' + i, ['Archives', 'Vieux', 'Dossier ' + i], ['arch', 'vieux']); dos('arch', ['Archives'], []); dos('vieux', ['Archives', 'Vieux'], ['arch']); dos('zz', ['Zébulon (bureau)'], []);
+    DOCS = { etat: 'pret', fichiers: F, dossiers: D, n: F.length }; PARTAGE = { etat: 'pret', racines: [{ id: 'imm', nom: 'Immeuble', dossier: true }, { id: 'arch', nom: 'Archives', dossier: true }, { id: 'zz', nom: 'Zébulon (bureau)', dossier: true }] };
+    const x = donneesIA(), g = id => x.dossiers.find(d => d.id === id);
+    S.sci.driveLogements = { lot1: 'b1' }; S.sci.ia = { date: new Date().toISOString(), res: { liens: [{ dossier: 'bail1', bien_id: 'b1', raison: 'x' }, { dossier: 'lot2', bien_id: 'b2', raison: 'y' }] } };
+    return { lot1: g('lot1'), y24: g('y24'), zz: !!g('zz'), imm: g('imm'), n: x.dossiers.length, props: propositionsIA().map(p => p.x.dossier) }; });
+  console.log(JSON.stringify({ lot1: r.lot1, imm: r.imm && r.imm.total, n: r.n }));
+  t(r.lot1 && r.lot1.n === 0 && r.lot1.total === 5 && r.lot1.exemples.length === 5, '"Lot 1" : 0 fichier direct mais 5 dans ses sous-dossiers, avec des exemples (n\'est plus "vide")');
+  t(r.imm && r.imm.total === 6, '"Immeuble" : 6 fichiers en tout, toute la profondeur');
+  t(r.y24 && r.y24.total === 1, 'dossier à 4 niveaux de profondeur bien vu');
+  t(r.zz && r.n === 500, 'avec 560 dossiers d\'archives : le dossier du haut "Zébulon" est gardé (plus de coupe par ordre alphabétique)');
+  t(r.props.length === 1 && r.props[0] === 'lot2', 'pas de proposition pour "Lot 1 › Bail" (déjà couvert par "Lot 1"), seulement "Lot 2" ' + JSON.stringify(r.props));
+  await p.evaluate(() => { go('reglages'); render(); }); await p.waitForTimeout(300);
+  const rg = await p.locator('#rgl-drive').innerText();
+  t(/3 dossiers partagés · 6 documents · lecture seule/.test(rg) && !/Pas connecté/.test(rg), 'Réglages › Google Drive : "✅ 3 dossiers partagés · 6 documents · lecture seule" ' + rg.replace(/\n/g, ' ').slice(0, 90));
+  await p.click('#rgl-drive summary'); await p.waitForTimeout(200);
+  const rg2 = await p.locator('#rgl-drive').innerText();
+  t(/sous-dossiers compris/.test(rg2) && /Voir mes documents/.test(rg2) && !/Connecter mon Google Drive/.test(rg2), 'ouvert : la liste des dossiers, "Voir mes documents", plus de "Connecter mon Google Drive"');
+  t(!errs.length, 'aucune erreur JS ' + errs.join(' | '));
+  await p.evaluate(async esp => { await SB.from('espaces').delete().eq('id', esp); }, ESP);
+  console.log(`\n${ok} OK, ${ko} KO`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);
+})().catch(e => { console.log('FATAL', e.message); process.exit(1); });

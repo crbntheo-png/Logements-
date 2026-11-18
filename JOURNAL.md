@@ -74,6 +74,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — Drive en profondeur pour l'IA ; Réglages › Google Drive cohérent ; bilan IA visible (cas de Greg)
+- L'IA ne voyait que les fichiers posés directement dans chaque dossier, et la liste était coupée à 400 dossiers par ordre alphabétique : un "Lot 1" rangé dans "Lot 1 › Bail" paraissait vide → elle demandait de ranger. Maintenant `donneesIA()` envoie aussi `total` (fichiers sous-dossiers compris) et des exemples pris dans les sous-dossiers ; tri : dossiers avec fichiers d'abord, les plus hauts en premier, 500 max ; consigne IA mise à jour (un dossier rangé en profondeur n'est pas vide, relier le plus haut suffit) ; plus de proposition pour un sous-dossier dont un parent est déjà relié au même logement. Serveur `partage` : 2 000 dossiers, 10 en parallèle, 110 s ; Docs prévient si le Drive est trop grand ("lecture incomplète").
+- Réglages › Google Drive disait "Pas connecté" alors que des dossiers étaient partagés (il ne regardait que l'ancienne connexion Google) : affiche "✅ N dossiers partagés · X documents · lecture seule", la liste, "Voir mes documents" ; les fichiers un par un deviennent facultatifs.
+- Régression corrigée (de la page Docs épurée) : après une analyse, le bilan de l'IA restait replié ; il reste ouvert tant qu'il y a quelque chose à faire (`iaAFaire()`).
+- iPhone, tirer pour actualiser : position de défilement plus fiable, geste annulé par le système géré. Rappel : l'iPhone ne prend la nouvelle version qu'après avoir fermé puis rouvert l'appli (ou Réglages › Mettre à jour l'appli).
+- Testé : test82 8/8, vraies analyses IA test48 16/16, test49 16/16, test52 12/12 (compteur IA du compte de test remis à zéro pour ça), test45/46/47/51, test80/81. En ligne, annoncé.
+
 ### 18/11/2026 — iPhone comme Android ; rouvrir sur la même page ; supprimer un bien (Max, SCI NIMAR)
 - iPhone : bande vide sous les icônes du bas réduite (`--sab` = zone d'accueil − 16 px) et fond opaque ; barre du bas cachée pendant la saisie (clavier) ; `100dvh`. Tirer vers le bas pour actualiser, même geste sur iPhone et Android (roue, relit les données sans recharger : `rafraichirTout`, `overscroll-behavior` contient le geste natif).
 - L'appli rouvre sur la dernière page (moins de 6 h) et le même onglet de Compta (`memoriserPage` / `restaurerPage`, jamais pour les liens locataire/candidat/partage).

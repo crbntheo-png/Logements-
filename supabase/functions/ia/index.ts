@@ -129,7 +129,8 @@ async function lireDocument(admin: any, u: any, c: any, schema: any, consigne: s
 }
 
 const CONSIGNE = `Tu aides un propriétaire (souvent une SCI familiale) à brancher son Google Drive sur son appli de gestion locative.
-Tu reçois : les logements déjà dans l'appli (id, nom, adresse), les locataires déjà dans l'appli (actuels et anciens), et l'arborescence des dossiers partagés (id, chemin, nombre de fichiers, quelques noms de fichiers).
+Tu reçois : les logements déjà dans l'appli (id, nom, adresse), les locataires déjà dans l'appli (actuels et anciens), et l'arborescence des dossiers partagés (id, chemin, fichiers = fichiers posés directement dans le dossier, fichiers_sous_dossiers_compris = tout ce qu'il contient en descendant dans ses sous-dossiers, quelques noms de fichiers).
+Important : un dossier avec 0 fichier direct mais des fichiers dans ses sous-dossiers N'EST PAS vide, il est rangé en profondeur (ex. "Agon / Lot 1 / Bail"). Relier le dossier le plus haut suffit : tous ses sous-dossiers, à n'importe quelle profondeur, suivent automatiquement. Ne propose jamais un sous-dossier quand son dossier parent concerne déjà ce même logement.
 Propose, en français, ce qui permet de bien ranger les documents :
 - liens : chaque dossier qui contient les documents d'UN SEUL logement existant (bail, état des lieux, DPE, factures de ce logement…). Mets le dossier le plus haut qui ne concerne que ce logement, pas ses sous-dossiers. Jamais un dossier général (compta, banque, statuts de la SCI…).
 - biens_a_creer : les logements qui ont clairement leur dossier mais ne sont pas dans l'appli. Nom court et parlant, adresse si elle se lit dans les noms (sinon ""), et les ids de leurs dossiers. Ne crée pas un logement pour un dossier de compta, de banque, de travaux généraux ou d'archives sans logement précis. Un immeuble avec plusieurs lots = un logement par lot si les lots ont des dossiers séparés.
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
     // Ce qu'on envoie à l'IA : des noms, rien d'autre (pas le contenu des documents)
     const biens = (c.biens || []).slice(0, 200).map((b: any) => ({ id: court(b.id, 40), nom: court(b.nom), adresse: court(b.adresse) }));
     const locs = (c.locataires || []).slice(0, 400).map((l: any) => ({ nom: court(l.nom, 80), bien_id: court(l.bienId, 40), statut: l.actif ? "actuel" : "ancien" }));
-    const dossiers = (c.dossiers || []).slice(0, 400).map((d: any) => ({ id: court(d.id, 80), chemin: court(d.chemin, 300), fichiers: +d.n || 0, exemples: (d.exemples || []).slice(0, 10).map((x: string) => court(x, 100)) }));
+    const dossiers = (c.dossiers || []).slice(0, 500).map((d: any) => ({ id: court(d.id, 80), chemin: court(d.chemin, 300), fichiers: +d.n || 0, fichiers_sous_dossiers_compris: +d.total || +d.n || 0, exemples: (d.exemples || []).slice(0, 10).map((x: string) => court(x, 100)) }));
     if (!dossiers.length) return rep({ erreur: "Aucun dossier à analyser." }, 400);
 
     const client = new Anthropic();

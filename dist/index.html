@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "bee7cc6", "date": "2026-11-18T19:38"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "ac88d59", "date": "2026-11-18T19:54"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -181,7 +181,7 @@ button.small .ic { width: 16px; height: 16px; }
 .nv-liste .tx { display: grid; gap: 2px; min-width: 0; } .nv-liste small { color: var(--muted); line-height: 1.4; } .nv-liste a { font-weight: 600; font-size: .9rem; }
 #app .portails-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 4px; box-shadow: inset 0 0 0 1.5px var(--accent-soft), var(--sh-1); } #app .portails-cta .tx { flex: 1 1 200px; display: grid; gap: 2px; min-width: 0; } #app .portails-cta small { color: var(--muted); } #app .portails-cta .row { width: 100%; }
 .ajout-doc { display: grid; gap: 12px; } .ajout-doc .btn { justify-content: center; }
-body.ptr-actif { overscroll-behavior-y: contain; }
+html:has(body.ptr-actif), body.ptr-actif { overscroll-behavior-y: contain; }
 @media (max-width: 860px) { body.clavier #bottomnav { display: none; } }
 #ptr { position: fixed; left: 50%; top: calc(var(--head-h) + env(safe-area-inset-top, 0px) + 6px); z-index: 25; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--surface); box-shadow: var(--sh-2); display: grid; place-items: center; opacity: 0; transform: translateY(-50px) scale(.6); transition: opacity .15s; pointer-events: none; color: var(--accent); }
 #ptr svg { width: 22px; height: 22px; } #ptr.pret { color: var(--accent); background: var(--accent-soft); } #ptr.tourne svg { animation: ptr-tour .8s linear infinite; }
@@ -4397,7 +4397,7 @@ function pageReglages() {
   </form>`);
   const compte = SB ? [sci,
     rubrique("membres", "👥", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
-    estProprio() ? rubrique("drive", LOGO_DRIVE, "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · seulement les dossiers choisis` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
+    estProprio() ? rubrique("drive", LOGO_DRIVE, "Google Drive", resumeDrive(), sectionDriveReglages())
       : rubrique("drive", LOGO_DRIVE, "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
     rubrique("banque", "🏦", "Banque", [BANQUE.directe ? "Banque en direct" + (BANQUE.directe.erreur ? " ⚠️" : "") : "", BANQUE.pennylane ? "Pennylane" + (BANQUE.pennylane.erreur ? " ⚠️" : "") : ""].filter(Boolean).join(" + ") + (BANQUE.directe && BANQUE.pennylane ? (() => { const c = comparaisonBanques(); return c ? (c.ecarts ? ` · ⚠️ ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""}` : " · ✅ concordent") : ""; })() : "") || "Pas branchée · ta banque, Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", LOGO_GMAIL, "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
@@ -5597,8 +5597,19 @@ function apresModifDrive() { setTimeout(() => lectureDriveFond("modif"), 400); }
 function attendreRolePuisLire(n = 0) { if (MEMBRES) { lectureDriveFond("ouverture"); return; } if (n < 15) setTimeout(() => attendreRolePuisLire(n + 1), 1000); }
 const bandeauDrive = () => SB && !MCP && pageCourante() === "locataires" && estProprio() && !rienChoisi() && !S.sci.driveDebranche && (DRIVEG.perdu || DRIVEG.etat === "non")
   ? `<div class="banner"><span>⚠️ <span><b>Ton Drive s'est déconnecté</b>, reconnecte-le pour que tes documents continuent de se ranger.</span></span><button class="small primary" onclick="connecterDrive()">Reconnecter</button></div>` : "";
+function resumeDrive() {
+  if (DOCS.etat === "vide" && SB && estProprio() && !MCP) setTimeout(indexerDrive, 0);
+  const R = racinesPartagees(), n = DOCS.fichiers ? DOCS.fichiers.length : 0;
+  if (R.length) return `✅ ${R.length} dossier${R.length > 1 ? "s" : ""} partagé${R.length > 1 ? "s" : ""} · ${n} document${n > 1 ? "s" : ""} · lecture seule`;
+  if (DOCS.etat === "chargement" || DOCS.etat === "attente") return "Lecture de ton Drive…";
+  return DRIVEG.etat === "oui" ? "✅ Connecté · fichiers choisis un par un" : "Pas encore de dossier partagé";
+}
 function sectionDriveReglages() {
-  const ok = DRIVEG.etat === "oui", n = choisisDrive().length;
+  const ok = DRIVEG.etat === "oui", n = choisisDrive().length, R = racinesPartagees();
+  if (R.length) return `<p class="note">✅ L'appli lit ${R.length > 1 ? "ces dossiers" : "ce dossier"}, <b>sous-dossiers compris</b>, en lecture seule. Rien d'autre de ton Drive.</p>
+    <ul class="todo plat">${R.map(r => `<li><span class="ico" aria-hidden="true">📁</span><span class="tx">${esc(r.nom || "Dossier")}</span></li>`).join("")}</ul>
+    <div class="row" style="margin-top:10px"><button class="small primary" onclick="go('docs')">Voir mes documents</button><button class="small" onclick="go('docs');setTimeout(ajouterDossierPartage,300)">+ Partager un autre dossier</button></div>
+    <details class="pq"><summary>Choisir aussi des fichiers un par un (facultatif)</summary><p class="note">Seulement pour un fichier rangé hors de ces dossiers.</p><div class="row">${ok ? `<button class="small ghost" onclick="debrancherDrive()">Débrancher les fichiers un par un</button>` : `<button class="small ghost" onclick="connecterDrive('choix')">Choisir des fichiers un par un</button>`}</div></details>`;
   return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}. </p>${DRIVEG.mode === "complet" ? `<p class="drive-avant">Accès en lecture à <b>tout</b> ton Drive (essai). Plus utile avec le partage de dossiers (Docs › + Ajouter un dossier) : touche <b>Débrancher</b> pour le retirer.</p>` : ""}${blocConnecte()}${DRIVEG.large ? `<p class="drive-avant">⚠️ Ton Drive est branché avec un accès large (lecture de tout le Drive). Touche <b>Débrancher</b> puis <b>Connecter</b> pour ne donner accès qu'à ce que tu choisis.</p>` : ""}` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
     <p class="note">📁 Pour que l'appli lise des <b>dossiers entiers</b>, partage-les avec elle depuis ton Drive : <a href="#docs">Docs › + Ajouter un dossier</a>. La connexion ci-dessous sert seulement à choisir des fichiers un par un.</p>
     <details class="pq"><summary>Ce que la connexion permet et ne permet pas</summary>${texteDrive(ok && DRIVEG.mode === "complet")}</details>
@@ -5757,10 +5768,13 @@ const resteIA = c => !c ? "" : c.illimite ? "Analyses illimitées pour toi." : `
 const iaBloquee = c => c && !c.illimite && (c.pause || c.mois_restant <= 0 || c.jour_restant <= 0);
 const msgBlocage = c => c.pause ? grosMsg("stop", "⛔ L'IA est en pause pour tout le monde", "Le budget de l'appli pour ce mois est atteint. Elle revient le 1er du mois.") : c.mois_restant <= 0 ? grosMsg("stop", `⛔ Tu as utilisé tes ${c.par_mois} analyses de ce mois-ci`, "Elles reviennent le 1er du mois. Tout ce que l'IA a déjà proposé reste disponible ci-dessous.") : grosMsg("stop", `⛔ Tu as utilisé tes ${c.par_jour} analyses d'aujourd'hui`, "Reviens demain. Tout ce que l'IA a déjà proposé reste disponible ci-dessous.");
 function donneesIA() {
-  const D = DOCS, parDossier = {};
-  D.fichiers.forEach(f => { const p = (f.ancetres || []).slice(-1)[0] || f.parent; if (p) (parDossier[p] = parDossier[p] || []).push(f.titre); });
-  const dossiers = Object.entries(D.dossiers || {}).map(([id, d]) => ({ id, chemin: (d.chemin || [d.titre]).join(" / "), n: (parDossier[id] || []).length, exemples: (parDossier[id] || []).slice(0, 10) }))
-    .sort((a, b) => a.chemin.localeCompare(b.chemin)).slice(0, 400);
+  // Pour chaque dossier : ses fichiers directs ET tout ce qu'il y a dans ses sous-dossiers (sinon un dossier "Lot 1" dont les papiers
+  // sont dans "Lot 1 › Bail" paraît vide). On garde d'abord les dossiers qui contiennent des fichiers, les plus hauts en premier.
+  const D = DOCS, parDossier = {}, dansTout = {};
+  D.fichiers.forEach(f => { const anc = f.ancetres || [], p = anc.slice(-1)[0] || f.parent; if (p) (parDossier[p] = parDossier[p] || []).push(f.titre); new Set([...anc, p].filter(Boolean)).forEach(a => (dansTout[a] = dansTout[a] || []).push(f.titre)); });
+  const dossiers = Object.entries(D.dossiers || {}).map(([id, d]) => { const ch = d.chemin || [d.titre], dir = parDossier[id] || [], tout = dansTout[id] || [];
+    return { id, chemin: ch.join(" / "), prof: ch.length, n: dir.length, total: tout.length, exemples: (dir.length ? dir : tout).slice(0, 10) }; })
+    .sort((a, b) => (b.total > 0) - (a.total > 0) || a.prof - b.prof || a.chemin.localeCompare(b.chemin)).slice(0, 500).sort((a, b) => a.chemin.localeCompare(b.chemin));
   const locataires = [...S.baux.map(b => ({ nom: b.nom, bienId: b.bienId, actif: isActive(b) })), ...S.biens.flatMap(bi => (bi.anciens || []).map(a => ({ nom: a.nom, bienId: bi.id, actif: false })))];
   return { espace: ESPACE, biens: S.biens.map(bi => ({ id: bi.id, nom: bi.nom, adresse: adresseBien(bi) })), locataires, dossiers };
 }
@@ -5784,6 +5798,13 @@ async function lancerIA() {
   } catch (e) { IA.etat = "erreur"; IA.err = e.message; toast(e.message); }
   if (pageCourante() === "docs") { render(); setTimeout(() => { const el = document.querySelector(".ia-card"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100); }
 }
+/* Le bilan de l'IA se replie sur une ligne seulement quand il n'y a plus rien à faire dedans */
+function iaAFaire() {
+  if (IA.fait || IA.etat === "en cours" || IA.etat === "erreur" || propositionsIA().length) return true;
+  if (IA.credits && iaBloquee(IA.credits)) return true;
+  const r = (S.sci.ia || {}).res || {}, connu = n => S.baux.some(b => normTxt(b.nom) === normTxt(n)) || S.biens.some(bi => (bi.anciens || []).some(a => normTxt(a.nom) === normTxt(n)));
+  return (r.locataires_actuels || []).some(x => !connu(x.nom));
+}
 /* Ce qui reste à proposer (on retire ce qui est déjà fait dans l'appli) */
 function propositionsIA() {
   const r = (S.sci.ia || {}).res; if (!r) return [];
@@ -5791,7 +5812,8 @@ function propositionsIA() {
   const dejaLoc = nom => S.baux.some(b => normTxt(b.nom) === normTxt(nom)) || S.biens.some(bi => (bi.anciens || []).some(a => normTxt(a.nom) === normTxt(nom)));
   const out = [];
   (r.biens_a_creer || []).filter(x => !nomsB.has(normTxt(x.nom))).forEach(x => out.push({ type: "creer", x, t: `🏠 Créer le logement « ${esc(x.nom)} »`, d: [x.adresse, x.type, x.dossiers.length ? "dossier " + x.dossiers.map(nomDos).join(", ") : ""].filter(Boolean).map(esc).join(" · ") + (x.raison ? "<br>" + esc(x.raison) : "") }));
-  (r.liens || []).filter(x => L[x.dossier] !== x.bien_id && bien(x.bien_id)).forEach(x => out.push({ type: "lien", x, t: `📁 « ${esc(nomDos(x.dossier))} » = ${esc(bien(x.bien_id).nom)}`, d: esc(x.raison || "") }));
+  const ancetresDe = id => (D[id] && D[id].ancetres) || [];
+  (r.liens || []).filter(x => L[x.dossier] !== x.bien_id && bien(x.bien_id) && !ancetresDe(x.dossier).some(a => L[a] === x.bien_id)).forEach(x => out.push({ type: "lien", x, t: `📁 « ${esc(nomDos(x.dossier))} » = ${esc(bien(x.bien_id).nom)}`, d: esc(x.raison || "") }));
   (r.anciens_locataires || []).filter(x => !dejaLoc(x.nom) && (x.bien_id || x.bien_a_creer)).forEach(x => out.push({ type: "ancien", x, t: `🕰 Ancien locataire « ${esc(x.nom)} » → ${esc(x.bien_id ? bien(x.bien_id).nom : x.bien_a_creer)}`, d: esc(x.raison || "") }));
   return out;
 }
@@ -6052,6 +6074,7 @@ function pageDocsDrive() {
     ${DOCS.fichiers.length ? `<button type="button" class="doc-tuile" onclick="view.docVue='tout';view.docQ='';render();scrollTo(0,0)"><span class="t-ico" aria-hidden="true">🗂</span><b>Tout le Drive</b><small>${DOCS.fichiers.length} documents</small></button>` : ""}
   </div></section>
   ${etat}
+  ${DOCS.incomplet && !charge ? `<p class="note">⚠️ Ton Drive est très grand : une partie des sous-dossiers n'a pas pu être lue cette fois. Touche <b>Actualiser</b> dans un moment, ou partage des dossiers plus petits (un par logement).</p>` : ""}
   ${recents.length && !charge ? `<section><h2 class="sec">Derniers ajoutés</h2><ul class="todo docs">${recents.map(ligneDoc).join("")}</ul></section>` : ""}
   <section class="card"><div class="sec-head"><h2>📁 Mes dossiers Drive</h2></div>
     ${tous.length || seuls.length ? `<ul class="lr-list">${tous.map(d => ligneDos(d, nbDans(d.id))).join("")}${seuls.length ? ligneDos({ id: "_seuls", nom: "Fichiers choisis un par un", ico: "📄" }, seuls.length) : ""}</ul>`
@@ -6061,7 +6084,7 @@ function pageDocsDrive() {
     ${complet ? `<div class="drive-avant" style="margin-top:12px">Tu as aussi autorisé la lecture de <b>tout</b> ton Drive (essai du 17/11). Avec le partage de dossiers, ce n'est plus utile. <button class="small" onclick="debrancherDrive()">Retirer cet accès</button></div>` : ""}
   </section>
   ${sectionBoite()}
-  ${iaFaite && !view.iaOuvert ? `<button type="button" class="card ia-ligne lr-main" onclick="view.iaOuvert=true;render()"><span class="ico-cat" aria-hidden="true">🤖</span><span class="tx"><b>Le bilan de l'IA</b><small>${S.sci.ia.date ? "fait le " + fds(String(S.sci.ia.date).slice(0, 10)) + " · " : ""}ce qu'elle a trouvé dans ton Drive</small></span>${ic("chevR", "chev")}</button>` : sectionIA()}
+  ${iaFaite && !view.iaOuvert && !iaAFaire() ? `<button type="button" class="card ia-ligne lr-main" onclick="view.iaOuvert=true;render()"><span class="ico-cat" aria-hidden="true">🤖</span><span class="tx"><b>Le bilan de l'IA</b><small>${S.sci.ia.date ? "fait le " + fds(String(S.sci.ia.date).slice(0, 10)) + " · " : ""}ce qu'elle a trouvé dans ton Drive</small></span>${ic("chevR", "chev")}</button>` : sectionIA()}
   ${sectionLotsAuto() + sectionDossiersLogements()}`}`;
 }
 function chercherDocsDans(q, dossier) {
@@ -6962,8 +6985,10 @@ async function rafraichirTout() {
   const SEUIL = 70, libre = t => { if (!document.getElementById("overlay").hidden || document.getElementById("sigpad")) return false; for (let n = t; n && n !== document.body; n = n.parentElement) { if (n.scrollHeight > n.clientHeight + 2 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) return false; } return true; };
   const montrer = d => { const k = Math.min(d, SEUIL * 1.4); el.style.opacity = String(Math.min(1, k / SEUIL)); el.style.transform = `translateY(${k - 40}px) rotate(${k * 4}deg) scale(${.6 + .4 * Math.min(1, k / SEUIL)})`; el.classList.toggle("pret", d >= SEUIL); };
   const cacher = () => { el.style.transition = "opacity .2s, transform .2s"; el.style.opacity = "0"; el.style.transform = "translateY(-50px) scale(.6)"; el.classList.remove("pret", "tourne"); setTimeout(() => { el.style.transition = ""; }, 220); };
-  addEventListener("touchstart", e => { if (PTR.encours || window.scrollY > 0 || e.touches.length !== 1 || !libre(e.target)) { PTR.y0 = null; return; } PTR.y0 = e.touches[0].clientY; PTR.dy = 0; }, { passive: true });
-  addEventListener("touchmove", e => { if (PTR.y0 === null) return; PTR.dy = (e.touches[0].clientY - PTR.y0) * .55; if (PTR.dy <= 0 || window.scrollY > 0) { PTR.dy = 0; el.style.opacity = "0"; return; } montrer(PTR.dy); }, { passive: true });
+  const enHaut = () => (document.scrollingElement || document.documentElement).scrollTop <= 0 && window.scrollY <= 0;
+  addEventListener("touchstart", e => { if (PTR.encours || !enHaut() || e.touches.length !== 1 || !libre(e.target)) { PTR.y0 = null; return; } PTR.y0 = e.touches[0].clientY; PTR.dy = 0; }, { passive: true });
+  addEventListener("touchmove", e => { if (PTR.y0 === null) return; PTR.dy = (e.touches[0].clientY - PTR.y0) * .55; if (PTR.dy <= 0 || (document.scrollingElement || document.documentElement).scrollTop > 0) { PTR.dy = 0; el.style.opacity = "0"; return; } montrer(PTR.dy); }, { passive: true });
+  addEventListener("touchcancel", () => { if (PTR.y0 !== null && PTR.dy < SEUIL) { PTR.y0 = null; PTR.dy = 0; cacher(); } }, { passive: true });
   addEventListener("touchend", async () => { if (PTR.y0 === null) return; const d = PTR.dy; PTR.y0 = null; PTR.dy = 0;
     if (d < SEUIL) { cacher(); return; }
     PTR.encours = true; el.classList.add("tourne"); el.style.opacity = "1"; el.style.transform = `translateY(${SEUIL - 30}px)`;

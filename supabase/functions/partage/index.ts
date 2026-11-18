@@ -70,8 +70,9 @@ Deno.serve(async (req) => {
         else fichiers.push({ id: r.id, titre: r.name, type: r.mimeType, lien: r.webViewLink, modif: r.modifiedTime, taille: +r.size || 0, chemin: [], ancetres: [], racine: "", partage: true });
       });
       const debut = Date.now();
-      while (file.length && Object.keys(dossiers).length < 800 && Date.now() - debut < 100000) {
-        const lot = file.splice(0, 6);
+      // toute la profondeur : jusqu'à 2 000 dossiers, 10 lus en même temps
+      while (file.length && Object.keys(dossiers).length < 2000 && Date.now() - debut < 110000) {
+        const lot = file.splice(0, 10);
         await Promise.all(lot.map(async f => {
           const L = await liste(`'${f.id}' in parents and trashed = false`, "id,name,mimeType,webViewLink,modifiedTime,size");
           L.forEach(x => {
