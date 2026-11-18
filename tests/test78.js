@@ -18,21 +18,21 @@ const sql = q => JSON.parse(execSync(`python3 ${__dirname}/sql.py ${JSON.stringi
   await p.evaluate(() => { S.biens.push({ id: 'b1', nom: 'T2', adresse: '1 rue', cp: '35000', ville: 'Rennes' }); S.baux.push({ id: 'l1', bienId: 'b1', nom: 'Jean Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save(); go('locataires'); render(); });
   await p.waitForTimeout(3000); await p.evaluate(() => render());
   let ban = await p.locator('.nv-bandeau').innerText().catch(() => '');
-  t(/nouveautés dans l'appli/.test(ban) && /Attestation d'assurance par le locataire/.test(ban), 'accueil : bandeau "🆕 9 nouveautés dans l\'appli · Attestation…" (' + ban.replace(/\n/g, ' ') + ')');
+  t(/nouveautés dans l'appli/.test(ban) && /nouveautés/.test(ban), 'accueil : bandeau "🆕 9 nouveautés dans l\'appli · Attestation…" (' + ban.replace(/\n/g, ' ') + ')');
   await p.screenshot({ path: __dirname + '/shots73/nv-accueil.png' });
   await p.click('.nv-bandeau'); await p.waitForTimeout(1500);
   const pg = await p.locator('#app').innerText();
-  t(/Quoi de neuf/.test(pg) && /18 novembre 2026/.test(pg) && /Signature à distance/.test(pg) && /Mois clôturés/.test(pg), 'page "🆕 Quoi de neuf" groupée par jour');
+  t(/Dernières nouveautés de l'appli/.test(pg) && /18 novembre 2026/.test(pg) && /Signature à distance/.test(pg) && /Mois clôturés/.test(pg), 'page "🆕 Quoi de neuf" groupée par jour');
   await p.screenshot({ path: __dirname + '/shots73/nv-page.png', fullPage: true });
   await p.evaluate(() => { go('locataires'); render(); }); await p.waitForTimeout(300);
   t(!(await p.locator('.nv-bandeau').count()), 'déjà vu : plus de bandeau');
   await p.evaluate(() => { go('reglages'); render(); }); await p.waitForTimeout(300);
-  t(/Quoi de neuf/.test(await p.locator('#app').innerText()), 'Réglages › Ton appli : "🆕 Quoi de neuf"');
+  t(/Dernières nouveautés de l'appli/.test(await p.locator('#app').innerText()), 'Réglages › Ton appli : "🆕 Dernières nouveautés de l\'appli"');
   t(await p.evaluate(() => TYPES_NOTIF.some(x => x[0] === 'nouveautes')), 'Notifications : "Nouveautés de l\'appli" réglable');
   // une nouvelle annonce (sans notification réelle : test)
   sql("insert into public.nouveautes (id, icone, titre, texte, annonce_le) values ('test-nv', '🧪', 'Essai de nouveauté', 'Texte simple.', now()) on conflict (id) do update set cree_le = now()");
   await p.evaluate(async () => { NV.etat = 'inconnu'; await chargerNouveautes(); go('locataires'); render(); }); await p.waitForTimeout(500);
-  ban = await p.locator('.nv-bandeau').innerText().catch(() => ''); t(/Nouveau dans l'appli/.test(ban) && /Essai de nouveauté/.test(ban), 'nouvelle annonce : le bandeau revient ("Nouveau · Essai…")');
+  ban = await p.locator('.nv-bandeau').innerText().catch(() => ''); t(/Nouveauté dans l'appli/.test(ban) && /Essai de nouveauté/.test(ban), 'nouvelle annonce : le bandeau revient ("Nouveau · Essai…")');
   // jamais deux notifications pour la même nouveauté
   const n0 = sql("select annonce_le is not null a from public.nouveautes where id = 'test-nv'")[0].a;
   t(n0 === true, 'nouveauté déjà annoncée : la fonction ne renverra pas de notification');

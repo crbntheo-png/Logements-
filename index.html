@@ -197,7 +197,7 @@ details.rgl[open] > summary .chev { transform: rotate(90deg); }
 .rgl-ico[class*="rc-"] { background: color-mix(in srgb, var(--rc) 15%, var(--surface)); color: var(--rc); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 22%, transparent); }
 .rgl-ico .logo-marque { width: 22px; height: 22px; display: block; } .rgl-ico { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; line-height: 1; }
 .rc-sci { --rc: #2563eb; } .rc-membres { --rc: #7c3aed; } .rc-drive { --rc: #16a34a; } .rc-banque { --rc: #0d9488; } .rc-gmail { --rc: #dc2626; } .rc-quittances { --rc: #0891b2; }
-.rc-relances { --rc: #ea580c; } .rc-agenda { --rc: #db2777; } .rc-claude { --rc: #c2410c; } .rc-integrations { --rc: #9333ea; } .rc-bientot { --rc: #6d28d9; } .rc-notif { --rc: #d97706; }
+.rc-relances { --rc: #ea580c; } .rc-agenda { --rc: #db2777; } .rc-claude { --rc: #c2410c; } .rc-integrations { --rc: #9333ea; } .rc-bientot { --rc: #6d28d9; } .rc-nouveautes { --rc: #0b7a64; } .rc-notif { --rc: #d97706; }
 .rc-irl { --rc: #059669; } .rc-rappels { --rc: #ca8a04; } .rc-zone { --rc: #b91c1c; } .rc-install { --rc: #0284c7; } .rc-maj { --rc: #16a34a; } .rc-sauv { --rc: #4f46e5; } .rc-legal { --rc: #475569; } .rc-aide { --rc: #0d9488; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rgl-ico[class*="rc-"] { background: color-mix(in srgb, var(--rc) 24%, var(--surface)); color: color-mix(in srgb, var(--rc) 70%, white); } }
 :root[data-theme="dark"] .rgl-ico[class*="rc-"] { background: color-mix(in srgb, var(--rc) 24%, var(--surface)); color: color-mix(in srgb, var(--rc) 70%, white); }
@@ -4388,7 +4388,7 @@ function pageReglages() {
   const [rSci, rMembres, rDrive, rBanque, rGmail, rQuit, rRel, rBientot, rClaude, rHisto, rInteg, rNotif, rInstall] = compte, [rAgenda, rIrl, rSauv, rMaj, rRappels] = outils;
   const groupe = (t, L) => { const h = L.filter(Boolean).join(""); return h ? `<p class="group-title">${t}</p>${h}` : ""; };
   const groupes = SB ? groupe(estPerso() ? "Toi" : "Ta SCI", [rSci, rMembres]) + groupe("Ce que l'appli fait pour toi", [rQuit, rRel, rNotif, rRappels, rIrl])
-    + groupe("Branchements", [rBanque, rDrive, rGmail, rAgenda, rClaude, rInteg]) + groupe("Ton appli", [SB ? rubrique("nouveautes", "🆕", "Quoi de neuf", NV.liste.length ? `Dernière : ${esc(NV.liste[0].titre)}` : "Les nouveautés de l'appli, en bref", `${listeNouveautes(NV.liste.slice(0, 4))}<div class="row"><a class="btn small" href="#nouveautes">Tout voir</a></div>`) : "", rInstall, rMaj, rSauv, rHisto, rBientot])
+    + groupe("Branchements", [rBanque, rDrive, rGmail, rAgenda, rClaude, rInteg]) + groupe("Ton appli", [SB ? rubrique("nouveautes", "🆕", "Dernières nouveautés de l'appli", (() => { const L = NV.liste.filter(x => x.id !== "canal-nouveautes"); return L.length ? `La plus récente : ${esc(L[0].titre)}${nvNonVues().length ? ` · <b>${nvNonVues().length} pas encore vue${nvNonVues().length > 1 ? "s" : ""}</b>` : ""}` : "Ce qui change dans l'appli, en bref"; })(), `${listeNouveautes(NV.liste.slice(0, 4))}<div class="row"><a class="btn small" href="#nouveautes">Tout voir</a></div>`) : "", rInstall, rMaj, rSauv, rHisto, rBientot])
     : groupe("Ton compte", compte) + groupe("Outils", outils);
   return `<div class="head"><div><h1>Réglages</h1><p>Touche une rubrique pour l'ouvrir.</p></div></div>
   <div class="rgl-aide ${SB ? "" : "seul"}"><a class="rgl-t" href="#aide"><span class="rgl-i i-aide" aria-hidden="true">💬</span><b>Aide</b><small>Comment ça marche</small></a>${SB ? `<button type="button" class="rgl-t" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span class="rgl-i i-bug" aria-hidden="true">🐞</span><b>Un souci</b><small>Ça ne marche pas</small></button><button type="button" class="rgl-t" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span class="rgl-i i-idee" aria-hidden="true">💡</span><b>Une idée</b><small>Améliorer l'appli</small></button>` : ""}</div>
@@ -6836,13 +6836,13 @@ function marquerNouveautesVues() { if (NV.liste[0]) try { localStorage.setItem("
 function bandeauNouveautes() {
   if (!SB) return ""; if (NV.etat === "inconnu") setTimeout(chargerNouveautes, 1200);
   const L = nvNonVues(); if (!L.length) return "";
-  return `<a class="card nv-bandeau" href="#nouveautes"><span class="nv-ico" aria-hidden="true">${esc(L[0].icone)}</span><span class="tx"><small>🆕 ${L.length > 1 ? L.length + " nouveautés" : "Nouveau"} dans l'appli</small><b>${esc(L[0].titre)}${L.length > 1 ? ` et ${L.length - 1} autre${L.length > 2 ? "s" : ""}` : ""}</b></span>${ic("chevR", "chev")}</a>`;
+  return `<a class="card nv-bandeau" href="#nouveautes"><span class="nv-ico" aria-hidden="true">${esc(L[0].icone)}</span><span class="tx"><small>🆕 ${L.length > 1 ? L.length + " nouveautés dans l'appli" : "Nouveauté dans l'appli"}</small><b>${esc(L[0].titre)}${L.length > 1 ? ` et ${L.length - 1} autre${L.length > 2 ? "s" : ""}` : ""}</b></span>${ic("chevR", "chev")}</a>`;
 }
 const listeNouveautes = L => L.length ? `<ul class="nv-liste">${L.map(x => `<li><span class="nv-ico" aria-hidden="true">${esc(x.icone)}</span><span class="tx"><b>${esc(x.titre)}</b><small>${esc(x.texte)}</small>${x.lien ? `<a href="${esc(x.lien)}">Voir ›</a>` : ""}</span></li>`).join("")}</ul>` : `<p class="note">Rien pour l'instant.</p>`;
 function pageNouveautes() {
   if (NV.etat === "inconnu") setTimeout(chargerNouveautes, 0);
   const G = {}; NV.liste.forEach(x => (G[x.date] = G[x.date] || []).push(x)); setTimeout(marquerNouveautesVues, 800);
-  return `<a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>🆕 Quoi de neuf</h1><p>Les dernières améliorations de l'appli, en bref. Tu reçois aussi une notification à chaque nouveauté (réglable dans Notifications).</p></div></div>
+  return `<a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>🆕 Dernières nouveautés de l'appli</h1><p>Ce qui a changé dans l'appli, en une phrase à chaque fois. Tu reçois aussi une notification à chaque nouveauté (réglable dans Notifications).</p></div></div>
   ${NV.etat === "chargement" || NV.etat === "inconnu" ? `<p class="note">Chargement…</p>` : Object.entries(G).map(([d, L]) => `<section><h2 class="sec">${esc(fd(P(d)))}</h2><div class="card">${listeNouveautes(L)}</div></section>`).join("") || `<div class="empty">Rien pour l'instant.</div>`}
 `;
 }
