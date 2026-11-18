@@ -57,6 +57,11 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — "qui a fait quoi" : la personne OU l'appli toute seule
+- Théo : l'historique disait "Gab a supprimé…" alors que c'était l'appli, toute seule, sur le téléphone de Gab. Corrigé : l'appli signale ses écritures automatiques (en-tête `x-auto` : pointage des virements, quittance automatique, indice IRL ; `saveAuto()`), y compris celles parties plus tard de la file hors-ligne. Le serveur le note (`docs.auto`, `docs_historique.auto`, `docs_supprimes.auto`, `supabase/auto.sql`).
+- Affichage : "🤖 L'appli (automatiquement, sur le téléphone de Gab)" dans l'historique et l'activité ; "🛠️ Correction technique" pour les corrections faites directement sur le serveur. L'incident de 13 h 50 est re-marqué "automatique".
+- Tests : test70 (vrai navigateur, vraie base : le signal passe, main vs automatique, historique) 6/6 ; test5, test53, test55, test56, test59, test67 OK. En ligne.
+
 ### 18/11/2026 — incident GTP : loyers de novembre disparus (bug de l'appli), réparé ; plus de suppression automatique ; historique et corbeille
 - **Ce qui s'est passé** (prouvé par l'historique des suppressions) : avec la banque directe ET Pennylane branchés, une ancienne version de l'appli encore ouverte a pris les virements vus par Pennylane pour de nouveaux loyers et les a imputés sur décembre (Emma 600, Antoine 500, Sofiane 750). À 13 h 50, la nouvelle version, ouverte sur le téléphone de Gab, a vu le doublon et a supprimé le MAUVAIS côté (les vrais paiements de novembre). Gab n'a rien fait de travers ; Théo non plus. Rien n'a été écrit dans Pennylane (l'appli n'y fait que lire).
 - **Réparé** : les 3 paiements de novembre restaurés tels quels, les 3 doublons de décembre retirés (gardés dans l'historique). Novembre : Emma 600, Antoine 500, Sofiane 750, Godefroy 200.

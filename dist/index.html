@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "c573718", "date": "2026-11-18T13:13"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "047157b", "date": "2026-11-18T13:25"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -829,6 +829,10 @@ const COLLS = ["biens", "baux", "paiements", "depenses", "relances", "rappels", 
 const META_KEYS = ["sci", "faits", "quittances", "irlPerso", "demo", "lastExport", "banqueVus"];
 let DB = null, MODE = "chargement", synced = {}, writeQueue = Promise.resolve(), pendingRender = false;
 const metaObj = () => { const m = {}; META_KEYS.forEach(k => { if (S[k] !== undefined) m[k] = S[k]; }); return m; };
+/* Les écritures faites par l'appli toute seule (pointage des virements, quittance automatique, indice IRL) sont signalées au serveur :
+   l'historique dit alors « l'appli (automatiquement) » et non le nom de la personne dont le téléphone était ouvert. */
+let AUTO = false;
+function saveAuto() { AUTO = true; try { save(); } finally { AUTO = false; } }
 function save() {
   if (MEMO) MEMO = new Map();
   if (LECTURE && SB) { revenirAuxDonneesEnLigne(); toast("👀 Tu es en lecture seule : rien n'a été modifié."); setTimeout(render, 0); return; }
@@ -843,7 +847,7 @@ function save() {
   const mj = JSON.stringify(metaObj());
   if (synced["meta/main"] !== mj) { synced["meta/main"] = mj; changes.push(["meta/main", JSON.parse(mj)]); }
   if (!changes.length) return;
-  if (SB) { planifierPortails(); planifierAgenda(); planifierConnecteur(); return ecrireSupabase(changes); }
+  if (SB) { planifierPortails(); planifierAgenda(); planifierConnecteur(); return ecrireSupabase(changes.map(c => [c[0], c[1], AUTO])); }
   changes.forEach(([path, val]) => {
     writeQueue = writeQueue.then(() => val === null ? DB.doc(path).delete() : DB.doc(path).set(val)).catch(err => {
       if (err && err.code === "invalid_argument") toast("Tu n'as pas le droit de modifier ces données (demande l'accès Éditeur).");
@@ -1053,8 +1057,7 @@ function rapprocherBanque() {
     lies.add(op.tx_id); n++;
   }
   RECUS = soldes;
-  if (n) save();
-  else if (modif) save();
+  if (n || modif) saveAuto();
   return n;
 }
 /* Loyers payés en entier que la banque vient de montrer : quittance envoyée toute seule (option du propriétaire)
@@ -1066,7 +1069,7 @@ async function apresLoyersRecus() {
   if (!L.length) return;
   const avec = L.filter(x => x.b.email), noms = L.map(x => nomCourt(x.b.nom)).join(", ");
   if (quittanceAutoPossible() && avec.length) {
-    let n = 0; for (const x of avec) { if (await envoyerQuittanceValidee(x.b.id, x.m, x.b.email)) n++; else break; }
+    let n = 0; for (const x of avec) { if (await envoyerQuittanceValidee(x.b.id, x.m, x.b.email, true)) n++; else break; }
     const rate = avec.length - n, sans = L.length - avec.length;
     toast(n ? `🧾 ${n} quittance${n > 1 ? "s" : ""} envoyée${n > 1 ? "s" : ""} automatiquement (${avec.slice(0, n).map(x => nomCourt(x.b.nom)).join(", ")})${rate ? ` · ${rate} non envoyée${rate > 1 ? "s" : ""}` : ""}${sans ? ` · ${sans} sans e-mail` : ""}` : "🧾 Quittance automatique pas envoyée : vérifie ton Gmail (Réglages › Envoi des e-mails).");
     return;
@@ -1300,13 +1303,16 @@ function seDeconnecter() {
 }
 function ecrireSupabase(changes) {
   const esp = ESPACE, t = Date.now() * 1000 + (FILE_SEQ++ % 1000), f = lireFile(esp);
-  changes.forEach(([p, v]) => { f[p] = { v, t }; if (v !== null) noterEcho(p, v); }); ecrireFile(f, esp);
+  changes.forEach(([p, v, a]) => { f[p] = { v, t, a: !!a }; if (v !== null) noterEcho(p, v); }); ecrireFile(f, esp);
   ECRITURE = ECRITURE.then(async () => {
     if (navigator.onLine === false) throw new Error("hors ligne");
-    const aEcrire = changes.filter(c => c[1] !== null).map(([p, v]) => { const [coll, doc_id] = p.split("/"); return { espace_id: esp, coll, doc_id, data: v, maj_le: new Date().toISOString() }; });
-    const aSuppr = changes.filter(c => c[1] === null).map(([p]) => p.split("/"));
-    for (let i = 0; i < aEcrire.length; i += 200) { const r = await SB.from("docs").upsert(aEcrire.slice(i, i + 200)); if (r.error) throw r.error; }
-    for (const [coll, doc_id] of aSuppr) { const r = await SB.from("docs").delete().match({ espace_id: esp, coll, doc_id }); if (r.error) throw r.error; }
+    for (const auto of [false, true]) {
+      const lot = changes.filter(c => !!c[2] === auto);
+      const aEcrire = lot.filter(c => c[1] !== null).map(([p, v]) => { const [coll, doc_id] = p.split("/"); return { espace_id: esp, coll, doc_id, data: v, maj_le: new Date().toISOString() }; });
+      const aSuppr = lot.filter(c => c[1] === null).map(([p]) => p.split("/"));
+      for (let i = 0; i < aEcrire.length; i += 200) { const r = await SB.from("docs").upsert(aEcrire.slice(i, i + 200)).setHeader("x-auto", auto ? "1" : "0"); if (r.error) throw r.error; }
+      for (const [coll, doc_id] of aSuppr) { const r = await SB.from("docs").delete().match({ espace_id: esp, coll, doc_id }).setHeader("x-auto", auto ? "1" : "0"); if (r.error) throw r.error; }
+    }
     // bien reçu : on retire de la file, sauf ce qui a été modifié de nouveau entre-temps
     const g = lireFile(esp); changes.forEach(([p]) => { if (g[p] && g[p].t <= t) delete g[p]; }); ecrireFile(g, esp);
   }).catch(e => {
@@ -1319,7 +1325,7 @@ function ecrireSupabase(changes) {
 /* Renvoie ce qui attend (retour du réseau, retour dans l'appli, ouverture) */
 function viderFile() {
   if (!SB || !ESPACE || MODE !== "partage" || LECTURE || navigator.onLine === false) return;
-  const ch = Object.entries(lireFile()).map(([p, e]) => [p, e.v]);
+  const ch = Object.entries(lireFile()).map(([p, e]) => [p, e.v, !!e.a]);
   if (ch.length) ecrireSupabase(ch);
 }
 /* À l'ouverture : les modifs en attente passent par-dessus les données en ligne */
@@ -3332,19 +3338,19 @@ function sectionTreso() {
    Le serveur note qui ajoute, modifie ou supprime (docs.maj_par, docs_supprimes) et qui envoie quoi (envois).
    L'accueil montre ce que les AUTRES ont fait ces 14 derniers jours ; un document prévient si un associé a déjà écrit au même locataire. */
 let ACTIVITE = [];
-const prenomMembre = uid => { if (uid === "claude") return "🤖 Claude"; const m = MEMBRES && MEMBRES.membres.find(x => x.user_id === uid); const l = m && m.email ? m.email.split("@")[0].split(/[._-]/)[0] : "Un associé"; return l.charAt(0).toUpperCase() + l.slice(1); };
+const prenomMembre = uid => { if (uid === "claude") return "🤖 Claude"; if (uid === null || uid === undefined || uid === "") return "🛠️ Correction technique"; if (String(uid).startsWith("auto:")) { const u = String(uid).slice(5); return u && u !== "null" ? `🤖 L'appli (automatiquement, sur le téléphone de ${prenomMembre(u)})` : "🤖 L'appli (automatiquement)"; } const m = MEMBRES && MEMBRES.membres.find(x => x.user_id === uid); const l = m && m.email ? m.email.split("@")[0].split(/[._-]/)[0] : "Un associé"; return l.charAt(0).toUpperCase() + l.slice(1); };
 async function chargerActivite() {
   if (!SB || !ESPACE || !SB_USER) return; const id = ESPACE, moi = SB_USER.id, depuis = new Date(Date.now() - 14 * 864e5).toISOString();
   try {
     const [d, x, e, cl] = await Promise.all([
-      SB.from("docs").select("coll, doc_id, data, maj_le, maj_par, cree_le").eq("espace_id", id).neq("maj_par", moi).gte("maj_le", depuis).in("coll", ["paiements", "depenses", "baux", "biens", "taxes"]).order("maj_le", { ascending: false }).limit(60),
-      SB.from("docs_supprimes").select("coll, data, par, le").eq("espace_id", id).neq("par", moi).gte("le", depuis).order("le", { ascending: false }).limit(30),
+      SB.from("docs").select("coll, doc_id, data, maj_le, maj_par, cree_le, auto").eq("espace_id", id).neq("maj_par", moi).gte("maj_le", depuis).in("coll", ["paiements", "depenses", "baux", "biens", "taxes"]).order("maj_le", { ascending: false }).limit(60),
+      SB.from("docs_supprimes").select("coll, data, par, le, auto").eq("espace_id", id).neq("par", moi).gte("le", depuis).order("le", { ascending: false }).limit(30),
       SB.from("envois").select("par, destinataires, objet, cree_le").eq("espace_id", id).neq("par", moi).gte("cree_le", depuis).order("cree_le", { ascending: false }).limit(30),
       SB.from("docs").select("coll, data, maj_le, cree_le").eq("espace_id", id).is("maj_par", null).eq("data->>parClaude", "true").gte("maj_le", depuis).order("maj_le", { ascending: false }).limit(40)]);
     if (ESPACE !== id) return;
     const L = [];
-    (d.data || []).forEach(r => { const cree = Math.abs(new Date(r.maj_le) - new Date(r.cree_le)) < 120000; L.push({ qui: r.maj_par, quand: r.maj_le, coll: r.coll, act: cree ? "ajout" : "modif", data: r.data }); });
-    (x.data || []).forEach(r => L.push({ qui: r.par, quand: r.le, coll: r.coll, act: "suppr", data: r.data || {} }));
+    (d.data || []).forEach(r => { const cree = Math.abs(new Date(r.maj_le) - new Date(r.cree_le)) < 120000; L.push({ qui: r.auto ? "auto:" + r.maj_par : r.maj_par, quand: r.maj_le, coll: r.coll, act: cree ? "ajout" : "modif", data: r.data }); });
+    (x.data || []).forEach(r => L.push({ qui: r.auto ? "auto:" + r.par : r.par, quand: r.le, coll: r.coll, act: "suppr", data: r.data || {} }));
     (e.data || []).forEach(r => L.push({ qui: r.par, quand: r.cree_le, coll: "envoi", act: "envoi", data: { objet: r.objet, a: r.destinataires || [] } }));
     (cl.data || []).forEach(r => L.push({ qui: "claude", quand: r.maj_le, coll: r.coll === "fichiers" ? "docs" : r.coll, act: "ajout", data: r.data }));
     L.sort((a, b) => new Date(b.quand) - new Date(a.quand));
@@ -3719,7 +3725,7 @@ function debrancherDirecte() { confirmer("Débrancher ta banque ? L'accès est r
 let HISTO = null;
 async function chargerHistorique() {
   HISTO = { etat: "chargement", L: [] }; render();
-  const r = await SB.from("docs_historique").select("id, coll, doc_id, action, avant, apres, par, le").eq("espace_id", ESPACE).order("le", { ascending: false }).limit(300);
+  const r = await SB.from("docs_historique").select("id, coll, doc_id, action, avant, apres, par, auto, le").eq("espace_id", ESPACE).order("le", { ascending: false }).limit(300);
   HISTO = r.error ? { etat: "erreur", msg: r.error.message, L: [] } : { etat: "ok", L: r.data || [] }; render();
 }
 const NOMS_COLL = { paiements: "paiement", depenses: "dépense", baux: "locataire", biens: "logement", fichiers: "document", taxes: "taxe foncière", relances: "relance", rappels: "rappel", edl: "état des lieux", prets: "prêt" };
@@ -3739,7 +3745,7 @@ function pageHistorique() {
   if (!SB) return `<div class="empty">Disponible dans l'appli installée.</div>`;
   if (!HISTO) setTimeout(chargerHistorique, 0);
   const f = view.histoF || "", L = ((HISTO && HISTO.L) || []).filter(h => !f || h.coll === f);
-  const ligne = h => { const { quoi, diff } = decrireHisto(h), qui = h.par ? prenomMembre(h.par) : "Le serveur", existe = (S[h.coll] || []).some(x => x.id === h.doc_id);
+  const ligne = h => { const { quoi, diff } = decrireHisto(h), qui = h.auto ? prenomMembre("auto:" + (h.par || "")) : prenomMembre(h.par), existe = (S[h.coll] || []).some(x => x.id === h.doc_id);
     const bouton = h.action === "suppr" ? (existe ? `<span class="pill ok">déjà là</span>` : `<button class="small primary" onclick="restaurerHisto(${h.id})">♻️ Restaurer</button>`) : (existe ? `<button class="small" onclick="restaurerHisto(${h.id})">↩️ Revenir à avant</button>` : "");
     return `<li class="histo-l ${h.action}"><span class="ico" aria-hidden="true">${h.action === "suppr" ? "🗑️" : "✏️"}</span><span class="tx"><b>${esc(qui)}</b> a ${h.action === "suppr" ? "supprimé" : "modifié"} ${quoi}${diff ? `<small class="histo-diff">${diff}</small>` : ""}<small>${ilYa(h.le)} · ${new Date(h.le).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</small></span>${bouton}</li>`; };
   const filtres = [["", "Tout"], ["paiements", "💶 Paiements"], ["depenses", "🧾 Dépenses"], ["baux", "👤 Locataires"], ["biens", "🏠 Logements"], ["fichiers", "📄 Documents"]];
@@ -5972,14 +5978,14 @@ const ENVOIS = new Set();
 /* Rien ne part sans validation : on ouvre l'aperçu, l'envoi se fait depuis l'aperçu */
 async function envoyerQuittance(bailId, m, silencieux) { if (!silencieux) quittance(bailId, m); return false; }
 /* Envoi après validation explicite (lot confirmé) */
-async function envoyerQuittanceValidee(bailId, m, adresse) {
+async function envoyerQuittanceValidee(bailId, m, adresse, auto) {
   const b = bail(bailId), d = docQuittance(bailId, m), cle = bailId + "|" + m, dest = adresse || (b && b.email);
   if (!d || !dest) return false;
   if (ENVOIS.has(cle) || S.quittances[cle]) return !!S.quittances[cle];
   ENVOIS.add(cle);
   const ok = await envoyerMail({ to: dest, objet: d.o.email.objet, corps: d.o.email.corps, html: d.html, fichier: d.o.fichier });
   ENVOIS.delete(cle);
-  if (ok) { S.quittances[cle] = iso(TODAY); save(); render(); }
+  if (ok) { S.quittances[cle] = iso(TODAY); if (auto) saveAuto(); else save(); render(); }
   return ok;
 }
 let ENVOI_LOT = false;
@@ -6568,7 +6574,7 @@ async function majIrlInsee(force) {
     try { localStorage.setItem("gestion-irl-vu", iso(TODAY)); } catch (e) {}
     if (!n) { if (force) toast("Les indices sont déjà à jour"); return; }
     S.irlPerso = Object.assign({}, S.irlPerso, neufs);
-    if (!LECTURE && (MODE === "local" || MODE === "partage")) save();
+    if (!LECTURE && (MODE === "local" || MODE === "partage")) saveAuto();
     render(); toast(`Nouvel indice IRL de l'INSEE : ${Object.keys(neufs).map(k => qLabel(k) + " = " + fmtIrl(neufs[k])).join(", ")}`);
   } catch (e) { if (force) toast("Site de l'INSEE injoignable pour le moment"); }
 }
