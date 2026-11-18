@@ -545,6 +545,11 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .bq-blocs { display: grid; gap: 10px; margin-bottom: 10px; } .bq-bloc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); } .bq-bloc.ok { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); } .bq-bloc.warn { border-color: var(--warn); background: var(--warn-soft); } .bq-bloc p { margin: 0; }
 .sorties-expl { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; margin: 4px 0 12px; } .sorties-expl p { margin: 0; font-size: .9rem; line-height: 1.45; } .sorties-expl .small { color: var(--muted); font-size: .8rem; }
 .sortie-g { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; background: var(--surface); } .sortie-g > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; } .sortie-g > summary::-webkit-details-marker { display: none; } .sortie-g > summary .tx { flex: 1; display: grid; min-width: 0; } .sortie-g > summary small { color: var(--muted); } .sortie-g[open] > summary .chev { transform: rotate(90deg); } .sortie-g > .sortie-l, .sortie-g > .row, .sortie-g > .note { padding: 0 12px; } .sortie-g > .row { padding-bottom: 12px; } .sortie-g.a-classer { border-color: var(--warn); } .sorties-bas { margin-top: 10px; } .sorties-masq { margin: 4px 2px 12px; }
+.notif-tel { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--warn-soft); margin-bottom: 10px; flex-wrap: wrap; } .notif-tel.ok { background: var(--ok-soft); } .notif-tel .tx { flex: 1; min-width: 180px; display: grid; } .notif-tel small { color: var(--muted); } .notif-tel-i { font-size: 1.5rem; }
+.notif-raccourcis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; } .notif-raccourcis button { padding-left: 6px; padding-right: 6px; } .notif-ico, .notif-h, .notif-tel-i { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; }
+.notif-tab { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 8px; } .notif-l { display: grid; grid-template-columns: 1fr 52px 52px; align-items: center; gap: 4px; padding: 10px 12px; border-top: 1px solid var(--line); } .notif-l:first-child { border-top: 0; }
+.notif-h { padding: 6px 12px; background: var(--bg); font-size: 1rem; text-align: center; } .notif-t { display: flex; gap: 10px; align-items: flex-start; min-width: 0; } .notif-t > div { display: grid; min-width: 0; } .notif-t b { font-size: .9rem; } .notif-t small { color: var(--muted); font-size: .76rem; line-height: 1.3; } .notif-ico { font-size: 1.2rem; line-height: 1.3; }
+#app .notif-sw { justify-self: center; width: 42px; min-width: 42px; height: 26px; min-height: 0; padding: 0; border-radius: 99px; border: 0; background: var(--line); position: relative; box-shadow: none; cursor: pointer; transition: background .15s; } #app .notif-sw i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .15s; } #app .notif-sw.on { background: var(--ok); } #app .notif-sw.on i { left: 19px; } #app .notif-sw:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
@@ -761,8 +766,8 @@ const EMO = { "📄": "file", "💶": "euro", "🎉": "sparkles", "✓": "check"
 const EMO_RE = new RegExp("(" + Object.keys(EMO).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")️?", "g");
 function decoNoeud(root) {
   if (!root || root.nodeType !== 1 && root.nodeType !== 11) return;
-  if (root.closest && root.closest(".paper, #pdfstage, textarea, .rgl-ico, .rgl-i")) return;
-  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && n.parentElement.closest(".paper, #pdfstage, textarea, script, style, option, .rgl-ico, .rgl-i") ? NodeFilter.FILTER_REJECT : (EMO_RE.lastIndex = 0, EMO_RE.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
+  if (root.closest && root.closest(".paper, #pdfstage, textarea, .rgl-ico, .rgl-i, .notif-ico, .notif-tel-i, .notif-h")) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && n.parentElement.closest(".paper, #pdfstage, textarea, script, style, option, .rgl-ico, .rgl-i, .notif-ico, .notif-tel-i, .notif-h") ? NodeFilter.FILTER_REJECT : (EMO_RE.lastIndex = 0, EMO_RE.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
   const liste = []; while (w.nextNode()) liste.push(w.currentNode);
   liste.forEach(n => {
     const html = esc(n.nodeValue).replace(EMO_RE, m => { const v = EMO[m.replace("️", "")]; if (v === "DOT") return '<i class="dot bad" aria-hidden="true"></i>'; if (!v) return ""; const [nom, cls] = Array.isArray(v) ? v : [v, ""]; return ic(nom, cls); }).replace(/^\s+(?=<svg)/, "");
@@ -4058,7 +4063,7 @@ function pageReglages() {
     rubrique("bientot", "🚀", "Prochaines sorties", "Ce qui arrive · dis ce qui t'intéresse", `<p class="note">Assistant IA, banque en direct, signature à distance… Les fonctions qui intéressent le plus de monde sortent en premier.</p><div class="row"><a class="btn primary" href="#bientot">🚀 Voir les prochaines sorties</a></div>`),
     estProprio() && SB ? rubrique("claude", "🤖", "Brancher sur Claude", S.sci.connecteurJeton ? "Branché · demande-lui « qui est en retard ? » ou de ranger avec toi" : "Pose tes questions à Claude avec tes vrais chiffres", `<p class="note">Avec ce branchement, tu demandes à Claude (claude.ai, l'appli Claude) : « Qui est en retard ? », « Quand finit l'assurance de Jean ? », « Combien j'ai encaissé cette année ? ». Il lit tes chiffres, <b>sans rien pouvoir modifier</b>.</p><div class="row"><button class="primary" onclick="brancherClaude()">🤖 ${S.sci.connecteurJeton ? "Voir le lien du connecteur" : "Brancher sur Claude"}</button></div>`) : "",
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
-    rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
+    rubrique("notif", "🔔", "Notifications", resumeNotif(), sansCarte(sectionNotif())),
     rubrique("install", "📲", "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
   ].join("") : sci;
   const outils = [
@@ -6410,18 +6415,51 @@ async function chargerNotif() {
   NOTIF = { etat: r.error ? "indispo" : sub && Notification.permission === "granted" ? "actif" : "inactif", prefs: r.data || { push: true, resume: false } };
   const el = document.getElementById("notifBox"); if (el) el.innerHTML = blocNotif();
 }
+/* Les types d'alerte : sur le téléphone (📱) et/ou par e-mail (✉️), au choix de chacun */
+const TYPES_NOTIF = [
+  ["loyer_recu", "💶", "Loyer reçu", "Un virement d'un locataire arrive sur le compte", true, false],
+  ["retard", "⏰", "Loyer en retard", "Pas reçu 3 jours après la date prévue", true, false],
+  ["relance_auto", "🔁", "Relance automatique envoyée", "Quand l'appli relance un locataire pour toi", true, false],
+  ["demande", "🔧", "Problème signalé par un locataire", "Fuite, panne… depuis son espace locataire", true, true],
+  ["boite", "📨", "Document reçu par e-mail", "Dans ta boîte à documents, à ranger", true, false],
+  ["resume", "📊", "Point du mois", "Le 1er et le 5 : qui a payé, qui est en retard", true, false],
+  ["banque", "🏦", "Banque à vérifier", "Accès qui expire, banque ou Pennylane qui ne répond plus", true, true],
+  ["echeances", "🛡️", "Rappels et échéances", "Tes rappels du jour, assurances des locataires qui finissent", true, false],
+];
+const ESSENTIEL_NOTIF = ["retard", "demande", "banque"];
+function veutNotif(type, canal) {
+  const p = NOTIF.prefs || {}, t = (p.types || {})[type], d = TYPES_NOTIF.find(x => x[0] === type) || [];
+  if (t && typeof t[canal] === "boolean") return t[canal];
+  if (type === "resume" && canal === "mail" && p.resume) return true;
+  return canal === "push" ? !!d[4] : !!d[5];
+}
+const resumeNotif = () => { if (!NOTIF.prefs) return "Alertes sur le téléphone et par e-mail, au choix"; const n = TYPES_NOTIF.filter(t => veutNotif(t[0], "push") || veutNotif(t[0], "mail")).length; return `${n} alerte${n > 1 ? "s" : ""} sur ${TYPES_NOTIF.length}${NOTIF.etat === "actif" ? " · téléphone activé" : " · téléphone pas activé"}`; };
 function blocNotif() {
   if (NOTIF.etat === "?") return `<p class="note">Chargement…</p>`;
   if (NOTIF.etat === "indispo") return `<p class="note">Les notifications arrivent très bientôt (mise à jour du serveur en cours).</p>`;
-  const support = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-  const iosPasInstalle = estIOS() && !estInstallee();
-  return `<ul class="todo plat">
-    <li><span class="ico" aria-hidden="true">📱</span><span class="tx">Alertes sur ce téléphone<small>Virement reçu, loyer pas arrivé 3 jours après la date, point du mois le 1er et le 5.</small></span>
-      ${NOTIF.etat === "actif" ? `<button class="small" onclick="desactiverPush()">Couper</button>` : iosPasInstalle ? `<span class="pill warn">installe d'abord l'appli</span>` : !support ? `<span class="pill">pas possible ici</span>` : `<button class="small primary" onclick="activerPush()">Activer</button>`}</li>
-    <li><span class="ico" aria-hidden="true">✉️</span><span class="tx">Résumé des loyers par e-mail<small>Le 1er et le 5 du mois, envoyé par ton Gmail à ${esc(SB_USER && SB_USER.email || "ton adresse")}${GMAIL && GMAIL.mode === "google" ? "" : " (branche d'abord ton Gmail : Réglages › Envoi des e-mails)"}. Rien n'est envoyé aux locataires.</small></span>
-      <button class="small ${NOTIF.prefs.resume ? "" : "primary"}" onclick="prefNotif('resume',${!NOTIF.prefs.resume})">${NOTIF.prefs.resume ? "Couper" : "Activer"}</button></li></ul>
-    ${iosPasInstalle ? `<p class="note">Sur iPhone, les alertes marchent seulement une fois l'appli installée sur l'écran d'accueil (iOS 16.4 ou plus récent) : voir "Installer l'appli" plus haut.</p>` : ""}
-    ${NOTIF.etat === "actif" ? `<div class="row"><button class="small ghost" onclick="essaiNotif()">M'envoyer un essai</button></div>` : ""}`;
+  const support = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window, iosPasInstalle = estIOS() && !estInstallee();
+  const gm = GMAIL && GMAIL.mode === "google", moi = esc(SB_USER && SB_USER.email || "ton adresse");
+  const inter = (k, canal) => { const on = veutNotif(k, canal); return `<button type="button" class="notif-sw ${on ? "on" : ""}" role="switch" aria-checked="${on}" aria-label="${canal === "push" ? "Sur le téléphone" : "Par e-mail"}" onclick="prefNotifType('${k}','${canal}',${!on})"><i></i></button>`; };
+  return `<div class="notif-tel ${NOTIF.etat === "actif" ? "ok" : ""}"><span class="notif-tel-i" aria-hidden="true">📱</span><div class="tx"><b>${NOTIF.etat === "actif" ? "Ce téléphone reçoit les alertes" : "Ce téléphone ne reçoit pas encore les alertes"}</b><small>${NOTIF.etat === "actif" ? "Tu peux choisir lesquelles ci-dessous." : iosPasInstalle ? "Sur iPhone : installe d'abord l'appli sur l'écran d'accueil (iOS 16.4 ou plus)." : !support ? "Ce navigateur ne permet pas les alertes : installe l'appli." : "Active-les pour être prévenu sans ouvrir l'appli."}</small></div>
+      ${NOTIF.etat === "actif" ? `<div class="row"><button class="small ghost" onclick="essaiNotif()">Essai</button><button class="small ghost" onclick="desactiverPush()">Couper</button></div>` : support && !iosPasInstalle ? `<button class="small primary" onclick="activerPush()">Activer</button>` : ""}</div>
+    <div class="notif-raccourcis" role="group" aria-label="Choix rapide"><button type="button" class="small" onclick="prefNotifTout('tout')">✅ Tout</button><button type="button" class="small" onclick="prefNotifTout('essentiel')">⭐ L'essentiel</button><button type="button" class="small" onclick="prefNotifTout('rien')">🔕 Rien</button></div>
+    <div class="notif-tab"><div class="notif-l notif-h"><span></span><span>📱</span><span>✉️</span></div>
+      ${TYPES_NOTIF.map(([k, ico, t, d]) => `<div class="notif-l"><div class="notif-t"><span class="notif-ico" aria-hidden="true">${ico}</span><div><b>${t}</b><small>${d}</small></div></div>${inter(k, "push")}${inter(k, "mail")}</div>`).join("")}</div>
+    <p class="note small">📱 sur tes téléphones où les alertes sont activées. ✉️ envoyé à <b>${moi}</b>, depuis ton Gmail${gm ? "" : " (pas encore branché : depuis celui du propriétaire de l'espace s'il l'est)"}. Les alertes du matin arrivent vers 8 h.</p>`;
+}
+async function enregistrerPrefsNotif(types) {
+  const p = Object.assign({ push: true, resume: false }, NOTIF.prefs || {}, { types }); delete p.user_id; delete p.maj_le;
+  const r = await SB.from("notif_prefs").upsert(p); if (r.error) { toast(r.error.message); return false; }
+  NOTIF.prefs = Object.assign({}, NOTIF.prefs, { types }); const el = document.getElementById("notifBox"); if (el) el.innerHTML = blocNotif();
+  const sm = document.querySelector("#rgl-notif summary small"); if (sm) sm.textContent = resumeNotif(); return true;
+}
+async function prefNotifType(k, canal, v) {
+  const types = JSON.parse(JSON.stringify((NOTIF.prefs && NOTIF.prefs.types) || {})); types[k] = Object.assign({ push: veutNotif(k, "push"), mail: veutNotif(k, "mail") }, types[k], { [canal]: v });
+  if (await enregistrerPrefsNotif(types)) toast(`${v ? "✓" : "✕"} ${TYPES_NOTIF.find(x => x[0] === k)[2]} ${canal === "push" ? "sur le téléphone" : "par e-mail"} : ${v ? "activé" : "coupé"}`);
+}
+async function prefNotifTout(mode) {
+  const types = {}; TYPES_NOTIF.forEach(([k, , , , push, mail]) => { types[k] = mode === "tout" ? { push: true, mail: !!mail } : mode === "rien" ? { push: false, mail: false } : { push: ESSENTIEL_NOTIF.includes(k), mail: ESSENTIEL_NOTIF.includes(k) && !!mail }; });
+  if (await enregistrerPrefsNotif(types)) toast(mode === "tout" ? "✓ Toutes les alertes activées" : mode === "rien" ? "Toutes les alertes coupées" : "✓ L'essentiel : retards, problèmes des locataires, banque");
 }
 async function activerPush() {
   try {
@@ -6435,7 +6473,7 @@ async function activerPush() {
 async function desactiverPush() { try { const reg = await navigator.serviceWorker.getRegistration(), sub = reg && await reg.pushManager.getSubscription(); if (sub) { await SB.from("push_abonnements").delete().eq("endpoint", sub.endpoint); await sub.unsubscribe(); } toast("Alertes coupées sur ce téléphone"); } catch (e) {} chargerNotif(); }
 async function prefNotif(k, v) { const p = Object.assign({ push: true, resume: false }, NOTIF.prefs, { [k]: v }); delete p.user_id; delete p.maj_le; const r = await SB.from("notif_prefs").upsert(p); if (r.error) { toast(r.error.message); return; } toast(v ? "C'est activé" : "C'est coupé"); chargerNotif(); }
 async function essaiNotif() { toast("Envoi d'un essai…"); const r = await SB.functions.invoke("notifier", { body: { essai: true } }); toast(r.error ? "Essai impossible : " + r.error.message : "✓ Essai envoyé : regarde tes notifications"); }
-function sectionNotif() { setTimeout(chargerNotif, 0); return `<section class="card"><h2>🔔 Notifications</h2><p class="note">L'appli te prévient, tu n'as plus besoin de l'ouvrir pour savoir.</p><div id="notifBox">${blocNotif()}</div></section>`; }
+function sectionNotif() { setTimeout(chargerNotif, 0); return `<section class="card"><h2>🔔 Notifications</h2><p class="note">Choisis ce qui te prévient, et comment : sur le téléphone, par e-mail, ou les deux.</p><div id="notifBox">${blocNotif()}</div></section>`; }
 
 /* ================= Indice IRL mis à jour tout seul (site de l'INSEE) ================= */
 async function majIrlInsee(force) {

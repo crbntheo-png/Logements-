@@ -57,6 +57,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — notifications complètes ; vrais logos et émojis dans les Réglages
+- Pictos des Réglages : vrais logos Google Drive et Gmail (SVG), vrais émojis en couleur pour toutes les rubriques (plus de remplacement par des icônes grises dans `.rgl-ico`, `.rgl-i`, `.notif-*`), pastilles teintées gardées. Aide : 💬.
+- **Notifications** (Réglages › Notifications) : bandeau "📱 Ce téléphone reçoit / ne reçoit pas les alertes" (Activer, Essai, Couper) ; raccourcis ✅ Tout / ⭐ L'essentiel / 🔕 Rien ; tableau de 8 types × 📱 téléphone / ✉️ e-mail (interrupteurs) : 💶 loyer reçu, ⏰ loyer en retard, 🔁 relance automatique envoyée, 🔧 problème signalé par un locataire, 📨 document reçu dans la boîte, 📊 point du mois, 🏦 banque à vérifier, 🛡️ rappels et échéances. Enregistré par personne (`notif_prefs.types`, `supabase/notif_types.sql`) ; résumé de la rubrique "N alertes sur 8 · téléphone activé ou non".
+- Serveur `notifier` : chaque envoi respecte le type et le canal de chaque membre (`veutDe`, `alerter` ; e-mail depuis le Gmail de la personne, sinon celui du propriétaire). Nouveaux : banque à vérifier (accord qui finit dans 15, 7, 1 jour ; banque ou Pennylane en erreur) au propriétaire ; rappels du jour ; assurance d'un locataire qui finit dans 30 jours ou aujourd'hui. "Essai" envoie maintenant une vraie alerte d'essai. Mode "à blanc" (clé de la tâche + `aBlanc`) : toute la tournée calculée, rien envoyé ni noté — tournée à blanc OK.
+- Tests : test69 11/11 (interrupteurs, enregistrement, rechargement, raccourcis) ; test5, test53, test56, test60, test62 OK. En ligne.
+- Pas vérifié : la réception réelle des nouvelles alertes sur un téléphone (première tournée : demain 8 h).
+
 ### 18/11/2026 — ranger l'appli avec Claude (connecteur en écriture, sur autorisation)
 - Demande de Théo : que chaque utilisateur branche SON Claude et range son espace avec lui (documents, logements…), sans que Claude voie comment l'appli est faite. Claude ne reçoit que des outils décrits en français et les données de l'espace, jamais le code ni la base (vérifié : rien sur la fabrication dans les consignes ni la liste des outils).
 - Réglages › Brancher sur Claude : interrupteur "🧹 Autoriser Claude à ranger avec moi" (coupé par défaut, propriétaire seulement : RPC `connecteur_ecriture`, colonne `ecriture`, les éditeurs ne peuvent plus changer que les chiffres publiés ; `supabase/connecteur_ecriture.sql`). Une fois autorisé : message tout prêt à coller dans Claude ("Range mon appli… montre-moi d'abord ton plan… attends mon OK").
