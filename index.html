@@ -788,7 +788,7 @@ function save() {
   const mj = JSON.stringify(metaObj());
   if (synced["meta/main"] !== mj) { synced["meta/main"] = mj; changes.push(["meta/main", JSON.parse(mj)]); }
   if (!changes.length) return;
-  if (SB) { planifierPortails(); return ecrireSupabase(changes); }
+  if (SB) { planifierPortails(); planifierAgenda(); return ecrireSupabase(changes); }
   changes.forEach(([path, val]) => {
     writeQueue = writeQueue.then(() => val === null ? DB.doc(path).delete() : DB.doc(path).set(val)).catch(err => {
       if (err && err.code === "invalid_argument") toast("Tu n'as pas le droit de modifier ces données (demande l'accès Éditeur).");
@@ -912,7 +912,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
-  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000);
+  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
 /* ================= Banque (via Pennylane, lue par le serveur) ================= */
@@ -2131,7 +2131,7 @@ const ACTIONS = [
   ["🗑️", "Saisir une taxe foncière", "taxeFonciere()"], ["📊", "Export pour le comptable", `exportCSV(${TODAY.getFullYear()})`], ["📄", "Bilan de l'année", `docBilanOpen(${TODAY.getFullYear()})`],
   ["📅", "Tous les loyers du mois", "go('loyers')"], ["⚙️", "Réglages de la SCI", "go('reglages')"], ["📁", "Documents du Drive", "go('docs')"],
   ["📷", "Photo d'une facture", "photoFacture()"], ["📊", "Importer mes logements depuis Excel", "importTableur()"], ["🧾", "Régulariser les charges", `regulTous(${TODAY.getFullYear() - 1})`], ["🧮", "Fichier FEC pour le comptable", `exportFEC(${TODAY.getFullYear()})`],
-  ["📆", "Ajouter les dates à mon agenda", "exportAgenda()"], ["📈", "Chercher le dernier indice IRL", "majIrlInsee(true)"], ["📖", "Petit lexique (c'est quoi ?)", "go('aide')"], ["🔔", "Notifications", "reglage('notif')"], ["⚖️", "Mentions légales et confidentialité", "go('legal')"]
+  ["📆", "Mes dates dans mon agenda", "abonnerAgenda()"], ["📈", "Chercher le dernier indice IRL", "majIrlInsee(true)"], ["📖", "Petit lexique (c'est quoi ?)", "go('aide')"], ["🔔", "Notifications", "reglage('notif')"], ["⚖️", "Mentions légales et confidentialité", "go('legal')"]
 ];
 function majRecherche() {
   const q = sansAccent((document.getElementById("srq") || {}).value || ""), mots = q.split(/\s+/).filter(Boolean), ok = t => mots.every(m => sansAccent(t).includes(m));
@@ -3666,7 +3666,7 @@ function pageReglages() {
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
   ].join("") : sci;
   const outils = [
-    rubrique("agenda", "📅", "Dans ton agenda", "Toutes les dates des 12 prochains mois", `<p class="note">Loyers attendus, révisions, fins d'assurance, congés, taxe foncière, déclarations : toutes les dates des 12 prochains mois dans le calendrier de ton téléphone (iPhone, Android, Google Agenda, Outlook). À refaire quand tu ajoutes un locataire.</p><div class="row"><button class="primary" onclick="exportAgenda()">📅 Ajouter à mon agenda</button></div>`),
+    rubrique("agenda", "📅", "Dans ton agenda", "Toutes les dates des 12 prochains mois", `<p class="note">Loyers attendus, révisions, fins d'assurance, congés, taxe foncière, déclarations : toutes les dates des 12 prochains mois dans le calendrier de ton téléphone (iPhone, Android, Google Agenda, Outlook). ${SB ? "Abonne ton agenda une fois : il se met à jour tout seul." : "À refaire quand tu ajoutes un locataire."}</p><div class="row"><button class="primary" onclick="abonnerAgenda()">📅 ${SB ? (S.sci.agendaJeton ? "Voir le lien de mon agenda" : "Abonner mon agenda") : "Ajouter à mon agenda"}</button>${SB ? `<button class="small ghost" onclick="exportAgenda()">Télécharger un fichier .ics</button>` : ""}</div>`),
     rubrique("irl", "📈", "Indice des loyers", `Dernier : ${qLabel(dernierIrl)} = ${fmtIrl(irlVal(dernierIrl))} · mis à jour tout seul`, `
     <p class="note">Les révisions de loyer se calculent toutes seules avec ces indices officiels de l'INSEE. Dernier connu : <b>${qLabel(irlCles().slice(-1)[0])} = ${fmtIrl(irlVal(irlCles().slice(-1)[0]))}</b>. Prochain : <b>${qLabel(irlProchain().k)}</b>, publié vers le ${fd(irlProchain().pub)}. Quand il sort, ajoute-le ici (valeur sur <a href="https://www.service-public.gouv.fr/particuliers/vosdroits/F13723" target="_blank" rel="noopener">service-public.gouv.fr</a>).</p>
     <div class="table-wrap" style="border:0"><table><tbody>${irlCles().slice(-6).reverse().map(k => `<tr><td>${qLabel(k)}</td><td class="num">${fmtIrl(irlVal(k))}</td><td class="sub">publié vers le ${fds(qPub(k))}</td></tr>`).join("")}</tbody></table></div>
@@ -6055,7 +6055,7 @@ async function majIrlInsee(force) {
 }
 
 /* ================= Agenda : toutes les dates importantes dans le calendrier du téléphone ================= */
-function exportAgenda() {
+function icsAgenda() {
   const ev = [], d8 = d => iso(d).replace(/-/g, ""), y = TODAY.getFullYear(), fin = addDays(TODAY, 400), sci = S.sci.nom || "Gestion locative";
   const add = (d, t, desc, id) => { if (d >= addDays(TODAY, -1) && d <= fin) ev.push({ d, t, desc: desc || "", id }); };
   S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).forEach(b => {
@@ -6069,11 +6069,44 @@ function exportAgenda() {
   S.rappels.filter(r => !r.fait).forEach(r => add(P(r.date), `⏰ ${r.titre}`, "", `rap-${r.id}`));
   [y, y + 1].forEach(a => { add(new Date(a, 4, 20), estPerso() ? "🏛 Déclaration des revenus fonciers" : (S.sci.regime === "IS" ? "🏛 Liasse fiscale IS" : "🏛 Déclaration 2072 de la SCI"), "", `fisc-${a}`); add(new Date(a, 9, 15), "🏛 Taxe foncière à payer", "Puis la saisir dans l'appli pour récupérer les ordures ménagères.", `tf-${a}`); if (!estPerso()) add(new Date(a, 5, 30), "🤝 Assemblée générale de la SCI", "Approuver les comptes de l'année passée.", `ag-${a}`); });
   const esc2 = t => String(t).replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
-  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Gestion locative//FR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:" + esc2(sci),
-    ...ev.flatMap(e => ["BEGIN:VEVENT", `UID:${e.id}@gestion-locative`, `DTSTAMP:${d8(TODAY)}T080000Z`, `DTSTART;VALUE=DATE:${d8(e.d)}`, `DTEND;VALUE=DATE:${d8(addDays(e.d, 1))}`, "SUMMARY:" + esc2(e.t), "DESCRIPTION:" + esc2(e.desc + "\n" + location.origin + location.pathname), "BEGIN:VALARM", "TRIGGER:PT9H", "ACTION:DISPLAY", "DESCRIPTION:" + esc2(e.t), "END:VALARM", "END:VEVENT"]), "END:VCALENDAR"].join("\r\n");
-  download(`agenda-${slug(sci)}.ics`, ics, "text/calendar");
-  toast(`${ev.length} dates prêtes : ouvre le fichier pour les ajouter à ton agenda`);
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Gestion locative//FR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:" + esc2(sci), "X-WR-TIMEZONE:Europe/Paris", "REFRESH-INTERVAL;VALUE=DURATION:PT3H", "X-PUBLISHED-TTL:PT3H",
+    ...ev.flatMap(e => ["BEGIN:VEVENT", `UID:${e.id}-${String(ESPACE || "local").slice(0, 8)}@gestion-locative`, `DTSTAMP:${d8(TODAY)}T080000Z`, `DTSTART;VALUE=DATE:${d8(e.d)}`, `DTEND;VALUE=DATE:${d8(addDays(e.d, 1))}`, "SUMMARY:" + esc2(e.t), "DESCRIPTION:" + esc2(e.desc + "\n" + (SB ? LIEN_APPLI : location.origin + location.pathname)), "BEGIN:VALARM", "TRIGGER:PT9H", "ACTION:DISPLAY", "DESCRIPTION:" + esc2(e.t), "END:VALARM", "END:VEVENT"]), "END:VCALENDAR"].map(l => { const c = [...l], o = []; for (let i = 0; i < c.length; i += 70) o.push(c.slice(i, i + 70).join("")); return o.join("\r\n "); }).join("\r\n");
+  return { ics, n: ev.length, sci };
 }
+function exportAgenda() {
+  const { ics, n, sci } = icsAgenda();
+  download(`agenda-${slug(sci)}.ics`, ics, "text/calendar");
+  toast(`${n} dates prêtes : ouvre le fichier pour les ajouter à ton agenda`);
+}
+/* Agenda ABONNÉ : un lien que Google Agenda, l'iPhone ou Outlook relisent tout seuls (mis à jour à chaque modification) */
+let AGENDA_PUBLIE = "", AGENDA_T = null;
+const lienAgenda = j => `${window.APP_SUPABASE ? window.APP_SUPABASE.url : ""}/functions/v1/agenda?j=${j}`;
+function planifierAgenda() { if (!SB || !ESPACE || LECTURE || !S.sci.agendaJeton) return; clearTimeout(AGENDA_T); AGENDA_T = setTimeout(publierAgenda, 2000); }
+async function publierAgenda() {
+  if (!SB || !ESPACE || LECTURE || !S.sci.agendaJeton) return;
+  const { ics } = icsAgenda(); if (AGENDA_PUBLIE === ics) return;
+  const r = await SB.from("agendas").update({ ics, maj_le: new Date().toISOString() }).eq("espace_id", ESPACE);
+  if (!r.error) AGENDA_PUBLIE = ics;
+}
+async function abonnerAgenda() {
+  if (!SB) { exportAgenda(); return; }
+  if (!S.sci.agendaJeton) {
+    const jeton = b64url(crypto.getRandomValues(new Uint8Array(32))), h = await sha256hex(jeton);
+    await SB.from("agendas").delete().eq("espace_id", ESPACE);
+    const r = await SB.from("agendas").insert({ jeton_hash: h, espace_id: ESPACE, ics: icsAgenda().ics });
+    if (r.error) { toast("Création impossible : " + r.error.message); return; }
+    S.sci.agendaJeton = jeton; AGENDA_PUBLIE = ""; save();
+  }
+  const url = lienAgenda(S.sci.agendaJeton), webcal = url.replace(/^https:/, "webcal:");
+  let lu = ""; try { const r = await SB.from("agendas").select("lu_le").eq("espace_id", ESPACE).maybeSingle(); lu = r.data && r.data.lu_le ? `Ton agenda l'a lu ${ilYa(r.data.lu_le)}.` : "Pas encore lu par un agenda."; } catch (e) {}
+  modal("📅 Abonner ton agenda", `<div class="full">${grosMsg("ok", "Toutes tes dates, toujours à jour", `Loyers attendus, révisions, fins d'assurance, préavis, taxe foncière, déclarations. Quand tu modifies l'appli, ton agenda suit tout seul (Google le relit toutes les quelques heures). ${lu}`)}</div>
+    <div class="full row"><a class="btn primary" href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}" target="_blank" rel="noopener">Google Agenda</a><a class="btn" href="${esc(webcal)}">iPhone / Mac</a><a class="btn" href="https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(url)}&name=${encodeURIComponent(S.sci.nom || "Gestion locative")}" target="_blank" rel="noopener">Outlook</a></div>
+    <label class="fl full">Le lien de ton agenda (secret)<input id="agenda_lien" readonly value="${esc(url)}"></label>
+    <div class="full row"><button type="button" class="small" onclick="copierTexte(document.getElementById('agenda_lien').value)">Copier le lien</button><button type="button" class="small danger" id="agenda_off">Désactiver ce lien</button></div>
+    <p class="full note small">Sur Android : ouvre Google Agenda sur un ordinateur une fois avec le bouton ci-dessus, l'agenda apparaît ensuite sur le téléphone.</p>`, () => true, { ok: "Fermer", lecture: true,
+    after: () => { document.getElementById("agenda_off").onclick = () => confirmer("Désactiver le lien de l'agenda ? Les agendas abonnés ne seront plus mis à jour.", async () => { await SB.from("agendas").delete().eq("espace_id", ESPACE); delete S.sci.agendaJeton; save(); render(); toast("✓ Lien de l'agenda désactivé"); }); } });
+}
+
 
 /* ================= SMS et WhatsApp, depuis ton propre téléphone ================= */
 const telIntl = t => { let n = String(t || "").replace(/[^\d+]/g, ""); if (n.startsWith("00")) n = "+" + n.slice(2); if (/^0[1-9]\d{8}$/.test(n)) n = "+33" + n.slice(1); return n; };

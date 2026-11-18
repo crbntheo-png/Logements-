@@ -49,6 +49,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — agenda abonné (Google Agenda, iPhone, Outlook)
+- Réglages › "📅 Dans ton agenda" › "Abonner mon agenda" (aussi dans le menu rapide) : un lien secret par espace (`supabase/agenda.sql`, table `agendas`, empreinte du jeton seulement) lu par la fonction `agenda` (sans connexion, `?j=…`, text/calendar). Boutons Google Agenda (`calendar.google.com/calendar/r?cid=webcal://…`), iPhone / Mac (webcal), Outlook, Copier, Désactiver, "lu il y a…".
+- L'appli republie le calendrier à chaque modification (si changé) : loyers attendus, révisions, fins d'assurance, préavis, départs, PNO, DPE, rappels, déclarations, taxe foncière, AG. Fichier .ics rendu conforme (lignes repliées, rafraîchissement toutes les 3 h conseillé, identifiants propres à l'espace). Le téléchargement d'un .ics reste possible.
+- Tests : test61 (vraie base, lecture sans connexion comme un agenda) 12/12 ; test5, test53 OK. En ligne.
+- Pas vérifié : l'abonnement réel dans Google Agenda et sur un iPhone (Google relit ces liens toutes les quelques heures, pas tout de suite).
+
 ### 18/11/2026 — relances automatiques (comme Qalimo)
 - Réglages › "🔁 Relances automatiques" (propriétaire) : chaque matin (tâche `notifier` v13), un locataire en retard reçoit depuis le Gmail du propriétaire un rappel gentil à J+3 (jusqu'à J+10), puis un 2e rappel ferme à J+8 (jusqu'à J+25) si le 1er date d'au moins 4 jours. Mêmes mots que les relances de l'appli, prénom du propriétaire, IBAN rappelé. Jamais la mise en demeure. Rien pendant un accord d'étalement, rien sans e-mail, rien pour un locataire exclu (fiche › Plus › "Pas de relance automatique pour lui").
 - Chaque relance envoyée est notée dans l'appli (relance du mois, `auto: true`), dans le journal des envois (anti-doublon entre associés) et annoncée par une notification ; si Gmail refuse, notification "pas envoyée".
