@@ -57,6 +57,15 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — incident GTP : loyers de novembre disparus (bug de l'appli), réparé ; plus de suppression automatique ; historique et corbeille
+- **Ce qui s'est passé** (prouvé par l'historique des suppressions) : avec la banque directe ET Pennylane branchés, une ancienne version de l'appli encore ouverte a pris les virements vus par Pennylane pour de nouveaux loyers et les a imputés sur décembre (Emma 600, Antoine 500, Sofiane 750). À 13 h 50, la nouvelle version, ouverte sur le téléphone de Gab, a vu le doublon et a supprimé le MAUVAIS côté (les vrais paiements de novembre). Gab n'a rien fait de travers ; Théo non plus. Rien n'a été écrit dans Pennylane (l'appli n'y fait que lire).
+- **Réparé** : les 3 paiements de novembre restaurés tels quels, les 3 doublons de décembre retirés (gardés dans l'historique). Novembre : Emma 600, Antoine 500, Sofiane 750, Godefroy 200.
+- **Pour que ça ne revienne pas** :
+  - l'appli ne supprime plus JAMAIS de paiement toute seule : un paiement peut-être compté deux fois devient une tâche urgente "⚠️ Paiement peut-être compté deux fois" avec "Garder novembre / Garder décembre / Ce sont 2 paiements" (l'autre va dans l'historique, restaurable) ;
+  - quand la banque directe est branchée, les opérations Pennylane ne sont plus lisibles directement (règles du serveur) : une vieille version encore ouverte ne peut plus les recompter ; la comparaison les lit par la fonction protégée `banque_pennylane_comparaison` (`supabase/banque_protection.sql`).
+- **Historique et corbeille** (Réglages › ♻️, page `#historique`, lien aussi depuis l'activité) : toutes les modifications et suppressions des paiements, dépenses, locataires, logements, documents, taxes, relances, rappels, états des lieux, prêts sont gardées 60 jours par le serveur (`docs_historique`, déclencheur `docs_historiser`) avec qui et quand, et ce qui a changé (ex. "novembre → décembre") ; "♻️ Restaurer" ou "↩️ Revenir à avant" en un geste (annulable).
+- Tests : test67 réécrit (scénario de l'incident : rien supprimé tout seul, tâche, "Garder novembre", historique, Restaurer) 16/16 ; test5, test53, test55, test59, test66 OK. En ligne.
+
 ### 18/11/2026 — notifications complètes ; vrais logos et émojis dans les Réglages
 - Pictos des Réglages : vrais logos Google Drive et Gmail (SVG), vrais émojis en couleur pour toutes les rubriques (plus de remplacement par des icônes grises dans `.rgl-ico`, `.rgl-i`, `.notif-*`), pastilles teintées gardées. Aide : 💬.
 - **Notifications** (Réglages › Notifications) : bandeau "📱 Ce téléphone reçoit / ne reçoit pas les alertes" (Activer, Essai, Couper) ; raccourcis ✅ Tout / ⭐ L'essentiel / 🔕 Rien ; tableau de 8 types × 📱 téléphone / ✉️ e-mail (interrupteurs) : 💶 loyer reçu, ⏰ loyer en retard, 🔁 relance automatique envoyée, 🔧 problème signalé par un locataire, 📨 document reçu dans la boîte, 📊 point du mois, 🏦 banque à vérifier, 🛡️ rappels et échéances. Enregistré par personne (`notif_prefs.types`, `supabase/notif_types.sql`) ; résumé de la rubrique "N alertes sur 8 · téléphone activé ou non".

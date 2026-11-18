@@ -31,11 +31,25 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.evaluate(async () => { await chargerBanque(false); location.hash = 'reglages'; render(); }); await p.waitForTimeout(800);
   const P = await p.evaluate(() => S.paiements.filter(x => x.bailId === 'emma').map(x => x.mois + ':' + x.tx + (x.txAutre ? '<' + x.txAutre : '')).sort());
   console.log(JSON.stringify(P));
-  t(P.length === 2 && !P.some(x => x.startsWith('2026-12')), 'le doublon de ce matin est retiré (décembre n\'est plus payé d\'avance)');
-  t(P.includes('2026-10:666<9001') && P.includes('2026-11:777<9002'), 'les loyers restent pointés une seule fois, reliés aux deux sources');
-  t(await p.evaluate(() => detteBail(bail('emma')) === 0 && toutesEcheances().filter(x => x.b.id === 'emma' && x.m === '2026-12' && x.paye > 0).length === 0), 'Emma : à jour, rien d\'avance sur décembre');
-  // nouvelle lecture : pas de recomptage
-  await p.evaluate(async () => { await chargerBanque(false); }); t(await p.evaluate(() => S.paiements.filter(x => x.bailId === 'emma').length) === 2, 'relire les deux sources ne recrée aucun paiement');
+  t(P.length === 3, 'rien n\'est supprimé tout seul (le doublon reste en attente de ton choix)');
+  t(P.includes('2026-10:666<9001'), 'octobre relié aux deux sources, sans recompter');
+  await p.evaluate(() => { location.hash = 'afaire'; render(); }); await p.waitForTimeout(300);
+  const af = await p.locator('#app').innerText();
+  t(/Paiement peut-être compté deux fois : Emma Durand 600,00/.test(af) && /Garder novembre 2026/.test(af) && /Garder décembre 2026/.test(af), 'À faire : "⚠️ Paiement peut-être compté deux fois" avec Garder novembre / Garder décembre');
+  await p.screenshot({ path: __dirname + '/shots58/doublon.png' });
+  await p.locator('button:has-text("Garder novembre 2026")').first().click(); await p.waitForTimeout(800);
+  const P2 = await p.evaluate(() => S.paiements.filter(x => x.bailId === 'emma').map(x => x.mois).sort());
+  t(JSON.stringify(P2) === '["2026-10","2026-11"]', '"Garder novembre" : décembre retiré, novembre gardé');
+  t(await p.evaluate(() => detteBail(bail('emma')) === 0 && !toutesEcheances().some(x => x.b.id === 'emma' && x.m === '2026-12' && x.paye > 0)), 'Emma : à jour, rien d\'avance sur décembre');
+  await p.waitForTimeout(2500);
+  // l'historique garde la suppression et permet de restaurer
+  await p.evaluate(() => { HISTO = null; location.hash = 'historique'; render(); }); await p.waitForTimeout(2500);
+  const hi = await p.locator('#app').innerText(); console.log(hi.slice(0, 300).replace(/\n/g, ' | '));
+  t(/a supprimé le paiement de Emma Durand 600,00\s€ \(décembre 2026\)/.test(hi), 'Historique : "… a supprimé le paiement de Emma 600 € (décembre)", avec qui et quand');
+  await p.screenshot({ path: __dirname + '/shots58/historique.png' });
+  await p.locator('.histo-l', { hasText: 'décembre 2026' }).locator('button:has-text("Restaurer")').click(); await p.waitForTimeout(800);
+  t(await p.evaluate(() => S.paiements.some(x => x.bailId === 'emma' && x.mois === '2026-12')), '♻️ Restaurer : le paiement revient');
+  await p.evaluate(() => { location.hash = 'reglages'; render(); }); await p.waitForTimeout(300);
   await p.click('#rgl-banque summary'); await p.waitForTimeout(200);
   const txt = await p.locator('#rgl-banque').innerText(); console.log(JSON.stringify(await p.evaluate(() => { const c = comparaisonBanques(); return c && { periode: c.periode, paires: c.paires, b: c.seulBanque.map(o => o.date + ' ' + o.montant), p: c.seulPennylane.map(o => o.date + ' ' + o.montant) }; })));
   t(/Banque en direct \+ Pennylane/.test(txt), 'résumé : "Banque en direct + Pennylane"');

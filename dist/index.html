@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "88f418b", "date": "2026-11-18T12:58"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "c573718", "date": "2026-11-18T13:13"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -575,6 +575,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .notif-tab { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; margin-bottom: 8px; } .notif-l { display: grid; grid-template-columns: 1fr 52px 52px; align-items: center; gap: 4px; padding: 10px 12px; border-top: 1px solid var(--line); } .notif-l:first-child { border-top: 0; }
 .notif-h { padding: 6px 12px; background: var(--bg); font-size: 1rem; text-align: center; } .notif-t { display: flex; gap: 10px; align-items: flex-start; min-width: 0; } .notif-t > div { display: grid; min-width: 0; } .notif-t b { font-size: .9rem; } .notif-t small { color: var(--muted); font-size: .76rem; line-height: 1.3; } .notif-ico { font-size: 1.2rem; line-height: 1.3; }
 #app .notif-sw { justify-self: center; width: 42px; min-width: 42px; height: 26px; min-height: 0; padding: 0; border-radius: 99px; border: 0; background: var(--line); position: relative; box-shadow: none; cursor: pointer; transition: background .15s; } #app .notif-sw i { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .15s; } #app .notif-sw.on { background: var(--ok); } #app .notif-sw.on i { left: 19px; } #app .notif-sw:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.histo-l { align-items: flex-start; flex-wrap: wrap; } .histo-l .tx { display: grid; gap: 2px; flex: 1; min-width: 210px; } .histo-l > button, .histo-l > .pill { margin-left: auto; } .histo-diff { color: var(--ink) !important; background: var(--bg); border-radius: 8px; padding: 3px 8px; font-weight: 600; justify-self: start; } .histo-f { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; } .rc-historique { --rc: #0f766e; }
 .apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
@@ -981,7 +982,8 @@ async function chargerBanque(actualiser) {
     if (ESPACE !== id) return;
     // deux sources possibles : la banque directe est la référence pour pointer les loyers ; Pennylane sert à comparer
     const directe = d.data && (d.data.comptes || []).length ? d.data : null, pl = l.data || null, src = directe ? "enablebanking" : "pennylane";
-    const opsTous = (o.data || []).map(x => ({ ...x, montant: +x.montant, tx_id: String(x.tx_id), source: x.source || "pennylane" })), comptesTous = (c.data || []).map(x => ({ ...x, source: x.source || "pennylane" }));
+    let opsTous = (o.data || []).map(x => ({ ...x, montant: +x.montant, tx_id: String(x.tx_id), source: x.source || "pennylane" })), comptesTous = (c.data || []).map(x => ({ ...x, source: x.source || "pennylane" }));
+    if (directe && pl) { try { const r = await SB.rpc("banque_pennylane_comparaison", { e: id }); if (r.data) { opsTous = opsTous.filter(x => x.source !== "pennylane").concat((r.data.ops || []).map(x => ({ ...x, montant: +x.montant, source: "pennylane" }))); comptesTous = comptesTous.filter(x => x.source !== "pennylane").concat((r.data.comptes || []).map(x => ({ ...x, source: "pennylane" }))); } } catch (e) {} }
     BANQUE = { etat: "ok", directe, pennylane: pl, principal: src, lien: directe ? { source: "enablebanking", derniere_synchro: directe.derniere_synchro, erreur: directe.erreur } : pl,
       comptes: comptesTous.filter(x => x.source === src), ops: opsTous.filter(x => x.source === src), comptesTous, opsTous, relue: BANQUE.relue };
     if (directe && actualiser && !BANQUE.relue && (!directe.derniere_synchro || Date.now() - new Date(directe.derniere_synchro) > 6 * 3600e3)) { BANQUE.relue = true; fnBanque({ action: "actualiser", espace: id }).then(j => { if (j.n) chargerBanque(false); }, () => {}); }
@@ -1003,21 +1005,30 @@ function bailDuVirement(op) {
   });
   return cands.length === 1 ? cands[0] : null;
 }
-/* Un virement vu par les deux sources (Pennylane et banque directe) ne compte qu'une fois : si un paiement créé depuis la source principale
-   double un paiement déjà relié à l'autre source (même locataire, même montant, à 12 jours près), on garde l'ancien et on le relie. */
-function dedoublonnerPaiements() {
-  if (!BANQUE.ops.length) return false;
-  const ids = new Set(BANQUE.ops.map(o => String(o.tx_id))), groupe = f => { const g = {}; S.paiements.filter(f).forEach(p => { const k = p.lot || ("tx" + p.tx); (g[k] = g[k] || []).push(p); }); return Object.values(g); };
-  const nouveaux = groupe(p => p.tx && ids.has(String(p.tx))), anciens = groupe(p => p.tx && !ids.has(String(p.tx)));
-  let modif = false; const pris = new Set();
-  for (const G of nouveaux) {
-    const tot = r2(G.reduce((s, p) => s + +p.montant, 0)), b = G[0].bailId, d = P(G[0].date);
-    const H = anciens.find(h => !pris.has(h) && h[0].bailId === b && Math.abs(r2(h.reduce((s, p) => s + +p.montant, 0)) - tot) < 0.01 && Math.abs(daysBetween(P(h[0].date), d)) <= 12);
-    if (!H) continue;
-    pris.add(H); const tx = G[0].tx; S.paiements = S.paiements.filter(p => !G.includes(p)); H.forEach(p => { p.txAutre = p.tx; p.tx = tx; }); modif = true;
+/* Paiements peut-être comptés deux fois (même locataire, même montant, à 12 jours près, reliés au même virement ou à deux sources).
+   L'appli ne supprime JAMAIS toute seule : elle le signale dans À faire et c'est toi qui choisis lequel garder. */
+function doublonsPaiements() {
+  const g = {}; S.paiements.filter(p => p.tx).forEach(p => { const k = p.lot || ("tx" + p.tx); (g[k] = g[k] || []).push(p); });
+  const L = Object.values(g).map(ps => ({ ps, b: ps[0].bailId, tot: r2(ps.reduce((s, p) => s + +p.montant, 0)), d: P(ps[0].date), txs: new Set(ps.flatMap(p => [String(p.tx), p.txAutre ? String(p.txAutre) : ""]).filter(Boolean)), mois: ps.map(p => p.mois).sort() }));
+  const out = [], vu = new Set(), ok = S.sci.pasDoublons || {}, principal = new Set((BANQUE.ops || []).map(o => String(o.tx_id)));
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
+    const A = L[i], B = L[j]; if (A.b !== B.b || Math.abs(A.tot - B.tot) >= 0.01 || Math.abs(daysBetween(A.d, B.d)) > 12) continue;
+    const src = G => principal.has(String(G.ps[0].tx)) ? "p" : "a"; // relié à la source de référence, ou à l'autre (Pennylane / ancienne lecture)
+    const memeVirement = [...A.txs].some(t => B.txs.has(t)) || src(A) !== src(B);
+    if (!memeVirement) continue;
+    const cle = [A.ps[0].id, B.ps[0].id].sort().join("|"); if (vu.has(cle) || ok[cle]) continue; vu.add(cle);
+    out.push({ cle, A, B });
   }
-  return modif;
+  return out;
 }
+function garderPaiement(cle, garder) {
+  const x = doublonsPaiements().find(d => d.cle === cle); if (!x) return;
+  const [G, R] = garder === "A" ? [x.A, x.B] : [x.B, x.A];
+  avecAnnuler(() => { S.paiements = S.paiements.filter(p => !R.ps.includes(p)); const txs = [...R.txs]; G.ps.forEach(p => { if (!p.txAutre && txs.find(t => t !== String(p.tx))) p.txAutre = txs.find(t => t !== String(p.tx)); }); save(); render(); toast(`✓ Gardé : ${G.mois.map(fm).join(", ")} · l'autre est dans l'historique (Réglages › Historique)`); });
+}
+function pasUnDoublon(cle) { S.sci.pasDoublons = Object.assign({}, S.sci.pasDoublons, { [cle]: iso(TODAY) }); save(); render(); toast("Noté : ce sont deux paiements différents"); }
+/* Relie seulement (jamais de suppression) : un paiement relié à l'autre source suit le virement de la source de référence */
+function dedoublonnerPaiements() { return false; }
 /* Enregistre les virements des locataires comme paiements (sans doublon avec ce qui a été saisi à la main) */
 function rapprocherBanque() {
   let n = 0, modif = dedoublonnerPaiements(); const soldes = [];
@@ -1895,6 +1906,9 @@ function taches() {
     if (BANQUE.lien.erreur || j <= 15) add({ key: "bq-renouv-" + (fin ? iso(fin) : "err"), prio: BANQUE.lien.erreur || j <= 3 ? "urgent" : "soon", date: TODAY, t: BANQUE.lien.erreur ? "🏦 Ta banque ne répond plus : reconnecte-la" : `🏦 Renouvelle l'accès à ta banque (fin ${j > 0 ? "dans " + j + " jour" + (j > 1 ? "s" : "") : "aujourd'hui"})`, d: BANQUE.lien.erreur ? esc(BANQUE.lien.erreur) : "Les banques demandent ton accord tous les 6 mois. 1 minute : tu te reconnectes sur le site de ta banque.", acts: [["Reconnecter", "relierBanque()", "primary"]] });
   }
   if (SB && BANQUE.directe && BANQUE.pennylane && estProprio()) { let c = null; try { c = comparaisonBanques(); } catch (e) {} if (c && c.ecarts) add({ key: "bq-ecarts-" + c.ecarts + "-" + c.periode, prio: "soon", date: TODAY, done: true, t: `🔎 ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""} entre ta banque et Pennylane`, d: `Sur la période ${c.periode} : ${c.seulBanque.length} seulement à la banque, ${c.seulPennylane.length} seulement dans Pennylane.`, acts: [["Voir", "voirComparaison()", "primary"]] }); }
+  doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
+    add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
+      acts: [[`Garder ${mA}`, `garderPaiement('${x.cle}','A')`, "primary"], [`Garder ${mB}`, `garderPaiement('${x.cle}','B')`], ["Ce sont 2 paiements", `pasUnDoublon('${x.cle}')`]] }); });
   (DEMANDES || []).forEach(d => { const b = bail(d.bail_id);
     add({ bailId: d.bail_id, key: "dem-" + d.id, prio: "urgent", date: new Date(d.cree_le), t: `🔧 ${esc(nomCourt(d.nom || (b && b.nom) || "Un locataire"))} signale un problème`, d: `"${esc(String(d.texte).slice(0, 140))}"${d.photo ? " · 📷 photo" : ""} · ${ilYa(d.cree_le)}`, acts: [["Voir", `voirDemande(${d.id})`, "primary"]] }); });
   // 1. Impayés
@@ -2388,6 +2402,7 @@ function render0() {
   else if (h === "legal") html = pageLegal();
   else if (h === "integrations") html = pageIntegrations();
   else if (h === "tous") html = pageTous();
+  else if (h === "historique") html = pageHistorique();
   else if (h === "bientot") html = pageBientot();
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
@@ -3370,7 +3385,7 @@ const ligneActivite = g => { const [ico, t] = texteActivite(g); return `<li><spa
 function carteActivite() {
   if (!SB || !ACTIVITE.length || (!(MEMBRES && MEMBRES.membres.length >= 2) && !ACTIVITE.some(x => x.qui === "claude"))) return "";
   const G = groupesActivite();
-  return `<section class="card activite"><div class="sec-head"><h2 class="sec">${MEMBRES && MEMBRES.membres.length >= 2 ? "👥 Ce que font tes associés" : "🤖 Ce que Claude a rangé"}</h2>${G.length > 4 ? `<button class="small ghost" onclick="toutActivite()">Tout voir</button>` : ""}</div><ul class="todo">${G.slice(0, 4).map(ligneActivite).join("")}</ul></section>`;
+  return `<section class="card activite"><div class="sec-head"><h2 class="sec">${MEMBRES && MEMBRES.membres.length >= 2 ? "👥 Ce que font tes associés" : "🤖 Ce que Claude a rangé"}</h2>${G.length > 4 ? `<button class="small ghost" onclick="toutActivite()">Tout voir</button><a class="small btn ghost" href="#historique">♻️ Historique</a>` : ""}</div><ul class="todo">${G.slice(0, 4).map(ligneActivite).join("")}</ul></section>`;
 }
 function toutActivite() { modal("👥 Activité des associés (14 jours)", `<ul class="todo full">${groupesActivite().map(ligneActivite).join("")}</ul>`, () => true, { ok: "Fermer", lecture: true }); }
 /* Un associé a-t-il écrit à cette adresse ces 3 derniers jours ? */
@@ -3700,6 +3715,48 @@ async function retourBanque() {
 }
 async function actualiserDirecte(bt) { if (bt) { bt.disabled = true; bt.textContent = "Lecture…"; } try { const j = await fnBanque({ action: "actualiser", espace: ESPACE, force: true }); toast(j.erreur ? "⚠️ " + j.erreur : `✓ ${j.n} opérations relues`); } catch (e) { toast(e.message); } await chargerBanque(false); render(); }
 function debrancherDirecte() { confirmer("Débrancher ta banque ? L'accès est retiré chez la banque et les opérations affichées sont effacées de l'appli (les loyers déjà enregistrés restent).", async () => { try { await fnBanque({ action: "debrancher", espace: ESPACE }); } catch (e) { toast(e.message); return; } await chargerBanque(false); render(); toast("✓ Banque directe débranchée"); }); }
+/* ================= Historique et corbeille : revenir en arrière ================= */
+let HISTO = null;
+async function chargerHistorique() {
+  HISTO = { etat: "chargement", L: [] }; render();
+  const r = await SB.from("docs_historique").select("id, coll, doc_id, action, avant, apres, par, le").eq("espace_id", ESPACE).order("le", { ascending: false }).limit(300);
+  HISTO = r.error ? { etat: "erreur", msg: r.error.message, L: [] } : { etat: "ok", L: r.data || [] }; render();
+}
+const NOMS_COLL = { paiements: "paiement", depenses: "dépense", baux: "locataire", biens: "logement", fichiers: "document", taxes: "taxe foncière", relances: "relance", rappels: "rappel", edl: "état des lieux", prets: "prêt" };
+function decrireHisto(h) {
+  const d = h.avant || {}, b = d.bailId && bail(d.bailId), nb = b ? nomCourt(b.nom) : "";
+  const quoi = h.coll === "paiements" ? `le paiement ${nb ? "de " + esc(nb) + " " : ""}${eur(+d.montant || 0)}${d.mois ? " (" + fm(d.mois) + ")" : ""}`
+    : h.coll === "depenses" ? `la dépense ${esc(d.libelle || d.categorie || "")} (${eur(+d.montant || 0)})` : h.coll === "baux" ? `le locataire ${esc(nomCourt(d.nom || ""))}`
+    : h.coll === "biens" ? `le logement ${esc(d.nom || "")}` : h.coll === "fichiers" ? `le document ${esc(d.nom || "")}` : h.coll === "rappels" ? `le rappel « ${esc(d.titre || "")} »` : `un(e) ${NOMS_COLL[h.coll] || h.coll}`;
+  let diff = "";
+  if (h.action === "modif" && h.apres) {
+    const champs = { mois: v => fm(v), montant: v => eur(+v || 0), date: v => fds(P(v)), loyerHC: v => eur(+v || 0), charges: v => eur(+v || 0), nom: v => esc(v), categorie: v => esc(v), bienId: v => esc((bien(v) || {}).nom || "—"), cat: v => esc(v), dateSortie: v => v ? fds(P(v)) : "—", email: v => esc(v || "—") };
+    diff = Object.entries(champs).filter(([k]) => JSON.stringify(h.avant[k]) !== JSON.stringify(h.apres[k]) && (h.avant[k] !== undefined || h.apres[k] !== undefined)).map(([k, f]) => `${f(h.avant[k])} → ${f(h.apres[k])}`).join(" · ");
+  }
+  return { quoi, diff };
+}
+function pageHistorique() {
+  if (!SB) return `<div class="empty">Disponible dans l'appli installée.</div>`;
+  if (!HISTO) setTimeout(chargerHistorique, 0);
+  const f = view.histoF || "", L = ((HISTO && HISTO.L) || []).filter(h => !f || h.coll === f);
+  const ligne = h => { const { quoi, diff } = decrireHisto(h), qui = h.par ? prenomMembre(h.par) : "Le serveur", existe = (S[h.coll] || []).some(x => x.id === h.doc_id);
+    const bouton = h.action === "suppr" ? (existe ? `<span class="pill ok">déjà là</span>` : `<button class="small primary" onclick="restaurerHisto(${h.id})">♻️ Restaurer</button>`) : (existe ? `<button class="small" onclick="restaurerHisto(${h.id})">↩️ Revenir à avant</button>` : "");
+    return `<li class="histo-l ${h.action}"><span class="ico" aria-hidden="true">${h.action === "suppr" ? "🗑️" : "✏️"}</span><span class="tx"><b>${esc(qui)}</b> a ${h.action === "suppr" ? "supprimé" : "modifié"} ${quoi}${diff ? `<small class="histo-diff">${diff}</small>` : ""}<small>${ilYa(h.le)} · ${new Date(h.le).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</small></span>${bouton}</li>`; };
+  const filtres = [["", "Tout"], ["paiements", "💶 Paiements"], ["depenses", "🧾 Dépenses"], ["baux", "👤 Locataires"], ["biens", "🏠 Logements"], ["fichiers", "📄 Documents"]];
+  return `<a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>♻️ Historique et corbeille</h1><p>Ce qui a été modifié ou supprimé ces 60 derniers jours, et par qui. Un geste pour revenir en arrière.</p></div><button class="small" onclick="chargerHistorique()">↻</button></div>
+    <div class="chips-choix histo-f">${filtres.map(([k, l]) => `<button type="button" class="small ${f === k ? "primary" : ""}" onclick="view.histoF='${k}';render()">${l}</button>`).join("")}</div>
+    ${!HISTO || HISTO.etat === "chargement" ? `<div class="loader"><span class="spin"></span>Chargement…</div>` : HISTO.etat === "erreur" ? `<div class="empty">${esc(HISTO.msg)}</div>` : !L.length ? `<div class="empty">Rien de modifié ni supprimé${f ? " dans cette catégorie" : ""} ces 60 derniers jours.</div>` : `<section class="card"><ul class="todo histo">${L.map(ligne).join("")}</ul></section>`}
+    <p class="note small">Restaurer remet l'élément tel qu'il était, pour tout l'espace. Tu peux annuler juste après. Pennylane et ta banque ne sont jamais modifiés.</p>`;
+}
+function restaurerHisto(id) {
+  const h = (HISTO && HISTO.L || []).find(x => x.id === id); if (!h || !h.avant || !S[h.coll]) return;
+  avecAnnuler(() => {
+    const L = S[h.coll], i = L.findIndex(x => x.id === h.doc_id), v = JSON.parse(JSON.stringify(h.avant));
+    if (i >= 0) L[i] = v; else L.push(v);
+    save(); render(); toast(h.action === "suppr" ? "♻️ Restauré" : "↩️ Remis comme avant");
+  });
+  setTimeout(chargerHistorique, 1500);
+}
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -4087,6 +4144,7 @@ function pageReglages() {
     estProprio() && SB ? rubrique("relances", "🔁", "Relances automatiques", S.sci.relanceAuto ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même", sansCarte(sectionRelanceAuto())) : "",
     rubrique("bientot", "🚀", "Prochaines sorties", "Ce qui arrive · dis ce qui t'intéresse", `<p class="note">Assistant IA, banque en direct, signature à distance… Les fonctions qui intéressent le plus de monde sortent en premier.</p><div class="row"><a class="btn primary" href="#bientot">🚀 Voir les prochaines sorties</a></div>`),
     estProprio() && SB ? rubrique("claude", "🤖", "Brancher sur Claude", S.sci.connecteurJeton ? "Branché · demande-lui « qui est en retard ? » ou de ranger avec toi" : "Pose tes questions à Claude avec tes vrais chiffres", `<p class="note">Avec ce branchement, tu demandes à Claude (claude.ai, l'appli Claude) : « Qui est en retard ? », « Quand finit l'assurance de Jean ? », « Combien j'ai encaissé cette année ? ». Il lit tes chiffres, <b>sans rien pouvoir modifier</b>.</p><div class="row"><button class="primary" onclick="brancherClaude()">🤖 ${S.sci.connecteurJeton ? "Voir le lien du connecteur" : "Brancher sur Claude"}</button></div>`) : "",
+    SB ? rubrique("historique", "♻️", "Historique et corbeille", "Ce qui a été modifié ou supprimé, et par qui · revenir en arrière", `<p class="note">Chaque modification et suppression (paiements, dépenses, locataires, logements, documents…) est gardée 60 jours : tu vois qui l'a faite et tu peux revenir en arrière en un geste.</p><div class="row"><a class="btn primary" href="#historique">♻️ Ouvrir l'historique</a></div>`) : "",
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", resumeNotif(), sansCarte(sectionNotif())),
     rubrique("install", "📲", "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
