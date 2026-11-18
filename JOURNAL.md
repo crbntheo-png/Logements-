@@ -20,7 +20,6 @@ Règle pour chaque session :
 - [ ] **Google (Théo), dans cet ordre** : 1) https://console.cloud.google.com/auth/branding (nom, e-mail, page d'accueil, https://gestion-locative-sci.pages.dev/confidentialite, domaine autorisé `gestion-locative-sci.pages.dev`) ; 2) https://console.cloud.google.com/auth/audience › Publier ; 3) activer https://console.cloud.google.com/apis/library/gmail.googleapis.com et https://console.cloud.google.com/apis/library/picker.googleapis.com ; 4) dans l'appli : se connecter avec Google, brancher Gmail, Débrancher puis Connecter le Drive, "Choisir mes documents". Ensuite : retirer le code de connexion par e-mail (dernier envoi Brevo) et le crochet `envoyer_code_auth`.
 - [ ] **Gmail (Théo)** : 1) activer l'API Gmail dans le projet Google Cloud (https://console.cloud.google.com/apis/library/gmail.googleapis.com) ; 2) Réglages › Envoi des e-mails › Continuer avec Google ; 3) supprimer l'ancien mot de passe d'application "Gestion SCI" (https://myaccount.google.com/apppasswords). Pour ouvrir l'appli aux inconnus : publier l'appli Google (https://console.cloud.google.com/auth/audience › Publier), sinon seuls les "utilisateurs test" peuvent brancher Gmail ou Drive.
 - [ ] **CAF Margottet – Fravelle** : prévenir la CAF du changement de propriétaire (l'allocation de 612 € part peut-être encore chez M. Loslier) et vérifier le loyer de novembre.
-- [ ] **Jeton Pennylane GTP** : à rebrancher (effacé le 18/11 en reliant la banque) avec un jeton en lecture seule : Réglages › Banque › Brancher Pennylane.
 - [ ] **Prêts GTP** : saisir le ou les prêts (Compta › Emprunts › + Prêt, ou importer le tableau de la banque), puis "Voir et ventiler" les échéances proposées ; vérifier les 8 "ECH PRET INT" d'environ 1 540 €.
 - [ ] **Copie de sauvegarde** : Réglages › Sauvegarde et import › "M'envoyer une copie chaque semaine" (case "maintenant" cochée pour vérifier la réception et rouvrir le .txt).
 - [ ] **Espace locataire** (fait le 18/11) : essayer avec un vrai locataire (fiche › Plus › Son espace locataire).
@@ -57,6 +56,12 @@ Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — Pennylane rebranché (jeton de Théo accepté), comparaison réelle
+- Demande de Théo : accepter son jeton même s'il n'est pas en lecture seule, à condition que l'appli ne fasse rien chez Pennylane. Vérifié dans le code et sur le serveur : l'appli n'appelle Pennylane qu'en lecture (GET sur /me, /bank_accounts, /transactions, rien d'autre) et le jeton reste dans le coffre du serveur. `banque_brancher` n'exige plus la lecture seule (`supabase/pennylane_tout_jeton.sql`) ; l'assistant conseille toujours la lecture seule mais dit que l'appli ne fait que lire.
+- Jeton de Théo (celui du `.env`, valide ; droits : lecture + quelques droits d'écriture que l'appli n'utilise jamais) branché sur GTP INVEST : 200 opérations Pennylane relues.
+- **Comparaison réelle** : soldes identiques (18 897,02 € à la banque et dans Pennylane) ; du 28/07 au 13/11/2026, 67 opérations identiques, **aucun décalage**.
+- test5, test67 OK. En ligne.
 
 ### 18/11/2026 — banque directe ET Pennylane ensemble, comparaison, doublons réparés
 - Théo a relié sa banque (Crédit Mutuel, compte GTP INVEST …0250, accord jusqu'au 17/05/2027, 73 opérations lues). Deux erreurs de ma part : (1) relier la banque effaçait le jeton Pennylane (choix "remplace Pennylane") ; (2) le pointage a recompté 4 virements de novembre déjà pointés via Pennylane (Emma 600, Antoine 500, Sofiane 750 imputés sur décembre, Godefroy 200 en double). Aucune quittance ni relance n'est partie à cause d'eux.
