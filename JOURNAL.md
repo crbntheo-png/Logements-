@@ -74,6 +74,9 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — SCI NIMAR (Max) : analyse IA ratée à cause du défaut "sous-dossiers"
+- Analyse lancée à 20 h 39 (avant la correction) : l'IA a écrit "Le sous-dossier 10_Lots est vide, donc aucun dossier ne peut être relié à un seul logement" → aucun lien dossier ↔ bien, fichiers restés "pas encore rangés", pas de locataires proposés. Il lui reste 1 analyse aujourd'hui (2 par jour). À faire (Max) : mettre l'appli à jour, Docs › relancer l'analyse, valider les liens, puis "Créer depuis son bail" et "Lire et ranger". (Rendre l'analyse ratée : pas fait, demande l'accord de Théo.)
+
 ### 18/11/2026 — Drive en profondeur pour l'IA ; Réglages › Google Drive cohérent ; bilan IA visible (cas de Greg)
 - L'IA ne voyait que les fichiers posés directement dans chaque dossier, et la liste était coupée à 400 dossiers par ordre alphabétique : un "Lot 1" rangé dans "Lot 1 › Bail" paraissait vide → elle demandait de ranger. Maintenant `donneesIA()` envoie aussi `total` (fichiers sous-dossiers compris) et des exemples pris dans les sous-dossiers ; tri : dossiers avec fichiers d'abord, les plus hauts en premier, 500 max ; consigne IA mise à jour (un dossier rangé en profondeur n'est pas vide, relier le plus haut suffit) ; plus de proposition pour un sous-dossier dont un parent est déjà relié au même logement. Serveur `partage` : 2 000 dossiers, 10 en parallèle, 110 s ; Docs prévient si le Drive est trop grand ("lecture incomplète").
 - Réglages › Google Drive disait "Pas connecté" alors que des dossiers étaient partagés (il ne regardait que l'ancienne connexion Google) : affiche "✅ N dossiers partagés · X documents · lecture seule", la liste, "Voir mes documents" ; les fichiers un par un deviennent facultatifs.
