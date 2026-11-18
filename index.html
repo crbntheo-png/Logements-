@@ -180,6 +180,7 @@ details.rgl[open] > summary .chev { transform: rotate(90deg); }
 .rgl-ico { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 20px; flex-shrink: 0; }
 /* Une couleur par rubrique : pastille teintée, pictogramme de la même couleur */
 .rgl-ico[class*="rc-"] { background: color-mix(in srgb, var(--rc) 15%, var(--surface)); color: var(--rc); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 22%, transparent); }
+.rgl-ico .logo-marque { width: 22px; height: 22px; display: block; } .rgl-ico { font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif; line-height: 1; }
 .rc-sci { --rc: #2563eb; } .rc-membres { --rc: #7c3aed; } .rc-drive { --rc: #16a34a; } .rc-banque { --rc: #0d9488; } .rc-gmail { --rc: #dc2626; } .rc-quittances { --rc: #0891b2; }
 .rc-relances { --rc: #ea580c; } .rc-agenda { --rc: #db2777; } .rc-claude { --rc: #c2410c; } .rc-integrations { --rc: #9333ea; } .rc-bientot { --rc: #6d28d9; } .rc-notif { --rc: #d97706; }
 .rc-irl { --rc: #059669; } .rc-rappels { --rc: #ca8a04; } .rc-zone { --rc: #b91c1c; } .rc-install { --rc: #0284c7; } .rc-maj { --rc: #16a34a; } .rc-sauv { --rc: #4f46e5; } .rc-legal { --rc: #475569; } .rc-aide { --rc: #0d9488; }
@@ -760,8 +761,8 @@ const EMO = { "📄": "file", "💶": "euro", "🎉": "sparkles", "✓": "check"
 const EMO_RE = new RegExp("(" + Object.keys(EMO).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")️?", "g");
 function decoNoeud(root) {
   if (!root || root.nodeType !== 1 && root.nodeType !== 11) return;
-  if (root.closest && root.closest(".paper, #pdfstage, textarea")) return;
-  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && n.parentElement.closest(".paper, #pdfstage, textarea, script, style, option") ? NodeFilter.FILTER_REJECT : (EMO_RE.lastIndex = 0, EMO_RE.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
+  if (root.closest && root.closest(".paper, #pdfstage, textarea, .rgl-ico, .rgl-i")) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => n.parentElement && n.parentElement.closest(".paper, #pdfstage, textarea, script, style, option, .rgl-ico, .rgl-i") ? NodeFilter.FILTER_REJECT : (EMO_RE.lastIndex = 0, EMO_RE.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
   const liste = []; while (w.nextNode()) liste.push(w.currentNode);
   liste.forEach(n => {
     const html = esc(n.nodeValue).replace(EMO_RE, m => { const v = EMO[m.replace("️", "")]; if (v === "DOT") return '<i class="dot bad" aria-hidden="true"></i>'; if (!v) return ""; const [nom, cls] = Array.isArray(v) ? v : [v, ""]; return ic(nom, cls); }).replace(/^\s+(?=<svg)/, "");
@@ -4008,13 +4009,16 @@ function reglage(id) {
   setTimeout(() => { const el = document.getElementById("rgl-" + id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 80);
 }
 const sansCarte = h => String(h).replace(/^\s*<section class="card[^"]*">\s*<h2>[\s\S]*?<\/h2>/, "").replace(/<\/section>\s*$/, "");
+/* Vrais logos (Google Drive, Gmail) pour les rubriques branchées sur Google */
+const LOGO_DRIVE = `<svg class="logo-marque" viewBox="0 0 87.3 78" aria-hidden="true"><path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/><path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/><path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/><path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/><path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/><path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/></svg>`;
+const LOGO_GMAIL = `<svg class="logo-marque" viewBox="52 42 88 66" aria-hidden="true"><path fill="#4285f4" d="M58 108h14V74L52 59v43c0 3.32 2.69 6 6 6"/><path fill="#34a853" d="M120 108h14c3.32 0 6-2.69 6-6V59l-20 15"/><path fill="#fbbc04" d="M120 48v26l20-15v-8c0-7.42-8.47-11.65-14.4-7.2"/><path fill="#ea4335" d="M72 74V48l24 18 24-18v26L96 92"/><path fill="#c5221f" d="M52 51v8l20 15V48l-5.6-4.2c-5.94-4.45-14.4-.22-14.4 7.2"/></svg>`;
 function rubrique(id, ico, titre, resume, contenu, cls = "") {
   const ouvert = view.rgl && view.rgl[id];
   return `<details class="card rgl ${cls}" id="rgl-${id}" ${ouvert ? "open" : ""} ontoggle="view.rgl=Object.assign({},view.rgl,{'${id}':this.open})"><summary><span class="rgl-ico rc-${id}" aria-hidden="true">${ico}</span><span class="tx"><b>${titre}</b><small>${resume}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">${contenu}</div></details>`;
 }
 function pageReglages() {
   const s = S.sci, dernierIrl = irlCles().slice(-1)[0], nbRap = S.rappels.filter(r => !r.fait).length;
-  const sci = rubrique("sci", "🏛", estPerso() ? "Tes infos" : "La SCI", `${esc(s.nom || "À remplir")} · adresse, IBAN, associés, Drive`, `  <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
+  const sci = rubrique("sci", "🏛️", estPerso() ? "Tes infos" : "La SCI", `${esc(s.nom || "À remplir")} · adresse, IBAN, associés, Drive`, `  <form class="f" id="fSci" onsubmit="event.preventDefault();saveSci(this)">
     ${sel("Tu loues", "forme", s.forme || "sci", [["sci", "Avec une SCI"], ["perso", "En nom propre (particulier)"]], "full")}
     ${fld("Nom de la SCI (ou ton nom)", "nom", s.nom)}${fld("N° SIREN", "siren", s.siren)}
     ${fld("Adresse du siège (ou ton adresse)", "siege", s.siege, "text", "full")}
@@ -4044,18 +4048,18 @@ function pageReglages() {
     <div class="full row"><button class="primary">Enregistrer</button></div>
   </form>`);
   const compte = SB ? [sci,
-    rubrique("membres", "👤", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
-    estProprio() ? rubrique("drive", "📁", "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · seulement les dossiers choisis` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
-      : rubrique("drive", "📁", "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
+    rubrique("membres", "👥", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
+    estProprio() ? rubrique("drive", LOGO_DRIVE, "Google Drive", DRIVEG.etat === "oui" ? `Connecté${DRIVEG.adresse ? " : " + esc(DRIVEG.adresse) : ""} · seulement les dossiers choisis` : "Pas connecté · l'appli peut ranger tes documents", sectionDriveReglages())
+      : rubrique("drive", LOGO_DRIVE, "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
     rubrique("banque", "🏦", "Banque", [BANQUE.directe ? "Banque en direct" + (BANQUE.directe.erreur ? " ⚠️" : "") : "", BANQUE.pennylane ? "Pennylane" + (BANQUE.pennylane.erreur ? " ⚠️" : "") : ""].filter(Boolean).join(" + ") + (BANQUE.directe && BANQUE.pennylane ? (() => { const c = comparaisonBanques(); return c ? (c.ecarts ? ` · ⚠️ ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""}` : " · ✅ concordent") : ""; })() : "") || "Pas branchée · ta banque, Pennylane ou relevé", sectionBanqueReglages()),
-    rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
+    rubrique("gmail", LOGO_GMAIL, "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
     estProprio() && SB ? rubrique("quittances", "🧾", "Quittances automatiques", S.sci.quittanceAuto ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive", sansCarte(sectionQuittanceAuto())) : "",
     estProprio() && SB ? rubrique("relances", "🔁", "Relances automatiques", S.sci.relanceAuto ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même", sansCarte(sectionRelanceAuto())) : "",
     rubrique("bientot", "🚀", "Prochaines sorties", "Ce qui arrive · dis ce qui t'intéresse", `<p class="note">Assistant IA, banque en direct, signature à distance… Les fonctions qui intéressent le plus de monde sortent en premier.</p><div class="row"><a class="btn primary" href="#bientot">🚀 Voir les prochaines sorties</a></div>`),
     estProprio() && SB ? rubrique("claude", "🤖", "Brancher sur Claude", S.sci.connecteurJeton ? "Branché · demande-lui « qui est en retard ? » ou de ranger avec toi" : "Pose tes questions à Claude avec tes vrais chiffres", `<p class="note">Avec ce branchement, tu demandes à Claude (claude.ai, l'appli Claude) : « Qui est en retard ? », « Quand finit l'assurance de Jean ? », « Combien j'ai encaissé cette année ? ». Il lit tes chiffres, <b>sans rien pouvoir modifier</b>.</p><div class="row"><button class="primary" onclick="brancherClaude()">🤖 ${S.sci.connecteurJeton ? "Voir le lien du connecteur" : "Brancher sur Claude"}</button></div>`) : "",
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
-    rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
+    rubrique("install", "📲", "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
   ].join("") : sci;
   const outils = [
     rubrique("agenda", "📅", "Dans ton agenda", "Toutes les dates des 12 prochains mois", `<p class="note">Loyers attendus, révisions, fins d'assurance, congés, taxe foncière, déclarations : toutes les dates des 12 prochains mois dans le calendrier de ton téléphone (iPhone, Android, Google Agenda, Outlook). ${SB ? "Abonne ton agenda une fois : il se met à jour tout seul." : "À refaire quand tu ajoutes un locataire."}</p><div class="row"><button class="primary" onclick="abonnerAgenda()">📅 ${SB ? (S.sci.agendaJeton ? "Voir le lien de mon agenda" : "Abonner mon agenda") : "Ajouter à mon agenda"}</button>${SB ? `<button class="small ghost" onclick="exportAgenda()">Télécharger un fichier .ics</button>` : ""}</div>`),
@@ -4064,21 +4068,21 @@ function pageReglages() {
     <div class="table-wrap" style="border:0"><table><tbody>${irlCles().slice(-6).reverse().map(k => `<tr><td>${qLabel(k)}</td><td class="num">${fmtIrl(irlVal(k))}</td><td class="sub">publié vers le ${fds(qPub(k))}</td></tr>`).join("")}</tbody></table></div>
     <div class="row" style="margin-bottom:8px"><button class="small primary" onclick="majIrlInsee(true)">🔄 Chercher le dernier indice sur le site de l'INSEE</button></div><p class="note">L'appli le fait aussi toute seule une fois par jour.</p><form class="row" onsubmit="event.preventDefault();ajouterIrl(this)"><input name="t" id="irl_t" aria-label="Trimestre" placeholder="T4 2026" style="max-width:120px" value="${qLabel(irlProchain().k)}"><input name="v" id="irl_v" type="number" inputmode="decimal" step="0.01" aria-label="Valeur de l'indice" placeholder="Valeur" style="max-width:120px" required><button>Ajouter l'indice</button></form>
 `),
-    rubrique("sauv", ic("download"), "Sauvegarde et import", `Copie de sécurité · dernière : ${S.lastExport ? fds(S.lastExport.slice(0, 10)) : "jamais"}`, `
+    rubrique("sauv", "💾", "Sauvegarde et import", `Copie de sécurité · dernière : ${S.lastExport ? fds(S.lastExport.slice(0, 10)) : "jamais"}`, `
     <div class="row" style="margin-bottom:8px"><button onclick="importTableur()">📊 Importer mes logements depuis Excel</button></div>
     ${SB ? `<p class="note">Tes données sont enregistrées en ligne et protégées. Tu peux aussi télécharger une copie de sécurité.</p>` : MODE === "partage" ? `<p class="note"><b>Les données sont enregistrées en ligne.</b> Pour que tes associés voient et modifient la même chose : bouton <b>Partager</b> en haut de cette page, puis invite-les avec leur e-mail en tant qu'<b>Éditeur</b>. Chacun envoie les quittances depuis son propre Gmail.</p>` : `<p class="note">Les données sont enregistrées dans ce navigateur, sur cet appareil. Pour ne rien perdre : télécharge une sauvegarde régulièrement et rouvre-la sur un autre appareil avec "Ouvrir une sauvegarde".</p>`}
     <div class="row"><button class="primary" onclick="exportJSON()">Télécharger une sauvegarde</button><button onclick="document.getElementById('importFile').click()">Ouvrir une sauvegarde</button></div>
     <p class="note">Dernière sauvegarde téléchargée : ${S.lastExport ? fd(S.lastExport.slice(0, 10)) : "jamais"}</p>
     ${sectionCopieHebdo()}
 `),
-    rubrique("maj", ic("refresh"), "Mettre à jour l'appli", MAJ.etat === "prete" || MAJ.etat === "dispo" ? "🆕 Nouvelle version disponible" : "Version " + versionTxt(window.APP_VERSION), sectionMaj()),
+    rubrique("maj", "🔄", "Mettre à jour l'appli", MAJ.etat === "prete" || MAJ.etat === "dispo" ? "🆕 Nouvelle version disponible" : "Version " + versionTxt(window.APP_VERSION), sectionMaj()),
     rubrique("rappels", "⏰", "Rappels", nbRap ? `${nbRap} à venir` : "Aucun rappel", `
     ${S.rappels.length ? `<div class="table-wrap" style="border:0"><table><tbody>${S.rappels.map(r => `<tr><td>${fds(r.date)}</td><td>${esc(r.titre)}</td><td>${r.fait ? `<span class="pill ok">Fait</span>` : `<span class="pill info">À faire</span>`}</td><td><button class="small ghost" onclick="supprRappel('${r.id}')">Supprimer</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note">Aucun rappel.</p>`}
     <div class="row"><button onclick="editRappel()">+ Rappel</button></div>
 `)
   ].join("");
   return `<div class="head"><div><h1>Réglages</h1><p>Touche une rubrique pour l'ouvrir.</p></div></div>
-  <div class="rgl-aide ${SB ? "" : "seul"}"><a class="rgl-t" href="#aide"><span class="rgl-i i-aide" aria-hidden="true">❓</span><b>Aide</b><small>Comment ça marche</small></a>${SB ? `<button type="button" class="rgl-t" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span class="rgl-i i-bug" aria-hidden="true">🐞</span><b>Un souci</b><small>Ça ne marche pas</small></button><button type="button" class="rgl-t" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span class="rgl-i i-idee" aria-hidden="true">💡</span><b>Une idée</b><small>Améliorer l'appli</small></button>` : ""}</div>
+  <div class="rgl-aide ${SB ? "" : "seul"}"><a class="rgl-t" href="#aide"><span class="rgl-i i-aide" aria-hidden="true">💬</span><b>Aide</b><small>Comment ça marche</small></a>${SB ? `<button type="button" class="rgl-t" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span class="rgl-i i-bug" aria-hidden="true">🐞</span><b>Un souci</b><small>Ça ne marche pas</small></button><button type="button" class="rgl-t" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span class="rgl-i i-idee" aria-hidden="true">💡</span><b>Une idée</b><small>Améliorer l'appli</small></button>` : ""}</div>
   <p class="group-title">Ton compte</p>${compte}
   <p class="group-title">Outils</p>${outils}
   ${rubrique("zone", "⚠️", "Zone sensible", "Tout effacer, supprimer le compte", `<div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button>${SB ? `<button class="danger ghost" onclick="supprimerCompte()">Supprimer mon compte</button>` : ""}</div>`, "rgl-danger")}
