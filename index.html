@@ -527,6 +527,7 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .tous-l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .9rem; } .tous-l small { color: var(--muted); font-weight: 500; }
 .tous-ret, .tous-urg { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .88rem; } .tous-ret li { display: flex; align-items: center; gap: 8px; } .tous-ret li b { margin-left: auto; color: var(--bad); font-variant-numeric: tabular-nums; } .tous-ok { margin: 0; color: var(--ok); font-weight: 650; font-size: .9rem; }
 .bientot { display: grid; gap: 10px; } .bientot-c { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; } .bientot-c .tx { flex: 1; min-width: 200px; display: grid; gap: 2px; } .bientot-c .tx p { margin: 0; } .bientot-c .tx small { color: var(--muted); font-weight: 600; } .bientot-ico { font-size: 1.6rem; line-height: 1; } .bientot-c.choisi { outline: 2px solid var(--accent); }
+.bq-choix { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; } #overlay .bq-l, .bq-l { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; text-align: left; min-height: 0; height: auto; } #overlay .bq-l input, .bq-l input { width: 18px; height: 18px; min-height: 0; flex: 0 0 auto; margin: 0; padding: 0; } .bq-l span { flex: 1; min-width: 0; } .bq-l img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; } .bq-l:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
@@ -812,6 +813,7 @@ function remoteChanged0() {
 }
 document.addEventListener("focusout", () => setTimeout(() => { const a = document.activeElement; if (pendingRender && document.getElementById("overlay").hidden && document.getElementById("focus").hidden && !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName))) { pendingRender = false; render(); } }, 250));
 async function boot() {
+  try { const q = new URLSearchParams(location.search); if (/^eb-/.test(q.get("state") || "")) { sessionStorage.setItem("retour-banque", JSON.stringify({ code: q.get("code") || "", state: q.get("state"), erreur: q.get("error_description") || q.get("error") || "" })); history.replaceState(null, "", location.pathname + location.hash); } } catch (e) {}
   if (/^#locataire=/.test(location.hash) && window.APP_SUPABASE) return demarrerLocataire();
   if (window.APP_SUPABASE && window.supabase) return bootSupabase();
   let db = null;
@@ -918,7 +920,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
-  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000); CONNECTEUR_PUBLIE = ""; setTimeout(publierConnecteur, 7000);
+  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; setTimeout(retourBanque, 800); chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000); CONNECTEUR_PUBLIE = ""; setTimeout(publierConnecteur, 7000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
 /* ================= Banque (via Pennylane, lue par le serveur) ================= */
@@ -930,6 +932,7 @@ async function chargerBanque(actualiser) {
     const [l, c, o] = await Promise.all([SB.from("banque_liens").select("*").eq("espace_id", id).maybeSingle(), SB.from("banque_comptes").select("*").eq("espace_id", id), SB.from("banque").select("tx_id, date, montant, libelle").eq("espace_id", id).order("date", { ascending: false }).limit(400)]);
     if (ESPACE !== id) return;
     BANQUE = { etat: "ok", lien: l.data || null, comptes: c.data || [], ops: (o.data || []).map(x => ({ ...x, montant: +x.montant, tx_id: String(x.tx_id) })) };
+    if (BANQUE.lien && BANQUE.lien.source === "enablebanking") { SB.from("banque_directe").select("banque, valide_jusqua").eq("espace_id", id).maybeSingle().then(r => { BANQUE.directe = r.data; }, () => {}); if (actualiser && !BANQUE.relue && (!BANQUE.lien.derniere_synchro || Date.now() - new Date(BANQUE.lien.derniere_synchro) > 6 * 3600e3)) { BANQUE.relue = true; fnBanque({ action: "actualiser", espace: id }).then(j => { if (j.n) chargerBanque(false); }, () => {}); } }
     const n = rapprocherBanque(); if (n) toast(`🏦 ${n} virement${n > 1 ? "s" : ""} de locataire reconnu${n > 1 ? "s" : ""} et enregistré${n > 1 ? "s" : ""}`);
     if (RECUS.length) setTimeout(() => apresLoyersRecus(), n ? 2500 : 0);
   } catch (e) { BANQUE.etat = "erreur"; }
@@ -1122,10 +1125,12 @@ async function brancherPennylane(jeton) {
 function sectionBanqueReglages() {
   if (!SB) return `<p class="note">La banque se branche dans l'appli installée.</p>`;
   if (!estProprio()) return `<p class="note">La banque de l'espace est branchée et gérée par le propriétaire (<b>${esc(nomProprio())}</b>).</p>`;
+  if (BANQUE.lien && BANQUE.lien.source === "enablebanking") return `<p class="note">✅ Ta banque est reliée en direct${BANQUE.comptes.length ? " : " + BANQUE.comptes.map(c => esc(c.nom)).join(", ") : ""}. Lecture toutes les 6 heures (les banques limitent à 4 lectures par jour)${BANQUE.lien.derniere_synchro ? " · dernière " + ilYa(BANQUE.lien.derniere_synchro) : ""}.${BANQUE.directe && BANQUE.directe.valide_jusqua ? `<br>Accord de ta banque valable jusqu'au <b>${fds(new Date(BANQUE.directe.valide_jusqua))}</b> : l'appli te préviendra pour le renouveler.` : ""}${BANQUE.lien.erreur ? `<br>⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p>
+    <div class="row">${BANQUE.lien.erreur ? `<button class="small primary" onclick="relierBanque()">Reconnecter ma banque</button>` : `<button class="small" onclick="actualiserDirecte(this)">↻ Relire maintenant</button>`}<button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="debrancherDirecte()">Débrancher</button></div>`;
   if (BANQUE.lien) return `<p class="note">✅ Branchée sur Pennylane${BANQUE.comptes.length ? " : " + BANQUE.comptes.map(c => esc(c.nom)).join(", ") : ""}. Lecture toutes les heures.${BANQUE.lien.erreur ? `<br>⚠️ ${esc(BANQUE.lien.erreur)}` : ""}</p>
-    <div class="row">${BANQUE.lien.erreur ? `<button class="small primary" onclick="assistantPennylane()">Rebrancher avec un nouveau jeton</button>` : ""}<button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div>`;
+    <div class="row">${BANQUE.lien.erreur ? `<button class="small primary" onclick="assistantPennylane()">Rebrancher avec un nouveau jeton</button>` : ""}<button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="debrancherBanque()">Débrancher</button></div><p class="note small">Tu préfères lire ta banque en direct, sans Pennylane ? <a href="#" onclick="event.preventDefault();relierBanque()">Relier ma banque directement</a> (remplace Pennylane pour la banque).</p>`;
   return `<p class="note">Les loyers reçus se cochent tout seuls et la compta se remplit. Avec Pennylane, c'est automatique ; sinon, tu peux importer le relevé de ta banque une fois par mois.</p>
-    <div class="row"><button class="small primary" onclick="assistantPennylane()">Brancher Pennylane</button><button class="small" onclick="importerReleve()">🏦 Importer un relevé</button></div>`;
+    <div class="row"><button class="small primary" onclick="relierBanque()">🏦 Relier ma banque</button><button class="small" onclick="assistantPennylane()">Brancher Pennylane</button><button class="small ghost" onclick="importerReleve()">Importer un relevé</button></div>`;
 }
 async function brancherBanque(f) {
   const bt = document.getElementById("bq_btn"); bt.disabled = true; bt.textContent = "Connexion…";
@@ -1776,6 +1781,10 @@ function taches() {
   const add = (o) => T.push(o);
   const ech = toutesEcheances();
   { const T = !LECTURE && S.baux.length ? tresorerie() : null; if (T && T.sous) add({ key: "treso-" + T.sous.m, prio: "soon", date: TODAY, t: `Trésorerie : ton compte pourrait passer sous ${eur(T.seuil)} en ${fm(T.sous.m)}`, d: `Solde prévu ${eur(T.sous.solde)} (loyers attendus, prêts, taxe foncière, dépenses courantes). À anticiper.`, acts: [["Voir", "location.hash='compta'"]] }); }
+  if (SB && BANQUE.lien && BANQUE.lien.source === "enablebanking" && estProprio()) {
+    const fin = BANQUE.directe && BANQUE.directe.valide_jusqua ? new Date(BANQUE.directe.valide_jusqua) : null, j = fin ? Math.ceil((fin - TODAY) / 864e5) : 99;
+    if (BANQUE.lien.erreur || j <= 15) add({ key: "bq-renouv-" + (fin ? iso(fin) : "err"), prio: BANQUE.lien.erreur || j <= 3 ? "urgent" : "soon", date: TODAY, t: BANQUE.lien.erreur ? "🏦 Ta banque ne répond plus : reconnecte-la" : `🏦 Renouvelle l'accès à ta banque (fin ${j > 0 ? "dans " + j + " jour" + (j > 1 ? "s" : "") : "aujourd'hui"})`, d: BANQUE.lien.erreur ? esc(BANQUE.lien.erreur) : "Les banques demandent ton accord tous les 6 mois. 1 minute : tu te reconnectes sur le site de ta banque.", acts: [["Reconnecter", "relierBanque()", "primary"]] });
+  }
   (DEMANDES || []).forEach(d => { const b = bail(d.bail_id);
     add({ bailId: d.bail_id, key: "dem-" + d.id, prio: "urgent", date: new Date(d.cree_le), t: `🔧 ${esc(nomCourt(d.nom || (b && b.nom) || "Un locataire"))} signale un problème`, d: `"${esc(String(d.texte).slice(0, 140))}"${d.photo ? " · 📷 photo" : ""} · ${ilYa(d.cree_le)}`, acts: [["Voir", `voirDemande(${d.id})`, "primary"]] }); });
   // 1. Impayés
@@ -3532,6 +3541,45 @@ async function brancherClaude() {
     <div class="full"><button type="button" class="small danger" id="mcp_off">Désactiver ce lien</button></div>`, () => true, { ok: "Fermer", lecture: true,
     after: () => { document.getElementById("mcp_off").onclick = () => confirmer("Désactiver le connecteur ? Claude ne pourra plus lire tes chiffres (tu pourras en recréer un).", async () => { await SB.from("connecteurs").delete().eq("espace_id", ESPACE); delete S.sci.connecteurJeton; save(); render(); toast("✓ Connecteur désactivé"); }); } });
 }
+/* ================= Banque en direct (Enable Banking, lecture seule) ================= */
+async function fnBanque(corps) {
+  const s0 = (await SB.auth.getSession()).data.session;
+  const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/banque-directe", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s0 && s0.access_token) }, body: JSON.stringify(corps) });
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) throw new Error(j.erreur || "Erreur " + r.status); return j;
+}
+let BANQUES = null;
+async function relierBanque() {
+  if (!SB || !estProprio()) { toast(msgProprio("relier la banque")); return; }
+  modal("🏦 Relier ma banque", `<div class="full">${grosMsg("attention", "Lecture seule, par la voie officielle", "Tu te connectes sur le site de ta banque (l'appli ne voit jamais tes codes). L'appli lit seulement les soldes et les opérations : elle ne peut faire aucun virement. Accord valable 6 mois, renouvelable.")}</div>
+    <label class="fl full">Ta banque<input id="bq_q" type="search" placeholder="Crédit Mutuel, BNP, Boursorama…" autocomplete="off"></label><div class="full" id="bq_liste"><p class="note">Chargement des banques…</p></div>
+    ${sel("Type de compte", "type", estPerso() ? "personal" : "business", [["business", "Compte professionnel (SCI, société)"], ["personal", "Compte personnel"]])}
+    <p class="full note small">Gratuit, avec Enable Banking (prestataire agréé). ${BANQUE.lien && BANQUE.lien.source !== "enablebanking" ? "⚠️ Ça remplace Pennylane pour la banque de cet espace." : ""}</p>`,
+    (d, f) => { const b = f.querySelector("input[name=bq]:checked"); if (!b) { toast("Choisis ta banque."); return false; } setTimeout(() => partirVersBanque(b.value, d.type), 50); return true; }, { ok: "Continuer vers ma banque", lecture: true,
+    after: async () => {
+      try { if (!BANQUES) BANQUES = (await fnBanque({ action: "banques" })).banques; } catch (e) { document.getElementById("bq_liste").innerHTML = `<p class="note">⚠️ ${esc(e.message)}</p>`; return; }
+      const liste = () => { const q = normTxt(document.getElementById("bq_q").value); const L = BANQUES.filter(b => !q || normTxt(b.nom).includes(q)).slice(0, q ? 30 : 12);
+        document.getElementById("bq_liste").innerHTML = L.length ? `<div class="bq-choix">${L.map((b, i) => `<label class="bq-l"><input type="radio" name="bq" value="${esc(b.nom)}"${L.length === 1 ? " checked" : ""}> ${b.logo ? `<img src="${esc(b.logo)}" alt="" loading="lazy" onerror="this.remove()">` : ""} <span>${esc(b.nom)}</span></label>`).join("")}</div>${!q ? `<p class="note small">${BANQUES.length} banques : tape le nom de la tienne.</p>` : ""}` : `<p class="note">Aucune banque trouvée.</p>`; };
+      document.getElementById("bq_q").addEventListener("input", liste); liste();
+    } });
+}
+async function partirVersBanque(nom, type) {
+  toast("Ouverture de ta banque…");
+  try { const j = await fnBanque({ action: "connecter", espace: ESPACE, banque: nom, type }); location.href = j.url; } catch (e) { toast(e.message); }
+}
+async function retourBanque() {
+  let r = null; try { r = JSON.parse(sessionStorage.getItem("retour-banque") || "null"); sessionStorage.removeItem("retour-banque"); } catch (e) {}
+  if (!r) return;
+  if (r.erreur || !r.code) { modal("🏦 Banque pas reliée", `<div class="full">${grosMsg("stop", "La banque n'a pas donné l'accord", esc(r.erreur || "Connexion annulée.") + " Tu peux recommencer : Réglages › Banque › Relier ma banque.")}</div>`, () => true, { ok: "Fermer", lecture: true }); return; }
+  toast("🏦 Lecture de ta banque…");
+  try {
+    const j = await fnBanque({ action: "valider", code: r.code, state: r.state });
+    if (j.espace && j.espace !== ESPACE) await ouvrirEspace(j.espace);
+    await chargerBanque(false);
+    modal("🏦 Banque reliée", `<div class="full">${grosMsg("ok", "✅ Ta banque est reliée", `${j.comptes} compte${j.comptes > 1 ? "s" : ""} · ${j.operations} opérations lues. Les loyers reçus se cochent tout seuls, la trésorerie part de ton vrai solde.${j.erreur ? " ⚠️ " + esc(j.erreur) : ""}`)}</div>`, () => true, { ok: "Super", lecture: true });
+  } catch (e) { modal("🏦 Banque pas reliée", `<div class="full">${grosMsg("stop", "Ça n'a pas marché", esc(e.message))}</div>`, () => true, { ok: "Fermer", lecture: true }); }
+}
+async function actualiserDirecte(bt) { if (bt) { bt.disabled = true; bt.textContent = "Lecture…"; } try { const j = await fnBanque({ action: "actualiser", espace: ESPACE, force: true }); toast(j.erreur ? "⚠️ " + j.erreur : `✓ ${j.n} opérations relues`); } catch (e) { toast(e.message); } await chargerBanque(false); render(); }
+function debrancherDirecte() { confirmer("Débrancher ta banque ? L'accès est retiré chez la banque et les opérations affichées sont effacées de l'appli (les loyers déjà enregistrés restent).", async () => { try { await fnBanque({ action: "debrancher", espace: ESPACE }); } catch (e) { toast(e.message); return; } BANQUE = { etat: "ok", ops: [], comptes: [], lien: null }; render(); toast("✓ Banque débranchée"); }); }
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
