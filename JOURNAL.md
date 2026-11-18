@@ -74,6 +74,11 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — vidéo Google retirée par YouTube ; Gmail : erreur de branchement expliquée
+- YouTube a retiré 2 vidéos de démo (17/11 et 18/11) pour "informations personnelles" (e-mails, adresses). Plan : compte Gmail dédié à la démo, espace "SCI Démo" avec données inventées, e-mail flouté dans YouTube Studio, vidéo "Non répertoriée". Brouillon de réponse à Google prêt dans Gmail, À NE PAS ENVOYER avant d'y mettre le nouveau lien.
+- Page de confidentialité : drive.file (sélecteur Google) et lecture IA des fichiers choisis précisées pour Google.
+- Branchement Gmail du compte de démo : rien enregistré (connexion à l'appli OK). Cause probable : case "Envoyer des e-mails" non cochée sur l'écran Google. L'erreur s'affichait dans un message de 3 s ; maintenant une fenêtre explique quoi faire avec "Réessayer" (le droit reçu est aussi vérifié avant d'appeler le serveur). En ligne.
+
 ### 18/11/2026 — logements remplis tout seuls, parcours d'un nouveau venu expliqué
 - Nouveau logement : l'essentiel d'abord (adresse, nom, type, meublé, surface, pièces), le reste replié dans "➕ Plus d'infos". Adresse touchée dans la liste → l'appli cherche les DPE à cette adresse (base ADEME) et propose "touche le tien" : surface, classe, numéro, validité remplis en jaune. Nom proposé tout seul ("Appart Agon-Coutainville", numéroté si déjà pris).
 - "📄 Remplir avec un document" (propriétaire, appli en ligne) : l'IA lit un DPE, bail, taxe foncière ou acte et remplit adresse, surface, pièces, DPE ; le document est rangé dans le logement à l'enregistrement. Fonction `ia` : le schéma "doc" renvoie aussi `surface` et `pieces` (déployée, version 12).

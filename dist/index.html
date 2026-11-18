@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "c1fc8f7", "date": "2026-11-18T21:00"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "b0f79fe", "date": "2026-11-18T21:24"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1725,15 +1725,26 @@ async function connecterGmail() {
   } catch (e) { fin(); toast(e.message || "Google n'a pas pu s'ouvrir."); return; }
   const cl = google.accounts.oauth2.initCodeClient({ client_id: GMCFG.client_id, scope: GMCFG.scope, ux_mode: "popup", select_account: true, include_granted_scopes: false, prompt: "consent",
     callback: async r => {
-      if (!r || !r.code) { fin(); toast("Connexion annulée."); return; }
+      if (!r || !r.code) { fin(); if (r && r.error) erreurGmail("Google a arrêté la connexion (" + r.error + ")."); else toast("Connexion annulée."); return; }
+      if (r.scope && !/gmail\.send/.test(r.scope)) { fin(); erreurGmail("", true); return; }
       toast("Branchement de ton Gmail…");
       const j = await appelGmail({ action: "brancher_google", code: r.code });
       fin();
-      if (!j.ok) { toast(j.erreur); return; }
+      if (!j.ok) { erreurGmail(j.erreur, /cocher/.test(j.erreur || "")); return; }
       GMAIL = { adresse: (j.adresse || "").toLowerCase(), mode: "google" }; render(); toast("✅ Gmail branché : tes e-mails partent maintenant de " + GMAIL.adresse);
     },
     error_callback: e => { fin(); toast(e && e.type === "popup_closed" ? "Connexion annulée." : "Google n'a pas pu s'ouvrir. Autorise les fenêtres pour ce site, puis réessaie."); } });
   cl.requestCode();
+}
+/* Le branchement de Gmail n'a pas marché : on le dit clairement, avec le geste qui règle le problème */
+function erreurGmail(msg, caseNonCochee) {
+  modal("✉️ Gmail n'est pas branché", `<div class="full">${caseNonCochee ? grosMsg("stop", "La case \"Envoyer des e-mails\" n'était pas cochée", "Sans elle, l'appli ne peut pas envoyer tes quittances depuis ton Gmail.")
+      : grosMsg("stop", "Le branchement n'a pas marché", esc(msg || "Google n'a pas répondu."))}</div>
+    <ol class="tuto full"><li>Touche <b>Réessayer</b> ci-dessous et choisis ton compte Google.</li>
+      <li>Si Google affiche "Google n'a pas validé cette application" : touche <b>Paramètres avancés</b>, puis <b>Accéder à l'appli</b>.</li>
+      <li>Sur l'écran des autorisations, <b>coche la case "Envoyer des e-mails en votre nom"</b> (ou "Tout sélectionner"), puis <b>Continuer</b>.</li></ol>
+    <p class="note full">L'appli peut seulement envoyer les e-mails que tu valides : elle ne peut ni lire ni supprimer tes e-mails.</p>`,
+    () => { setTimeout(connecterGmail, 50); return true; }, { ok: "Réessayer", lecture: true });
 }
 function debrancherGmail() { confirmer("Débrancher ton Gmail ? L'appli ne pourra plus envoyer d'e-mails à ta place (tu pourras toujours partager les PDF).", async () => { await appelGmail({ action: "debrancher" }); await SB.rpc("gmail_debrancher"); GMAIL = null; render(); }); }
 /* Proposer l'installation sur l'écran d'accueil */
