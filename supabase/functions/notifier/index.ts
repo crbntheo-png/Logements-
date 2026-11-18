@@ -82,7 +82,7 @@ let A_BLANC = false; // tournée « à blanc » (essai technique) : tout est cal
 // ---- Préférences de chacun : par type d'alerte, sur le téléphone (push) et/ou par e-mail (mail) ----
 const TYPES_NOTIF: Record<string, { push: boolean; mail: boolean }> = {
   loyer_recu: { push: true, mail: false }, retard: { push: true, mail: false }, relance_auto: { push: true, mail: false }, demande: { push: true, mail: true },
-  candidature: { push: true, mail: true }, boite: { push: true, mail: false }, resume: { push: true, mail: false }, banque: { push: true, mail: true }, echeances: { push: true, mail: false },
+  candidature: { push: true, mail: true }, signature: { push: true, mail: true }, boite: { push: true, mail: false }, resume: { push: true, mail: false }, banque: { push: true, mail: true }, echeances: { push: true, mail: false },
 };
 function veutDe(p: any, type: string, canal: "push" | "mail") {
   if (canal === "push" && p && p.push === false) return false; // interrupteur général du téléphone
@@ -153,6 +153,13 @@ Deno.serve(async (req) => {
     if (!d) return rep({ ok: true, rien: true });
     const titre = `🔧 ${d.nom || "Un locataire"} signale un problème`, texte = String(d.texte || "").replace(/\s+/g, " ").slice(0, 140);
     await alerter(admin, d.espace_id, "demande", { titre, texte, url: "./#afaire", tag: "dem-" + d.id }, { titre, texte: `${d.nom || "Un locataire"} a signalé un problème depuis son espace locataire :\n\n${d.texte}\n\n${d.photo ? "Une photo est jointe à la demande : ouvre l'appli pour la voir.\n\n" : ""}Ouvre l'appli : ${APP}/#afaire` });
+    return rep({ ok: true });
+  }
+  if (corps.signature && !seulUser) {
+    const { data: d } = await admin.from("signatures_distance").select("id, espace_id, titre, signature").eq("id", corps.signature).maybeSingle();
+    if (!d) return rep({ ok: true, rien: true });
+    const nom = (d.signature && d.signature.nom) || "Ton locataire", titre = `✍️ ${nom} a signé`, texte = `« ${d.titre} » : ouvre l'appli pour ranger le PDF signé.`;
+    await alerter(admin, d.espace_id, "signature", { titre, texte, url: "./#afaire", tag: "sig-" + d.id }, { titre, texte: `${nom} a signé « ${d.titre} » depuis son espace locataire.\n\nOuvre l'appli pour ranger le PDF signé : ${APP}/#afaire` });
     return rep({ ok: true });
   }
   if (corps.candidature && !seulUser) {

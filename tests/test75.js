@@ -34,7 +34,7 @@ const OUT = __dirname + '/shots73';
   let ct = await C.locator('#app').innerText();
   t(/T2 2 pièces 42 m²/.test(ct) && /650,00\s€/.test(ct) && /Lumineux/.test(ct) && /DPE C/.test(ct), 'candidat : annonce (titre, loyer charges comprises, texte, DPE)');
   t(!/Secrète/.test(ct) && !(await C.isVisible('#bottomnav a')), 'candidat : pas d\'adresse exacte, pas de menu de l\'appli');
-  t(/n'a pas le droit de te demander/.test(ct), 'candidat : pièces interdites rappelées');
+  t(/n'a pas le droit de vous demander/.test(ct), 'candidat : pièces interdites rappelées');
   await C.fill('#cand_nom', 'Alice Martin'); await C.fill('#cand_email', 'alice@exemple.fr'); await C.fill('#cand_revenus', '2400');
   await C.setInputFiles('input[name=p_identite]', __dirname + '/shots53/qauto.png'); await C.setInputFiles('input[name=p_salaires]', OUT + '/bulletins.pdf');
   await C.check('#cand_accord'); await C.screenshot({ path: OUT + '/candidat.png', fullPage: true });

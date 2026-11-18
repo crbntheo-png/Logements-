@@ -74,6 +74,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — signature à distance, gratuite (idée n°1 de la liste "branchements et praticité")
+- Dans le panneau "✍️ Signer" de tout document à signer (bail, avenant, état des lieux) : "📲 Lui faire signer à distance". Le document (avec la signature du bailleur s'il a signé) part dans l'espace locataire (créé tout seul s'il n'existe pas), rubrique "✍️ À signer" ; message prêt à envoyer (WhatsApp, SMS, e-mail).
+- Le locataire lit le document, signe avec le doigt, coche "lu et approuvé". Preuve gardée : empreinte SHA-256 du document, date, heure, IP, appareil (table `signatures_distance`, supabase/signature_distance.sql ; fonction `locataire` action "signer"). Un membre ne peut changer que le statut (droits par colonne) ; pas de double signature ; rien de lisible sans lien.
+- Propriétaire : notification "✍️ X a signé", À faire urgent "✍️ Jean a signé « Avenant n° 1 »" → le PDF s'ouvre avec les deux signatures ("Signé à distance (espace locataire) par … · réf. empreinte") → "Ranger le PDF signé". En attente depuis 3 jours : rappel ; "Retirer" possible.
+- Écrans locataire et candidat passés au vouvoiement (comme l'espace locataire).
+- Testé : test76 16/16 (vrai serveur, deux navigateurs), test75 19/19, test56 22/22, test5, test53. En ligne.
+- Idées suivantes (même liste) : 2) l'IA lit le décompte du syndic → régularisation des charges ; 3) DossierFacile accepté dans les candidatures ; 4) avis d'échéance automatique ; 5) l'IA prépare les réponses aux locataires.
+
 ### 18/11/2026 — candidatures en ligne ; Docs épurée ; Compta sans chevauchement
 - Candidatures (Vague 4, étape 21) : fiche logement › Relouer › "🔗 Recevoir les dossiers en ligne" → lien public `#candidature=JETON` (tables `annonces_publiques`, `candidatures` : supabase/candidature.sql ; fonction `candidature`, verify_jwt=false). Le candidat voit l'annonce (sans l'adresse exacte), dépose nom, contact, situation, revenus, garantie, message et pièces (autorisées par la loi, 5 Mo chacune, photos réduites), accord obligatoire. Notification "🙋 Nouvelle candidature" (type `candidature` dans notifier). Propriétaire : À faire "🙋 Candidature de X · logement · taux d'effort", dossier (pièces en liens temporaires, ce qui manque), "➕ Garder" (ajouté aux candidats du logement, avec ses pièces) ou "Pas retenu" (pièces effacées). L'annonce se met à jour toute seule ; lien désactivable.
 - Docs (captures de Théo) : vue d'ensemble = recherche + tuiles "Par logement" (+ "Pas encore rangés", "Tout le Drive") + 5 derniers ajoutés ; la liste complète n'apparaît que sur demande ou en cherchant. Drive avant la boîte à documents ; "un par un", ".zip" et "ailleurs" rangés dans "Plus" ; adresse de la boîte sur une ligne, explication repliée ; carte "Ton Drive est à jour" retirée ; bilan de l'IA replié sur une ligne. Page : plus de 10 écrans → 2.

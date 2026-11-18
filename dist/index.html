@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "fc8b3c9", "date": "2026-11-18T18:08"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "5b2d2df", "date": "2026-11-18T18:38"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -172,6 +172,8 @@ button.small .ic { width: 16px; height: 16px; }
 #app .doc-tuile b { font-size: .95rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; } #app .doc-tuile small { color: var(--muted); } #app .doc-tuile .t-ico { font-size: 1.3rem; }
 #app .doc-tuile.a-ranger { box-shadow: inset 0 0 0 1.5px var(--warn); }
 #app .ia-ligne { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; justify-content: flex-start; border: 0; font: inherit; color: var(--ink); cursor: pointer; } #app .ia-ligne .tx { flex: 1; display: grid; } #app .ia-ligne small { color: var(--muted); font-weight: 400; }
+.sig-distance { border: 1px dashed var(--line); border-radius: 12px; padding: 12px; margin: 10px 0; display: grid; gap: 6px; } .sig-distance p { margin: 0; }
+.loc-signer { display: flex; justify-content: center; padding: 16px; } .loc-asigner { box-shadow: inset 0 0 0 2px var(--accent), var(--sh-2); }
 .cand-piece span { display: block; font-weight: 400; } .cand-piece small { color: var(--muted); }
 .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.info { background: var(--surface-3); color: var(--muted); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
@@ -1031,7 +1033,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   chargerBanque(true);
-  CANDS = []; ANNONCE_PUBLIEE = {}; setTimeout(chargerCandidatures, 400); setTimeout(publierAnnonces, 5500);
+  CANDS = []; ANNONCE_PUBLIEE = {}; setTimeout(chargerCandidatures, 400); SIGD = []; setTimeout(chargerSignaturesDistance, 600); setTimeout(publierAnnonces, 5500);
   DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; setTimeout(retourBanque, 800); chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000); CONNECTEUR_PUBLIE = ""; setTimeout(publierConnecteur, 7000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
@@ -2067,6 +2069,10 @@ function taches() {
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
       acts: [[`Garder ${mA}`, `garderPaiement('${x.cle}','A')`, "primary"], [`Garder ${mB}`, `garderPaiement('${x.cle}','B')`], ["Ce sont 2 paiements", `pasUnDoublon('${x.cle}')`]] }); });
+  (SIGD || []).forEach(x => { const b = bail(x.bail_id) || {};
+    if (x.statut === "signe") add({ bailId: x.bail_id, key: "sigd-" + x.id, prio: "urgent", date: new Date(x.signe_le), t: `✍️ ${esc(nomCourt(b.nom || x.nom_locataire || "Le locataire"))} a signé « ${esc(x.titre)} »`, d: `À distance, ${ilYa(x.signe_le)}. Range le PDF signé dans le logement.`, acts: [["Voir et ranger le PDF", `ouvrirSigneDistance('${x.id}')`, "primary"]] });
+    else if (x.statut === "attente") { const j = daysBetween(new Date(x.cree_le), TODAY); add({ bailId: x.bail_id, key: "sigd-att-" + x.id + "-" + (j >= 3 ? "r" : ""), prio: j >= 3 ? "soon" : "info", date: new Date(x.cree_le), t: `⏳ « ${esc(x.titre)} » attend la signature de ${esc(nomCourt(b.nom || ""))}`, d: j >= 3 ? `Envoyé il y a ${j} jours : un petit rappel ?` : "Dans son espace locataire.", acts: [["📲 Lui rappeler", `rappelSignature('${x.id}')`], ["Retirer", `annulerSignatureDistance('${x.id}')`]] }); }
+  });
   (CANDS || []).filter(c => c.statut === "nouvelle").forEach(c => { const bi = bien(c.bien_id) || {}, te = tauxEffort(bi, c.revenus);
     add({ key: "cand-" + c.id, prio: "soon", date: new Date(c.cree_le), t: `🙋 Candidature de ${esc(c.nom)} · ${esc(bi.nom || "")}`, d: `${te !== null ? `Taux d'effort ${Math.round(te * 100)} %` : "Revenus non indiqués"} · ${(c.pieces || []).length} pièce${(c.pieces || []).length > 1 ? "s" : ""} · ${ilYa(c.cree_le)}`, acts: [["Voir le dossier", `voirCandidature(${c.id})`, "primary"]] }); });
   travauxOuverts().forEach(({ bi, t }) => { const dt = t.date ? P(t.date) : null, passe = dt && dt < TODAY && t.statut !== "devis", vieux = t.statut === "devis" && t.cree && daysBetween(P(t.cree), TODAY) > 14;
@@ -4833,7 +4839,7 @@ function appliquerSignatures() {
     const k = bloc.children[+i]; if (!k) return;
     k.querySelectorAll(".small").forEach(x => { if (/^signature/i.test(x.textContent.trim())) x.remove(); });
     const d = new Date(g.quand);
-    k.insertAdjacentHTML("beforeend", `<span class="small sig-l">${g.lu ? "Lu et approuvé. " : ""}Signé sur écran par ${esc(g.nom)} le ${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span><img class="sig-img" alt="Signature de ${esc(g.nom)}" src="${g.img}" data-w="${g.w}" data-h="${g.h}">`);
+    k.insertAdjacentHTML("beforeend", `<span class="small sig-l">${g.lu ? "Lu et approuvé. " : ""}${g.distance ? "Signé à distance (espace locataire)" : "Signé sur écran"} par ${esc(g.nom)} le ${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}${g.ref ? ` · réf. ${esc(g.ref)}` : ""}</span><img class="sig-img" alt="Signature de ${esc(g.nom)}" src="${g.img}" data-w="${g.w}" data-h="${g.h}">`);
   });
   CURDOC.html = t.innerHTML;
   const p = document.getElementById("paper"); if (p) p.innerHTML = CURDOC.html;
@@ -4851,12 +4857,15 @@ const bienDuDoc = () => { const b = bail(CURDOC && CURDOC.o.bailId); return b ? 
 function panneauSignature(msg) {
   if (!CURDOC) return;
   const L = signataires(), n = Object.keys(CURDOC.sigs).length, peutRanger = !!(SB && ESPACE && bienDuDoc());
+  const loc = L.find(x => !/bailleur/i.test(x.role)), peutDistance = !!(SB && ESPACE && !LECTURE && CURDOC.o.bailId && bail(CURDOC.o.bailId) && loc && !CURDOC.sigs[loc.i] && !CURDOC.sigDistance);
   const d = sigPadHtml("✍️ Signer sur l'écran", `${msg ? grosMsg("attention", msg, "") : ""}
     <p class="note">Chacun signe avec le doigt, sur ce téléphone. La signature, le nom, la date et l'heure sont ajoutés au PDF.</p>
     <ul class="sig-liste">${L.map(x => { const g = CURDOC.sigs[x.i]; return `<li><span><b>${esc(x.role)}</b>${g ? `<br><span class="small ok">✓ signé par ${esc(g.nom)}</span>` : ""}</span><button type="button" class="${g ? "small" : "primary small"}" onclick="dessinerSignature(${x.i})">${g ? "Refaire" : "✍️ Signer"}</button></li>`; }).join("")}</ul>
     ${n ? grosMsg("ok", n === L.length ? "✅ Tout le monde a signé" : `${n} signature${n > 1 ? "s" : ""} sur ${L.length}`, peutRanger ? (CURDOC.range ? "Le PDF signé est rangé dans les documents du logement." : "Range le PDF signé dans le logement : sinon, la signature est perdue en fermant le document.") : "Télécharge ou partage le PDF signé : il n'est pas gardé en fermant le document.") : ""}
+    ${peutDistance ? `<div class="sig-distance"><b>📲 ${esc(nomCourt(bail(CURDOC.o.bailId).nom).split(" ")[0])} n'est pas là ?</b><p class="note">Il signe depuis son espace locataire, sur son téléphone. Gratuit. Tu reçois le PDF signé.</p><button type="button" class="small" id="sigDistance">📲 Lui faire signer à distance</button></div>` : ""}
     <div class="row" style="justify-content:flex-end">${n && peutRanger && !CURDOC.range ? `<button type="button" class="primary" id="sigRanger">📁 Ranger le PDF signé dans le logement</button>` : ""}<button type="button" onclick="fermerSigPad()">${n ? "Voir le document" : "Fermer"}</button></div>`);
   const r = d.querySelector("#sigRanger"); if (r) r.onclick = () => rangerPdfSigne(r);
+  const sd = d.querySelector("#sigDistance"); if (sd) sd.onclick = () => envoyerSignatureDistance(sd);
 }
 function dessinerSignature(i) {
   const x = signataires().find(s => s.i === i); if (!x) return;
@@ -4907,6 +4916,7 @@ async function rangerPdfSigne(bt) {
     const nom = t.replace(/\s*–\s*à relire avant signature/i, "") + " (signé le " + new Date().toLocaleDateString("fr-FR") + ")";
     S.fichiers.push(Object.assign({ id: uid(), bienId, cat, nom, chemin, type: "application/pdf", taille: blob.size, date: iso(TODAY), signe: true }, qui(CURDOC.o.bailId || "")));
     CURDOC.range = true; save();
+    if (CURDOC.sigDistanceId) { await SB.from("signatures_distance").update({ statut: "range" }).eq("id", CURDOC.sigDistanceId); SIGD = SIGD.filter(x => x.id !== CURDOC.sigDistanceId); }
     panneauSignature(); toast("✓ PDF signé rangé dans les documents du logement");
   } catch (e) { toast("Rangement impossible : " + (e.message || e)); if (bt) { bt.disabled = false; bt.textContent = "📁 Ranger le PDF signé dans le logement"; } }
 }
@@ -4920,6 +4930,7 @@ function fermerDoc() {
    remise à jour à chaque modification. Le locataire l'ouvre sans compte, et peut signaler un problème avec une photo. */
 let DEMANDES = [], PORTAIL_PUBLIE = {}, PORTAIL_T = null;
 let CANDS = [], ANNONCE_PUBLIEE = {}, ANNONCE_T = null; // candidatures en ligne (voir plus bas)
+let SIGD = []; // signatures à distance en attente ou signées, pas encore rangées
 const LIEN_PORTAIL = j => `${LIEN_APPLI}/#locataire=${j}`;
 const b64url = u8 => btoa(String.fromCharCode(...u8)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const sha256hex = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -5035,6 +5046,7 @@ function pageLocataire() {
       <ul class="loc-l"><li><span class="tx"><b>Loyer mensuel</b><small>${eur(L.hc)} + ${eur(L.charges)} de charges · à payer le ${L.jour} du mois</small></span><b>${eur((L.hc || 0) + (L.charges || 0))}</b></li>
       ${D.prochain ? `<li><span class="tx"><b>Prochain loyer</b><small>avant le ${fds(P(D.prochain.date))}</small></span><b>${eur(D.prochain.montant)}</b></li>` : ""}
       ${D.iban ? `<li><span class="tx"><b>IBAN pour le virement</b><small class="iban">${esc(D.iban)}</small></span><button type="button" class="small" onclick="copierTexte('${esc(D.iban)}')">Copier</button></li>` : ""}</ul></section>
+    ${(LOC.a_signer || []).length ? `<section class="card loc-card loc-asigner"><h2>✍️ À signer</h2><ul class="loc-l">${LOC.a_signer.map(x => `<li><span class="tx"><b>${esc(x.titre)}</b><small>${x.statut === "attente" ? "Envoyé " + ilYa(x.cree_le) : "Signé " + ilYa(x.signe_le)}</small></span>${x.statut === "attente" ? `<button type="button" class="small primary" onclick="lireASigner('${x.id}')">Lire et signer</button>` : `<span class="pill ok">✓ Signé</span>`}</li>`).join("")}</ul></section>` : ""}
     <section class="card loc-card"><h2>🧾 Mes quittances</h2>${q ? `<ul class="loc-l">${q}</ul>` : `<p class="note">Rien pour l'instant.</p>`}</section>
     ${docs ? `<section class="card loc-card"><h2>📄 Mes documents</h2><ul class="loc-l">${docs}</ul></section>` : ""}
     <section class="card loc-card"><h2>🔧 Signaler un problème</h2><p class="note">Fuite, panne, chauffage… Votre propriétaire est prévenu tout de suite.</p>
@@ -6703,6 +6715,87 @@ async function refuserCandidature(id) {
   const r = await SB.from("candidatures").update({ statut: "refusee", pieces: [] }).eq("id", id); if (r.error) { toast("Impossible : " + r.error.message); return; }
   CANDS = CANDS.filter(x => x.id !== id); closeOverlay(); render(); toast("Candidature non retenue · pièces effacées");
 }
+/* ================= Signature à distance =================
+   Le document (avec la signature du bailleur s'il a déjà signé) part dans l'espace du locataire. Il le lit et signe avec
+   le doigt sur son téléphone. Preuve : empreinte du document, date, heure, IP. Le propriétaire range ensuite le PDF signé. */
+async function chargerSignaturesDistance() {
+  if (!SB || !ESPACE) return; const id = ESPACE;
+  const r = await SB.from("signatures_distance").select("id, bail_id, bien_id, titre, statut, signe_le, cree_le, nom_locataire").eq("espace_id", id).in("statut", ["attente", "signe"]).order("cree_le", { ascending: false }).limit(50);
+  if (ESPACE !== id || r.error) return; const avant = JSON.stringify(SIGD); SIGD = r.data || []; if (JSON.stringify(SIGD) !== avant) render();
+}
+async function envoyerSignatureDistance(bt) {
+  const b = bail(CURDOC.o.bailId); if (!b) return; const loc = signataires().find(x => !/bailleur/i.test(x.role));
+  if (bt) { bt.disabled = true; bt.textContent = "Envoi…"; }
+  try {
+    if (!b.portail) {
+      const jeton = b64url(crypto.getRandomValues(new Uint8Array(32))), h = await sha256hex(jeton);
+      await SB.from("portails_locataire").delete().eq("espace_id", ESPACE).eq("bail_id", b.id);
+      const r0 = await SB.from("portails_locataire").insert({ jeton_hash: h, espace_id: ESPACE, bail_id: b.id, donnees: donneesPortail(b) }); if (r0.error) throw r0.error;
+      b.portail = jeton; delete PORTAIL_PUBLIE[b.id]; save();
+    }
+    const base = CURDOC.base, emp = await sha256hex(base), sigs = Object.fromEntries(Object.entries(CURDOC.sigs).filter(([i]) => +i !== loc.i));
+    const r = await SB.from("signatures_distance").insert({ espace_id: ESPACE, bail_id: b.id, bien_id: b.bienId, titre: (CURDOC.o.titre || "Document").replace(/\s*–\s*à relire avant signature/i, ""), base_html: base, empreinte: emp, sigs, index_locataire: loc.i, nom_locataire: b.nom }).select("id").single();
+    if (r.error) throw r.error;
+    CURDOC.sigDistance = true; chargerSignaturesDistance();
+    const lien = LIEN_PORTAIL(b.portail), msg = `Bonjour ${nomCourt(b.nom).split(" ")[0]},\n\nVous avez un document à signer : ${CURDOC.o.titre || "document"}.\nOuvrez votre espace locataire, lisez-le et signez avec le doigt (2 minutes) :\n\n${lien}\n\nMerci !`;
+    const d = sigPadHtml("📲 Signature à distance", `${grosMsg("ok", "✅ Envoyé dans son espace", `${esc(nomCourt(b.nom))} le voit dans son espace locataire, rubrique « À signer ». Tu seras prévenu dès qu'il a signé.`)}
+      <p class="note">Envoie-lui le lien de son espace pour qu'il le trouve tout de suite :</p>
+      <div class="row"><button type="button" class="primary" id="sdPartager">📲 Lui envoyer le lien</button><button type="button" id="sdCopier">Copier le message</button></div>
+      <p class="note small">Signature électronique simple : l'appli garde l'empreinte du document, la date, l'heure et l'adresse IP. Elle suffit pour un bail ou un avenant entre particuliers.</p>
+      <div class="row" style="justify-content:flex-end"><button type="button" onclick="fermerSigPad()">Fermer</button></div>`);
+    d.querySelector("#sdPartager").onclick = () => partagerTexte("Document à signer", msg, b.telephone, b.email);
+    d.querySelector("#sdCopier").onclick = () => copierTexte(msg);
+  } catch (e) { toast("Envoi impossible : " + (e.message || e)); if (bt) { bt.disabled = false; bt.textContent = "📲 Lui faire signer à distance"; } }
+}
+function rappelSignature(id) { const x = SIGD.find(y => y.id === id), b = x && bail(x.bail_id); if (!b || !b.portail) return;
+  partagerTexte("Document à signer", `Bonjour ${nomCourt(b.nom).split(" ")[0]},\n\nPetit rappel : « ${x.titre} » vous attend dans votre espace locataire. Il suffit de le lire et de signer avec le doigt :\n\n${LIEN_PORTAIL(b.portail)}\n\nMerci !`, b.telephone, b.email); }
+function annulerSignatureDistance(id) {
+  confirmer("Retirer ce document de son espace ? Il ne pourra plus le signer.", async () => { const r = await SB.from("signatures_distance").update({ statut: "annule" }).eq("id", id); if (r.error) { toast(r.error.message); return; } SIGD = SIGD.filter(x => x.id !== id); render(); toast("Document retiré"); });
+}
+async function ouvrirSigneDistance(id) {
+  const r = await SB.from("signatures_distance").select("*").eq("id", id).single(); if (r.error) { toast(r.error.message); return; }
+  const x = r.data, emp = await sha256hex(x.base_html);
+  if (emp !== x.empreinte) { toast("⚠️ Le document a été modifié depuis l'envoi : signature refusée."); return; }
+  showDoc(x.base_html, { titre: x.titre, bailId: x.bail_id, bienId: x.bien_id });
+  CURDOC.base = x.base_html; CURDOC.sigs = Object.assign({}, x.sigs || {}, { [x.index_locataire]: Object.assign({}, x.signature, { ref: x.empreinte.slice(0, 10) }) });
+  CURDOC.sigDistance = true; CURDOC.sigDistanceId = x.id; CURDOC.range = false; appliquerSignatures(); panneauSignature();
+}
+/* ---- Côté locataire : lire et signer ---- */
+const sansScript = h => String(h || "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/ on[a-z]+="[^"]*"/gi, "");
+function lireASigner(id) {
+  const x = (LOC.a_signer || []).find(y => y.id === id); if (!x) return;
+  const t = document.createElement("div"); t.innerHTML = sansScript(x.base_html);
+  const bloc = t.querySelector(".sign"); if (bloc) Object.entries(x.sigs || {}).forEach(([i, g]) => { const k = bloc.children[+i]; if (k && g && g.img) k.insertAdjacentHTML("beforeend", `<span class="small sig-l">Signé par ${esc(g.nom)}</span><img class="sig-img" alt="" src="${g.img}">`); });
+  const ov = document.getElementById("overlay");
+  ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="closeOverlay()" aria-label="Fermer">✕</button><b class="doc-t">${esc(x.titre)}</b></div><div class="row"><button class="primary" onclick="padSignatureLocataire('${x.id}')">✍️ Signer</button></div></div>
+    <div class="paper" id="paper">${t.innerHTML}</div><div class="loc-signer"><button class="primary big" onclick="padSignatureLocataire('${x.id}')">✍️ J'ai lu, je signe</button></div></div>`;
+  ov.hidden = false;
+}
+function padSignatureLocataire(id) {
+  const x = (LOC.a_signer || []).find(y => y.id === id); if (!x) return; const D = LOC.donnees || {};
+  const d = sigPadHtml("✍️ Signer", `<label class="fl">Votre nom<input id="sigNom" value="${esc(x.nom_locataire || D.locataire || "")}" autocomplete="name"></label>
+    <p class="note">Signez dans le cadre avec le doigt.</p><canvas class="sig-zone" id="sigZone" aria-label="Zone de signature"></canvas>
+    <label class="fl chk"><input type="checkbox" id="sigAccord"> J'ai lu « ${esc(x.titre)} » et je l'approuve (lu et approuvé).</label>
+    <div class="row" style="justify-content:space-between"><button type="button" id="sigEff">Effacer</button><div class="row"><button type="button" onclick="fermerSigPad()">Retour</button><button type="button" class="primary" id="sigOk">Signer</button></div></div>`);
+  const c = d.querySelector("#sigZone"), r = window.devicePixelRatio || 1, bx = c.getBoundingClientRect(); c.width = Math.round(bx.width * r); c.height = Math.round(bx.height * r);
+  const g = c.getContext("2d"); let trace = false, vide = true, der = null;
+  g.lineWidth = 2.6 * r; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#1b2a6b"; g.fillStyle = "#1b2a6b";
+  const pos = e => { const b = c.getBoundingClientRect(); return [(e.clientX - b.left) * r, (e.clientY - b.top) * r]; };
+  c.addEventListener("pointerdown", e => { e.preventDefault(); try { c.setPointerCapture(e.pointerId); } catch (_) {} trace = true; der = pos(e); g.beginPath(); g.arc(der[0], der[1], 1.3 * r, 0, 7); g.fill(); vide = false; });
+  c.addEventListener("pointermove", e => { if (!trace) return; e.preventDefault(); const p = pos(e); g.beginPath(); g.moveTo(der[0], der[1]); g.lineTo(p[0], p[1]); g.stroke(); der = p; vide = false; });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(t => c.addEventListener(t, () => { trace = false; }));
+  d.querySelector("#sigEff").onclick = () => { g.clearRect(0, 0, c.width, c.height); vide = true; };
+  d.querySelector("#sigOk").onclick = async () => {
+    const nom = d.querySelector("#sigNom").value.trim(), ok = d.querySelector("#sigAccord").checked;
+    if (!nom) { toast("Indiquez votre nom."); return; } if (vide) { toast("Signez dans le cadre avec le doigt."); return; } if (!ok) { toast("Cochez la case : vous avez lu le document et vous l'approuvez."); return; }
+    const im = rognerSignature(c); if (!im) { toast("Signez dans le cadre avec le doigt."); return; }
+    const bt = d.querySelector("#sigOk"); bt.disabled = true; bt.textContent = "Envoi…";
+    try { await appelLocataire({ action: "signer", id, nom, img: im.img, w: im.w, h: im.h, lu: true, accord: true });
+      fermerSigPad(); closeOverlay(); const j = await appelLocataire({ action: "voir" }); LOC = { etat: "ok", ...j }; render(); toast("✓ Signé ! Votre propriétaire est prévenu");
+    } catch (e) { toast(e.message); bt.disabled = false; bt.textContent = "Signer"; }
+  };
+}
+
 /* ---- Côté candidat (le lien de l'annonce, sans compte) ---- */
 let CAND = { etat: "chargement" };
 const jetonCandidat = () => (location.hash.match(/^#candidature=([A-Za-z0-9_-]+)/) || [])[1] || "";
@@ -6719,12 +6812,12 @@ function pageCandidat() {
   if (CAND.etat === "chargement") return `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Ouverture de l'annonce…</div>`;
   if (CAND.etat === "erreur") return `<section class="card loc-card">${grosMsg("stop", "Annonce indisponible", esc(CAND.msg))}</section>`;
   const A = CAND.annonce || {};
-  if (CAND.etat === "envoye") return `<div class="loc-page"><section class="card loc-card">${grosMsg("ok", "✅ Dossier envoyé", `Merci ${esc(CAND.nom || "")} ! ${A.bailleur ? esc(A.bailleur) : "Le propriétaire"} a reçu ton dossier (${CAND.n} pièce${CAND.n > 1 ? "s" : ""}) et te répondra directement.`)}</section></div>`;
+  if (CAND.etat === "envoye") return `<div class="loc-page"><section class="card loc-card">${grosMsg("ok", "✅ Dossier envoyé", `Merci ${esc(CAND.nom || "")} ! ${A.bailleur ? esc(A.bailleur) : "Le propriétaire"} a reçu votre dossier (${CAND.n} pièce${CAND.n > 1 ? "s" : ""}) et vous répondra directement.`)}</section></div>`;
   return `<div class="loc-page">
     <section class="card loc-card"><p class="note">Location${A.bailleur ? " proposée par " + esc(A.bailleur) : ""}</p><h1 class="loc-t">${esc(A.titre || "Logement")}</h1><p>${esc(A.ville || "")}</p>
       <div class="kpis" style="margin-top:10px"><div class="kpi"><span>Loyer</span><b>${eur((+A.hc || 0) + (+A.ch || 0))}</b><small>dont ${eur(+A.ch || 0)} de charges (${A.mode === "forfait" ? "forfait" : "provision"})</small></div><div class="kpi"><span>Dépôt de garantie</span><b>${eur(+A.depot || 0)}</b><small>${A.dispo ? "Libre le " + fd(A.dispo) : "Disponible"}</small></div></div>
       ${A.texte ? `<p style="white-space:pre-wrap;margin-top:10px">${esc(A.texte)}</p>` : ""}<p class="note">${A.surface ? A.surface + " m² · " : ""}DPE ${esc(A.dpe || "non communiqué")}${A.energie ? " · énergie estimée " + esc(A.energie) + " par an" : ""} · Pas d'honoraires</p></section>
-    <section class="card loc-card"><h2>📁 Déposer mon dossier</h2><p class="note">Gratuit, sans compte. Seul le propriétaire verra ton dossier.</p>
+    <section class="card loc-card"><h2>📁 Déposer mon dossier</h2><p class="note">Gratuit, sans compte. Seul le propriétaire verra votre dossier.</p>
       <form id="cand_form" class="f" onsubmit="event.preventDefault();envoyerCandidature(this)">
         <label class="fl full">Nom et prénom<input name="nom" id="cand_nom" required maxlength="200" autocomplete="name"></label>
         <label class="fl">E-mail<input name="email" id="cand_email" type="email" maxlength="200" autocomplete="email"></label><label class="fl">Téléphone<input name="tel" id="cand_tel" type="tel" maxlength="40" autocomplete="tel"></label>
@@ -6736,7 +6829,7 @@ function pageCandidat() {
         <label class="fl full">Un mot pour le propriétaire (facultatif)<textarea name="message" maxlength="3000" placeholder="Date d'emménagement souhaitée, présentation…"></textarea></label>
         <fieldset class="full"><legend>Pièces du dossier (photos ou PDF, 5 Mo max chacune)</legend>
           ${PIECES_CAND.map(([k, i, t, d]) => `<label class="fl full cand-piece"><span>${i} <b>${t}</b>${d ? `<small> · ${d}</small>` : ""}</span><input type="file" name="p_${k}" data-type="${k}" accept="image/*,application/pdf" multiple></label>`).join("")}
-          <p class="note full">Le propriétaire n'a pas le droit de te demander : relevés de compte, photo d'identité, carte Vitale, attestation de bonne tenue de compte, chèque de réservation…</p></fieldset>
+          <p class="note full">Le propriétaire n'a pas le droit de vous demander : relevés de compte, photo d'identité, carte Vitale, attestation de bonne tenue de compte, chèque de réservation…</p></fieldset>
         <label class="fl chk full"><input type="checkbox" name="accord" id="cand_accord" required> J'accepte que ces informations soient transmises au propriétaire pour étudier ma candidature. Elles sont effacées si elle n'est pas retenue.</label>
         <div class="full"><button class="primary" id="cand_btn">Envoyer mon dossier</button></div></form></section>
     <p class="note center">Annonce mise à jour ${A.maj ? ilYa(A.maj) : ""}.</p></div>`;
@@ -6744,15 +6837,15 @@ function pageCandidat() {
 const lireFichierDataUrl = f => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ko(new Error("Fichier illisible : " + f.name)); r.readAsDataURL(f); });
 async function envoyerCandidature(f) {
   const bt = document.getElementById("cand_btn"), d = Object.fromEntries(new FormData(f).entries());
-  if (!d.email && !d.tel) { toast("Indique un e-mail ou un téléphone pour que le propriétaire puisse te répondre."); return; }
+  if (!d.email && !d.tel) { toast("Indiquez un e-mail ou un téléphone pour que le propriétaire puisse vous répondre."); return; }
   bt.disabled = true; bt.textContent = "Préparation des pièces…";
   try {
     const pieces = [];
     for (const inp of f.querySelectorAll("input[type=file]")) for (const x of inp.files) {
-      if (x.type === "application/pdf") { if (x.size > 5e6) throw new Error(`"${x.name}" dépasse 5 Mo : envoie plutôt une photo de chaque page.`); pieces.push({ type: inp.dataset.type, nom: x.name, data: await lireFichierDataUrl(x) }); }
+      if (x.type === "application/pdf") { if (x.size > 5e6) throw new Error(`"${x.name}" dépasse 5 Mo : envoyez plutôt une photo de chaque page.`); pieces.push({ type: inp.dataset.type, nom: x.name, data: await lireFichierDataUrl(x) }); }
       else if (/^image\//.test(x.type)) pieces.push({ type: inp.dataset.type, nom: x.name, data: await photoReduite(x) });
     }
-    if (pieces.length > 12) throw new Error("12 fichiers au maximum : regroupe les bulletins dans un seul PDF si besoin.");
+    if (pieces.length > 12) throw new Error("12 fichiers au maximum : regroupez les bulletins dans un seul PDF si besoin.");
     bt.textContent = "Envoi…";
     const j = await appelCandidat({ action: "deposer", nom: d.nom, email: d.email, tel: d.tel, situation: d.situation, revenus: d.revenus, garantie: d.garantie, garantInfo: d.garantInfo, occupants: d.occupants, message: d.message, accord: !!f.accord.checked, pieces });
     CAND = { ...CAND, etat: "envoye", nom: d.nom.split(" ")[0], n: j.pieces || 0 }; render(); scrollTo(0, 0);
@@ -6985,6 +7078,7 @@ const TYPES_NOTIF = [
   ["retard", "⏰", "Loyer en retard", "Pas reçu 3 jours après la date prévue", true, false],
   ["relance_auto", "🔁", "Relance automatique envoyée", "Quand l'appli relance un locataire pour toi", true, false],
   ["demande", "🔧", "Problème signalé par un locataire", "Fuite, panne… depuis son espace locataire", true, true],
+  ["signature", "✍️", "Document signé à distance", "Un locataire signe un document depuis son espace", true, true],
   ["candidature", "🙋", "Nouvelle candidature", "Un candidat dépose son dossier depuis le lien de ton annonce", true, true],
   ["boite", "📨", "Document reçu par e-mail", "Dans ta boîte à documents, à ranger", true, false],
   ["resume", "📊", "Point du mois", "Le 1er et le 5 : qui a payé, qui est en retard", true, false],

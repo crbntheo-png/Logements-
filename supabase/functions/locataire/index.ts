@@ -39,6 +39,25 @@ Deno.serve(async (req) => {
     return rep({ ok: true, id: d.id });
   }
 
+  if (c.action === "signer") {
+    // signature à distance d'un document envoyé par le propriétaire (bail, avenant, état des lieux)
+    const id = String(c.id || ""), nom = String(c.nom || "").trim().slice(0, 120);
+    if (!/^[0-9a-f-]{36}$/.test(id)) return rep({ erreur: "Document introuvable." }, 400);
+    if (!nom) return rep({ erreur: "Indiquez votre nom." }, 400);
+    if (!c.accord) return rep({ erreur: "Cochez la case : vous avez lu le document et vous l'approuvez." }, 400);
+    const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(c.img || ""));
+    if (!m || m[1].length > 700_000) return rep({ erreur: "Signature illisible : recommencez." }, 400);
+    const { data: d } = await admin.from("signatures_distance").select("id, statut, index_locataire, titre").eq("id", id).eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).maybeSingle();
+    if (!d) return rep({ erreur: "Document introuvable." }, 404);
+    if (d.statut !== "attente") return rep({ erreur: d.statut === "annule" ? "Ce document a été retiré par votre propriétaire." : "Ce document est déjà signé." }, 409);
+    const quand = new Date().toISOString(), ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim().slice(0, 60), appareil = (req.headers.get("user-agent") || "").slice(0, 300);
+    const signature = { img: "data:image/png;base64," + m[1], w: Math.max(1, Math.min(2000, +c.w || 300)), h: Math.max(1, Math.min(2000, +c.h || 100)), nom, lu: !!c.lu, quand, distance: true };
+    const { error } = await admin.from("signatures_distance").update({ statut: "signe", signature, signe_le: quand, ip, appareil }).eq("id", id).eq("statut", "attente");
+    if (error) return rep({ erreur: "Signature impossible, réessayez dans un moment." }, 500);
+    try { await fetch(url + "/functions/v1/notifier", { method: "POST", headers: { "Content-Type": "application/json", "x-cle-cron": Deno.env.get("CLE_CRON_NOTIFIER") || "" }, body: JSON.stringify({ signature: id }) }); } catch (_) { /* signé quand même */ }
+    return rep({ ok: true });
+  }
+
   // voir
   await admin.from("portails_locataire").update({ vu_le: new Date().toISOString() }).eq("jeton_hash", p.jeton_hash);
   const don: any = p.donnees || {};
@@ -50,5 +69,7 @@ Deno.serve(async (req) => {
   }
   const { data: dem } = await admin.from("demandes_locataire").select("id, texte, statut, cree_le, traite_le").eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).order("cree_le", { ascending: false }).limit(20);
   const { docs: _d, ...reste } = don;
-  return rep({ ok: true, donnees: reste, docs, demandes: dem || [] });
+  const { data: sig } = await admin.from("signatures_distance").select("id, titre, base_html, sigs, index_locataire, nom_locataire, statut, signe_le, cree_le").eq("espace_id", p.espace_id).eq("bail_id", p.bail_id).in("statut", ["attente", "signe", "range"]).order("cree_le", { ascending: false }).limit(10);
+  const a_signer = (sig || []).map((x: any) => x.statut === "attente" ? x : { id: x.id, titre: x.titre, statut: x.statut, signe_le: x.signe_le, cree_le: x.cree_le });
+  return rep({ ok: true, donnees: reste, docs, demandes: dem || [], a_signer });
 });
