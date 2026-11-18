@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "4d704dd", "date": "2026-11-18T07:46"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "d4dba4b", "date": "2026-11-18T07:53"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2315,7 +2315,7 @@ function etapesGuide() {
   let installOk = false; try { installOk = estInstallee() || localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) { installOk = estInstallee(); }
   const L = [
     { ok: !!(S.sci.nom && S.sci.gerant && S.sci.siege), ico: "🏛", t: estPerso() ? "Tes infos de propriétaire" : "Les infos de ta société", pourquoi: "Ton nom, ton adresse et le signataire apparaissent sur chaque quittance, bail et courrier. Sans eux, les documents sont incomplets.", comment: "Réglages › rubrique « La SCI ». 1 minute.", btn: ["Remplir", "reglage('sci')"] },
-    { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: SB ? "Le plus rapide : partage le dossier Drive de tes locations, l'IA te fait le bilan et crée tes logements (tu corriges avant). Sinon : Biens › + Ajouter." : "Un par logement : adresse, surface, meublé ou vide.", btn: SB ? ["🤖 Depuis mon Drive", "go('docs')"] : ["Ajouter un logement", "editBien()"] },
+    { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: SB ? "Le plus rapide : partage le dossier Drive de tes locations, l'IA te fait le bilan et crée tes logements (tu corriges avant). Tu as un tableur Excel ou une autre appli ? Biens › 📊 Depuis un tableur. Sinon : Biens › + Ajouter." : "Un par logement : adresse, surface, meublé ou vide.", btn: SB ? ["🤖 Depuis mon Drive", "go('docs')"] : ["Ajouter un logement", "editBien()"] },
     { ok: S.baux.length > 0, ico: "👤", t: "Tes locataires", pourquoi: "L'appli calcule chaque mois ce qui est dû, te dit qui est en retard, prépare quittances et relances, et te rappelle la révision du loyer (IRL) au bon moment.", comment: "Nom, e-mail, date d'entrée, loyer. L'e-mail sert à envoyer les documents.", btn: ["Ajouter un locataire", "editBail()"] },
     { ok: relOk, ico: "🏦", t: "Ta banque", pourquoi: "Les loyers reçus se cochent tout seuls et la compta se remplit avec tes dépenses : plus de pointage à la main.", comment: "Ton relevé une fois par mois (2 min), ou Pennylane si tu l'as.", btn: ["Voir comment", "go('compta')"] },
     { ok: S.fichiers.length > 0 || S.edl.length > 0, ico: "📁", t: "Tes documents", pourquoi: "Bail signé, DPE, assurance, factures : tout est rangé par logement, sur ton téléphone et celui de tes associés. Fini de chercher dans les mails.", comment: "Fiche d'un logement › Documents › Ajouter un fichier (PDF ou photo).", btn: ["Ouvrir mes logements", "go('biens')"] },
@@ -2987,7 +2987,7 @@ function rangerPropositions(liste) {
   save(); render(); toast(`✓ ${liste.length} document${liste.length > 1 ? "s" : ""} rangé${liste.length > 1 ? "s" : ""}`);
 }
 function pageBiens() {
-  return `<div class="head"><div><h1>Biens</h1><p>Touche un logement pour tout voir : locataire, documents, historique.</p></div><button class="primary" onclick="editBien()">+ Ajouter</button></div>
+  return `<div class="head"><div><h1>Biens</h1><p>Touche un logement pour tout voir : locataire, documents, historique.</p></div><div class="row"><button class="primary" onclick="editBien()">+ Ajouter</button>${SB && estProprio() && !LECTURE ? `<button onclick="importerTableur()">📊 Depuis un tableur</button>` : ""}</div></div>
   ${S.biens.length ? `<ul class="lr-list biens-l">${S.biens.map(bi => {
     const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null, e = b && echeance(b, CUR), nDocs = S.fichiers.filter(f => f.bienId === bi.id).length;
     const alerte = !bi.dpe ? "DPE à noter" : bi.dpe === "G" || bi.dpe === "F" ? `DPE ${bi.dpe} : attention` : "";
@@ -3359,6 +3359,58 @@ function rangerApresLecture(d, ctx, bid) {
   if (!bienId) return;
   Object.assign(f, { bienId, cat: CAT_DOC_IA[d.type] || f.cat || "Autre" }, bailId ? { bailId } : {}); save();
   setTimeout(() => toast(`📁 Rangé dans ${bien(bienId).nom} · ${f.cat}`), 1500);
+}
+/* ================= Importer depuis un tableur (Excel, CSV, export Rentila / autre appli) : l'IA comprend les colonnes ================= */
+let TAB = null;
+function chargerXlsx() { return window.XLSX ? Promise.resolve() : new Promise((ok, ko) => { const sc = document.createElement("script"); sc.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; sc.onload = ok; sc.onerror = () => ko(new Error("Lecture Excel indisponible (connexion internet nécessaire).")); document.head.appendChild(sc); }); }
+async function texteTableur(f) {
+  if (/\.(csv|txt|tsv)$/i.test(f.name) || /^text\//.test(f.type)) return await f.text();
+  await chargerXlsx();
+  const wb = window.XLSX.read(await f.arrayBuffer(), { type: "array", cellDates: true });
+  return wb.SheetNames.map(n => "### Feuille : " + n + "\n" + window.XLSX.utils.sheet_to_csv(wb.Sheets[n], { FS: ";", blankrows: false, dateNF: "yyyy-mm-dd" })).join("\n\n");
+}
+function importerTableur() {
+  if (!SB || !estProprio()) { toast("L'import par l'IA est réservé au propriétaire de l'espace."); return; }
+  modal("📊 Importer depuis un tableur", `<div class="full">${grosMsg("attention", "Ton fichier Excel, ou l'export de ton ancienne appli", "Logements et locataires actuels : l'IA comprend les colonnes toute seule, puis te montre ce qu'elle va créer. Tu corriges avant de valider.")}</div>
+    <p class="full note small">Rentila, Qalimo, BailFacile… : cherche "Exporter" (Excel ou CSV) dans leurs paramètres. Utilise 1 lecture de document par l'IA.</p>
+    <label class="fl full">Le fichier (.xlsx, .xls, .ods, .csv)<input type="file" name="f" id="tab_f" accept=".xlsx,.xls,.ods,.csv,.tsv,.txt" required></label>`,
+    d => { const f = document.getElementById("tab_f").files[0]; if (!f) return false; setTimeout(() => lireTableurIA(f), 50); return true; }, { ok: "Lire avec l'IA", lecture: true });
+}
+async function lireTableurIA(f) {
+  try {
+    toast("🤖 L'IA lit « " + f.name + " »… (30 secondes environ)");
+    const texte = (await texteTableur(f)).slice(0, 110000);
+    if (texte.replace(/[;,\s#:]/g, "").length < 10) throw new Error("Le fichier a l'air vide.");
+    const j = await fnIA({ action: "tableur", espace: ESPACE, texte, biens: S.biens.map(b => b.nom) });
+    TAB = j.tableur; TAB.credits = j.credits; apercuTableur();
+  } catch (e) { toast(e.message || "Lecture impossible."); }
+}
+function apercuTableur() {
+  const T = TAB, exist = n => S.biens.find(b => normTxt(b.nom) === normTxt(n));
+  const nb = T.biens.filter(b => !exist(b.nom)), opts = [...S.biens.map(b => [b.id, b.nom]), ...nb.map((b, i) => ["new:" + i, "🆕 " + b.nom])];
+  const choixBien = n => { const e = exist(n); if (e) return e.id; const i = nb.findIndex(b => normTxt(b.nom) === normTxt(n)); return i >= 0 ? "new:" + i : ""; };
+  const bilan = `<div class="bilan-ia full"><div><b>${nb.length}</b><small>logement${nb.length > 1 ? "s" : ""} à créer</small></div><div><b>${T.locataires.length}</b><small>locataire${T.locataires.length > 1 ? "s" : ""} actuel${T.locataires.length > 1 ? "s" : ""}</small></div></div>`;
+  modal("📊 Ce que l'IA a trouvé", `${bilan}<div class="full">${grosMsg("attention", "✏️ Corrige si besoin, puis crée", (T.remarques ? esc(T.remarques) + " " : "") + "Les loyers sont suivis à partir du prochain loyer à payer : rien n'est compté comme impayé avant, et aucune relance ne part pour le passé." + esc(resteDocsTxt(T.credits)))}</div>
+    ${nb.length ? `<h3 class="full">🏠 Logements à créer</h3><ul class="props-ia full">${nb.map((b, i) => `<li><label class="chk-ia"><input type="checkbox" name="kb${i}" checked> créer</label><div class="champs-ia">
+      <label class="fl">Nom<input name="bn${i}" value="${esc(b.nom)}"></label><label class="fl">Adresse<input name="ba${i}" value="${esc([b.adresse, [b.cp, b.ville].filter(Boolean).join(" ")].filter(Boolean).join(", "))}"></label>
+      ${sel("Type", "bt" + i, TYPES_LOGEMENT.includes(b.type) ? b.type : "Appartement", TYPES_LOGEMENT.map(x => [x, x]))}${sel("Location", "bm" + i, b.meuble === "meuble" ? "meuble" : "vide", [["vide", "Vide"], ["meuble", "Meublée"]])}</div></li>`).join("")}</ul>` : ""}
+    ${T.locataires.length ? `<h3 class="full">👤 Locataires actuels</h3><ul class="props-ia full">${T.locataires.map((l, i) => `<li><label class="chk-ia"><input type="checkbox" name="kl${i}" checked> créer</label><div class="champs-ia">
+      <label class="fl">Nom<input name="ln${i}" value="${esc(l.nom)}"></label>${sel("Logement", "lb" + i, choixBien(l.bien), [["", "À choisir"], ...opts])}
+      <label class="fl">Loyer HC (€)<input name="ll${i}" type="number" step="0.01" value="${+l.loyer_hc || ""}"></label><label class="fl">Charges (€)<input name="lc${i}" type="number" step="0.01" value="${+l.charges || ""}"></label>
+      <label class="fl">Payé le (jour)<input name="lj${i}" type="number" min="1" max="31" value="${+l.jour_paiement >= 1 && +l.jour_paiement <= 31 ? +l.jour_paiement : 5}"></label><label class="fl">Entrée le<input name="ld${i}" type="date" value="${/^\d{4}-\d{2}-\d{2}$/.test(l.date_entree || "") ? l.date_entree : ""}"></label>
+      <label class="fl">E-mail<input name="le${i}" type="email" value="${esc(l.email)}"></label><label class="fl">Téléphone<input name="lt${i}" value="${esc(l.tel)}"></label></div></li>`).join("")}</ul>` : ""}
+    ${!nb.length && !T.locataires.length ? `<div class="full">${grosMsg("stop", "Rien à créer", "L'IA n'a trouvé ni logement nouveau ni locataire actuel dans ce fichier.")}</div>` : ""}`,
+    (d, form) => appliquerTableur(d, nb), { ok: "Créer ce qui est coché" });
+}
+function appliquerTableur(d, nb) {
+  const ids = {}; let nB = 0, nL = 0, manque = 0;
+  nb.forEach((b, i) => { if (!d["kb" + i]) return; const m = /^(.*?)[,\s]+(\d{5})\s+(.+)$/.exec(String(d["ba" + i] || "").trim()) || [];
+    const id = uid(); ids["new:" + i] = id; S.biens.push({ id, nom: (d["bn" + i] || b.nom).trim(), type: d["bt" + i], meuble: d["bm" + i], adresse: m[1] || String(d["ba" + i] || "").trim(), cp: m[2] || "", ville: m[3] || "", surface: +b.surface || "" }); nB++; });
+  TAB.locataires.forEach((l, i) => { if (!d["kl" + i]) return; const bienId = ids[d["lb" + i]] || (S.biens.some(b => b.id === d["lb" + i]) ? d["lb" + i] : "");
+    if (!bienId) { manque++; return; } const bi = bien(bienId), entree = d["ld" + i] || iso(TODAY);
+    S.baux.push({ id: uid(), bienId, nom: (d["ln" + i] || l.nom).trim(), colocataires: l.colocataires || "", email: (d["le" + i] || "").trim(), tel: (d["lt" + i] || "").trim(), typeBail: bi && bi.meuble === "meuble" ? "meuble" : "vide",
+      dateEntree: entree, suiviDepuis: entree.slice(0, 7) > CUR ? entree.slice(0, 7) : (TODAY.getDate() > (+d["lj" + i] || 5) ? addM(CUR, 1) : CUR), loyerHC: String(+d["ll" + i] || 0), charges: String(+d["lc" + i] || 0), jourPaiement: String(+d["lj" + i] || 5), depot: +l.depot || "", revisions: [] }); nL++; });
+  setTimeout(() => toast(`✓ ${nB} logement${nB > 1 ? "s" : ""} et ${nL} locataire${nL > 1 ? "s" : ""} créé${nL + nB > 1 ? "s" : ""}${manque ? ` · ${manque} sans logement choisi, pas créé${manque > 1 ? "s" : ""}` : ""}`), 50);
 }
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
@@ -6208,7 +6260,7 @@ function pageLegal() {
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
   ${b("🔗 Espace locataire", `<p>Si tu crées un lien pour un locataire, il voit seulement ce qui le concerne : son logement, ce qu'il doit, ses quittances des 12 derniers mois, son bail et ses états des lieux, et les problèmes qu'il a signalés. Rien sur les autres locataires, la compta ou la banque. Le lien est secret (le serveur n'en garde qu'une empreinte) ; tu peux le désactiver à tout moment depuis sa fiche. Les photos qu'il envoie sont rangées dans les documents de ton espace.</p>`)}
   ${b("📨 Boîte à documents et agenda", `<p>Si tu crées ta boîte à documents, les e-mails envoyés à ton adresse passent par Cloudflare (qui héberge le domaine) ; seules leurs pièces jointes PDF et photos sont gardées, dans les documents de ton espace. Les e-mails venant d'une adresse que tu n'as pas autorisée sont refusés. Le lien de ton agenda est secret : il ne montre que les dates (loyers attendus, échéances), et tu peux le désactiver à tout moment.</p>`)}
-  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement. Si tu demandes à l'IA de <b>lire un document</b> (bail, avis de taxe foncière, facture, DPE, attestation d'assurance), le contenu de <b>ce document seulement</b> est envoyé à Anthropic, au moment où tu le demandes, pour remplir l'appli. Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
+  ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement. Si tu demandes à l'IA de <b>lire un document</b> (bail, avis de taxe foncière, facture, DPE, attestation d'assurance, tableur à importer), le contenu de <b>ce document seulement</b> est envoyé à Anthropic, au moment où tu le demandes, pour remplir l'appli. Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
   ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}
   ${b("🍪 Cookies", `<p>Aucun cookie publicitaire ni de mesure d'audience. L'appli garde seulement sur ton appareil ce qui sert à rester connecté et à fonctionner sans réseau.</p>`)}

@@ -84,15 +84,33 @@ Recopie exactement ce qui est écrit, sans rien inventer : "" ou 0 quand l'infor
 - dpe_* : seulement pour un DPE : classe énergie, classe climat (GES), numéro ADEME (13 caractères), date d'établissement, date de fin de validité.
 - assure_nom / assurance_fin : seulement pour l'attestation d'un locataire : nom de l'assuré et date de fin de la période couverte.
 - remarques : 1 phrase sur ce qui est illisible ou incertain, sinon "".`;
+// Lecture d'un tableur (Excel, export d'une autre appli) : logements et locataires à créer
+const S_TAB = {
+  type: "object", additionalProperties: false, required: ["biens", "locataires", "remarques"],
+  properties: {
+    biens: { type: "array", items: { type: "object", additionalProperties: false, required: ["nom", "adresse", "cp", "ville", "type", "meuble", "surface"], properties: {
+      nom: { type: "string" }, adresse: { type: "string" }, cp: { type: "string" }, ville: { type: "string" }, type: { type: "string", enum: ["Appartement", "Studio", "Maison", "Local commercial", "Parking", "Autre"] }, meuble: { type: "string", enum: ["vide", "meuble", ""] }, surface: { type: "number" } } } },
+    locataires: { type: "array", items: { type: "object", additionalProperties: false, required: ["nom", "colocataires", "email", "tel", "bien", "date_entree", "loyer_hc", "charges", "jour_paiement", "depot"], properties: {
+      nom: { type: "string" }, colocataires: { type: "string" }, email: { type: "string" }, tel: { type: "string" }, bien: { type: "string" }, date_entree: { type: "string" }, loyer_hc: { type: "number" }, charges: { type: "number" }, jour_paiement: { type: "number" }, depot: { type: "number" } } } },
+    remarques: { type: "string" },
+  },
+};
+const CONSIGNE_TAB = `Tu lis un tableur de propriétaire bailleur (fichier Excel fait main, ou export d'une autre appli de gestion locative comme Rentila, Qalimo, BailFacile) pour créer ses logements et ses locataires ACTUELS dans son appli.
+Recopie ce qui est écrit, sans rien inventer : "" ou 0 quand l'information manque. Dates au format AAAA-MM-JJ.
+- biens : chaque logement loué ou à louer. nom court et parlant (ex : "T2 Beauchamps", "Lot 1 Agon"). Ne recrée pas un logement qui est déjà dans l'appli (liste fournie) : utilise alors son nom exact dans locataires.bien. Un parking ou une cave à part = un bien de type Parking ou Autre.
+- locataires : seulement les locataires ACTUELS (pas les anciens, pas les candidats). bien = le nom exact d'un bien de la liste biens ou d'un logement déjà dans l'appli. loyer_hc : loyer mensuel hors charges ; charges : charges mensuelles ; si seul un loyer charges comprises est donné, mets-le dans loyer_hc et 0 en charges, et dis-le dans remarques. jour_paiement : jour du mois si indiqué, sinon 0. colocataires : les autres titulaires du même bail.
+- Ignore les lignes de totaux, les loyers mois par mois, les dépenses et la comptabilité.
+- remarques : 1 à 2 phrases sur ce qui est ambigu ou ignoré, sinon "".`;
+async function lireUnTableur(admin: any, u: any, c: any) { return lireDocument(admin, u, { ...c, brut: true }, S_TAB, CONSIGNE_TAB, "Logements déjà dans l'appli : " + (Array.isArray(c.biens) && c.biens.length ? c.biens.map((x: any) => court(x, 80)).join(" ; ") : "aucun") + ".\nCrée les logements et les locataires actuels à partir de ce tableur.", "tableur"); }
 async function lireUnBail(admin: any, u: any, c: any) { return lireDocument(admin, u, c, S_BAIL, CONSIGNE_BAIL, "Remplis la fiche à partir de ce bail.", "bail"); }
 async function lireUnDoc(admin: any, u: any, c: any) { return lireDocument(admin, u, c, S_DOC, CONSIGNE_DOC, "Lis ce document" + (c.nom ? ` (fichier « ${court(c.nom, 200)} »)` : "") + " et dis où le ranger.", "doc"); }
 async function lireDocument(admin: any, u: any, c: any, schema: any, consigne: string, demande: string, cle: string) {
   const illimite = sansLimite(u.email);
   const { data: ok } = await admin.rpc("ia_reserver_doc", { u: u.id, max_jour: illimite ? 100000 : DOC_JOUR(), max_mois: illimite ? 100000 : DOC_MOIS(), budget: illimite ? 1e15 : BUDGET() });
   if (ok !== "ok") return rep({ erreur: ok === "budget" ? "L'IA est en pause pour tout le monde jusqu'au 1er du mois (budget de l'appli atteint)." : `Tu as utilisé tes lectures de documents par l'IA ${ok === "jour" ? "d'aujourd'hui" : "de ce mois-ci"}.`, raison: ok, credits: await credits(admin, u) }, 429);
-  const texte = court(c.texte, 120000), b64 = String(c.fichier_b64 || ""), type = String(c.type || "");
+  const texte = c.brut ? String(c.texte || "").slice(0, 120000) : court(c.texte, 120000), b64 = String(c.fichier_b64 || ""), type = String(c.type || "");
   let contenu: any[];
-  if (texte.length > 300) contenu = [{ type: "text", text: "Texte du document (extrait du PDF) :\n" + texte }];
+  if (texte.length > (c.brut ? 20 : 300)) contenu = [{ type: "text", text: (c.brut ? "Contenu du tableur (CSV, une section par feuille) :\n" : "Texte du document (extrait du PDF) :\n") + texte }];
   else if (b64 && /^application\/pdf$/.test(type)) contenu = [{ type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }];
   else if (b64 && /^image\/(jpeg|png|webp|gif)$/.test(type)) contenu = [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }];
   else { await admin.rpc("ia_rembourser_doc", { u: u.id }); return rep({ erreur: "Document vide ou format non lu (PDF ou photo)." }, 400); }
@@ -137,6 +155,7 @@ Deno.serve(async (req) => {
     if (!proprio) return rep({ erreur: "L'IA est réservée au propriétaire de l'espace : c'est lui qui gère ses crédits.", raison: "proprio" }, 403);
     if (c.action === "bail") return await lireUnBail(admin, u.user, c);
     if (c.action === "doc") return await lireUnDoc(admin, u.user, c);
+    if (c.action === "tableur") return await lireUnTableur(admin, u.user, c);
     const illimite = sansLimite(u.user.email);
     const { data: ok } = await admin.rpc("ia_reserver", { u: u.user.id, max_jour: illimite ? 100000 : NB_JOUR(), max_mois: illimite ? 100000 : NB_MOIS(), budget: illimite ? 1e15 : BUDGET() });
     if (ok !== "ok") return rep({ erreur: ok === "jour" ? `Tu as utilisé tes ${NB_JOUR()} analyses d'aujourd'hui. Reviens demain.` : ok === "mois" ? `Tu as utilisé tes ${NB_MOIS()} analyses de ce mois-ci. Elles reviennent le 1er du mois.` : "L'IA est en pause pour tout le monde jusqu'au 1er du mois (budget de l'appli atteint).", raison: ok, credits: await credits(admin, u.user) }, 429);

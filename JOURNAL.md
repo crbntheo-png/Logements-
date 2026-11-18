@@ -51,6 +51,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — importer depuis un tableur (Excel, export Rentila / autre appli)
+- Biens › "📊 Depuis un tableur" (propriétaire) : .xlsx, .xls, .ods (lus avec SheetJS 0.18.5 depuis cdnjs, toutes les feuilles) ou .csv. L'IA (`ia` action `tableur`, 1 lecture de document) comprend les colonnes, garde seulement les locataires ACTUELS, ignore totaux, encaissements et anciens, ne recrée pas un logement déjà là.
+- Fenêtre "Ce que l'IA a trouvé" : bilan chiffré, remarques de l'IA, tout est modifiable (logements : nom, adresse, type, vide/meublée ; locataires : nom, logement y compris 🆕, loyer, charges, jour, entrée, e-mail, téléphone), décocher = ne pas créer.
+- Défaut évité en testant : le loyer du mois déjà passé était compté comme impayé (et les relances automatiques seraient parties). Le suivi commence au prochain loyer à payer.
+- Tests : test63 (vrai fichier Excel à 2 feuilles, vraie IA, 9 s) 9/9 ; test5, test53 OK. En ligne.
+
 ### 18/11/2026 — boîte à documents par e-mail
 - Docs › "📨 Ta boîte à documents" › "Créer mon adresse" : une adresse par espace (ex. gtp-invest-xxxxx@sci-gestion-locative.com, table `boites`, `supabase/boite.sql`). On y transfère factures, avis, attestations : les pièces jointes PDF et photos arrivent dans "À ranger" (documents `boite: true`, sans logement), avec l'expéditeur et l'objet ; notification à tous les membres.
 - Seuls les membres de l'espace (adresse du compte ou Gmail branché) et les adresses ajoutées ("Autoriser une autre adresse" : syndic, comptable…) peuvent déposer ; les autres sont refusés avec un message.
