@@ -3481,7 +3481,7 @@ function pageBientot() {
 }
 /* ================= Connecteur Claude (MCP) : Claude lit les chiffres de l'espace, en lecture seule ================= */
 let CONNECTEUR_PUBLIE = "", CONNECTEUR_T = null;
-const lienConnecteur = j => `${window.APP_SUPABASE ? window.APP_SUPABASE.url : ""}/functions/v1/mcp/${j}`;
+const lienConnecteur = j => `${LIEN_APPLI}/mcp/${j}`;
 const sansHtml = t => String(t || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
 function donneesConnecteur() {
   MEMO = new Map();

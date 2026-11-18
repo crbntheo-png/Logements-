@@ -58,6 +58,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — connecteur Claude : adresse sur le domaine de l'appli
+- Essai de Théo dans claude.ai : "Connexion requise" puis "Impossible de s'inscrire auprès du service de connexion". Cause : à l'adresse Supabase, la recherche OAuth de Claude (`/.well-known/oauth-protected-resource/functions/v1/mcp/…`) reçoit un 401 de Supabase ("No API key"), Claude croit qu'il faut un identifiant.
+- Correction : le connecteur est servi sur https://sci-gestion-locative.com/mcp/JETON (Cloudflare Pages Functions, dossier `functions/` : `mcp/[[chemin]].js` relaie vers la fonction Supabase `mcp` ; `.well-known/[[chemin]].js` répond 404 propre). Le lien affiché dans l'appli est le nouveau ; le jeton de Théo reste valable.
+- Vérifié : découverte OAuth → 404 JSON, GET → 405, faux lien → 404, vrai lien de Théo → initialize OK et 9 outils avec la bibliothèque officielle MCP. test65 OK. En ligne.
+- Pas vérifié : l'ajout dans claude.ai avec la nouvelle adresse (Théo).
+
 ### 18/11/2026 — brancher l'appli sur Claude (connecteur MCP)
 - Réglages › "🤖 Brancher sur Claude" (propriétaire) : un lien secret par espace (`supabase/connecteur.sql`, table `connecteurs`, empreinte du jeton seulement), servi par la fonction `mcp` (protocole MCP en HTTP, lecture seule). Étapes affichées : claude.ai › Paramètres › Connecteurs › Ajouter un connecteur personnalisé (nom, URL), puis l'activer dans une conversation.
 - 9 outils : résumé du mois, locataires (avec recherche par nom et mois impayés), logements, impayés, à faire, échéances 90 jours, trésorerie, compta de l'année, liste des documents (sans contenu). Aucun outil d'écriture.

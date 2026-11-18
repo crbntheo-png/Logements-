@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "ebbc2c4", "date": "2026-11-18T08:13"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "9dd5f1c", "date": "2026-11-18T08:31"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3506,7 +3506,7 @@ function pageBientot() {
 }
 /* ================= Connecteur Claude (MCP) : Claude lit les chiffres de l'espace, en lecture seule ================= */
 let CONNECTEUR_PUBLIE = "", CONNECTEUR_T = null;
-const lienConnecteur = j => `${window.APP_SUPABASE ? window.APP_SUPABASE.url : ""}/functions/v1/mcp/${j}`;
+const lienConnecteur = j => `${LIEN_APPLI}/mcp/${j}`;
 const sansHtml = t => String(t || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
 function donneesConnecteur() {
   MEMO = new Map();

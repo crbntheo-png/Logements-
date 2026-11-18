@@ -23,7 +23,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.isVisible('text=Brancher sur Claude'), 'Réglages : rubrique "🤖 Brancher sur Claude"');
   await p.evaluate(() => brancherClaude()); await p.waitForTimeout(2500);
   const url = await p.inputValue('#mcp_lien');
-  t(/\/functions\/v1\/mcp\/[A-Za-z0-9_-]{40,}$/.test(url), 'lien du connecteur créé');
+  t(/^https:\/\/sci-gestion-locative\.com\/mcp\/[A-Za-z0-9_-]{40,}$/.test(url), "lien du connecteur créé, sur le domaine de l'appli");
   await p.screenshot({ path: __dirname + '/shots58/claude.png' });
   const api = await b.newContext({ ignoreHTTPSErrors: true });
   const rpc = async (corps, u = url) => { const r = await api.request.post(u, { headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' }, data: corps }); const tx = await r.text(); return { s: r.status(), j: tx ? JSON.parse(tx) : null }; };
