@@ -21,7 +21,8 @@ drop policy if exists docs_supprimes_lire on public.docs_supprimes;
 create policy docs_supprimes_lire on public.docs_supprimes for select to authenticated using (public.est_membre(espace_id));
 create or replace function public.docs_suppression() returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if auth.uid() is not null and old.coll in ('paiements', 'depenses', 'baux', 'biens') then
+  -- pas pendant la suppression d'un espace entier (l'espace n'existe déjà plus : rien à garder)
+  if auth.uid() is not null and old.coll in ('paiements', 'depenses', 'baux', 'biens') and exists (select 1 from public.espaces e where e.id = old.espace_id) then
     insert into public.docs_supprimes (espace_id, coll, doc_id, data, par) values (old.espace_id, old.coll, old.doc_id, old.data, auth.uid());
   end if;
   delete from public.docs_supprimes where le < now() - interval '60 days';

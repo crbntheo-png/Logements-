@@ -56,6 +56,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — tous mes espaces sur un écran, prochaines sorties, défaut de suppression corrigé
+- **Tous mes espaces** (page `#tous`, carte sur l'accueil et bouton dans "Mes espaces" dès 2 espaces) : en haut, loyers reçus du mois sur tous les espaces (barre), montant en retard, tâches urgentes, logements et quittances à envoyer ; puis une carte par espace (ce mois-ci, retards par locataire, 3 urgences, "✓ Rien d'urgent", Ouvrir), les espaces avec quelque chose à faire en premier. Les autres espaces sont lus en entier (hors documents) et calculés avec les mêmes règles que l'appli.
+- **Prochaines sorties** (Réglages › 🚀, page `#bientot`) : assistant IA, banque en direct, signature à distance, prélèvement, recommandé, App Store, déclarations préremplies ; "👍 Ça m'intéresse" (table `envies`, `supabase/envies.sql`, nombre d'intéressés par fonction via `envies_compte`), classées par nombre d'intéressés.
+- **Défaut grave corrigé** (introduit à l'étape "qui a fait quoi") : le déclencheur qui garde les suppressions bloquait la suppression d'un espace entier (et donc "Supprimer mon compte"). Il ignore maintenant les suppressions en cascade. Vérifié : suppression d'espaces OK. Espaces de test oubliés du compte de test supprimés.
+- Tests : test64 (vraie base, 2 espaces) 12/12 ; test5, test53, test59 OK. En ligne.
+
 ### 18/11/2026 — importer depuis un tableur (Excel, export Rentila / autre appli)
 - Biens › "📊 Depuis un tableur" (propriétaire) : .xlsx, .xls, .ods (lus avec SheetJS 0.18.5 depuis cdnjs, toutes les feuilles) ou .csv. L'IA (`ia` action `tableur`, 1 lecture de document) comprend les colonnes, garde seulement les locataires ACTUELS, ignore totaux, encaissements et anciens, ne recrée pas un logement déjà là.
 - Fenêtre "Ce que l'IA a trouvé" : bilan chiffré, remarques de l'IA, tout est modifiable (logements : nom, adresse, type, vide/meublée ; locataires : nom, logement y compris 🆕, loyer, charges, jour, entrée, e-mail, téléphone), décocher = ne pas créer.

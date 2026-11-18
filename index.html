@@ -522,6 +522,11 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .paper .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
 .paper .sign div { min-height: 90px; }
 .boite-adr { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1.5px dashed var(--accent); border-radius: 12px; word-break: break-all; } .boite .actions-courtes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tous-k { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; } .tous-k .kpi small { overflow-wrap: anywhere; } .tous-k .kpi:not(.tous-big) b { font-size: 1.1rem; white-space: nowrap; } .tous-big .hero-bar { width: 100%; } .tous-k .kpi { display: grid; gap: 2px; } .tous-big { grid-column: 1 / -1; } .tous-k .kpi.neg b { color: var(--bad); }
+.tous-bar { margin-top: 6px; } .tous-g { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; } .tous-c { display: grid; gap: 8px; } .tous-h { display: flex; align-items: center; gap: 10px; } .tous-h .tx { flex: 1; display: grid; min-width: 0; }
+.tous-l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .9rem; } .tous-l small { color: var(--muted); font-weight: 500; }
+.tous-ret, .tous-urg { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .88rem; } .tous-ret li { display: flex; align-items: center; gap: 8px; } .tous-ret li b { margin-left: auto; color: var(--bad); font-variant-numeric: tabular-nums; } .tous-ok { margin: 0; color: var(--ok); font-weight: 650; font-size: .9rem; }
+.bientot { display: grid; gap: 10px; } .bientot-c { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; } .bientot-c .tx { flex: 1; min-width: 200px; display: grid; gap: 2px; } .bientot-c .tx p { margin: 0; } .bientot-c .tx small { color: var(--muted); font-weight: 600; } .bientot-ico { font-size: 1.6rem; line-height: 1; } .bientot-c.choisi { outline: 2px solid var(--accent); }
 .apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
@@ -1276,7 +1281,7 @@ async function creerEspace(f) {
 }
 function choisirEspace() {
   if (ESPACES.length > 1) setTimeout(totalEspaces, 0);
-  modal("Mes espaces", `${ESPACES.length > 1 ? `<div class="full" id="totEsp"><p class="note">Calcul du total de tes espaces…</p></div>` : ""}<div class="full" ${ESPACES.length > 1 ? "hidden" : ""}><ul class="todo">${ESPACES.map(e => `<li>${avatar(e.nom)}<span class="tx">${esc(e.nom)}${e.id === ESPACE ? "<small>Ouvert en ce moment</small>" : ""}</span>${e.id === ESPACE ? `<span class="pill ok">✓</span>` : `<button type="button" class="small primary" onclick="closeOverlay();ouvrirEspace('${e.id}')">Ouvrir</button>`}</li>`).join("")}</ul></div>
+  modal("Mes espaces", `${ESPACES.length > 1 ? `<div class="full"><a class="btn primary" href="#tous" onclick="closeOverlay()">📊 Tous mes espaces sur un écran</a></div><div class="full" id="totEsp"><p class="note">Calcul du total de tes espaces…</p></div>` : ""}<div class="full" ${ESPACES.length > 1 ? "hidden" : ""}><ul class="todo">${ESPACES.map(e => `<li>${avatar(e.nom)}<span class="tx">${esc(e.nom)}${e.id === ESPACE ? "<small>Ouvert en ce moment</small>" : ""}</span>${e.id === ESPACE ? `<span class="pill ok">✓</span>` : `<button type="button" class="small primary" onclick="closeOverlay();ouvrirEspace('${e.id}')">Ouvrir</button>`}</li>`).join("")}</ul></div>
     <div class="full row"><button type="button" onclick="closeOverlay();MODE='nouvel-espace';render()">➕ Nouvel espace</button><button type="button" class="ghost" onclick="closeOverlay();seDeconnecter()">Se déconnecter</button></div>
     <p class="full note">Connecté avec ${esc(SB_USER && SB_USER.email || "")}</p>`, () => true, { ok: "Fermer", lecture: true });
 }
@@ -2263,6 +2268,8 @@ function render0() {
   else if (h === "aide") html = pageAide();
   else if (h === "legal") html = pageLegal();
   else if (h === "integrations") html = pageIntegrations();
+  else if (h === "tous") html = pageTous();
+  else if (h === "bientot") html = pageBientot();
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
@@ -2495,7 +2502,7 @@ function pageAccueil(T) {
       <button class="cta" onclick="lancerPoint()">⚡ Faire le point</button>
     </div>
   </section>
-  ${carteBanqueAccueil()}${carteActivite()}
+  ${SB && ESPACES.length > 1 ? `<a class="card banque-mini" href="#tous"><span class="bq-ico" aria-hidden="true">🏢</span><span class="tx"><small>Tous mes espaces</small><b>${ESPACES.length} espaces sur un écran</b><small>Loyers, retards et urgences de chacun</small></span></a>` : ""}${carteBanqueAccueil()}${carteActivite()}
   <section><div class="sec-head"><h2 class="sec">Locataires <span class="count">${actifs.length}</span></h2><button class="small" onclick="editBail()">➕ Ajouter</button></div>
     <div class="tiles">${actifs.map(b => [b, ({ retard: 0, partiel: 1, etale: 2, avenir: 3, paye: 4 })[(echeance(b, CUR) || {}).statut] ?? 5]).sort((x, y) => x[1] - y[1]).map(x => carteLocataire(x[0])).join("")}
     ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span class="who"><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="tile-state"><i class="dot"></i>Disponible</div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">➕ Mettre un locataire</button></div></article>`).join("")}</div>
@@ -3387,6 +3394,91 @@ function appliquerTableur(d, nb) {
       dateEntree: entree, suiviDepuis: entree.slice(0, 7) > CUR ? entree.slice(0, 7) : (TODAY.getDate() > (+d["lj" + i] || 5) ? addM(CUR, 1) : CUR), loyerHC: String(+d["ll" + i] || 0), charges: String(+d["lc" + i] || 0), jourPaiement: String(+d["lj" + i] || 5), depot: +l.depot || "", revisions: [] }); nL++; });
   setTimeout(() => toast(`✓ ${nB} logement${nB > 1 ? "s" : ""} et ${nL} locataire${nL > 1 ? "s" : ""} créé${nL + nB > 1 ? "s" : ""}${manque ? ` · ${manque} sans logement choisi, pas créé${manque > 1 ? "s" : ""}` : ""}`), 50);
 }
+/* ================= Tous mes espaces sur un écran ================= */
+let TOUS = null;
+async function chargerTous() {
+  TOUS = { etat: "chargement" }; render();
+  const colls = ["biens", "baux", "paiements", "depenses", "relances", "rappels", "taxes", "edl", "meta"];
+  try {
+    const data = await Promise.all(ESPACES.map(async e => {
+      if (e.id === ESPACE) return { e, d: S };
+      const lignes = [];
+      for (let de = 0; ; de += 1000) { const r = await SB.from("docs").select("coll, data").eq("espace_id", e.id).in("coll", colls).range(de, de + 999); if (r.error) throw r.error; lignes.push(...r.data); if (r.data.length < 1000) break; }
+      const t = blank(); lignes.forEach(l => { if (l.coll === "meta") META_KEYS.forEach(k => { if (l.data[k] !== undefined) t[k] = l.data[k]; }); else (t[l.coll] = t[l.coll] || []).push(l.data); });
+      return { e, d: t };
+    }));
+    const sauve = { S, DEMANDES, ACTIVITE, BANQUE }, L = [];
+    for (const { e, d } of data) {
+      S = d; if (e.id !== ESPACE) { DEMANDES = []; ACTIVITE = []; BANQUE = { etat: "vide", ops: [], comptes: [], lien: null }; } else { DEMANDES = sauve.DEMANDES; BANQUE = sauve.BANQUE; }
+      MEMO = new Map();
+      try {
+        const mois = S.baux.map(b => echeance(b, CUR)).filter(Boolean), att = r2(mois.reduce((s, x) => s + x.du, 0)), rec = r2(mois.reduce((s, x) => s + Math.min(x.paye, x.du), 0));
+        const retards = S.baux.map(b => ({ b, dette: detteBail(b) })).filter(x => x.dette > 0).sort((a, c) => c.dette - a.dette);
+        let urg = []; try { urg = taches().filter(t => t.prio === "urgent").map(t => String(t.t).replace(/<[^>]+>/g, "")); } catch (err) {}
+        const qt = toutesEcheances().filter(qAFaire).length;
+        L.push({ e, nom: S.sci.nom || e.nom, att, rec, logts: S.biens.length, retards: retards.map(x => ({ nom: nomCourt(x.b.nom), dette: x.dette })), dette: r2(retards.reduce((s, x) => s + x.dette, 0)), urg, qt });
+      } finally { MEMO = null; }
+    }
+    S = sauve.S; DEMANDES = sauve.DEMANDES; ACTIVITE = sauve.ACTIVITE; BANQUE = sauve.BANQUE;
+    TOUS = { etat: "ok", L, quand: new Date() };
+  } catch (err) { TOUS = { etat: "erreur", msg: err.message || String(err) }; }
+  render();
+}
+function pageTous() {
+  if (!SB) return `<div class="empty">Disponible dans l'appli installée, avec plusieurs espaces.</div>`;
+  if (!TOUS) { setTimeout(chargerTous, 0); TOUS = { etat: "chargement" }; }
+  const head = `<a class="back" href="#">← Accueil</a><div class="head"><div><h1>Tous mes espaces</h1><p>${ESPACES.length} espace${ESPACES.length > 1 ? "s" : ""} · ${fm(CUR)}</p></div><button class="small" onclick="chargerTous()">↻ Actualiser</button></div>`;
+  if (TOUS.etat === "chargement") return head + `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Calcul de tous tes espaces…</div>`;
+  if (TOUS.etat === "erreur") return head + `<div class="empty">${esc(TOUS.msg)}</div>`;
+  const L = TOUS.L, tot = L.reduce((t, x) => ({ att: t.att + x.att, rec: t.rec + x.rec, dette: t.dette + x.dette, nret: t.nret + x.retards.length, urg: t.urg + x.urg.length, qt: t.qt + x.qt, logts: t.logts + x.logts }), { att: 0, rec: 0, dette: 0, nret: 0, urg: 0, qt: 0, logts: 0 });
+  const pct = v => tot.att ? Math.min(100, Math.round(v / tot.att * 100)) : 0;
+  const carte = x => { const p = x.att ? Math.min(100, Math.round(x.rec / x.att * 100)) : 0, ouvert = x.e.id === ESPACE;
+    return `<section class="card tous-c"><div class="tous-h">${avatar(x.nom)}<div class="tx"><b>${esc(x.nom)}</b><small>${x.logts} logement${x.logts > 1 ? "s" : ""}</small></div>${ouvert ? `<a class="btn small" href="#">Ouvert</a>` : `<button class="small primary" onclick="ouvrirEspace('${x.e.id}').then(() => { location.hash = ''; })">Ouvrir</button>`}</div>
+      <div class="tous-l"><span>Ce mois-ci</span><b>${eur(x.rec)} <small>/ ${eur(x.att)}</small></b></div><div class="hero-bar tous-bar" role="progressbar" aria-valuenow="${p}" aria-valuemin="0" aria-valuemax="100"><i style="width:${p}%"></i></div>
+      ${x.retards.length ? `<ul class="tous-ret">${x.retards.slice(0, 4).map(r => `<li><span class="dot bad"></span>${esc(r.nom)}<b>${eur(r.dette)}</b></li>`).join("")}</ul>` : ""}
+      ${x.urg.length ? `<ul class="tous-urg">${x.urg.slice(0, 3).map(t => `<li>⚠️ ${esc(t)}</li>`).join("")}${x.urg.length > 3 ? `<li class="note">+ ${x.urg.length - 3} autre${x.urg.length - 3 > 1 ? "s" : ""}</li>` : ""}</ul>` : ""}
+      ${!x.retards.length && !x.urg.length ? `<p class="tous-ok">✓ Rien d'urgent</p>` : ""}${x.qt ? `<p class="note small">🧾 ${x.qt} quittance${x.qt > 1 ? "s" : ""} à envoyer</p>` : ""}</section>`; };
+  return head + `<div class="tous-k">
+      <div class="kpi tous-big"><span>Loyers reçus · ${fm(CUR)}</span><b>${eur(tot.rec)}</b><small>sur ${eur(tot.att)} attendus · ${pct(tot.rec)} %</small><div class="hero-bar tous-bar"><i style="width:${pct(tot.rec)}%"></i></div></div>
+      <div class="kpi ${tot.dette ? "neg" : ""}"><span>En retard</span><b>${eur(tot.dette)}</b><small>${tot.nret ? `${tot.nret} locataire${tot.nret > 1 ? "s" : ""}` : "personne"}</small></div>
+      <div class="kpi"><span>Urgent</span><b>${tot.urg}</b><small>tâche${tot.urg > 1 ? "s" : ""} à traiter</small></div>
+      <div class="kpi"><span>Logements</span><b>${tot.logts}</b><small>${tot.qt ? `${tot.qt} quittance${tot.qt > 1 ? "s" : ""} à envoyer` : "toutes quittances envoyées"}</small></div></div>
+    <div class="tous-g">${L.sort((a, c) => (c.urg.length + c.retards.length) - (a.urg.length + a.retards.length)).map(carte).join("")}</div>
+    <p class="note small center">Calculé ${ilYa(TOUS.quand)}. Les espaces avec quelque chose à faire sont en premier.</p>`;
+}
+
+/* ================= Prochaines sorties : chacun dit ce qui l'intéresse ================= */
+const BIENTOT = [
+  ["assistant", "🤖", "Assistant IA « Pose ta question »", "« Combien me doit Jean ? », « Puis-je augmenter le loyer ? » : une réponse avec tes chiffres et la loi. Limité en crédits, comme les autres fonctions IA."],
+  ["banque-directe", "🏦", "Ta banque en direct, sans Pennylane", "Les virements de tes locataires arrivent tout seuls depuis ta banque (toutes les banques françaises), et les loyers se cochent."],
+  ["signature-distance", "✍️", "Signature électronique à distance", "Le locataire signe le bail ou l'avenant depuis chez lui, avec valeur légale. Service payant à l'acte."],
+  ["prelevement", "💳", "Prélèvement automatique des loyers", "Le locataire signe un mandat une fois, le loyer est prélevé tout seul chaque mois (environ 2 € par loyer)."],
+  ["recommande", "📮", "Lettre recommandée en ligne", "Mise en demeure ou congé envoyés en recommandé électronique, sans aller à la poste. Payant à l'envoi."],
+  ["app-store", "📱", "L'appli dans l'App Store et le Play Store", "Une vraie appli à télécharger, en plus de celle qu'on installe depuis le navigateur."],
+  ["declaration", "🏛", "Déclaration 2072 et 2044 préremplies", "Les montants de ta déclaration calculés et présentés case par case, prêts à recopier sur impots.gouv."],
+];
+let ENVIES = null;
+async function chargerEnvies() {
+  ENVIES = { etat: "chargement", miennes: new Set(), nb: {} };
+  const [m, c] = await Promise.all([SB.from("envies").select("fonction"), SB.rpc("envies_compte")]);
+  ENVIES = { etat: "ok", miennes: new Set((m.data || []).map(x => x.fonction)), nb: Object.fromEntries((c.data || []).map(x => [x.fonction, +x.nb])) }; render();
+}
+async function basculerEnvie(k) {
+  if (!SB) return; const a = ENVIES.miennes.has(k);
+  const r = a ? await SB.from("envies").delete().eq("fonction", k).eq("user_id", SB_USER.id) : await SB.from("envies").insert({ fonction: k });
+  if (r.error) { toast("Impossible : " + r.error.message); return; }
+  if (a) { ENVIES.miennes.delete(k); ENVIES.nb[k] = Math.max(0, (ENVIES.nb[k] || 1) - 1); } else { ENVIES.miennes.add(k); ENVIES.nb[k] = (ENVIES.nb[k] || 0) + 1; toast("👍 Noté ! Plus il y a d'intéressés, plus vite ça sort."); }
+  render();
+}
+function pageBientot() {
+  if (SB && !ENVIES) setTimeout(chargerEnvies, 0);
+  const E = ENVIES || { miennes: new Set(), nb: {} }, L = BIENTOT.slice().sort((a, b) => (E.nb[b[0]] || 0) - (E.nb[a[0]] || 0));
+  return `<a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>🚀 Prochaines sorties</h1><p>Touche « Ça m'intéresse » sur ce que tu veux : les plus demandées sortent en premier.</p></div></div>
+    <div class="bientot">${L.map(([k, ico, t, d]) => { const moi = E.miennes.has(k), n = E.nb[k] || 0;
+      return `<section class="card bientot-c ${moi ? "choisi" : ""}"><div class="bientot-ico" aria-hidden="true">${ico}</div><div class="tx"><b>${t}</b><p class="note">${d}</p><small>${n ? `${n} personne${n > 1 ? "s" : ""} intéressée${n > 1 ? "s" : ""}` : "Sois le premier à le demander"}</small></div>
+        ${SB ? `<button class="small ${moi ? "" : "primary"}" onclick="basculerEnvie('${k}')" aria-pressed="${moi}">${moi ? "✓ Intéressé" : "👍 Ça m'intéresse"}</button>` : ""}</section>`; }).join("")}</div>
+    <p class="note center">Une autre idée ? <a href="#" onclick="event.preventDefault();ouvrirDemandeIntegration()">Dis-nous ce qui te manque</a>.</p>`;
+}
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -3769,6 +3861,7 @@ function pageReglages() {
     rubrique("gmail", "✉️", "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
     estProprio() && SB ? rubrique("quittances", "🧾", "Quittances automatiques", S.sci.quittanceAuto ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive", sansCarte(sectionQuittanceAuto())) : "",
     estProprio() && SB ? rubrique("relances", "🔁", "Relances automatiques", S.sci.relanceAuto ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même", sansCarte(sectionRelanceAuto())) : "",
+    rubrique("bientot", "🚀", "Prochaines sorties", "Ce qui arrive · dis ce qui t'intéresse", `<p class="note">Assistant IA, banque en direct, signature à distance… Les fonctions qui intéressent le plus de monde sortent en premier.</p><div class="row"><a class="btn primary" href="#bientot">🚀 Voir les prochaines sorties</a></div>`),
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
