@@ -82,7 +82,7 @@ let A_BLANC = false; // tournée « à blanc » (essai technique) : tout est cal
 // ---- Préférences de chacun : par type d'alerte, sur le téléphone (push) et/ou par e-mail (mail) ----
 const TYPES_NOTIF: Record<string, { push: boolean; mail: boolean }> = {
   loyer_recu: { push: true, mail: false }, retard: { push: true, mail: false }, relance_auto: { push: true, mail: false }, demande: { push: true, mail: true },
-  boite: { push: true, mail: false }, resume: { push: true, mail: false }, banque: { push: true, mail: true }, echeances: { push: true, mail: false },
+  candidature: { push: true, mail: true }, boite: { push: true, mail: false }, resume: { push: true, mail: false }, banque: { push: true, mail: true }, echeances: { push: true, mail: false },
 };
 function veutDe(p: any, type: string, canal: "push" | "mail") {
   if (canal === "push" && p && p.push === false) return false; // interrupteur général du téléphone
@@ -153,6 +153,14 @@ Deno.serve(async (req) => {
     if (!d) return rep({ ok: true, rien: true });
     const titre = `🔧 ${d.nom || "Un locataire"} signale un problème`, texte = String(d.texte || "").replace(/\s+/g, " ").slice(0, 140);
     await alerter(admin, d.espace_id, "demande", { titre, texte, url: "./#afaire", tag: "dem-" + d.id }, { titre, texte: `${d.nom || "Un locataire"} a signalé un problème depuis son espace locataire :\n\n${d.texte}\n\n${d.photo ? "Une photo est jointe à la demande : ouvre l'appli pour la voir.\n\n" : ""}Ouvre l'appli : ${APP}/#afaire` });
+    return rep({ ok: true });
+  }
+  if (corps.candidature && !seulUser) {
+    // nouveau dossier déposé par un candidat depuis le lien de l'annonce
+    const { data: d } = await admin.from("candidatures").select("id, espace_id, bien_id, nom, revenus, pieces").eq("id", corps.candidature).maybeSingle();
+    if (!d) return rep({ ok: true, rien: true });
+    const titre = `🙋 Nouvelle candidature : ${d.nom}`, texte = `${(d.pieces || []).length} pièce(s) jointe(s)${d.revenus ? " · revenus " + Math.round(+d.revenus) + " €/mois" : ""}`;
+    await alerter(admin, d.espace_id, "candidature", { titre, texte, url: "./#afaire", tag: "cand-" + d.id }, { titre, texte: `${d.nom} a déposé son dossier depuis le lien de ton annonce (${texte}).\n\nOuvre l'appli pour le voir : ${APP}/#afaire` });
     return rep({ ok: true });
   }
   if (seulUser && corps.essai && !corps.simulerRelances) {

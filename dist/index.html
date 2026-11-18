@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "2fdc6e9", "date": "2026-11-18T17:27"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "a3cc77b", "date": "2026-11-18T18:00"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -165,6 +165,7 @@ button.small .ic { width: 16px; height: 16px; }
 
 /* Pastilles d'état */
 .pill { display: inline-flex; align-items: center; gap: 5px; font-size: .74rem; font-weight: 750; padding: 3px 9px; border-radius: 99px; white-space: nowrap; line-height: 1.4; }
+.cand-piece span { display: block; font-weight: 400; } .cand-piece small { color: var(--muted); }
 .pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
 .pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.info { background: var(--surface-3); color: var(--muted); } .pill.acc { background: var(--accent-soft); color: var(--accent); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: var(--muted); }
@@ -897,7 +898,7 @@ function save() {
   const mj = JSON.stringify(metaObj());
   if (synced["meta/main"] !== mj) { synced["meta/main"] = mj; changes.push(["meta/main", JSON.parse(mj)]); }
   if (!changes.length) return;
-  if (SB) { planifierPortails(); planifierAgenda(); planifierConnecteur(); return ecrireSupabase(changes.map(c => [c[0], c[1], AUTO])); }
+  if (SB) { planifierPortails(); planifierAnnonces(); planifierAgenda(); planifierConnecteur(); return ecrireSupabase(changes.map(c => [c[0], c[1], AUTO])); }
   changes.forEach(([path, val]) => {
     writeQueue = writeQueue.then(() => val === null ? DB.doc(path).delete() : DB.doc(path).set(val)).catch(err => {
       if (err && err.code === "invalid_argument") toast("Tu n'as pas le droit de modifier ces données (demande l'accès Éditeur).");
@@ -917,6 +918,7 @@ document.addEventListener("focusout", () => setTimeout(() => { const a = documen
 async function boot() {
   try { const q = new URLSearchParams(location.search); if (/^eb-/.test(q.get("state") || "")) { sessionStorage.setItem("retour-banque", JSON.stringify({ code: q.get("code") || "", state: q.get("state"), erreur: q.get("error_description") || q.get("error") || "" })); history.replaceState(null, "", location.pathname + location.hash); } } catch (e) {}
   if (/^#locataire=/.test(location.hash) && window.APP_SUPABASE) return demarrerLocataire();
+  if (/^#candidature=/.test(location.hash) && window.APP_SUPABASE) return demarrerCandidat();
   if (window.APP_SUPABASE && window.supabase) return bootSupabase();
   let db = null;
   try { db = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch (e) { db = null; }
@@ -1022,6 +1024,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   chargerBanque(true);
+  CANDS = []; ANNONCE_PUBLIEE = {}; setTimeout(chargerCandidatures, 400); setTimeout(publierAnnonces, 5500);
   DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; setTimeout(retourBanque, 800); chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000); CONNECTEUR_PUBLIE = ""; setTimeout(publierConnecteur, 7000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
@@ -2057,6 +2060,8 @@ function taches() {
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
       acts: [[`Garder ${mA}`, `garderPaiement('${x.cle}','A')`, "primary"], [`Garder ${mB}`, `garderPaiement('${x.cle}','B')`], ["Ce sont 2 paiements", `pasUnDoublon('${x.cle}')`]] }); });
+  (CANDS || []).filter(c => c.statut === "nouvelle").forEach(c => { const bi = bien(c.bien_id) || {}, te = tauxEffort(bi, c.revenus);
+    add({ key: "cand-" + c.id, prio: "soon", date: new Date(c.cree_le), t: `🙋 Candidature de ${esc(c.nom)} · ${esc(bi.nom || "")}`, d: `${te !== null ? `Taux d'effort ${Math.round(te * 100)} %` : "Revenus non indiqués"} · ${(c.pieces || []).length} pièce${(c.pieces || []).length > 1 ? "s" : ""} · ${ilYa(c.cree_le)}`, acts: [["Voir le dossier", `voirCandidature(${c.id})`, "primary"]] }); });
   travauxOuverts().forEach(({ bi, t }) => { const dt = t.date ? P(t.date) : null, passe = dt && dt < TODAY && t.statut !== "devis", vieux = t.statut === "devis" && t.cree && daysBetween(P(t.cree), TODAY) > 14;
     add({ bailId: t.bailId, key: "trv-" + t.id + "-" + t.statut + "-" + (t.date || ""), prio: passe || vieux ? "soon" : "info", date: dt || TODAY, t: `🛠 ${esc(t.titre)} · ${esc(bi.nom)}`,
       d: passe ? `Le passage était prévu le ${fds(t.date)} : c'est fini ?` : vieux ? `À organiser depuis ${daysBetween(P(t.cree), TODAY)} jours : relancer l'artisan ?` : `${(STATUTS_TRAVAUX.find(x => x[0] === t.statut) || ["", ""])[1]}${t.artisan ? " · " + esc(t.artisan) : ""}${dt ? " · passage le " + fds(t.date) : ""}`,
@@ -2526,6 +2531,7 @@ function render() {
 function render0() {
   const app = document.getElementById("app");
   if (MODE === "locataire") { document.body.classList.add("sans-nav", "mode-locataire"); app.innerHTML = pageLocataire(); return; }
+  if (MODE === "candidat") { document.body.classList.add("sans-nav", "mode-locataire"); app.innerHTML = pageCandidat(); return; }
   document.body.classList.toggle("sans-nav", MODE === "connexion" || MODE === "nouvel-espace" || MODE === "chargement");
   if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
   if (MODE === "connexion") { app.innerHTML = location.hash === "#legal" ? pageLegal().replace('href="#reglages">← Réglages', 'href="#">← Connexion') : pageConnexion() + `<p class="note center" style="margin-top:18px"><a href="/presentation">Découvrir l'appli</a> · <a href="#legal">Mentions légales et confidentialité</a></p>`; if (document.getElementById("gbtn")) setTimeout(boutonGoogle, 0); return; }
@@ -4905,6 +4911,7 @@ function fermerDoc() {
    L'appli publie une "photo" de ce que le locataire a le droit de voir (situation, quittances, bail et états des lieux),
    remise à jour à chaque modification. Le locataire l'ouvre sans compte, et peut signaler un problème avec une photo. */
 let DEMANDES = [], PORTAIL_PUBLIE = {}, PORTAIL_T = null;
+let CANDS = [], ANNONCE_PUBLIEE = {}, ANNONCE_T = null; // candidatures en ligne (voir plus bas)
 const LIEN_PORTAIL = j => `${LIEN_APPLI}/#locataire=${j}`;
 const b64url = u8 => btoa(String.fromCharCode(...u8)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const sha256hex = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(x => x.toString(16).padStart(2, "0")).join("");
@@ -6577,8 +6584,148 @@ function sectionLocation(bi) {
   const vide = !bailActifDuBien(bi.id) || S.baux.some(b => b.bienId === bi.id && b.dateSortie && P(b.dateSortie) >= TODAY), C = (bi.candidats || []).map(c => ({ c, ...scoreCandidat(bi, c) })).sort((a, b) => b.s - a.s);
   if (!vide && !C.length) return "";
   return `<section class="card"><h2>📣 Relouer</h2><p class="note">${encadre(bi) ? `⚖️ Ville avec encadrement des loyers${cq("encadrement")} : vérifie le plafond sur le site de la préfecture avant de fixer le loyer. ` : ""}Annonce avec les mentions obligatoires, candidats comparés au même endroit.</p>
-    <div class="row"><button class="primary" onclick="annonce('${bi.id}')">✍️ ${bi.annonce ? "Revoir l'annonce" : "Écrire l'annonce"}</button><button onclick="editCandidat('${bi.id}')">+ Candidat</button><a class="btn ghost" href="https://www.visale.fr" target="_blank" rel="noopener">Visale ↗</a></div>
+    <div class="row"><button class="primary" onclick="annonce('${bi.id}')">✍️ ${bi.annonce ? "Revoir l'annonce" : "Écrire l'annonce"}</button><button onclick="editCandidat('${bi.id}')">+ Candidat</button>${SB && !LECTURE ? `<button onclick="lienCandidature('${bi.id}')">🔗 ${bi.lienCandidature ? "Lien de candidature" : "Recevoir les dossiers en ligne"}</button>` : ""}<a class="btn ghost" href="https://www.visale.fr" target="_blank" rel="noopener">Visale ↗</a></div>
+    ${(() => { const L = (CANDS || []).filter(c => c.bien_id === bi.id && c.statut !== "importee"); return L.length ? `<h3 style="margin-top:14px">📥 Dossiers reçus en ligne</h3><ul class="todo plat">${L.map(c => { const te = tauxEffort(bi, c.revenus); return `<li>${avatar(c.nom)}<span class="tx"><a href="#" onclick="event.preventDefault();voirCandidature(${c.id})">${esc(c.nom)}</a><small>${te !== null ? `taux d'effort ${Math.round(te * 100)} %` : "revenus ?"} · ${(c.pieces || []).length} pièce${(c.pieces || []).length > 1 ? "s" : ""} · ${ilYa(c.cree_le)}</small></span>${c.statut === "nouvelle" ? `<span class="pill warn">Nouveau</span>` : ""}</li>`; }).join("")}</ul>` : ""; })()}
     ${C.length ? `<ul class="todo plat" style="margin-top:12px">${C.map(({ c, s, te }) => `<li>${avatar(c.nom)}<span class="tx"><a href="#" onclick="event.preventDefault();editCandidat('${bi.id}','${c.id}')">${esc(c.nom)}</a><small>${te !== null ? `taux d'effort ${Math.round(te * 100)} %` : "revenus ?"} · ${({ aucune: "sans garant", personne: "garant", visale: "Visale", autre: "garantie" })[c.garantie]} · ${(c.pieces || []).length}/5 pièces · ${"★".repeat(Math.min(5, s))}${"☆".repeat(Math.max(0, 5 - s))}</small></span><button class="small primary" onclick="choisirCandidat('${bi.id}','${c.id}')">Choisir</button></li>`).join("")}</ul>` : ""}</section>`;
+}
+
+/* ================= Candidatures en ligne =================
+   Un lien public par logement à louer : le candidat voit l'annonce et dépose son dossier (pièces autorisées par la loi),
+   sans compte. Le propriétaire le reçoit dans À faire, l'ouvre, le garde dans ses candidats ou le refuse (pièces effacées). */
+const LIEN_CANDIDATURE = j => `${LIEN_APPLI}/#candidature=${j}`;
+const loyerAnnonce = bi => (+(bi.annonce || {}).hc || +bi.loyerRef || 0) + (+(bi.annonce || {}).ch || 0);
+const tauxEffort = (bi, revenus) => { const l = loyerAnnonce(bi || {}); return l && +revenus ? l / +revenus : null; };
+function donneesAnnonce(bi) {
+  const a = bi.annonce || {}, meuble = bi.meuble === "meuble", hc = +a.hc || +bi.loyerRef || 0, ch = +a.ch || 0;
+  return { v: 1, maj: new Date().toISOString(), titre: `${bi.type || "Logement"}${meuble ? " meublé" : ""}${bi.pieces ? " " + bi.pieces + " pièce" + (bi.pieces > 1 ? "s" : "") : ""}${bi.surface ? " " + bi.surface + " m²" : ""}`, ville: [bi.cp, bi.ville].filter(Boolean).join(" "),
+    hc, ch, mode: a.mode || (meuble ? "forfait" : "provision"), depot: r2(hc * (meuble ? 2 : 1)), dispo: a.dispo || "", dpe: bi.dpe || "", energie: a.energie || "", texte: a.plus || "", surface: bi.surface || "", meuble,
+    bailleur: estPerso() ? (S.sci.gerant || "") : (S.sci.nom || "") };
+}
+function planifierAnnonces() { if (!SB || !ESPACE || LECTURE || !S.biens.some(b => b.lienCandidature)) return; clearTimeout(ANNONCE_T); ANNONCE_T = setTimeout(publierAnnonces, 1500); }
+async function publierAnnonces() {
+  if (!SB || !ESPACE || LECTURE) return;
+  for (const bi of S.biens.filter(x => x.lienCandidature)) { const d = donneesAnnonce(bi), cle = JSON.stringify({ ...d, maj: "" }); if (ANNONCE_PUBLIEE[bi.id] === cle) continue;
+    const r = await SB.from("annonces_publiques").update({ donnees: d, maj_le: d.maj }).eq("espace_id", ESPACE).eq("bien_id", bi.id); if (!r.error) ANNONCE_PUBLIEE[bi.id] = cle; }
+}
+async function chargerCandidatures() {
+  if (!SB || !ESPACE) return; const id = ESPACE;
+  const r = await SB.from("candidatures").select("*").eq("espace_id", id).in("statut", ["nouvelle", "vue"]).order("cree_le", { ascending: false }).limit(200);
+  if (ESPACE !== id || r.error) return; const avant = JSON.stringify(CANDS.map(c => c.id + c.statut)); CANDS = r.data || []; if (JSON.stringify(CANDS.map(c => c.id + c.statut)) !== avant) render();
+}
+async function lienCandidature(bienId) {
+  const bi = bien(bienId); if (!bi || !SB) return;
+  if (!bi.lienCandidature) {
+    modal("🔗 Recevoir les dossiers en ligne", `<div class="full">${grosMsg("attention", "Un lien à mettre dans ton annonce", "Les candidats voient l'annonce et t'envoient leur dossier complet, sans créer de compte. Tu es prévenu à chaque dossier.")}</div>
+      <div class="full"><b>Ce qu'ils verront</b><ul class="note"><li>le titre, la ville (pas l'adresse exacte), le loyer, les charges, le dépôt, la date de disponibilité, le DPE ;</li><li>ton texte d'annonce ;</li><li>la liste des pièces que la loi t'autorise à demander.</li></ul>
+      <b>Ce qu'ils ne verront jamais</b><p class="note">L'adresse exacte, tes autres logements, tes locataires, les autres candidats.</p></div>
+      ${bi.annonce ? "" : `<p class="full note">💡 Écris d'abord l'annonce (bouton "Écrire l'annonce") pour que le loyer et le texte apparaissent.</p>`}`,
+      () => { creerLienCandidature(bienId); return true; }, { ok: "Créer le lien", lecture: true });
+    return;
+  }
+  const lien = LIEN_CANDIDATURE(bi.lienCandidature), n = (CANDS || []).filter(c => c.bien_id === bi.id).length;
+  modal("🔗 Lien de candidature", `<div class="full">${grosMsg("ok", "✅ Ton lien est prêt", `Mets-le dans ton annonce (Leboncoin, SeLoger, Facebook…) ou envoie-le aux personnes intéressées.${n ? ` ${n} dossier${n > 1 ? "s" : ""} en attente.` : ""}`)}</div>
+    <label class="fl full">Lien à partager<input id="cand_lien" readonly value="${esc(lien)}"></label>
+    <div class="full row"><button type="button" class="primary" onclick="copierTexte(document.getElementById('cand_lien').value)">Copier le lien</button>${navigator.share ? `<button type="button" onclick="navigator.share({title:'Dossier de candidature',text:'Pour déposer votre dossier : ${esc(lien)}'}).catch(()=>{})">Partager</button>` : ""}<a class="btn" href="${esc(lien)}" target="_blank" rel="noopener">Voir comme un candidat</a></div>
+    <p class="full note">L'annonce se met à jour toute seule quand tu la modifies. Logement loué ? Désactive le lien.</p>
+    <div class="full"><button type="button" class="danger small" onclick="confirmer('Désactiver le lien ? Plus personne ne pourra déposer de dossier (les dossiers reçus restent).', () => desactiverLienCandidature('${bienId}'))">Désactiver le lien</button></div>`, () => true, { ok: "Fermer", lecture: true });
+}
+async function creerLienCandidature(bienId) {
+  const bi = bien(bienId); if (!bi) return;
+  const jeton = b64url(crypto.getRandomValues(new Uint8Array(32))), h = await sha256hex(jeton);
+  await SB.from("annonces_publiques").delete().eq("espace_id", ESPACE).eq("bien_id", bi.id);
+  const d = donneesAnnonce(bi), r = await SB.from("annonces_publiques").insert({ jeton_hash: h, espace_id: ESPACE, bien_id: bi.id, donnees: d });
+  if (r.error) { toast("Impossible de créer le lien : " + r.error.message); return; }
+  bi.lienCandidature = jeton; ANNONCE_PUBLIEE[bi.id] = JSON.stringify({ ...d, maj: "" }); save(); render(); lienCandidature(bienId);
+}
+async function desactiverLienCandidature(bienId) {
+  const bi = bien(bienId); if (!bi) return;
+  const r = await SB.from("annonces_publiques").delete().eq("espace_id", ESPACE).eq("bien_id", bi.id); if (r.error) { toast("Impossible : " + r.error.message); return; }
+  delete bi.lienCandidature; save(); closeOverlay(); toast("Lien désactivé : plus aucun dossier ne peut arriver");
+}
+const PIECES_CAND = [["identite", "🪪", "Pièce d'identité", "Carte d'identité, passeport ou titre de séjour"], ["domicile", "🏠", "Justificatif de domicile", "3 dernières quittances, ou attestation d'hébergement"], ["salaires", "💼", "Justificatifs de revenus", "3 derniers bulletins de salaire (ou bilan, pension, bourse…)"], ["impots", "🧾", "Dernier avis d'imposition", ""], ["travail", "📄", "Situation professionnelle", "Contrat de travail, attestation employeur, carte étudiant…"], ["garant", "🤝", "Garant ou Visale", "Dossier du garant, ou visa Visale"]];
+const PIECE_VERS_CAND = { identite: "Pièce d'identité", salaires: "3 derniers bulletins de salaire", impots: "Dernier avis d'imposition", travail: "Contrat de travail ou attestation employeur", domicile: "Justificatif de domicile" };
+async function voirCandidature(id) {
+  const c = CANDS.find(x => x.id === id); if (!c) return; const bi = bien(c.bien_id) || {}, te = tauxEffort(bi, c.revenus);
+  if (c.statut === "nouvelle" && !LECTURE) { SB.from("candidatures").update({ statut: "vue" }).eq("id", id).then(() => { c.statut = "vue"; render(); }); }
+  const liens = await Promise.all((c.pieces || []).map(async x => { const r = await SB.storage.from("documents").createSignedUrl(x.chemin, 900); return { ...x, url: r.data ? r.data.signedUrl : "" }; }));
+  const sit = { cdi: "CDI", cdd: "CDD / intérim", independant: "Indépendant", etudiant: "Étudiant", retraite: "Retraité", autre: "Autre" }, gar = { aucune: "Pas de garant", personne: "Un garant", visale: "Visale", autre: "Autre garantie" };
+  modal(`🙋 ${esc(c.nom)}`, `<p class="full note">Dossier reçu ${ilYa(c.cree_le)} pour ${esc(bi.nom || "")}${c.email ? ` · <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""}${c.tel ? ` · <a href="tel:${esc(c.tel)}">${esc(c.tel)}</a>` : ""}</p>
+    <div class="full">${grosMsg(te === null ? "attention" : te <= .33 ? "ok" : "attention", te === null ? "Revenus non indiqués" : `Taux d'effort : ${Math.round(te * 100)} %`, `${c.revenus ? `Revenus ${eur(c.revenus)} par mois pour un loyer de ${eur(loyerAnnonce(bi))}. ` : ""}${te !== null ? (te <= .33 ? "Moins d'un tiers des revenus : c'est le repère habituel." : "Plus d'un tiers des revenus : un garant ou Visale rassure.") : ""}`)}</div>
+    <table class="full"><tbody><tr><td>Situation</td><td>${esc(sit[c.situation] || c.situation || "—")}</td></tr><tr><td>Garantie</td><td>${esc(gar[c.garantie] || "—")}${c.garant_info ? " · " + esc(c.garant_info) : ""}</td></tr><tr><td>Personnes dans le logement</td><td>${c.occupants || 1}</td></tr></tbody></table>
+    ${c.message ? `<blockquote class="full demande-txt">${esc(c.message)}</blockquote>` : ""}
+    <div class="full"><b>Pièces (${liens.length})</b>${liens.length ? `<ul class="todo plat">${liens.map(x => `<li><span class="ico" aria-hidden="true">${(PIECES_CAND.find(p => p[0] === x.type) || [, "📎"])[1]}</span><span class="tx">${esc((PIECES_CAND.find(p => p[0] === x.type) || [, , "Autre"])[2])}<small>${esc(x.nom)}</small></span>${x.url ? `<a class="btn small" href="${esc(x.url)}" target="_blank" rel="noopener">Ouvrir</a>` : ""}</li>`).join("")}</ul>` : `<p class="note">Aucune pièce jointe.</p>`}
+      ${(() => { const manque = PIECES_CAND.filter(p => p[0] !== "garant" && !(c.pieces || []).some(x => x.type === p[0])).map(p => p[2]); return manque.length ? `<p class="note">Il manque : ${manque.map(esc).join(", ")}.</p>` : `<p class="note">✅ Dossier complet.</p>`; })()}</div>
+    ${LECTURE ? "" : `<div class="full row"><button type="button" class="danger small" onclick="confirmer('Ne pas retenir ${esc(c.nom).replace(/'/g, "\\'")} ? Ses pièces seront effacées.', () => refuserCandidature(${id}))">Pas retenu</button></div>`}`,
+    () => { if (LECTURE) return true; garderCandidature(id); return true; }, { ok: "➕ Garder dans mes candidats", lecture: true });
+}
+async function garderCandidature(id) {
+  const c = CANDS.find(x => x.id === id), bi = c && bien(c.bien_id); if (!bi) return;
+  bi.candidats = bi.candidats || [];
+  if (!bi.candidats.some(x => x.enLigne === id)) bi.candidats.push({ id: uid(), enLigne: id, nom: c.nom, tel: c.tel || "", email: c.email || "", revenus: +c.revenus || 0, situation: c.situation || "autre", garantie: c.garantie || "aucune", garantInfo: c.garant_info || "", notes: c.message || "",
+    pieces: [...new Set((c.pieces || []).map(x => PIECE_VERS_CAND[x.type]).filter(Boolean))], piecesEnLigne: (c.pieces || []).map(x => ({ type: x.type, nom: x.nom, chemin: x.chemin })), date: iso(TODAY) });
+  const r = await SB.from("candidatures").update({ statut: "importee" }).eq("id", id); if (!r.error) c.statut = "importee";
+  save(); render(); toast(`✓ ${c.nom} ajouté à tes candidats de ${bi.nom}`);
+}
+async function refuserCandidature(id) {
+  const c = CANDS.find(x => x.id === id); if (!c) return;
+  const ch = (c.pieces || []).map(x => x.chemin).filter(Boolean); if (ch.length) await SB.storage.from("documents").remove(ch);
+  const r = await SB.from("candidatures").update({ statut: "refusee", pieces: [] }).eq("id", id); if (r.error) { toast("Impossible : " + r.error.message); return; }
+  CANDS = CANDS.filter(x => x.id !== id); closeOverlay(); render(); toast("Candidature non retenue · pièces effacées");
+}
+/* ---- Côté candidat (le lien de l'annonce, sans compte) ---- */
+let CAND = { etat: "chargement" };
+const jetonCandidat = () => (location.hash.match(/^#candidature=([A-Za-z0-9_-]+)/) || [])[1] || "";
+async function appelCandidat(corps) {
+  const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/candidature", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle }, body: JSON.stringify({ jeton: jetonCandidat(), ...corps }) });
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) throw new Error(j.erreur || "Le service ne répond pas, réessayez dans un moment."); return j;
+}
+async function demarrerCandidat() {
+  MODE = "candidat"; CAND = { etat: "chargement" }; render(); document.getElementById("brandName").textContent = "Dossier de location";
+  try { const j = await appelCandidat({ action: "voir" }); CAND = { etat: "ok", annonce: j.annonce || {} }; } catch (e) { CAND = { etat: "erreur", msg: e.message }; }
+  render();
+}
+function pageCandidat() {
+  if (CAND.etat === "chargement") return `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Ouverture de l'annonce…</div>`;
+  if (CAND.etat === "erreur") return `<section class="card loc-card">${grosMsg("stop", "Annonce indisponible", esc(CAND.msg))}</section>`;
+  const A = CAND.annonce || {};
+  if (CAND.etat === "envoye") return `<div class="loc-page"><section class="card loc-card">${grosMsg("ok", "✅ Dossier envoyé", `Merci ${esc(CAND.nom || "")} ! ${A.bailleur ? esc(A.bailleur) : "Le propriétaire"} a reçu ton dossier (${CAND.n} pièce${CAND.n > 1 ? "s" : ""}) et te répondra directement.`)}</section></div>`;
+  return `<div class="loc-page">
+    <section class="card loc-card"><p class="note">Location${A.bailleur ? " proposée par " + esc(A.bailleur) : ""}</p><h1 class="loc-t">${esc(A.titre || "Logement")}</h1><p>${esc(A.ville || "")}</p>
+      <div class="kpis" style="margin-top:10px"><div class="kpi"><span>Loyer</span><b>${eur((+A.hc || 0) + (+A.ch || 0))}</b><small>dont ${eur(+A.ch || 0)} de charges (${A.mode === "forfait" ? "forfait" : "provision"})</small></div><div class="kpi"><span>Dépôt de garantie</span><b>${eur(+A.depot || 0)}</b><small>${A.dispo ? "Libre le " + fd(A.dispo) : "Disponible"}</small></div></div>
+      ${A.texte ? `<p style="white-space:pre-wrap;margin-top:10px">${esc(A.texte)}</p>` : ""}<p class="note">${A.surface ? A.surface + " m² · " : ""}DPE ${esc(A.dpe || "non communiqué")}${A.energie ? " · énergie estimée " + esc(A.energie) + " par an" : ""} · Pas d'honoraires</p></section>
+    <section class="card loc-card"><h2>📁 Déposer mon dossier</h2><p class="note">Gratuit, sans compte. Seul le propriétaire verra ton dossier.</p>
+      <form id="cand_form" class="f" onsubmit="event.preventDefault();envoyerCandidature(this)">
+        <label class="fl full">Nom et prénom<input name="nom" id="cand_nom" required maxlength="200" autocomplete="name"></label>
+        <label class="fl">E-mail<input name="email" id="cand_email" type="email" maxlength="200" autocomplete="email"></label><label class="fl">Téléphone<input name="tel" id="cand_tel" type="tel" maxlength="40" autocomplete="tel"></label>
+        <label class="fl">Situation<select name="situation"><option value="cdi">CDI</option><option value="cdd">CDD / intérim</option><option value="independant">Indépendant</option><option value="etudiant">Étudiant</option><option value="retraite">Retraité</option><option value="autre">Autre</option></select></label>
+        <label class="fl">Revenus nets par mois (€, tout le foyer)<input name="revenus" id="cand_revenus" type="number" min="0" step="1" inputmode="numeric"></label>
+        <label class="fl">Garantie<select name="garantie"><option value="aucune">Pas de garant</option><option value="personne">Un garant</option><option value="visale">Visale</option><option value="autre">Autre organisme</option></select></label>
+        <label class="fl">Revenus du garant ou n° de visa Visale<input name="garantInfo" maxlength="300"></label>
+        <label class="fl">Nombre de personnes dans le logement<input name="occupants" type="number" min="1" max="20" value="1"></label>
+        <label class="fl full">Un mot pour le propriétaire (facultatif)<textarea name="message" maxlength="3000" placeholder="Date d'emménagement souhaitée, présentation…"></textarea></label>
+        <fieldset class="full"><legend>Pièces du dossier (photos ou PDF, 5 Mo max chacune)</legend>
+          ${PIECES_CAND.map(([k, i, t, d]) => `<label class="fl full cand-piece"><span>${i} <b>${t}</b>${d ? `<small> · ${d}</small>` : ""}</span><input type="file" name="p_${k}" data-type="${k}" accept="image/*,application/pdf" multiple></label>`).join("")}
+          <p class="note full">Le propriétaire n'a pas le droit de te demander : relevés de compte, photo d'identité, carte Vitale, attestation de bonne tenue de compte, chèque de réservation…</p></fieldset>
+        <label class="fl chk full"><input type="checkbox" name="accord" id="cand_accord" required> J'accepte que ces informations soient transmises au propriétaire pour étudier ma candidature. Elles sont effacées si elle n'est pas retenue.</label>
+        <div class="full"><button class="primary" id="cand_btn">Envoyer mon dossier</button></div></form></section>
+    <p class="note center">Annonce mise à jour ${A.maj ? ilYa(A.maj) : ""}.</p></div>`;
+}
+const lireFichierDataUrl = f => new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ko(new Error("Fichier illisible : " + f.name)); r.readAsDataURL(f); });
+async function envoyerCandidature(f) {
+  const bt = document.getElementById("cand_btn"), d = Object.fromEntries(new FormData(f).entries());
+  if (!d.email && !d.tel) { toast("Indique un e-mail ou un téléphone pour que le propriétaire puisse te répondre."); return; }
+  bt.disabled = true; bt.textContent = "Préparation des pièces…";
+  try {
+    const pieces = [];
+    for (const inp of f.querySelectorAll("input[type=file]")) for (const x of inp.files) {
+      if (x.type === "application/pdf") { if (x.size > 5e6) throw new Error(`"${x.name}" dépasse 5 Mo : envoie plutôt une photo de chaque page.`); pieces.push({ type: inp.dataset.type, nom: x.name, data: await lireFichierDataUrl(x) }); }
+      else if (/^image\//.test(x.type)) pieces.push({ type: inp.dataset.type, nom: x.name, data: await photoReduite(x) });
+    }
+    if (pieces.length > 12) throw new Error("12 fichiers au maximum : regroupe les bulletins dans un seul PDF si besoin.");
+    bt.textContent = "Envoi…";
+    const j = await appelCandidat({ action: "deposer", nom: d.nom, email: d.email, tel: d.tel, situation: d.situation, revenus: d.revenus, garantie: d.garantie, garantInfo: d.garantInfo, occupants: d.occupants, message: d.message, accord: !!f.accord.checked, pieces });
+    CAND = { ...CAND, etat: "envoye", nom: d.nom.split(" ")[0], n: j.pieces || 0 }; render(); scrollTo(0, 0);
+  } catch (e) { toast(e.message); bt.disabled = false; bt.textContent = "Envoyer mon dossier"; }
 }
 
 /* ================= Travaux ================= */
@@ -6807,6 +6954,7 @@ const TYPES_NOTIF = [
   ["retard", "⏰", "Loyer en retard", "Pas reçu 3 jours après la date prévue", true, false],
   ["relance_auto", "🔁", "Relance automatique envoyée", "Quand l'appli relance un locataire pour toi", true, false],
   ["demande", "🔧", "Problème signalé par un locataire", "Fuite, panne… depuis son espace locataire", true, true],
+  ["candidature", "🙋", "Nouvelle candidature", "Un candidat dépose son dossier depuis le lien de ton annonce", true, true],
   ["boite", "📨", "Document reçu par e-mail", "Dans ta boîte à documents, à ranger", true, false],
   ["resume", "📊", "Point du mois", "Le 1er et le 5 : qui a payé, qui est en retard", true, false],
   ["banque", "🏦", "Banque à vérifier", "Accès qui expire, banque ou Pennylane qui ne répond plus", true, true],
