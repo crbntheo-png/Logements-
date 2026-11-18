@@ -49,12 +49,19 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 
 Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅ agenda abonné, ✅ boîte à documents par e-mail (reste l'activation Cloudflare par Théo), ✅ import depuis un tableur. À faire ensuite, dans l'ordre :
 8. **Assistant IA "Pose ta question"** (comme Rentila) : question libre, réponse avec les données de l'espace (dettes, échéances, baux) et les règles de la loi de 1989 ; quota à part (nouvelle colonne dans `ia_usage`).
-9. **Brancher l'appli sur Claude / ChatGPT (MCP)** (comme Rentila) : serveur MCP en fonction Supabase, lecture seule d'abord (loyers, retards, locataires, documents), lien secret par espace.
-10. **Tous mes espaces sur un écran** (SCI + nom propre).
+9. ✅ (18/11) **Brancher l'appli sur Claude / ChatGPT (MCP)** (comme Rentila) : serveur MCP en fonction Supabase, lecture seule d'abord (loyers, retards, locataires, documents), lien secret par espace.
+10. ✅ (18/11) **Tous mes espaces sur un écran** (SCI + nom propre).
 
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — brancher l'appli sur Claude (connecteur MCP)
+- Réglages › "🤖 Brancher sur Claude" (propriétaire) : un lien secret par espace (`supabase/connecteur.sql`, table `connecteurs`, empreinte du jeton seulement), servi par la fonction `mcp` (protocole MCP en HTTP, lecture seule). Étapes affichées : claude.ai › Paramètres › Connecteurs › Ajouter un connecteur personnalisé (nom, URL), puis l'activer dans une conversation.
+- 9 outils : résumé du mois, locataires (avec recherche par nom et mois impayés), logements, impayés, à faire, échéances 90 jours, trésorerie, compta de l'année, liste des documents (sans contenu). Aucun outil d'écriture.
+- L'appli republie les chiffres à chaque modification (si changés). "Désactiver ce lien" coupe tout accès. Confidentialité complétée.
+- Tests : test65 (vraie base, vraie fonction) 17/17 ; vérifié aussi avec la bibliothèque officielle MCP (`@modelcontextprotocol/sdk` 1.17.0, transport HTTP) : connexion, liste des outils, appels. test5, test53, test64 OK. En ligne.
+- Pas vérifié : l'ajout réel dans claude.ai (à faire par Théo, 1 minute).
 
 ### 18/11/2026 — tous mes espaces sur un écran, prochaines sorties, défaut de suppression corrigé
 - **Tous mes espaces** (page `#tous`, carte sur l'accueil et bouton dans "Mes espaces" dès 2 espaces) : en haut, loyers reçus du mois sur tous les espaces (barre), montant en retard, tâches urgentes, logements et quittances à envoyer ; puis une carte par espace (ce mois-ci, retards par locataire, 3 urgences, "✓ Rien d'urgent", Ouvrir), les espaces avec quelque chose à faire en premier. Les autres espaces sont lus en entier (hors documents) et calculés avec les mêmes règles que l'appli.

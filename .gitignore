@@ -7,3 +7,4 @@ tests/shots*/
 tests/vendor/
 node_modules/
 email-worker/node_modules/
+tests/mcp-url.txt

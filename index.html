@@ -794,7 +794,7 @@ function save() {
   const mj = JSON.stringify(metaObj());
   if (synced["meta/main"] !== mj) { synced["meta/main"] = mj; changes.push(["meta/main", JSON.parse(mj)]); }
   if (!changes.length) return;
-  if (SB) { planifierPortails(); planifierAgenda(); return ecrireSupabase(changes); }
+  if (SB) { planifierPortails(); planifierAgenda(); planifierConnecteur(); return ecrireSupabase(changes); }
   changes.forEach(([path, val]) => {
     writeQueue = writeQueue.then(() => val === null ? DB.doc(path).delete() : DB.doc(path).set(val)).catch(err => {
       if (err && err.code === "invalid_argument") toast("Tu n'as pas le droit de modifier ces données (demande l'accès Éditeur).");
@@ -918,7 +918,7 @@ async function ouvrirEspace(id, enFond) {
   setTimeout(viderFile, 300);
   setTimeout(() => majIrlInsee(false), 4000);
   BANQUE = { etat: "chargement", ops: [], comptes: [], lien: null }; chargerBanque(true);
-  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000);
+  DEMANDES = []; PORTAIL_PUBLIE = {}; ACTIVITE = []; AGENDA_PUBLIE = ""; BOITE = { etat: "inconnu" }; chargerDemandes(); chargerActivite(); setTimeout(publierPortails, 5000); setTimeout(publierAgenda, 6000); CONNECTEUR_PUBLIE = ""; setTimeout(publierConnecteur, 7000);
   chargerMembres().then(() => { if (MODE === "partage") render(); }).catch(() => {});
 }
 /* ================= Banque (via Pennylane, lue par le serveur) ================= */
@@ -3479,6 +3479,59 @@ function pageBientot() {
         ${SB ? `<button class="small ${moi ? "" : "primary"}" onclick="basculerEnvie('${k}')" aria-pressed="${moi}">${moi ? "✓ Intéressé" : "👍 Ça m'intéresse"}</button>` : ""}</section>`; }).join("")}</div>
     <p class="note center">Une autre idée ? <a href="#" onclick="event.preventDefault();ouvrirDemandeIntegration()">Dis-nous ce qui te manque</a>.</p>`;
 }
+/* ================= Connecteur Claude (MCP) : Claude lit les chiffres de l'espace, en lecture seule ================= */
+let CONNECTEUR_PUBLIE = "", CONNECTEUR_T = null;
+const lienConnecteur = j => `${window.APP_SUPABASE ? window.APP_SUPABASE.url : ""}/functions/v1/mcp/${j}`;
+const sansHtml = t => String(t || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+function donneesConnecteur() {
+  MEMO = new Map();
+  try {
+    const actifs = S.baux.filter(b => isActive(b)), y = TODAY.getFullYear();
+    const mois = actifs.map(b => ({ b, e: echeance(b, CUR) })).filter(x => x.e);
+    const impayes = S.baux.flatMap(b => echeancesBail(b).filter(e => e.reste > 0 && (e.statut === "retard" || e.statut === "etale" || e.statut === "partiel")).map(e => ({ locataire: b.nom, logement: (bien(b.bienId) || {}).nom || "", mois: e.m, du: e.du, paye: e.paye, reste: e.reste, statut: e.statut === "etale" ? "étalé (accord en cours)" : e.statut === "partiel" ? "payé en partie" : "en retard" })));
+    let T = []; try { T = taches().map(t => ({ priorite: t.prio === "urgent" ? "urgent" : t.prio === "soon" ? "bientôt" : "info", quoi: sansHtml(t.t), detail: sansHtml(t.d), date: t.date ? iso(new Date(t.date)) : "" })); } catch (e) {}
+    let tr = null; try { const t = tresorerie(); if (t) tr = { solde_depart: t.depart, seuil_alerte: t.seuil, plus_bas: { mois: t.bas.m, solde: t.bas.solde }, mois: t.mois.map(x => ({ mois: x.m, loyers: x.entrees, prets: x.prets, taxe_fonciere: x.taxe, depenses_courantes: x.courantes, solde: x.solde })) }; } catch (e) {}
+    const rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)));
+    const parCat = {}; deps.forEach(d => { parCat[d.categorie] = r2((parCat[d.categorie] || 0) + +d.montant); });
+    const fin = addDays(TODAY, 90); let ev = []; try { ev = icsAgenda().ev.filter(e => e.d <= fin).sort((a, b) => a.d - b.d).map(e => ({ date: iso(e.d), quoi: e.t.replace(/^\W+\s*/, ""), detail: e.desc })); } catch (e) {}
+    return { v: 1, maj: new Date().toISOString(), espace: S.sci.nom || "", sci: estPerso() ? "biens en nom propre" : "SCI" + (S.sci.regime ? " à l'" + S.sci.regime : ""),
+      resume: { mois: fm(CUR), loyers_attendus: r2(mois.reduce((s, x) => s + x.e.du, 0)), loyers_recus: r2(mois.reduce((s, x) => s + Math.min(x.e.paye, x.e.du), 0)), logements: S.biens.length, locataires_actuels: actifs.length,
+        en_retard: actifs.map(b => ({ locataire: b.nom, doit: detteBail(b) })).filter(x => x.doit > 0), quittances_a_envoyer: toutesEcheances().filter(qAFaire).length, taches_urgentes: T.filter(t => t.priorite === "urgent").length },
+      locataires: actifs.map(b => { const bi = bien(b.bienId) || {}, rv = revInfo(b); return { nom: b.nom, colocataires: b.colocataires || "", logement: bi.nom || "", adresse: adresseBien(bi), entree: b.dateEntree, type_bail: b.typeBail, loyer_hc: +b.loyerHC || 0, charges: +b.charges || 0, jour_paiement: +b.jourPaiement || 0, depot: +b.depot || 0, doit: detteBail(b), email: b.email || "", telephone: b.tel || "", fin_assurance: b.assuranceFin || "", prochaine_revision: rv && rv.anniv ? iso(rv.anniv) : "", depart_prevu: b.dateSortie || "" }; }),
+      logements: S.biens.map(bi => { const b = actifs.find(x => x.bienId === bi.id); return { nom: bi.nom, adresse: adresseBien(bi), type: bi.type || "", meuble: bi.meuble || "", surface: bi.surface || "", dpe: bi.dpe || "", dpe_valide_jusqua: bi.dpeValidite || "", locataire: b ? b.nom : "vacant", loyer_total: b ? r2((+b.loyerHC || 0) + (+b.charges || 0)) : 0 }; }),
+      impayes, taches: T.slice(0, 60), echeances: ev, tresorerie: tr,
+      compta: { annee: y, loyers_encaisses: r2(Object.values(rec).reduce((s, r) => s + (r.loyers || 0), 0)), charges_encaissees: r2(Object.values(rec).reduce((s, r) => s + (r.charges || 0), 0)), depenses_total: r2(deps.reduce((s, d) => s + +d.montant, 0)), depenses_par_categorie: parCat,
+        par_logement: S.biens.map(bi => ({ logement: bi.nom, loyers: r2((rec[bi.id] || {}).loyers || 0), depenses: r2(deps.filter(d => d.bienId === bi.id).reduce((s, d) => s + +d.montant, 0)) })) },
+      documents: (S.fichiers || []).slice(-400).map(f => ({ nom: f.nom, categorie: f.cat || "", logement: (bien(f.bienId) || {}).nom || "à ranger", locataire: f.bailId && bail(f.bailId) ? bail(f.bailId).nom : "", date: f.date || "" })) };
+  } finally { MEMO = null; }
+}
+function planifierConnecteur() { if (!SB || !ESPACE || LECTURE || !S.sci.connecteurJeton) return; clearTimeout(CONNECTEUR_T); CONNECTEUR_T = setTimeout(publierConnecteur, 2500); }
+async function publierConnecteur() {
+  if (!SB || !ESPACE || LECTURE || !S.sci.connecteurJeton) return;
+  let d; try { d = donneesConnecteur(); } catch (e) { return; }
+  const cle = JSON.stringify({ ...d, maj: "" }); if (CONNECTEUR_PUBLIE === cle) return;
+  const r = await SB.from("connecteurs").update({ donnees: d, maj_le: d.maj }).eq("espace_id", ESPACE);
+  if (!r.error) CONNECTEUR_PUBLIE = cle;
+}
+async function brancherClaude() {
+  if (!SB || !estProprio()) return;
+  if (!S.sci.connecteurJeton) {
+    const jeton = b64url(crypto.getRandomValues(new Uint8Array(32))), h = await sha256hex(jeton);
+    await SB.from("connecteurs").delete().eq("espace_id", ESPACE);
+    const r = await SB.from("connecteurs").insert({ jeton_hash: h, espace_id: ESPACE, donnees: donneesConnecteur() });
+    if (r.error) { toast("Création impossible : " + r.error.message); return; }
+    S.sci.connecteurJeton = jeton; CONNECTEUR_PUBLIE = ""; save();
+  }
+  const url = lienConnecteur(S.sci.connecteurJeton);
+  let lu = ""; try { const r = await SB.from("connecteurs").select("lu_le").eq("espace_id", ESPACE).maybeSingle(); lu = r.data && r.data.lu_le ? `Claude l'a utilisé ${ilYa(r.data.lu_le)}.` : "Pas encore utilisé par Claude."; } catch (e) {}
+  modal("🤖 Brancher sur Claude", `<div class="full">${grosMsg("ok", "Ton connecteur est prêt", `Claude pourra lire tes chiffres (loyers, retards, locataires, échéances, trésorerie, compta, liste des documents) <b>sans rien modifier</b>. ${lu}`)}</div>
+    <label class="fl full">Le lien de ton connecteur (secret)<input id="mcp_lien" readonly value="${esc(url)}"></label>
+    <div class="full row"><button type="button" class="primary" onclick="copierTexte(document.getElementById('mcp_lien').value)">Copier le lien</button><a class="btn" href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">Ouvrir les connecteurs de Claude</a></div>
+    <ol class="full note etapes-mcp"><li>Sur <b>claude.ai</b> : Paramètres › <b>Connecteurs</b> › <b>Ajouter un connecteur personnalisé</b>.</li><li>Nom : <b>Gestion locative</b>. URL : colle le lien. Touche <b>Ajouter</b>.</li><li>Dans une conversation, active-le (bouton <b>+</b> › Connecteurs) et demande : « Qui est en retard de loyer ? »</li></ol>
+    <p class="full note small">⚠️ Ce lien donne accès à tes chiffres : ne le partage pas. Il se met à jour tout seul quand tu modifies l'appli. Il marche aussi avec les autres assistants compatibles MCP.</p>
+    <div class="full"><button type="button" class="small danger" id="mcp_off">Désactiver ce lien</button></div>`, () => true, { ok: "Fermer", lecture: true,
+    after: () => { document.getElementById("mcp_off").onclick = () => confirmer("Désactiver le connecteur ? Claude ne pourra plus lire tes chiffres (tu pourras en recréer un).", async () => { await SB.from("connecteurs").delete().eq("espace_id", ESPACE); delete S.sci.connecteurJeton; save(); render(); toast("✓ Connecteur désactivé"); }); } });
+}
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
@@ -3862,6 +3915,7 @@ function pageReglages() {
     estProprio() && SB ? rubrique("quittances", "🧾", "Quittances automatiques", S.sci.quittanceAuto ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive", sansCarte(sectionQuittanceAuto())) : "",
     estProprio() && SB ? rubrique("relances", "🔁", "Relances automatiques", S.sci.relanceAuto ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même", sansCarte(sectionRelanceAuto())) : "",
     rubrique("bientot", "🚀", "Prochaines sorties", "Ce qui arrive · dis ce qui t'intéresse", `<p class="note">Assistant IA, banque en direct, signature à distance… Les fonctions qui intéressent le plus de monde sortent en premier.</p><div class="row"><a class="btn primary" href="#bientot">🚀 Voir les prochaines sorties</a></div>`),
+    estProprio() && SB ? rubrique("claude", "🤖", "Brancher sur Claude", S.sci.connecteurJeton ? "Branché · demande à Claude « qui est en retard ? »" : "Pose tes questions à Claude avec tes vrais chiffres", `<p class="note">Avec ce branchement, tu demandes à Claude (claude.ai, l'appli Claude) : « Qui est en retard ? », « Quand finit l'assurance de Jean ? », « Combien j'ai encaissé cette année ? ». Il lit tes chiffres, <b>sans rien pouvoir modifier</b>.</p><div class="row"><button class="primary" onclick="brancherClaude()">🤖 ${S.sci.connecteurJeton ? "Voir le lien du connecteur" : "Brancher sur Claude"}</button></div>`) : "",
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", "Alertes sur le téléphone, résumé par e-mail", sansCarte(sectionNotif())),
     rubrique("install", ic("phone"), "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
@@ -6274,7 +6328,7 @@ function icsAgenda() {
   const esc2 = t => String(t).replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
   const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Gestion locative//FR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:" + esc2(sci), "X-WR-TIMEZONE:Europe/Paris", "REFRESH-INTERVAL;VALUE=DURATION:PT3H", "X-PUBLISHED-TTL:PT3H",
     ...ev.flatMap(e => ["BEGIN:VEVENT", `UID:${e.id}-${String(ESPACE || "local").slice(0, 8)}@gestion-locative`, `DTSTAMP:${d8(TODAY)}T080000Z`, `DTSTART;VALUE=DATE:${d8(e.d)}`, `DTEND;VALUE=DATE:${d8(addDays(e.d, 1))}`, "SUMMARY:" + esc2(e.t), "DESCRIPTION:" + esc2(e.desc + "\n" + (SB ? LIEN_APPLI : location.origin + location.pathname)), "BEGIN:VALARM", "TRIGGER:PT9H", "ACTION:DISPLAY", "DESCRIPTION:" + esc2(e.t), "END:VALARM", "END:VEVENT"]), "END:VCALENDAR"].map(l => { const c = [...l], o = []; for (let i = 0; i < c.length; i += 70) o.push(c.slice(i, i + 70).join("")); return o.join("\r\n "); }).join("\r\n");
-  return { ics, n: ev.length, sci };
+  return { ics, n: ev.length, sci, ev };
 }
 function exportAgenda() {
   const { ics, n, sci } = icsAgenda();
@@ -6327,7 +6381,7 @@ function pageLegal() {
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
   ${b("🔗 Espace locataire", `<p>Si tu crées un lien pour un locataire, il voit seulement ce qui le concerne : son logement, ce qu'il doit, ses quittances des 12 derniers mois, son bail et ses états des lieux, et les problèmes qu'il a signalés. Rien sur les autres locataires, la compta ou la banque. Le lien est secret (le serveur n'en garde qu'une empreinte) ; tu peux le désactiver à tout moment depuis sa fiche. Les photos qu'il envoie sont rangées dans les documents de ton espace.</p>`)}
-  ${b("📨 Boîte à documents et agenda", `<p>Si tu crées ta boîte à documents, les e-mails envoyés à ton adresse passent par Cloudflare (qui héberge le domaine) ; seules leurs pièces jointes PDF et photos sont gardées, dans les documents de ton espace. Les e-mails venant d'une adresse que tu n'as pas autorisée sont refusés. Le lien de ton agenda est secret : il ne montre que les dates (loyers attendus, échéances), et tu peux le désactiver à tout moment.</p>`)}
+  ${b("📨 Boîte à documents, agenda, Claude", `<p>Si tu crées ta boîte à documents, les e-mails envoyés à ton adresse passent par Cloudflare (qui héberge le domaine) ; seules leurs pièces jointes PDF et photos sont gardées, dans les documents de ton espace. Les e-mails venant d'une adresse que tu n'as pas autorisée sont refusés. Le lien de ton agenda est secret : il ne montre que les dates (loyers attendus, échéances), et tu peux le désactiver à tout moment.</p><p><b>Connecteur Claude</b> : si tu le crées, l'assistant que tu utilises (Claude, ou un autre compatible) lit, quand tu lui poses une question, les chiffres de ton espace : loyers, retards, locataires et leurs coordonnées, échéances, trésorerie, compta et la liste de tes documents (pas leur contenu). Il ne peut rien modifier. Le lien est secret ; désactive-le à tout moment dans Réglages › Brancher sur Claude.</p>`)}
   ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement. Si tu demandes à l'IA de <b>lire un document</b> (bail, avis de taxe foncière, facture, DPE, attestation d'assurance, tableur à importer), le contenu de <b>ce document seulement</b> est envoyé à Anthropic, au moment où tu le demandes, pour remplir l'appli. Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("👤 Les locataires", `<p>Tu es responsable des données de tes locataires que tu saisis (nom, contact, paiements). Garde seulement ce qui est utile à la location, et supprime les dossiers des candidats non retenus.</p>`)}
   ${b("✋ Tes droits", `<p>Tu peux à tout moment : <b>télécharger toutes tes données</b> (Réglages › Sauvegarde), les corriger dans l'appli, ou <b>supprimer ton compte</b> (Réglages › Zone sensible). Tu peux aussi saisir la CNIL (cnil.fr).</p><p>Durée de conservation : tant que ton compte existe. À la suppression, les espaces dont tu es le seul membre sont effacés avec leurs documents.</p>`)}
