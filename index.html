@@ -181,8 +181,14 @@ details.rgl[open] > summary .chev { transform: rotate(90deg); }
 .rgl-c { padding: 14px 16px 16px; border-top: 1px solid var(--line); }
 .rgl-aide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: -4px 0 14px; }
 .rgl-aide.seul { grid-template-columns: auto; justify-content: start; }
-.rgl-aide > * { justify-content: center; text-align: center; white-space: nowrap; min-width: 0; }
-@media (max-width: 380px) { .rgl-aide > * { white-space: normal; font-size: .8rem; padding-left: 6px; padding-right: 6px; } }
+.rgl-aide { gap: 10px; margin: 0 0 18px; }
+#app .rgl-aide .rgl-t { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; min-width: 0; min-height: 112px; padding: 16px 8px 14px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--sh-2); text-align: center; text-decoration: none; font: inherit; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+.rgl-aide .rgl-t:hover { border-color: var(--accent); box-shadow: var(--sh-3); } .rgl-t:active { transform: scale(.97); } .rgl-t:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.rgl-t b { font-size: .95rem; font-weight: 750; line-height: 1.15; } .rgl-t small { font-size: .72rem; color: var(--muted); line-height: 1.2; }
+.rgl-i { width: 42px; height: 42px; flex: 0 0 42px; border-radius: 50%; display: grid; place-items: center; font-size: 1.25rem; line-height: 1; overflow: hidden; } .rgl-i > *, .rgl-i svg { display: block; margin: 0; width: 22px; height: 22px; }
+.i-aide { background: var(--accent-soft); color: var(--accent); } .i-bug { background: var(--bad-soft); color: var(--bad); } .i-idee { background: var(--warn-soft); color: var(--warn); }
+.rgl-aide.seul .rgl-t { min-width: 140px; }
+@media (max-width: 360px) { .rgl-t small { display: none; } .rgl-t { min-height: 92px; } }
 details.rgl { scroll-margin-top: 76px; }
 .drive-explique ul { margin: 4px 0 10px; padding-left: 20px; line-height: 1.5; }
 .drive-explique p { margin: 8px 0 2px; }
@@ -3989,7 +3995,7 @@ function pageReglages() {
 `)
   ].join("");
   return `<div class="head"><div><h1>Réglages</h1><p>Touche une rubrique pour l'ouvrir.</p></div></div>
-  <div class="rgl-aide ${SB ? "" : "seul"}"><a class="btn small" href="#aide"><span aria-hidden="true">❓</span> Aide</a>${SB ? `<button class="small" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span aria-hidden="true">🐞</span> Un problème</button><button class="small" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span aria-hidden="true">💡</span> Une idée</button>` : ""}</div>
+  <div class="rgl-aide ${SB ? "" : "seul"}"><a class="rgl-t" href="#aide"><span class="rgl-i i-aide" aria-hidden="true">❓</span><b>Aide</b><small>Comment ça marche</small></a>${SB ? `<button type="button" class="rgl-t" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span class="rgl-i i-bug" aria-hidden="true">🐞</span><b>Un souci</b><small>Ça ne marche pas</small></button><button type="button" class="rgl-t" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span class="rgl-i i-idee" aria-hidden="true">💡</span><b>Une idée</b><small>Améliorer l'appli</small></button>` : ""}</div>
   <p class="group-title">Ton compte</p>${compte}
   <p class="group-title">Outils</p>${outils}
   ${rubrique("zone", "⚠️", "Zone sensible", "Tout effacer, supprimer le compte", `<div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button>${SB ? `<button class="danger ghost" onclick="supprimerCompte()">Supprimer mon compte</button>` : ""}</div>`, "rgl-danger")}

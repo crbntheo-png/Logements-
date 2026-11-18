@@ -58,6 +58,10 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — Réglages : tuiles Aide / Un souci / Une idée
+- Demande de Théo (capture) : les 3 boutons du haut des Réglages manquaient de contours. Remplacés par 3 tuiles blanches avec bord, ombre et coins arrondis : icône dans une pastille de couleur (vert, rouge, jaune), titre ("Aide", "Un souci" au lieu de "Un problème" qui passait sur 2 lignes, "Une idée") et sous-titre. Alignées en haut ; une règle générale des boutons écrasait leur marge (corrigé avec une règle plus précise). Clair et sombre vérifiés (capture tests/shots58/reglages-tuiles.png). En ligne.
+- Le connecteur Claude ajouté par Théo dans claude.ai fonctionne (outils "Gestion locative" visibles côté Claude).
+
 ### 18/11/2026 — banque en direct (Enable Banking)
 - Théo a créé l'application Enable Banking "Gestion locative" (production, lecture des comptes, active ; retour https://sci-gestion-locative.com/). Identifiant `ce885f55-e7cd-427d-95c6-1e41589ab36a`, clé privée dans `.env` (`ENABLEBANKING_APP_ID`, `ENABLEBANKING_KEY`) et en secrets Supabase. Hôte api.enablebanking.com ajouté au réseau de la session.
 - Serveur : table `banque_directe` (`supabase/banque_directe.sql`) ; fonction `banque-directe` : `banques` (132 banques françaises), `connecter` (adresse d'accord officielle, compte pro ou perso, accord jusqu'à 180 jours), `valider` (retour de la banque, session, comptes), `actualiser` (au plus toutes les 6 h : les banques limitent à 4 lectures par jour), `debrancher` (retire l'accès chez la banque), `toutes` (tâche planifiée `banque-directe` toutes les 6 h, clé de la tâche du matin). Soldes et opérations (120 jours, nom du payeur + libellé) rangés dans `banque`, `banque_comptes`, `banque_liens` (source `enablebanking`) : pointage des loyers, quittances automatiques et trésorerie marchent tels quels. Relier sa banque remplace Pennylane pour cet espace (`banque_vider_pennylane`).
