@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "96da714", "date": "2026-11-18T12:18"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "6ee7904", "date": "2026-11-18T12:28"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -203,6 +203,13 @@ details.rgl > summary small { color: var(--muted); font-size: .85rem; }
 details.rgl > summary .chev { transition: transform .15s; color: var(--muted); flex-shrink: 0; }
 details.rgl[open] > summary .chev { transform: rotate(90deg); }
 .rgl-ico { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; font-size: 20px; flex-shrink: 0; }
+/* Une couleur par rubrique : pastille teintée, pictogramme de la même couleur */
+.rgl-ico[class*="rc-"] { background: color-mix(in srgb, var(--rc) 15%, var(--surface)); color: var(--rc); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rc) 22%, transparent); }
+.rc-sci { --rc: #2563eb; } .rc-membres { --rc: #7c3aed; } .rc-drive { --rc: #16a34a; } .rc-banque { --rc: #0d9488; } .rc-gmail { --rc: #dc2626; } .rc-quittances { --rc: #0891b2; }
+.rc-relances { --rc: #ea580c; } .rc-agenda { --rc: #db2777; } .rc-claude { --rc: #c2410c; } .rc-integrations { --rc: #9333ea; } .rc-bientot { --rc: #6d28d9; } .rc-notif { --rc: #d97706; }
+.rc-irl { --rc: #059669; } .rc-rappels { --rc: #ca8a04; } .rc-zone { --rc: #b91c1c; } .rc-install { --rc: #0284c7; } .rc-maj { --rc: #16a34a; } .rc-sauv { --rc: #4f46e5; } .rc-legal { --rc: #475569; } .rc-aide { --rc: #0d9488; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rgl-ico[class*="rc-"] { background: color-mix(in srgb, var(--rc) 24%, var(--surface)); color: color-mix(in srgb, var(--rc) 70%, white); } }
+:root[data-theme="dark"] .rgl-ico[class*="rc-"] { background: color-mix(in srgb, var(--rc) 24%, var(--surface)); color: color-mix(in srgb, var(--rc) 70%, white); }
 .rgl-c { padding: 14px 16px 16px; border-top: 1px solid var(--line); }
 .rgl-aide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: -4px 0 14px; }
 .rgl-aide.seul { grid-template-columns: auto; justify-content: start; }
@@ -560,6 +567,8 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .bientot { display: grid; gap: 10px; } .bientot-c { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; } .bientot-c .tx { flex: 1; min-width: 200px; display: grid; gap: 2px; } .bientot-c .tx p { margin: 0; } .bientot-c .tx small { color: var(--muted); font-weight: 600; } .bientot-ico { font-size: 1.6rem; line-height: 1; } .bientot-c.choisi { outline: 2px solid var(--accent); }
 .bq-choix { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; } #overlay .bq-l, .bq-l { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; text-align: left; min-height: 0; height: auto; } #overlay .bq-l input, .bq-l input { width: 18px; height: 18px; min-height: 0; flex: 0 0 auto; margin: 0; padding: 0; } .bq-l span { flex: 1; min-width: 0; } .bq-l img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; } .bq-l:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .bq-blocs { display: grid; gap: 10px; margin-bottom: 10px; } .bq-bloc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); } .bq-bloc.ok { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); } .bq-bloc.warn { border-color: var(--warn); background: var(--warn-soft); } .bq-bloc p { margin: 0; }
+.sorties-expl { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; margin: 4px 0 12px; } .sorties-expl p { margin: 0; font-size: .9rem; line-height: 1.45; } .sorties-expl .small { color: var(--muted); font-size: .8rem; }
+.sortie-g { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; background: var(--surface); } .sortie-g > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; } .sortie-g > summary::-webkit-details-marker { display: none; } .sortie-g > summary .tx { flex: 1; display: grid; min-width: 0; } .sortie-g > summary small { color: var(--muted); } .sortie-g[open] > summary .chev { transform: rotate(90deg); } .sortie-g > .sortie-l, .sortie-g > .row, .sortie-g > .note { padding: 0 12px; } .sortie-g > .row { padding-bottom: 12px; } .sortie-g.a-classer { border-color: var(--warn); } .sorties-bas { margin-top: 10px; } .sorties-masq { margin: 4px 2px 12px; }
 .apercu-mail { white-space: pre-wrap; font: inherit; font-size: .85rem; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 6px 0 0; }
 .deja-ecrit { width: min(840px, 100%); margin-bottom: 12px; } .activite .todo li .tx { font-weight: 500; } .activite .todo li .tx b { font-weight: 750; }
 .treso { display: grid; gap: 12px; } .treso-g svg { width: 100%; height: auto; max-height: 180px; display: block; } .treso-m { font-size: 10px; fill: var(--muted); }
@@ -1079,32 +1088,44 @@ function sortiesAClasser(y) {
 function sectionSorties(y) {
   if (!SB || !BANQUE.lien) return "";
   const L = sortiesAClasser(y); if (!L.length) return "";
-  const vis = view.sortiesTout ? L : L.slice(0, 15), tot = L.reduce((t, o) => t - o.montant, 0);
-  const optsBien = [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])];
-  return `<section class="card sorties"><h2>🧾 ${L.length} sortie${L.length > 1 ? "s" : ""} d'argent à mettre en compta</h2>
-    <p class="note">${eur(tot)} sortis du compte en ${y}. L'appli a deviné la catégorie : vérifie, change si besoin, puis enregistre. Elle retiendra tes choix pour les fois suivantes.</p>
-    <form onsubmit="event.preventDefault();validerSorties(this)"><ul class="ops sortie-l">${vis.map(o => { const c = classerSortie(o);
-      return `<li><label class="chk"><input type="checkbox" name="ok_${o.tx_id}" ${c.cat ? "checked" : ""} aria-label="Enregistrer"></label><div class="tx"><div class="sl-h"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span><b class="neg">−${eur(-o.montant)}</b></div>
-        <small>${fds(o.date)}${c.appris ? " · d'après ton choix précédent" : ""}</small>
-        <div class="sl-sel"><select name="cat_${o.tx_id}" aria-label="Catégorie"><option value="">— à classer —</option>${CATS.map(k => `<option ${k === c.cat ? "selected" : ""}>${esc(k)}</option>`).join("")}</select>
-        <select name="bien_${o.tx_id}" aria-label="Bien">${optsBien.map(([v, l]) => `<option value="${v}" ${v === c.bienId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
-        <button type="button" class="small ghost" onclick="ignorerSortie('${o.tx_id}')">Ignorer</button></div></div></li>`; }).join("")}</ul>
-    <div class="row">${L.length > 15 ? `<button type="button" class="small ghost" onclick="view.sortiesTout=!view.sortiesTout;render()">${view.sortiesTout ? "Moins" : `Voir les ${L.length}`}</button>` : ""}<button class="primary">Enregistrer les lignes cochées</button></div></form></section>`;
+  if (S.sci.sortiesMasquees) return `<p class="note small sorties-masq">🧾 ${L.length} dépense${L.length > 1 ? "s" : ""} de la banque pas rangée${L.length > 1 ? "s" : ""} dans l'appli (masqué : ton comptable s'en occupe). <a href="#" onclick="event.preventDefault();S.sci.sortiesMasquees=false;save();render()">Les afficher</a></p>`;
+  const tot = r2(L.reduce((t, o) => t - o.montant, 0)), optsBien = [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])];
+  const G = {}; L.forEach(o => { const c = classerSortie(o), k = c.cat || "À classer"; (G[k] = G[k] || { cat: c.cat, L: [] }).L.push({ o, c }); });
+  const groupes = Object.entries(G).sort((a, b) => (a[0] === "À classer" ? -1 : b[0] === "À classer" ? 1 : 0) || b[1].L.length - a[1].L.length);
+  const ligne = ({ o, c }, k) => `<li><input type="hidden" name="grp_${o.tx_id}" value="${esc(k)}"><label class="chk"><input type="checkbox" name="ok_${o.tx_id}" ${c.cat ? "checked" : ""} aria-label="Ranger cette dépense"></label><div class="tx"><div class="sl-h"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span><b class="neg">−${eur(-o.montant)}</b></div>
+      <small>${fds(o.date)}${c.appris ? " · d'après ton choix précédent" : ""}</small>
+      <div class="sl-sel"><select name="cat_${o.tx_id}" aria-label="Catégorie"><option value="">— choisis la catégorie —</option>${CATS.map(x => `<option ${x === c.cat ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      <select name="bien_${o.tx_id}" aria-label="Logement">${optsBien.map(([v, l]) => `<option value="${v}" ${v === c.bienId ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+      <button type="button" class="small ghost" onclick="ignorerSortie('${o.tx_id}')" title="Ce n'est pas une dépense (virement entre tes comptes, erreur…)">Pas une dépense</button></div></div></li>`;
+  return `<section class="card sorties"><h2>🧾 Ranger tes dépenses de ${y}</h2>
+    <div class="sorties-expl">
+      <p><b>C'est quoi ?</b> Ta banque montre <b>${L.length} paiement${L.length > 1 ? "s" : ""}</b> (${eur(tot)}) que l'appli n'a pas encore rangés dans sa compta.</p>
+      <p><b>À quoi ça sert ?</b> Savoir ce que te rapporte vraiment chaque logement, préparer ta déclaration et prévoir ta trésorerie.</p>
+      <p><b>Que fait le bouton ?</b> Chaque ligne cochée devient une dépense dans l'onglet Compta, avec sa catégorie. <b>Rien ne change à ta banque ni à Pennylane.</b> Tu peux annuler juste après.</p>
+      <p class="small">L'appli a deviné la catégorie de chaque ligne et retient tes corrections. Ouvre un groupe pour vérifier, puis range-le.</p>
+    </div>
+    <form onsubmit="event.preventDefault();validerSorties(this)">${groupes.map(([k, g]) => { const t = r2(g.L.reduce((a, x) => a - x.o.montant, 0));
+      return `<details class="sortie-g ${k === "À classer" ? "a-classer" : ""}" ${k === "À classer" ? "open" : ""}><summary><span class="ico-cat" aria-hidden="true">${k === "À classer" ? "❓" : ICO_DEP(k)}</span><span class="tx"><b>${esc(k)}</b><small>${g.L.length} paiement${g.L.length > 1 ? "s" : ""} · ${eur(t)}${/ventiler/.test(k) ? " · l'appli sépare ensuite capital et intérêts (Emprunts)" : ""}</small></span>${ic("chevR", "chev")}</summary>
+        <ul class="ops sortie-l">${g.L.map(x => ligne(x, k)).join("")}</ul>
+        ${k === "À classer" ? `<p class="note small">Choisis une catégorie pour chaque ligne, ou "Pas une dépense".</p>` : ""}<div class="row"><button type="button" class="small primary" onclick="validerSorties(this.form, '${esc(k).replace(/'/g, "\\'")}')">Ranger ${g.L.length > 1 ? "ces " + g.L.length : "cette dépense"}</button></div></details>`; }).join("")}
+    <div class="row sorties-bas"><button class="primary">Tout ranger (lignes cochées)</button>${BANQUE.pennylane ? `<button type="button" class="small ghost" onclick="S.sci.sortiesMasquees=true;save();render();toast('Masqué : tu pourras le réafficher en bas de Compta')">Masquer : mon comptable s'en occupe</button>` : ""}</div></form></section>`;
 }
-function validerSorties(f) {
+function validerSorties(f, groupe) {
   const d = Object.fromEntries(new FormData(f).entries()); let n = 0, sansCat = 0;
-  const regles = Object.assign({}, S.sci.reglesBanque);
-  BANQUE.ops.forEach(o => {
-    if (!d["ok_" + o.tx_id]) return; const cat = d["cat_" + o.tx_id], bienId = d["bien_" + o.tx_id] || "";
-    if (!cat) { sansCat++; return; }
-    const auto = classerSortie(o);
-    if (cat !== auto.cat || bienId !== auto.bienId) regles[motifBanque(o.libelle)] = { cat, bienId };
-    S.depenses.push({ id: "bq" + o.tx_id, date: o.date, montant: r2(-o.montant), categorie: cat, bienId, libelle: (o.libelle || "").slice(0, 80), recuperable: false, banqueTx: o.tx_id }); n++;
+  avecAnnuler(() => {
+    const regles = Object.assign({}, S.sci.reglesBanque);
+    BANQUE.ops.forEach(o => {
+      if (!d["ok_" + o.tx_id] || (groupe && d["grp_" + o.tx_id] !== groupe)) return; const cat = d["cat_" + o.tx_id], bienId = d["bien_" + o.tx_id] || "";
+      if (!cat) { sansCat++; return; }
+      const auto = classerSortie(o);
+      if (cat !== auto.cat || bienId !== auto.bienId) regles[motifBanque(o.libelle)] = { cat, bienId };
+      S.depenses.push({ id: "bq" + o.tx_id, date: o.date, montant: r2(-o.montant), categorie: cat, bienId, libelle: (o.libelle || "").slice(0, 80), recuperable: false, banqueTx: o.tx_id }); n++;
+    });
+    S.sci.reglesBanque = regles; save(); render();
+    toast(n ? `✓ ${n} dépense${n > 1 ? "s" : ""} rangée${n > 1 ? "s" : ""} dans la compta` + (sansCat ? ` · ${sansCat} sans catégorie laissée${sansCat > 1 ? "s" : ""} de côté` : "") : "Coche des lignes et choisis leur catégorie.");
   });
-  S.sci.reglesBanque = regles; save(); render();
-  toast(n ? `✓ ${n} dépense${n > 1 ? "s" : ""} enregistrée${n > 1 ? "s" : ""}` + (sansCat ? ` · ${sansCat} sans catégorie laissée${sansCat > 1 ? "s" : ""} de côté` : "") : "Coche des lignes et choisis leur catégorie.");
 }
-function ignorerSortie(tx) { S.banqueVus = Object.assign({}, S.banqueVus, { [tx]: "ignore" }); save(); render(); toast("Ignorée (ce n'est pas une dépense)"); }
+function ignorerSortie(tx) { avecAnnuler(() => { S.banqueVus = Object.assign({}, S.banqueVus, { [tx]: "ignore" }); save(); render(); toast("Noté : ce n'est pas une dépense"); }); }
 function sectionBanque() {
   if (!SB || !BANQUE.lien) return `<details class="card rgl install-tuto"><summary><span class="rgl-ico" aria-hidden="true">🏦</span><span class="tx"><b>Ta banque dans l'appli</b><small>Les loyers se cochent tout seuls · comment faire</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
     <p class="note"><b>Pourquoi :</b> les loyers reçus se cochent tout seuls, les quittances sont prêtes, et la compta se remplit avec tes dépenses. Tu n'as presque plus besoin d'ouvrir l'appli de ta banque.</p>
@@ -3199,7 +3220,7 @@ function libelleLisible(t) {
 const HORS_RESULTAT = new Set(["Remboursement capital emprunt", "Échéance de prêt (capital + intérêts, à ventiler)", "Achat du bien / frais d'acquisition"]);
 /* Classement automatique des sorties d'argent : règles de base + ce que tu as déjà classé toi-même */
 const REGLES_BANQUE = [
-  [/ECH PRET INT\b/, "Intérêts d'emprunt"], [/ECH PRET CAP/, "Échéance de prêt (capital + intérêts, à ventiler)"], [/COMMIS(SION)? PRET|FRAIS DE DOSSIER/, "Frais bancaires"],
+  [/ECH PRET INT\b/, "Échéance de prêt (capital + intérêts, à ventiler)"], [/ECH PRET CAP/, "Échéance de prêt (capital + intérêts, à ventiler)"], [/COMMIS(SION)? PRET|FRAIS DE DOSSIER/, "Frais bancaires"],
   [/ASSURANCE (DU )?PROPRIETAIRE|\bPNO\b/, "Assurance propriétaire (PNO)"], [/LOYERS? IMPAYES|\bGLI\b/, "Assurance loyers impayés"], [/ASSURANCE EMPRUNTEUR|CNP|CARDIF/, "Assurance emprunteur"],
   [/DGFIP.*\bTF\b|IMPOT TF|TAXE FONCIERE/, "Taxe foncière"], [/SAUR|VEOLIA|EAU DE|EDF|ENGIE|TOTALENERGIES|GRDF/, "Eau / électricité / gaz"],
   [/FACT SGT|COTIS|FRAIS BANC|COMMISSION|AGIOS/, "Frais bancaires"], [/CONCIERGERIE|AIRBNB|ABRITEL|LEBONCOIN|SELOGER/, "Frais de gestion / annonces"],
@@ -4004,7 +4025,7 @@ function reglage(id) {
 const sansCarte = h => String(h).replace(/^\s*<section class="card[^"]*">\s*<h2>[\s\S]*?<\/h2>/, "").replace(/<\/section>\s*$/, "");
 function rubrique(id, ico, titre, resume, contenu, cls = "") {
   const ouvert = view.rgl && view.rgl[id];
-  return `<details class="card rgl ${cls}" id="rgl-${id}" ${ouvert ? "open" : ""} ontoggle="view.rgl=Object.assign({},view.rgl,{'${id}':this.open})"><summary><span class="rgl-ico" aria-hidden="true">${ico}</span><span class="tx"><b>${titre}</b><small>${resume}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">${contenu}</div></details>`;
+  return `<details class="card rgl ${cls}" id="rgl-${id}" ${ouvert ? "open" : ""} ontoggle="view.rgl=Object.assign({},view.rgl,{'${id}':this.open})"><summary><span class="rgl-ico rc-${id}" aria-hidden="true">${ico}</span><span class="tx"><b>${titre}</b><small>${resume}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">${contenu}</div></details>`;
 }
 function pageReglages() {
   const s = S.sci, dernierIrl = irlCles().slice(-1)[0], nbRap = S.rappels.filter(r => !r.fait).length;

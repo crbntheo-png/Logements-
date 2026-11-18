@@ -57,6 +57,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 18/11/2026 — Compta : "Ranger tes dépenses" expliqué et regroupé ; couleurs des Réglages
+- Retour de Théo sur "37 sorties d'argent à mettre en compta" : incompréhensible (quoi cocher, que fait le bouton, trop de lignes). La carte devient "🧾 Ranger tes dépenses de 2026" avec une explication en 3 questions (C'est quoi ? À quoi ça sert ? Que fait le bouton ? — rien ne change à la banque ni à Pennylane, annulable). Les lignes sont **regroupées par catégorie** (repliées ; "À classer" ouvert et en orange en premier), avec "Ranger ces N" par groupe et "Tout ranger" ; "Ignorer" devient "Pas une dépense" ; avec Pennylane branché : "Masquer : mon comptable s'en occupe" (réaffichable).
+- Correction de classement : "ECH PRET INT" (≈ 1 540 €) = échéance complète de prêt, plus "Intérêts d'emprunt" (ça gonflait les intérêts déductibles) → "Échéance de prêt (capital + intérêts, à ventiler)".
+- Réglages : chaque rubrique a sa couleur (pastille teintée et pictogramme de la même couleur, version sombre adaptée), à la demande de Théo ("je veux de la vie").
+- Tests : test5, test53, test58, test64, test67 OK ; captures clair et sombre vérifiées. En ligne.
+
 ### 18/11/2026 — Pennylane rebranché (jeton de Théo accepté), comparaison réelle
 - Demande de Théo : accepter son jeton même s'il n'est pas en lecture seule, à condition que l'appli ne fasse rien chez Pennylane. Vérifié dans le code et sur le serveur : l'appli n'appelle Pennylane qu'en lecture (GET sur /me, /bank_accounts, /transactions, rien d'autre) et le jeton reste dans le coffre du serveur. `banque_brancher` n'exige plus la lecture seule (`supabase/pennylane_tout_jeton.sql`) ; l'assistant conseille toujours la lecture seule mais dit que l'appli ne fait que lire.
 - Jeton de Théo (celui du `.env`, valide ; droits : lecture + quelques droits d'écriture que l'appli n'utilise jamais) branché sur GTP INVEST : 200 opérations Pennylane relues.
