@@ -21,7 +21,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
       for (let k = 1; k <= 12; k++) S.depenses.push({ id: 'd' + k, date: addM(CUR, -k) + '-10', montant: 100, categorie: "Charges de copropriété", bienId: 'b1' });
       S.depenses.push({ id: 'dt', date: addM(CUR, -3) + '-15', montant: 5000, categorie: "Travaux d'amélioration", bienId: 'b1' }); // ponctuel : pas compté
       S.taxes = [{ id: 't1', bienId: 'b1', annee: TODAY.getFullYear() - 1, total: 900, teom: 100, parts: [] }];
-      save(); location.hash = 'compta'; render(); });
+      save(); view.comptaOnglet = 'banque'; location.hash = 'compta'; render(); });
     await p.waitForTimeout(300);
     ok(`${scheme} : sans solde, on demande le solde du compte`, await p.isVisible('#treso_solde'));
     await p.fill('#treso_solde', '2000'); await p.click('text=Voir ma trésorerie'); await p.waitForTimeout(300);

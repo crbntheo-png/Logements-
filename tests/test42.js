@@ -24,7 +24,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
     const t2 = await p.evaluate(() => { const L = tableauPret({ montant: 100000, taux: 3, duree: 240, premiere: '2025-01-05', differe: 6, differeType: 'partiel' }); return [L.slice(0, 6).every(x => x.interets === 250 && x.capital === 0), L[6].capital > 0, L.length]; });
     ok(scheme + ' : différé partiel de 6 mois (intérêts seuls)', t2[0] && t2[1] && t2[2] === 240);
     // 2. "+ Prêt" par la fenêtre
-    await p.evaluate(() => { location.hash = 'compta'; }); await p.waitForTimeout(300);
+    await p.evaluate(() => { view.comptaOnglet = 'comptable'; location.hash = 'compta'; }); await p.waitForTimeout(300);
     await p.evaluate(() => editPret()); await p.waitForTimeout(200);
     await p.fill('#mform input[name=banque]', 'Banque Test'); await p.selectOption('#mform select[name=bienId]', bid);
     await p.fill('#mform input[name=montant]', '120000'); await p.fill('#mform input[name=taux]', '3,5'.replace(',', '.')); await p.fill('#mform input[name=duree]', '240');
@@ -45,7 +45,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
       S.depenses.push({ id: 'd3', date: e2.date, montant: 12.34, categorie: "Intérêts d'emprunt", bienId: '', libelle: 'autre chose' });
       save(); render(); return { n: propositionsVentilation().length, e1, e2 }; }, bid);
     ok(scheme + ' : 2 échéances proposées (dont celle classée en intérêts)', v.n === 2);
-    await p.evaluate(() => { location.hash = 'compta'; view.pretsOuverts = true; render(); }); await p.waitForTimeout(300);
+    await p.evaluate(() => { view.comptaOnglet = 'comptable'; location.hash = 'compta'; view.pretsOuverts = true; render(); }); await p.waitForTimeout(300);
     ok(scheme + ' : Compta : "2 échéances de prêt à ventiler"', await p.evaluate(() => /2 échéances de prêt à ventiler/.test(document.body.innerText)));
     await p.evaluate(() => ventilerEcheances()); await p.waitForTimeout(300);
     await p.screenshot({ path: OUT + `/2-ventiler-${scheme}.png` });
@@ -67,7 +67,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
     ok(scheme + ' : fiche : "Rentabilité nette" + "Cash-flow" + "Pourquoi ?"', await p.evaluate(() => /Rentabilité nette/.test(document.body.innerText) && /Cash-flow/.test(document.body.innerText) && /Comment c'est calculé/.test(document.body.innerText)));
     await p.screenshot({ path: OUT + `/3-fiche-${scheme}.png`, fullPage: true });
     // 7. Avances des associés
-    await p.evaluate(() => { location.hash = 'compta'; }); await p.waitForTimeout(200);
+    await p.evaluate(() => { view.comptaOnglet = 'comptable'; location.hash = 'compta'; }); await p.waitForTimeout(200);
     await p.evaluate(() => avanceAssocie()); await p.waitForTimeout(200);
     await p.selectOption('#mform select[name=qui]', 'Gabriel'); await p.fill('#mform input[name=montant]', '180'); await p.fill('#mform input[name=libelle]', 'Facture plombier');
     await p.click('#mform button.primary'); await p.waitForTimeout(300);

@@ -21,7 +21,7 @@ const attendre = ms => new Promise(r => setTimeout(r, ms));
     S.depenses.push({ id: 'doct', date: '2026-10-12', libelle: 'Plombier', montant: 120, categorie: 'Entretien et réparations', bienId: 'b1' });
     save(); await new Promise(r => setTimeout(r, 2500)); await chargerMembres();
   });
-  await p.evaluate(() => { location.hash = 'compta'; render(); }); await p.waitForTimeout(1500);
+  await p.evaluate(() => { view.comptaOnglet = 'comptable'; location.hash = 'compta'; render(); }); await p.waitForTimeout(1500);
   let txt = await p.locator('.cloture').innerText();
   t(/Aucun mois clôturé/.test(txt) && /Clôturer jusqu'à octobre 2026/.test(txt), 'carte visible : "Aucun mois clôturé" + bouton "Clôturer jusqu\'à octobre 2026"');
   await p.locator('.cloture button.primary').click(); await p.waitForTimeout(400);
@@ -58,7 +58,7 @@ const attendre = ms => new Promise(r => setTimeout(r, ms));
   const e5 = await p.evaluate(async () => (await SB.rpc('cloturer', { p_espace: ESPACE, p_mois: mk(TODAY) })).error?.message || '');
   t(/mois terminés/.test(e5), 'serveur : impossible de clôturer le mois en cours');
   // 6. rouvrir
-  await p.evaluate(() => { location.hash = 'compta'; render(); }); await p.waitForTimeout(800);
+  await p.evaluate(() => { view.comptaOnglet = 'comptable'; location.hash = 'compta'; render(); }); await p.waitForTimeout(800);
   await p.locator('.cloture button', { hasText: 'Rouvrir' }).click(); await p.waitForTimeout(300); await p.click('#cyes'); await p.waitForTimeout(2000);
   txt = await p.locator('.cloture').innerText(); t(/Clôturé jusqu'à fin septembre 2026/.test(txt), 'rouvrir octobre : clôturé seulement jusqu\'à septembre');
   await p.evaluate(async () => { S.paiements.find(x => x.id === 'poct').montant = 450; save(); await new Promise(r => setTimeout(r, 2000)); });

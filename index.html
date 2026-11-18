@@ -68,7 +68,7 @@ a:hover { text-decoration: underline; }
 /* En-tête */
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface-glass); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid var(--line); }
 .top-inner { max-width: 1120px; margin: 0 auto; height: var(--head-h); display: flex; align-items: center; gap: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; } .brand-t { min-width: 0; } #brandSub i { margin-right: 5px; } #brandName, #brandSub { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } @media (max-width: 420px) { .top-acts .icon-btn { width: 38px; } }
 .logo { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(140deg, var(--accent), var(--night)); color: #fff; display: grid; place-items: center; flex: none; }
 .logo .ic { width: 19px; height: 19px; }
 .brand-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
@@ -550,6 +550,11 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .bientot { display: grid; gap: 10px; } .bientot-c { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; } .bientot-c .tx { flex: 1; min-width: 200px; display: grid; gap: 2px; } .bientot-c .tx p { margin: 0; } .bientot-c .tx small { color: var(--muted); font-weight: 600; } .bientot-ico { font-size: 1.6rem; line-height: 1; } .bientot-c.choisi { outline: 2px solid var(--accent); }
 .bq-choix { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; } #overlay .bq-l, .bq-l { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; text-align: left; min-height: 0; height: auto; } #overlay .bq-l input, .bq-l input { width: 18px; height: 18px; min-height: 0; flex: 0 0 auto; margin: 0; padding: 0; } .bq-l span { flex: 1; min-width: 0; } .bq-l img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; background: #fff; } .bq-l:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
 .bq-blocs { display: grid; gap: 10px; margin-bottom: 10px; } .bq-bloc { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; background: var(--surface); } .bq-bloc.ok { border-color: color-mix(in srgb, var(--ok) 35%, var(--line)); } .bq-bloc.warn { border-color: var(--warn); background: var(--warn-soft); } .bq-bloc p { margin: 0; }
+.c-onglets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface-2); margin: 14px 0 16px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 66px); z-index: 5; box-shadow: 0 0 0 4px var(--bg); }
+#app .c-onglets button { display: grid; justify-items: center; gap: 2px; min-height: 52px; padding: 6px 2px; border: 0; box-shadow: none; background: none; border-radius: 10px; font-size: .78rem; font-weight: 600; color: var(--muted); position: relative; }
+#app .c-onglets button span { font-size: 1.15rem; line-height: 1; } #app .c-onglets button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.c-pastille { position: absolute; top: 4px; right: 8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-style: normal; font-size: 11px; line-height: 18px; }
+.c-note { margin: -4px 2px 12px; }
 .classement .cl-h { display: flex; gap: 12px; align-items: center; } .classement h2 { margin: 0 0 2px; font-size: 1.05rem; } .classement .cl-h p { margin: 0; color: var(--muted); font-size: .9rem; }
 .classement .cl-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--accent-soft); }
 .classement .cl-pct { margin-left: auto; white-space: nowrap; flex: none; font-size: 1.3rem; color: var(--accent); } .classement .tx { min-width: 0; }
@@ -711,7 +716,7 @@ input.code { font-size: 1.6rem; letter-spacing: .4em; text-align: center; font-w
 .guide .etapes{list-style:none;margin:10px 0 6px;padding:0}.etape{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}.etape:first-child{border-top:0}.etape .num{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:14px}.etape.ok .num{background:var(--ok-soft);color:var(--ok)}.etape.ok b{color:var(--muted);text-decoration:line-through}.etape .tx{flex:1;min-width:0}.etape p{margin:4px 0 0;font-size:.9rem;line-height:1.45}.lbl{font-weight:700;color:var(--ink-2)}.et-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}.et-h b{flex:1;min-width:150px}.etape.next{background:var(--accent-soft);margin:0 -12px;padding:12px;border-radius:14px;border-top:0}
 .aide p{margin:6px 0;line-height:1.5}
 .aide-fab{position:fixed;right:14px;bottom:calc(var(--nav-h) + 14px + env(safe-area-inset-bottom));z-index:40;width:46px;height:46px;border-radius:50%;padding:0;font-size:1.35rem;font-weight:800;background:var(--surface);color:var(--accent);box-shadow:var(--sh-3);border:1px solid var(--line);display:grid;place-items:center}
-.aide-fab.charge{opacity:.5;pointer-events:none}@media(min-width:900px){.aide-fab{bottom:22px;right:22px}}
+.aide-fab.charge,.aide-top.charge{opacity:.5;pointer-events:none}.aide-top{font-size:1.15rem;font-weight:800;color:var(--accent)}@media(min-width:900px){.aide-fab{bottom:22px;right:22px}}
 .types-sig{display:flex;gap:6px;flex-wrap:wrap}.types-sig label{flex:1;min-width:110px}.types-sig input{position:absolute;opacity:0}.types-sig span{display:block;text-align:center;padding:10px 6px;border-radius:12px;background:var(--surface-2);font-weight:700;font-size:.85rem;cursor:pointer}.types-sig input:checked+span{background:var(--accent-soft);color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}.types-sig input:focus-visible+span{outline:2px solid var(--accent)}
 .sig-capture{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.9rem}.sig-capture img{width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid var(--line);background:var(--surface-2)}
 .props-drive h3{margin:16px 0 6px;font-size:1rem}.props-drive .todo li{flex-wrap:wrap}.props-drive .todo li>.row{width:100%;justify-content:flex-end}.props-drive h4{margin:12px 0 2px;font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
@@ -1121,7 +1126,7 @@ function carteBanqueAccueil() {
   if (!SB || !BANQUE.lien || !BANQUE.comptes.length) return "";
   const solde = BANQUE.comptes.reduce((s, c) => s + +c.solde, 0), m = CUR, ops = BANQUE.ops.filter(o => o.date.startsWith(m));
   const ent = ops.filter(o => o.montant > 0).reduce((s, o) => s + o.montant, 0), sor = ops.filter(o => o.montant < 0).reduce((s, o) => s - o.montant, 0);
-  return `<a class="card banque-mini" href="#compta"><span class="bq-ico" aria-hidden="true">🏦</span><span class="tx"><small>Compte bancaire · ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0].maj_le)}</small><b>${eur(solde)}</b><small>Ce mois-ci : <span class="pos">+${eur(ent)}</span> · <span class="neg">−${eur(sor)}</span></small></span><span aria-hidden="true">›</span></a>`;
+  return `<a class="card banque-mini" href="#compta" onclick="view.comptaOnglet='banque'"><span class="bq-ico" aria-hidden="true">🏦</span><span class="tx"><small>Compte bancaire · ${ilYa(BANQUE.lien.derniere_synchro || BANQUE.comptes[0].maj_le)}</small><b>${eur(solde)}</b><small>Ce mois-ci : <span class="pos">+${eur(ent)}</span> · <span class="neg">−${eur(sor)}</span></small></span><span aria-hidden="true">›</span></a>`;
 }
 /* Sorties d'argent de la banque à transformer en dépenses de compta (classées d'avance, validées par toi) */
 function sortiesAClasser(y) {
@@ -1247,7 +1252,7 @@ function sectionClassement(y) {
       <h2>${fini ? `Toute la banque de ${y} est classée` : `Il reste ${c.reste} opération${c.reste > 1 ? "s" : ""} à classer`}</h2>
       <p>${c.total - c.reste} sur ${c.total} opérations de ${y} ont leur place dans la compta.</p></div><b class="cl-pct">${c.pct} %</b></div>
     <div class="cl-barre" role="progressbar" aria-valuenow="${c.pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Opérations classées"><i style="width:${c.pct}%"></i></div>
-    ${fini ? `<p class="note small">C'est la base pour te passer du comptable : chaque euro qui entre ou sort a une explication.</p>` : `<div class="row">${c.e ? `<button class="small" onclick="allerA('entrees')">💶 ${c.e} entrée${c.e > 1 ? "s" : ""}</button>` : ""}${c.s ? `<button class="small" onclick="${S.sci.sortiesMasquees ? "S.sci.sortiesMasquees=false;save();render();setTimeout(()=>allerA('sorties'),50)" : "allerA('sorties')"}">🧾 ${c.s} dépense${c.s > 1 ? "s" : ""}</button>` : ""}</div>`}
+    ${fini ? `<p class="note small">C'est la base pour te passer du comptable : chaque euro qui entre ou sort a une explication.</p>` : `<div class="row">${c.e ? `<button class="small" onclick="allerA('entrees')">💶 ${c.e} entrée${c.e > 1 ? "s" : ""}</button>` : ""}${c.s ? `<button class="small" onclick="${S.sci.sortiesMasquees ? "S.sci.sortiesMasquees=false;view.comptaOnglet='depenses';save();render();scrollTo(0,0)" : "view.comptaOnglet='depenses';render();scrollTo(0,0)"}">🧾 ${c.s} dépense${c.s > 1 ? "s" : ""}</button>` : ""}</div>`}
   </section>`;
 }
 function allerA(id) { const el = document.getElementById(id) || document.querySelector("." + id); if (!el) return; el.scrollIntoView({ behavior: "smooth", block: "start" }); }
@@ -1341,7 +1346,7 @@ function sectionBanqueReglages() {
     : `<div class="bq-bloc"><b>📒 Pennylane</b><p class="note">${D ? "Branche aussi Pennylane pour <b>comparer</b> : l'appli te signale tout décalage entre ta banque et ta compta." : "Ta compta Pennylane lit déjà ta banque : l'appli peut s'en servir."}</p><div class="row"><button class="small ${D ? "primary" : ""}" onclick="assistantPennylane()">Brancher Pennylane</button></div></div>`;
   const cmp = D && PL ? comparaisonBanques() : null;
   const blocC = cmp ? `<div class="bq-bloc ${cmp.ecarts ? "warn" : "ok"}"><b>🔎 Ta banque et Pennylane</b><p class="note">${cmp.ecarts ? `⚠️ <b>${cmp.ecarts} décalage${cmp.ecarts > 1 ? "s" : ""}</b>` : "✅ Tout concorde"} sur la période commune (${cmp.periode}) : ${cmp.paires} opération${cmp.paires > 1 ? "s" : ""} identique${cmp.paires > 1 ? "s" : ""}.${cmp.ecartSolde ? ` Soldes : ${eur(cmp.soldeB)} à la banque, ${eur(cmp.soldeP)} dans Pennylane.` : ""}</p><div class="row"><button class="small ${cmp.ecarts ? "primary" : ""}" onclick="voirComparaison()">Voir le détail</button></div></div>` : "";
-  return `<div class="bq-blocs">${blocD}${blocP}${blocC}</div><div class="row"><button class="small" onclick="go('compta')">Voir les opérations</button><button class="small ghost" onclick="importerReleve()">Importer un relevé</button></div>`;
+  return `<div class="bq-blocs">${blocD}${blocP}${blocC}</div><div class="row"><button class="small" onclick="view.comptaOnglet='banque';go('compta')">Voir les opérations</button><button class="small ghost" onclick="importerReleve()">Importer un relevé</button></div>`;
 }
 /* Comparer ta banque (directe) et Pennylane : mêmes opérations sur la période commune ? */
 function comparaisonBanques() {
@@ -1404,7 +1409,7 @@ const nbEnAttente = () => SB && ESPACE ? Object.keys(lireFile()).length : 0;
 const enAttente = k => !!lireFile()[k];
 function majBadgeFile() {
   const el = document.getElementById("brandSub"); if (!el || MODE !== "partage" || !SB) return;
-  const n = nbEnAttente(), h = n ? `<span class="badge-file">⏳ ${n} modif${n > 1 ? "s" : ""} en attente</span>` : `<i aria-hidden="true"></i>${ESPACES.length > 1 ? "Changer d'espace ▾" : "Synchronisé"}`;
+  const n = nbEnAttente(), h = n ? `<span class="badge-file">⏳ ${n} modif${n > 1 ? "s" : ""} en attente</span>` : `<i aria-hidden="true"></i>${ESPACES.length > 1 ? "Changer ▾" : "Synchronisé"}`;
   if (el.innerHTML !== h) el.innerHTML = h;
 }
 /* Se déconnecter avec des modifs en attente : on prévient (elles seraient perdues) */
@@ -2018,14 +2023,12 @@ function taches() {
   const T = [], y = TODAY.getFullYear();
   const add = (o) => T.push(o);
   const ech = toutesEcheances();
-  { const T = !LECTURE && S.baux.length ? tresorerie() : null; if (T && T.sous) add({ key: "treso-" + T.sous.m, prio: "soon", date: TODAY, t: `Trésorerie : ton compte pourrait passer sous ${eur(T.seuil)} en ${fm(T.sous.m)}`, d: `Solde prévu ${eur(T.sous.solde)} (loyers attendus, prêts, taxe foncière, dépenses courantes). À anticiper.`, acts: [["Voir", "location.hash='compta'"]] }); }
+  { const T = !LECTURE && S.baux.length ? tresorerie() : null; if (T && T.sous) add({ key: "treso-" + T.sous.m, prio: "soon", date: TODAY, t: `Trésorerie : ton compte pourrait passer sous ${eur(T.seuil)} en ${fm(T.sous.m)}`, d: `Solde prévu ${eur(T.sous.solde)} (loyers attendus, prêts, taxe foncière, dépenses courantes). À anticiper.`, acts: [["Voir", "view.comptaOnglet='banque';location.hash='compta'"]] }); }
   if (SB && BANQUE.lien && BANQUE.lien.source === "enablebanking" && estProprio()) {
     const fin = BANQUE.directe && BANQUE.directe.valide_jusqua ? new Date(BANQUE.directe.valide_jusqua) : null, j = fin ? Math.ceil((fin - TODAY) / 864e5) : 99;
     if (BANQUE.lien.erreur || j <= 15) add({ key: "bq-renouv-" + (fin ? iso(fin) : "err"), prio: BANQUE.lien.erreur || j <= 3 ? "urgent" : "soon", date: TODAY, t: BANQUE.lien.erreur ? "🏦 Ta banque ne répond plus : reconnecte-la" : `🏦 Renouvelle l'accès à ta banque (fin ${j > 0 ? "dans " + j + " jour" + (j > 1 ? "s" : "") : "aujourd'hui"})`, d: BANQUE.lien.erreur ? esc(BANQUE.lien.erreur) : "Les banques demandent ton accord tous les 6 mois. 1 minute : tu te reconnectes sur le site de ta banque.", acts: [["Reconnecter", "relierBanque()", "primary"]] });
   }
   if (SB && BANQUE.directe && BANQUE.pennylane && estProprio()) { let c = null; try { c = comparaisonBanques(); } catch (e) {} if (c && c.ecarts) add({ key: "bq-ecarts-" + c.ecarts + "-" + c.periode, prio: "soon", date: TODAY, done: true, t: `🔎 ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""} entre ta banque et Pennylane`, d: `Sur la période ${c.periode} : ${c.seulBanque.length} seulement à la banque, ${c.seulPennylane.length} seulement dans Pennylane.`, acts: [["Voir", "voirComparaison()", "primary"]] }); }
-  if (SB && BANQUE.lien && BANQUE.ops.length && estProprio()) { const c = etatClassement(y);
-    if (c.reste) add({ key: "bq-classer-" + mk(TODAY) + "-" + c.reste, prio: "info", date: TODAY, t: `🧮 ${c.reste} opération${c.reste > 1 ? "s" : ""} de la banque à classer`, d: `${c.pct} % de ${y} a déjà sa place dans la compta${c.e ? ` · ${c.e} entrée${c.e > 1 ? "s" : ""} (apport, prêt…)` : ""}${c.s ? ` · ${c.s} dépense${c.s > 1 ? "s" : ""}` : ""}. C'est ce qui permettra de te passer du comptable.`, acts: [["Classer", "location.hash='compta';setTimeout(()=>allerA('" + (c.e ? "entrees" : "sorties") + "'),300)", "primary"]] }); }
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
       acts: [[`Garder ${mA}`, `garderPaiement('${x.cle}','A')`, "primary"], [`Garder ${mB}`, `garderPaiement('${x.cle}','B')`], ["Ce sont 2 paiements", `pasUnDoublon('${x.cle}')`]] }); });
@@ -2040,7 +2043,7 @@ function taches() {
     else add({ bailId: b.id, key: "planko-" + b.id + CUR, prio: "urgent", date: TODAY, t: `Étalement pas suivi : ${esc(b.nom)}`, d: `Avec l'accord, il devrait encore devoir ${eur(p.attendu)}, il doit ${eur(p.dette)} : il manque ${eur(p.manque)}.`, acts: [["Il a versé…", `verserSomme('${b.id}')`, "primary"], ["Relancer", `relance('${b.id}','${(echeancesBail(b).find(e => e.statut === "retard") || {}).m || CUR}')`]] });
   });
   if (!(SB && BANQUE.lien) && S.baux.length && !fait("rel-" + CUR) && TODAY.getDate() >= 3) add({ key: "rel-" + CUR, prio: "info", date: TODAY, done: true, t: "Importer le relevé bancaire du mois", d: "2 minutes : les loyers reçus se cochent tout seuls et la compta se remplit.", acts: [["Importer", "importerReleve()", "primary"], ["Comment faire ?", "go('compta')"]] });
-  if (SB && BANQUE.lien) { const n = sortiesAClasser(TODAY.getFullYear()).length; if (n) add({ key: "bqdep-" + CUR + "-" + n, prio: "info", date: TODAY, t: `${n} sortie${n > 1 ? "s" : ""} d'argent à mettre en compta`, d: "Prêt, assurance, taxe, eau… déjà classées par l'appli : il reste à vérifier et enregistrer.", acts: [["Classer", "go('compta')", "primary"]] }); }
+  if (SB && BANQUE.lien) { const n = sortiesAClasser(TODAY.getFullYear()).length; if (n) add({ key: "bqdep-" + CUR + "-" + n, prio: "info", date: TODAY, t: `${n} sortie${n > 1 ? "s" : ""} d'argent à mettre en compta`, d: "Prêt, assurance, taxe, eau… déjà classées par l'appli : il reste à vérifier et enregistrer.", acts: [["Classer", "view.comptaOnglet='depenses';go('compta')", "primary"]] }); }
   const enPlan = id => { const p = planEtat(bail(id)); return p && !p.fait; };
   ech.filter(e => e.statut === "retard" && !enPlan(e.b.id)).forEach(e => {
     const niv = e.relances.length;
@@ -2114,7 +2117,7 @@ function taches() {
         add({ bailId: b.id, key: k, prio: "soon", date: ech2, done: true, t: `Fin du bail étudiant de ${esc(b.nom)} le ${fd(ech2)}`, d: "Le bail étudiant de 9 mois se termine sans reconduction. Prévoir l'état des lieux de sortie ou un nouveau bail.", acts: [] });
       else if (b.typeBail !== "mobilite" && b.typeBail !== "etudiant" && daysBetween(TODAY, lim) <= 45 && !fait(k))
         add({ bailId: b.id, key: k, prio: TODAY > lim ? "info" : "soon", date: lim, done: true, t: `Fin de période du bail de ${esc(b.nom)} le ${fd(ech2)}`,
-          d: `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: [] });
+          d: TODAY > lim ? `Rien à faire : le bail se renouvelle tout seul le ${fd(ech2)}. Le délai pour donner congé (vente, reprise) est passé : il fallait l'envoyer avant le ${fd(lim)}.` : `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: [] });
     }
     // 8. Régularisation annuelle des charges
     if ((b.chargesMode || "provision") === "provision" && (+b.charges > 0 || (b.revisions || []).some(r => +r.charges > 0 && r.depuis <= (y - 1) + "-12"))) {
@@ -2507,7 +2510,7 @@ function render0() {
   if (bn.innerHTML !== navHtml) bn.innerHTML = navHtml;
   document.getElementById("brandName").textContent = S.sci.nom || "Gestion SCI";
   const nAtt = nbEnAttente();
-  const sub = MODE === "partage" ? (SB ? (nAtt ? `<span class="badge-file">⏳ ${nAtt} modif${nAtt > 1 ? "s" : ""} en attente</span>` : `<i aria-hidden="true"></i>${ESPACES.length > 1 ? "Changer d'espace ▾" : "Synchronisé"}`) : '<i aria-hidden="true"></i>Synchronisé') : "Sur cet appareil";
+  const sub = MODE === "partage" ? (SB ? (nAtt ? `<span class="badge-file">⏳ ${nAtt} modif${nAtt > 1 ? "s" : ""} en attente</span>` : `<i aria-hidden="true"></i>${ESPACES.length > 1 ? "Changer ▾" : "Synchronisé"}`) : '<i aria-hidden="true"></i>Synchronisé') : "Sur cet appareil";
   document.querySelector(".brand").setAttribute("href", SB ? "#" : "#locataires");
   document.querySelector(".brand").onclick = SB ? (ev => { ev.preventDefault(); choisirEspace(); }) : null;
   if (document.getElementById("brandSub").innerHTML !== sub) document.getElementById("brandSub").innerHTML = sub;
@@ -2679,7 +2682,8 @@ async function envoyerSignalement(type, message, fichier, avecCapture) {
 function boutonAide() {
   let b = document.getElementById("aideBtn");
   const visible = SB && MODE === "partage";
-  if (!b && visible) { b = document.createElement("button"); b.id = "aideBtn"; b.className = "aide-fab"; b.type = "button"; b.setAttribute("aria-label", "Signaler un problème, proposer une idée ou poser une question"); b.title = "Un souci ? Une idée ?"; b.textContent = "?"; b.onclick = ouvrirSignalement; document.body.appendChild(b); }
+  // dans la barre du haut (et plus en bouton flottant qui cachait des montants)
+  if (!b && visible) { b = document.createElement("button"); b.id = "aideBtn"; b.className = "icon-btn aide-top"; b.type = "button"; b.setAttribute("aria-label", "Signaler un problème, proposer une idée ou poser une question"); b.title = "Un souci ? Une idée ?"; b.textContent = "?"; b.onclick = ouvrirSignalement; const t = document.querySelector(".top-acts"), r = t && t.querySelector('a[href="#reglages"]'); if (t) t.insertBefore(b, r); else document.body.appendChild(b); }
   if (b) b.hidden = !visible;
 }
 function pageBienvenue() {
@@ -3934,25 +3938,32 @@ function pageCompta() {
   const tot = lignes.reduce((t, l) => ({ loyers: t.loyers + l.loyers, charges: t.charges + l.charges, dep: t.dep + l.dep, res: t.res + l.res }), { loyers: 0, charges: 0, dep: 0, res: 0 });
   const parts = S.sci.associes.reduce((s, a) => s + (+a.parts || 0), 0);
   const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
+  const onglet = view.comptaOnglet || "resume", annee = y === TODAY.getFullYear();
+  const ONG = [["resume", "📊", "Résumé"], ["banque", "🏦", "Banque"], ["depenses", "🧾", "Dépenses"], ["comptable", "📁", "Comptable"]];
+  const barre = `<div class="c-onglets" role="tablist" aria-label="Parties de la compta">${ONG.map(([k, i, t]) => `<button type="button" role="tab" aria-selected="${onglet === k}" class="${onglet === k ? "on" : ""}" onclick="view.comptaOnglet='${k}';render();scrollTo(0,0)"><span aria-hidden="true">${i}</span>${t}</button>`).join("")}</div>`;
+  const corps = {
+    resume: () => `<div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
+  ${annee ? graphiqueLoyers() : ""}
+  <section><h2 style="margin-bottom:10px">Par logement</h2><ul class="lr-list">${lignes.filter(l => l.loyers || l.charges || l.dep).map(l => `<li class="lr"><div class="lr-main"><span class="tx"><b>${esc(l.nom)}</b><small>loyers ${eur(l.loyers + l.charges)} · dépenses ${eur(l.dep)}</small></span><span class="lr-r"><b class="${l.res < 0 ? "bad-txt" : ""}">${eur(l.res)}</b><small>résultat</small></span></div></li>`).join("")}<li class="lr-total"><span>Total</span><span class="${tot.res < 0 ? "bad-txt" : ""}">${eur(tot.res)}</span></li></ul></section>
+  <section class="card"><h2>Part de chaque associé</h2>
+  ${parts ? `<div class="table-wrap" style="border:0"><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)}<div class="sub">${a.parts} parts · ${Math.round(a.parts / parts * 1000) / 10} %</div></td><td class="num"><b>${eur(tot.res * a.parts / parts)}</b></td></tr>`).join("")}</tbody></table></div><p class="note">${S.sci.regime === "IR" ? "SCI à l'impôt sur le revenu : chaque associé déclare sa part du résultat (revenus fonciers). Le calcul fiscal exact (2072) peut différer : amortissements, travaux d'amélioration, etc." : "SCI à l'IS : l'impôt est payé par la SCI. Les associés ne sont imposés que sur les dividendes distribués."}</p>` : `<p class="note">Renseignez les associés et leurs parts dans <a href="#reglages">Réglages</a>.</p>`}
+  </section>`,
+    banque: () => annee ? `${sectionBanque()}${sectionTreso()}` : `<div class="empty">La banque et la trésorerie montrent l'année en cours. Reviens sur ${TODAY.getFullYear()} avec la flèche ›.</div>`,
+    depenses: () => `${sectionSorties(y)}
+  <section><h2 style="margin-bottom:10px">Dépenses ${y} <span class="count">${deps.length}</span></h2>
+  ${deps.length ? `<ul class="lr-list">${(view.depTout ? deps : deps.slice(0, 12)).map(d => `<li class="lr"><div class="lr-main" onclick="editDepense('${d.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">${ICO_DEP(d.categorie)}</span><span class="tx"><b>${esc(libelleLisible(d.libelle) || d.categorie)}</b><small>${fds(d.date)} · ${esc(d.categorie)} · ${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}${d.avancePar ? ` · payé par ${esc(d.avancePar)}${d.rembourseLe ? " (remboursé)" : ""}` : ""}${d.pretId ? " · ventilé" : ""}</small></span><span class="lr-r"><b>${eur(d.montant)}</b></span></div></li>`).join("")}</ul>${deps.length > 12 && !view.depTout ? `<button class="ghost small lr-plus" onclick="view.depTout=true;render()">Voir les ${deps.length - 12} autres dépenses</button>` : ""}` : `<div class="empty">Aucune dépense en ${y}.</div>`}
+  </section>
+  ${Object.keys(parCat).length ? `<section class="card"><h2>Par catégorie</h2><div class="table-wrap" style="border:0"><table><tbody>${Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${eur(v)}</td></tr>`).join("")}</tbody></table></div></section>` : ""}`,
+    comptable: () => `<p class="note c-note">Pour préparer ta déclaration ou la donner à ton comptable. Rien d'obligatoire au quotidien.</p>
+  ${aideDeclaration(y, lignes, tot)}
+  ${sectionClassement(y)}${sectionEntrees(y)}${sectionCloture()}
+  ${sectionPrets(y)}${sectionAvances()}`
+  };
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
   <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`], ["🏦 Ajouter un prêt", "editPret()"], estPerso() ? null : ["👤 Un associé a payé de sa poche", "avanceAssocie()"]], "Plus")}</div>
-  ${aideDeclaration(y, lignes, tot)}
-  <div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
-  ${y === TODAY.getFullYear() ? sectionBanque() + sectionTreso() : ""}
-  ${sectionClassement(y)}
-  ${sectionEntrees(y)}
-  ${sectionSorties(y)}
-  ${sectionCloture()}
-  ${y === TODAY.getFullYear() ? graphiqueLoyers() : ""}
-  ${sectionPrets(y)}${sectionAvances()}
-  <section><h2 style="margin-bottom:10px">Par logement</h2><ul class="lr-list">${lignes.filter(l => l.loyers || l.charges || l.dep).map(l => `<li class="lr"><div class="lr-main"><span class="tx"><b>${esc(l.nom)}</b><small>loyers ${eur(l.loyers + l.charges)} · dépenses ${eur(l.dep)}</small></span><span class="lr-r"><b class="${l.res < 0 ? "bad-txt" : ""}">${eur(l.res)}</b><small>résultat</small></span></div></li>`).join("")}<li class="lr-total"><span>Total</span><span class="${tot.res < 0 ? "bad-txt" : ""}">${eur(tot.res)}</span></li></ul></section>
-  <div class="two"><section><h2 style="margin-bottom:10px">Dépenses ${y} <span class="count">${deps.length}</span></h2>
-  ${deps.length ? `<ul class="lr-list">${(view.depTout ? deps : deps.slice(0, 12)).map(d => `<li class="lr"><div class="lr-main" onclick="editDepense('${d.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">${ICO_DEP(d.categorie)}</span><span class="tx"><b>${esc(libelleLisible(d.libelle) || d.categorie)}</b><small>${fds(d.date)} · ${esc(d.categorie)} · ${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}${d.avancePar ? ` · payé par ${esc(d.avancePar)}${d.rembourseLe ? " (remboursé)" : ""}` : ""}${d.pretId ? " · ventilé" : ""}</small></span><span class="lr-r"><b>${eur(d.montant)}</b></span></div></li>`).join("")}</ul>${deps.length > 12 && !view.depTout ? `<button class="ghost small lr-plus" onclick="view.depTout=true;render()">Voir les ${deps.length - 12} autres dépenses</button>` : ""}` : `<div class="empty">Aucune dépense en ${y}.</div>`}
-  </section><section class="card"><h2>Part de chaque associé</h2>
-  ${parts ? `<div class="table-wrap" style="border:0"><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)}<div class="sub">${a.parts} parts · ${Math.round(a.parts / parts * 1000) / 10} %</div></td><td class="num"><b>${eur(tot.res * a.parts / parts)}</b></td></tr>`).join("")}</tbody></table></div><p class="note">${S.sci.regime === "IR" ? "SCI à l'impôt sur le revenu : chaque associé déclare sa part du résultat (revenus fonciers). Le calcul fiscal exact (2072) peut différer : amortissements, travaux d'amélioration, etc." : "SCI à l'IS : l'impôt est payé par la SCI. Les associés ne sont imposés que sur les dividendes distribués."}</p>` : `<p class="note">Renseignez les associés et leurs parts dans <a href="#reglages">Réglages</a>.</p>`}
-  ${Object.keys(parCat).length ? `<h3 style="margin-top:12px">Par catégorie</h3><div class="table-wrap" style="border:0"><table><tbody>${Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${eur(v)}</td></tr>`).join("")}</tbody></table></div>` : ""}
-  </section></div>`;
+  ${barre}
+  <div class="c-corps">${corps[onglet] ? corps[onglet]() : corps.resume()}</div>`;
 }
 
 /* ================= Mettre à jour l'appli ================= */
@@ -4318,7 +4329,7 @@ function pageReglages() {
     rubrique("integrations", "🔌", "Une autre appli ?", "Demander un branchement (Dropbox, ta banque, signature…)", `<p class="note">Déjà branchés : Google Drive, Gmail, Pennylane. Tu utilises autre chose ? Dis-le : les applis les plus demandées arrivent en premier.</p><div class="row"><button class="primary" onclick="ouvrirDemandeIntegration()">🔌 Demander une intégration</button>${ADMIN ? `<a class="btn" href="#integrations">📊 Voir les demandes (admin)</a>` : ""}</div>`),
     rubrique("notif", "🔔", "Notifications", resumeNotif(), sansCarte(sectionNotif())),
     rubrique("install", "📲", "Appli sur le téléphone", estInstallee() ? "✅ Installée" : "Mettre l'icône sur l'écran d'accueil", sansCarte(sectionInstall()))
-  ].join("") : sci;
+  ] : [sci];
   const outils = [
     rubrique("agenda", "📅", "Dans ton agenda", "Toutes les dates des 12 prochains mois", `<p class="note">Loyers attendus, révisions, fins d'assurance, congés, taxe foncière, déclarations : toutes les dates des 12 prochains mois dans le calendrier de ton téléphone (iPhone, Android, Google Agenda, Outlook). ${SB ? "Abonne ton agenda une fois : il se met à jour tout seul." : "À refaire quand tu ajoutes un locataire."}</p><div class="row"><button class="primary" onclick="abonnerAgenda()">📅 ${SB ? (S.sci.agendaJeton ? "Voir le lien de mon agenda" : "Abonner mon agenda") : "Ajouter à mon agenda"}</button>${SB ? `<button class="small ghost" onclick="exportAgenda()">Télécharger un fichier .ics</button>` : ""}</div>`),
     rubrique("irl", "📈", "Indice des loyers", `Dernier : ${qLabel(dernierIrl)} = ${fmtIrl(irlVal(dernierIrl))} · mis à jour tout seul`, `
@@ -4338,11 +4349,16 @@ function pageReglages() {
     ${S.rappels.length ? `<div class="table-wrap" style="border:0"><table><tbody>${S.rappels.map(r => `<tr><td>${fds(r.date)}</td><td>${esc(r.titre)}</td><td>${r.fait ? `<span class="pill ok">Fait</span>` : `<span class="pill info">À faire</span>`}</td><td><button class="small ghost" onclick="supprRappel('${r.id}')">Supprimer</button></td></tr>`).join("")}</tbody></table></div>` : `<p class="note">Aucun rappel.</p>`}
     <div class="row"><button onclick="editRappel()">+ Rappel</button></div>
 `)
-  ].join("");
+  ];
+  // Rangé par usage : [sci, membres, drive, banque, gmail, quittances, relances, bientot, claude, historique, integrations, notif, install] + [agenda, irl, sauv, maj, rappels]
+  const [rSci, rMembres, rDrive, rBanque, rGmail, rQuit, rRel, rBientot, rClaude, rHisto, rInteg, rNotif, rInstall] = compte, [rAgenda, rIrl, rSauv, rMaj, rRappels] = outils;
+  const groupe = (t, L) => { const h = L.filter(Boolean).join(""); return h ? `<p class="group-title">${t}</p>${h}` : ""; };
+  const groupes = SB ? groupe(estPerso() ? "Toi" : "Ta SCI", [rSci, rMembres]) + groupe("Ce que l'appli fait pour toi", [rQuit, rRel, rNotif, rRappels, rIrl])
+    + groupe("Branchements", [rBanque, rDrive, rGmail, rAgenda, rClaude, rInteg]) + groupe("Ton appli", [rInstall, rMaj, rSauv, rHisto, rBientot])
+    : groupe("Ton compte", compte) + groupe("Outils", outils);
   return `<div class="head"><div><h1>Réglages</h1><p>Touche une rubrique pour l'ouvrir.</p></div></div>
   <div class="rgl-aide ${SB ? "" : "seul"}"><a class="rgl-t" href="#aide"><span class="rgl-i i-aide" aria-hidden="true">💬</span><b>Aide</b><small>Comment ça marche</small></a>${SB ? `<button type="button" class="rgl-t" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span class="rgl-i i-bug" aria-hidden="true">🐞</span><b>Un souci</b><small>Ça ne marche pas</small></button><button type="button" class="rgl-t" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span class="rgl-i i-idee" aria-hidden="true">💡</span><b>Une idée</b><small>Améliorer l'appli</small></button>` : ""}</div>
-  <p class="group-title">Ton compte</p>${compte}
-  <p class="group-title">Outils</p>${outils}
+  ${groupes}
   ${rubrique("zone", "⚠️", "Zone sensible", "Tout effacer, supprimer le compte", `<div class="row">${SB ? "" : `<button onclick="chargerDemo()">Recharger l'exemple</button>`}<button class="danger" onclick="toutEffacer()">Tout effacer</button>${SB ? `<button class="danger ghost" onclick="supprimerCompte()">Supprimer mon compte</button>` : ""}</div>`, "rgl-danger")}
   <p class="note center" style="margin:16px 0 20px"><a href="#legal">Mentions légales et confidentialité</a></p>`;
 }

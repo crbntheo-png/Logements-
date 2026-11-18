@@ -53,7 +53,14 @@ Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅
 9. ✅ (18/11) **Brancher l'appli sur Claude / ChatGPT (MCP)** (comme Rentila) : serveur MCP en fonction Supabase, lecture seule d'abord (loyers, retards, locataires, documents), lien secret par espace.
 10. ✅ (18/11) **Tous mes espaces sur un écran** (SCI + nom propre).
 
-Vague 3 (objectif de Théo : plus de comptable, tout depuis la banque ; GTP est une SCI à l'IS) — dans l'ordre :
+Vague 4 — PRIORITÉ depuis le 18/11 (Théo : "une interface fluide, intuitive, qui sert vraiment à la gestion locative, pas à remplacer le comptable pour le moment") :
+18. ✅ (18/11) Compta en 4 onglets (Résumé, Banque, Dépenses, Comptable), écrans plus propres (bouton "?" en haut, Réglages en 4 groupes, plus de clignotement, menu Plus, banque par pages).
+19. **Congé donné par le bailleur** (vente, reprise, motif sérieux) : lettre + date limite + offre de vente (Rentila : 30 courriers types).
+20. **Suivi des interventions** : demande du locataire → artisan prévenu, date, réglé, facture ; dans À faire jusqu'à la fin.
+21. **Candidatures en ligne** : lien pour déposer le dossier, pièces vérifiées, loyer < 1/3 des revenus (Rentila, Qalimo). Les candidats existent déjà par logement : à ouvrir aux candidats eux-mêmes.
+22. **Tableau de bord par logement** : occupation, rentabilité (prix d'achat repris de l'acte par l'IA), prochain événement.
+
+Vague 3 — EN PAUSE (plus de comptable, tout depuis la banque ; GTP est une SCI à l'IS) — dans l'ordre :
 11. ✅ (18/11) **Chaque opération de banque classée** (entrées comprises : loyers, dépôts, apports d'associés), compteur "il reste N opérations à classer".
 12. **Une facture pour chaque dépense** (boîte à documents + IA relient facture et paiement ; liste "pièces manquantes").
 13. **Amortissements** par composants (terrain non amorti, gros œuvre, toiture, installations, agencements, frais d'achat, travaux d'amélioration) : dotations annuelles automatiques.
@@ -66,6 +73,15 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 18/11/2026 — appli plus fluide (demande de Théo : la compta n'est pas la priorité)
+- Compta en 4 onglets (`view.comptaOnglet` : resume, banque, depenses, comptable). Hauteur sur téléphone : 7 249 px → 2 112 px. Les liens vers Compta ouvrent le bon onglet (banque-mini, trésorerie, "Voir les opérations", sorties à mettre en compta).
+- Tâche "N opérations de la banque à classer" retirée de À faire (pas la priorité) ; le compteur reste dans l'onglet Comptable, sans pastille.
+- Bouton "?" (souci / idée) déplacé dans la barre du haut : il cachait des montants sur tous les écrans. "Changer d'espace" → "Changer ▾" (tient sur une ligne).
+- Réglages rangés en 4 groupes : Ta SCI / Ce que l'appli fait pour toi / Branchements / Ton appli.
+- Bail : "Fin de période du bail" ne dit plus "il faut l'envoyer avant le 9 juillet 2026" quand la date est passée.
+- Tests adaptés aux onglets (test23, 42, 58, 71, 72) et passés : 5, 17, 23, 26, 42, 53, 58, 67, 70, 71, 72. Hors service avant ce changement, pour une autre raison : test2, 4, 30 (anciens tests en fichier local / paquet jsPDF absent). En ligne.
+- Feuille de route : nouvelle Vague 4 (gestion locative fluide), Vague 3 compta en pause.
 
 ### 18/11/2026 — chaque opération de la banque a sa place ; affichage Compta réparé
 - Compta : carte compteur "🧮 Il reste N opérations à classer" (barre, %), boutons vers les entrées ou les dépenses ; tâche "🧮 N opérations de la banque à classer" dans À faire (propriétaire).

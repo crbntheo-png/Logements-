@@ -22,7 +22,7 @@ const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURICompo
   console.log(r.join('\n'));
   console.log('toasts/banque', await p.evaluate(() => [BANQUE.etat, BANQUE.ops.length, BANQUE.comptes.map(c => c.solde)]));
   // 2e passage : rien de neuf (pas de doublon)
-  await p.evaluate(() => location.hash = 'compta'); await p.waitForTimeout(800);
+  await p.evaluate(() => { view.comptaOnglet = 'depenses'; location.hash = 'compta'; }); await p.waitForTimeout(800);
   const res = await p.evaluate(() => { const L = sortiesAClasser(2026); const par = {}; L.forEach(o => { const c = classerSortie(o).cat || '(à classer)'; par[c] = (par[c] || 0) + 1; }); return [L.length, par]; });
   console.log('sorties 2026', JSON.stringify(res, null, 1));
   console.log('tâche', await p.evaluate(() => taches().filter(t => t.key && t.key.startsWith('bqdep')).map(t => t.t)));
@@ -32,10 +32,10 @@ const srv = http.createServer((q, r) => { let f = path.join(DIST, decodeURICompo
   await p.evaluate(() => { const o = sortiesAClasser(2026).find(o => /EDF/.test(o.libelle)); document.querySelector(`[name=bien_${o.tx_id}]`).value = 'agonD'; view.sortiesTout = true; });
   await p.evaluate(() => { view.sortiesTout = true; render(); }); await p.waitForTimeout(300);
   await p.evaluate(() => { const o = sortiesAClasser(2026).find(o => /EDF/.test(o.libelle)); document.querySelector(`[name=bien_${o.tx_id}]`).value = 'agonD'; });
-  await p.click('section.sorties button.primary'); await p.waitForTimeout(800);
+  await p.click('section.sorties .sorties-bas button.primary'); await p.waitForTimeout(800);
   console.log('dépenses', await p.evaluate(() => [S.depenses.length, sortiesAClasser(2026).length, Object.keys(S.sci.reglesBanque || {})]));
   console.log('EDF suivantes rangées sur agonD ?', await p.evaluate(() => S.depenses.filter(d => /EDF/.test(d.libelle)).map(d => d.bienId).join(',')));
-  console.log('résultat compta', await p.evaluate(() => document.querySelector('.kpis').innerText.replace(/\n+/g, ' | ')));
+  console.log('résultat compta', await p.evaluate(() => { view.comptaOnglet = 'resume'; render(); return 1; }) && await p.evaluate(() => document.querySelector('.kpis').innerText.replace(/\n+/g, ' | ')));
   await p.reload(); await p.waitForTimeout(3500);
   console.log('après rechargement', await p.evaluate(() => [S.depenses.length, sortiesAClasser(2026).length]));
   await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });

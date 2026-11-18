@@ -26,7 +26,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
       { tx_id: 'e4', date: '2026-08-10', montant: 200, libelle: 'VIR AIRBNB PAYMENTS LUXEMBOU' },
       { tx_id: 'e5', date: '2026-09-09', montant: 300, libelle: 'VIR SOCIETE XYZ' },
       { tx_id: 's1', date: '2026-10-12', montant: -100, libelle: 'PRLV SEPA EDF CLIENTS' }] };
-    location.hash = 'compta'; render();
+    view.comptaOnglet = 'comptable'; location.hash = 'compta'; render();
   });
   await p.waitForTimeout(800);
   const c0 = await p.evaluate(() => etatClassement(2026)); console.log(JSON.stringify(c0));
@@ -34,7 +34,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   let txt = await p.locator('.classement').innerText(); t(/Il reste 6 opérations à classer/.test(txt) && /0 %/.test(txt), 'carte : "Il reste 6 opérations à classer", 0 %');
   const devine = await p.evaluate(() => Object.fromEntries(BANQUE.ops.filter(o => o.montant > 0).map(o => [o.tx_id, classerEntree(o)])));
   t(devine.e1.cat === "Loyer d'un locataire" && devine.e2.cat === "Apport d'un associé" && devine.e2.qui === 'Paul Martin' && devine.e3.cat === 'Déblocage de prêt' && devine.e4.cat.startsWith('Location courte') && !devine.e5.cat, 'devinés : loyer, apport de Paul Martin, prêt, Airbnb ; le virement inconnu reste à choisir');
-  const tache = await p.evaluate(() => taches().find(x => /opérations? de la banque à classer/.test(x.t))); t(!!tache && /6 opérations/.test(tache.t), 'À faire : "🧮 6 opérations de la banque à classer"');
+  const tache = await p.evaluate(() => taches().find(x => /opérations? de la banque à classer/.test(x.t))); t(!tache, 'À faire reste léger : pas de tâche "opérations à classer" (la compta n\'est pas la priorité)');
   await p.locator('#entrees').scrollIntoViewIfNeeded(); await p.screenshot({ path: __dirname + '/shots72/test-entrees.png' });
   // classer un seul groupe
   const g = p.locator('#entrees details.sortie-g').filter({ has: p.locator('summary', { hasText: 'Déblocage de prêt' }) });
