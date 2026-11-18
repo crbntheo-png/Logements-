@@ -11,6 +11,8 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Banque en direct (Théo, 5 min, gratuit pour ses propres comptes)** : Enable Banking, mode "restricted production". 1) https://enablebanking.com/sign-in/ (e-mail, lien reçu) ; 2) https://enablebanking.com/cp/applications › "Add a new application" : environnement Production, clé privée générée par défaut, nom "Gestion locative", URL de retour https://sci-gestion-locative.com/ › Register (un fichier .pem se télécharge, son nom = l'identifiant de l'application) ; 3) sur la page de l'application : "Link accounts" et relier le compte de la SCI ; 4) envoyer à Claude le contenu du .pem et l'identifiant. Ensuite (Claude, 1 session) : fonction serveur, choix de la banque dans l'appli, relevés lus dans les mêmes tables que Pennylane (le rapprochement des loyers marche tel quel). Limite : gratuit seulement pour les comptes que Théo relie lui-même ; pour les autres utilisateurs, contrat payant Enable Banking.
+
 - [ ] **Boîte à documents (Théo, 2 min)** : activer Email Routing sur sci-gestion-locative.com et envoyer l'adresse catch-all au Worker "boite-documents" (étapes dans l'Historique du 18/11, "boîte à documents").
 
 - [ ] **Partage de dossiers (Théo)** : partager "02 - GTP Invest" avec `lecture-dossiers@gestion-locative-drive.iam.gserviceaccount.com` (Lecteur), puis Docs › + Ajouter un dossier › C'est fait. Ensuite Docs › "Retirer cet accès" (lecture de tout le Drive, essai du 17/11).
