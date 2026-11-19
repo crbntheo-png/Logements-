@@ -74,6 +74,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 — fluidité (iPhone, Android, ordinateur)
+- Audit automatique en conditions réelles (iPhone 13 et Pixel 7 simulés, compte de test) : changements de page, actualisation de chaque page, ouverture/fermeture des fenêtres. Déjà bon : aucun décalage de mise en page, défilement remis en haut, bonne page après actualisation, aucune erreur.
+- Corrigé : l'écran n'est plus redessiné quand rien n'a changé (render compare le HTML ; 2 fois moins de redessins à l'actualisation) ; un bloc ouvert par la personne (<details> sans suivi) reste ouvert quand la page se met à jour (reconnu par les lettres de son titre) ; "Lecture de ton Drive…" seulement si un Drive est attendu (driveAttendu, nombre de documents gardé sur l'appareil) ; résumé des notifications gardé sur l'appareil (plus de texte qui change sous les yeux).
+- Nouveau : le bouton retour Android / geste retour iPhone ferme la fenêtre ouverte au lieu de quitter la page (une étape d'historique ajoutée à l'ouverture) ; plus de zoom au double toucher sur les boutons (touch-action: manipulation) ; petit enfoncement visible au toucher sur téléphone.
+- Tests : test90 (nouveau) OK ; test5, 26, 34, 38, 39, 40, 41, 58, 64, 67, 81, 84, 86, 88, 89 OK ; test51 OK au 2e essai (raté ponctuel déjà vu avant). En ligne. Nouveauté "retour-ferme" sans notification.
+- Pas vérifié : sur un vrai téléphone (Safari iOS et Chrome Android réels).
+
 ### 19/11/2026 — démarrage en 5 minutes ; papiers lus dès leur arrivée ; vitesse mesurée
 - Copie de sauvegarde hebdo : pas de bug. Le test39 était périmé (la copie part du Gmail de chacun, il faut d'abord le brancher ; l'appli le dit). Test mis à jour : 12/12 OK.
 - Nouvelle page #demarrage ("🚀 Démarrage en 5 minutes") : 4 étapes dans l'ordre (Drive partagé → bilan de l'IA à corriger et appliquer → locataires depuis leur bail → fiches remplies avec les papiers), étape en cours dépliée, "Plus tard"/"Je n'utilise pas Drive" pour passer, récap final (logements, locataires, documents rangés, fiches complètes). On reste sur la page après chaque action. Entrées : bienvenue (carte Drive), guide "Tes logements", vitrine #aide.

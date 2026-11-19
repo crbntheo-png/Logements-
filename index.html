@@ -396,6 +396,9 @@ details.pq summary::-webkit-details-marker { display: none; } details.pq p { mar
 .parcours .etapes { list-style: none; margin: 10px 0 0; padding: 0; } .parcours .etape .note { margin: 4px 0 8px; }
 tr.pire td { background: var(--bad-soft); }
 input.auto, select.auto, textarea.auto { background: var(--warn-soft); }
+/* Toucher : pas de zoom sur double toucher, et un petit enfoncement qui montre que le toucher est pris en compte */
+button, .btn, a, summary, label, [role="link"], .tile-head, .lr-main { touch-action: manipulation; }
+@media (hover: none) { button:active, .btn:active, .suite:active, .vit:active, .doc-tuile:active, .lr-main:active, .tile-head:active { transform: scale(.97); transition: transform .08s; } }
 .compl-cta { display: flex; align-items: center; gap: 12px; background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; margin: 8px 0 10px; }
 .compl-cta .tx { flex: 1; display: grid; gap: 3px; min-width: 0; }
 .compl-cta .tx small { color: var(--ink-2); font-size: .8rem; line-height: 1.35; }
@@ -2691,7 +2694,15 @@ function render0() {
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
   const actif = document.activeElement, focusId = actif && actif.id && app.contains(actif) ? actif.id : null, selS = focusId && actif.selectionStart, selE = focusId && actif.selectionEnd;
-  app.innerHTML = banner + html;
+  // Fluidité : on ne redessine que si quelque chose a changé, et les blocs que la personne a ouverts restent ouverts
+  const neuf = banner + html;
+  if (app.__html !== neuf || app.__premier !== app.firstChild) {
+    const cle = d => d.id || ((d.querySelector("summary") || {}).textContent || "").replace(/[^A-Za-zÀ-ÿ]+/g, " ").trim().slice(0, 80); // seulement les lettres : nombres et icônes du titre peuvent changer
+    const ouverts = app.__page === h ? [...app.querySelectorAll("details[open]:not([ontoggle]):not(.menu-plus)")].map(cle) : [];
+    app.innerHTML = neuf; app.__html = neuf; app.__premier = app.firstChild;
+    if (ouverts.length) app.querySelectorAll("details:not([ontoggle]):not(.menu-plus)").forEach(d => { if (!d.open && ouverts.includes(cle(d))) d.open = true; });
+  }
+  app.__page = h;
   if (h.startsWith("edl-") || h.startsWith("bail-") || page === "biens") setTimeout(hydraterPhotos, 0);
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { el.setSelectionRange(selS, selE); } catch (e) {} } }
   document.title = S.sci.nom || "Gestion SCI";
@@ -4672,6 +4683,18 @@ function modal(title, body, onSubmit, opts = {}) {
   if (opts.after) opts.after(f);
   const first = f.querySelector("input:not([type=checkbox]):not([type=radio]),select,textarea"); if (first && matchMedia("(pointer: fine)").matches) first.focus();
 }
+/* Bouton retour (Android) ou geste retour (iPhone) : ferme la fenêtre ouverte au lieu de quitter la page.
+   À l'ouverture, une étape d'historique est ajoutée (une seule, même si plusieurs fenêtres s'enchaînent). */
+(function () {
+  const o = document.getElementById("overlay"), fo = document.getElementById("focus");
+  const ouverte = () => (o && !o.hidden) || (fo && !fo.hidden);
+  const suivre = () => { if (ouverte() && !(history.state && history.state.fenetre)) { try { history.pushState({ fenetre: 1 }, "", location.href); } catch (e) {} } };
+  [o, fo].forEach(el => el && new MutationObserver(suivre).observe(el, { attributes: true, attributeFilter: ["hidden"] }));
+  addEventListener("popstate", () => {
+    if (fo && !fo.hidden && typeof fermerPoint === "function") { fermerPoint(); return; }
+    if (o && !o.hidden) { if (o.querySelector('.docwrap [onclick="fermerDoc()"]') && typeof fermerDoc === "function") fermerDoc(); else closeOverlay(); }
+  });
+})();
 /* Toucher à côté d'une fenêtre la ferme, comme la croix (utile aussi si l'affichage bugue).
    Si on a commencé à remplir un formulaire, il faut toucher une 2e fois à côté : rien ne se perd par erreur. */
 let FOND = { depart: null, avert: 0 };
@@ -6065,11 +6088,18 @@ function apresModifDrive() { setTimeout(() => lectureDriveFond("modif"), 400); }
 function attendreRolePuisLire(n = 0) { if (MEMBRES) { lectureDriveFond("ouverture"); return; } if (n < 15) setTimeout(() => attendreRolePuisLire(n + 1), 1000); }
 const bandeauDrive = () => SB && !MCP && pageCourante() === "locataires" && estProprio() && !rienChoisi() && !S.sci.driveDebranche && (DRIVEG.perdu || DRIVEG.etat === "non")
   ? `<div class="banner"><span>⚠️ <span><b>Ton Drive s'est déconnecté</b>, reconnecte-le pour que tes documents continuent de se ranger.</span></span><button class="small primary" onclick="connecterDrive()">Reconnecter</button></div>` : "";
+/* Un Drive est-il attendu ? (branché, ou des documents lus la dernière fois) : sinon pas de "Lecture de ton Drive…" qui clignote */
+const cleDriveN = () => "gestion-drive-n-" + ESPACE;
+function driveAttendu() {
+  if ((DRIVEG.etat === "oui" && !rienChoisi()) || racinesPartagees().length) return true;
+  try { return +localStorage.getItem(cleDriveN()) > 0; } catch (e) { return false; }
+}
+function noterDriveN() { try { if (DOCS.etat === "pret") localStorage.setItem(cleDriveN(), String(DOCS.fichiers.length)); } catch (e) {} }
 function resumeDrive() {
   if (DOCS.etat === "vide" && SB && estProprio() && !MCP) setTimeout(indexerDrive, 0);
   const R = racinesPartagees(), n = DOCS.fichiers ? DOCS.fichiers.length : 0;
   if (R.length) return `✅ ${R.length} dossier${R.length > 1 ? "s" : ""} partagé${R.length > 1 ? "s" : ""} · ${n} document${n > 1 ? "s" : ""} · lecture seule`;
-  if (DOCS.etat === "chargement" || DOCS.etat === "attente") return "Lecture de ton Drive…";
+  if ((DOCS.etat === "chargement" || DOCS.etat === "attente") && driveAttendu()) return "Lecture de ton Drive…";
   return DRIVEG.etat === "oui" ? "✅ Connecté · fichiers choisis un par un" : "Pas encore de dossier partagé";
 }
 function sectionDriveReglages() {
@@ -6163,7 +6193,7 @@ async function indexerAppli(silencieux) {
     } catch (e) { D.errPartage = e.message; }
   }
   if (DOCS !== D) return D;
-  if (D.etat !== "erreur") { D.etat = "pret"; D.date = new Date(); }
+  if (D.etat !== "erreur") { D.etat = "pret"; D.date = new Date(); noterDriveN(); }
   D.n = D.fichiers.length; render();
   return D;
 }
@@ -6504,7 +6534,7 @@ function pageDocsDrive() {
   if (cur && cur !== "_seuls" && !dcur && !(DOCS.etat === "chargement" || DOCS.etat === "attente")) view.docDossier = "";
   const charge = DOCS.etat === "chargement" || DOCS.etat === "attente";
   const nbDans = id => DOCS.fichiers.filter(f => racineDe(f) === id).length, seuls = DOCS.fichiers.filter(f => !racineDe(f));
-  const etat = charge ? `<p class="note">⏳ Lecture de ton Drive… ${DOCS.n || 0} document${(DOCS.n || 0) > 1 ? "s" : ""}</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : DOCS.errPartage ? `<div class="empty">Dossiers partagés : ${esc(DOCS.errPartage)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : "";
+  const etat = charge && !driveAttendu() ? "" : charge ? `<p class="note">⏳ Lecture de ton Drive… ${DOCS.n || 0} document${(DOCS.n || 0) > 1 ? "s" : ""}</p>` : DOCS.etat === "erreur" ? `<div class="empty">${esc(DOCS.err)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : DOCS.errPartage ? `<div class="empty">Dossiers partagés : ${esc(DOCS.errPartage)} <button class="small" onclick="indexerDrive()">Réessayer</button></div>` : "";
   const recherche = ph => `<form class="search" onsubmit="event.preventDefault()"><input id="docq" type="search" placeholder="${ph}" value="${esc(q)}" oninput="view.docQ=this.value;view.docLim=40;rafraichirDocs()" aria-label="Chercher un document"></form>`;
   const ajouter = (cls = "primary") => `<button class="${cls}" onclick="${pret ? "ajouterDossierPartage()" : "choisirDossierDrive()"}">+ Ajouter un dossier</button>`;
   const unParUn = `<button class="small ghost" onclick="${DRIVEG.etat === "oui" ? "choisirFichiersDrive()" : "connecterDrive('choix')"}">📄 Des fichiers un par un</button>`;
@@ -7789,7 +7819,7 @@ function veutNotif(type, canal) {
   if (type === "resume" && canal === "mail" && p.resume) return true;
   return canal === "push" ? !!d[4] : !!d[5];
 }
-const resumeNotif = () => { if (!NOTIF.prefs) return "Alertes sur le téléphone et par e-mail, au choix"; const n = TYPES_NOTIF.filter(t => veutNotif(t[0], "push") || veutNotif(t[0], "mail")).length; return `${n} alerte${n > 1 ? "s" : ""} sur ${TYPES_NOTIF.length}${NOTIF.etat === "actif" ? " · téléphone activé" : " · téléphone pas activé"}`; };
+const resumeNotif = () => { if (!NOTIF.prefs) { try { return localStorage.getItem("gestion-notif-resume") || "Alertes sur le téléphone et par e-mail, au choix"; } catch (e) { return "Alertes sur le téléphone et par e-mail, au choix"; } } const n = TYPES_NOTIF.filter(t => veutNotif(t[0], "push") || veutNotif(t[0], "mail")).length; const r = `${n} alerte${n > 1 ? "s" : ""} sur ${TYPES_NOTIF.length}${NOTIF.etat === "actif" ? " · téléphone activé" : " · téléphone pas activé"}`; try { localStorage.setItem("gestion-notif-resume", r); } catch (e) {} return r; };
 function blocNotif() {
   if (NOTIF.etat === "?") return `<p class="note">Chargement…</p>`;
   if (NOTIF.etat === "indispo") return `<p class="note">Les notifications arrivent très bientôt (mise à jour du serveur en cours).</p>`;
