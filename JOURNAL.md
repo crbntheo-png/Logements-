@@ -11,6 +11,8 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Max (SCI NIMAR)** : dans À faire, toucher "Oui, bail commercial" pour l'EURL Velours & Végétal ; fiche "Immeuble / parties communes" › Transformer ; "Compléter avec mes papiers" sur chaque logement.
+- [ ] **Assistant "Pose ta question" (Claude)** : feuille de route n° 8, prochaine session.
 - [ ] **Banque pour tous (Théo)** : envoyer les demandes de devis Enable Banking (formulaire "Get a quote") et Bridge ; avec un contrat Enable Banking, rien à recoder. En attendant, les autres utilisateurs reçoivent 0 compte.
 - [ ] **Banque en direct (Théo)** : application créée le 18/11. Reste : Réglages › Banque › Relier ma banque (connexion sur le site de la banque). Ancienne note : : Enable Banking, mode "restricted production". 1) https://enablebanking.com/sign-in/ (e-mail, lien reçu) ; 2) https://enablebanking.com/cp/applications › "Add a new application" : environnement Production, clé privée générée par défaut, nom "Gestion locative", URL de retour https://sci-gestion-locative.com/ › Register (un fichier .pem se télécharge, son nom = l'identifiant de l'application) ; 3) sur la page de l'application : "Link accounts" et relier le compte de la SCI ; 4) envoyer à Claude le contenu du .pem et l'identifiant. Ensuite (Claude, 1 session) : fonction serveur, choix de la banque dans l'appli, relevés lus dans les mêmes tables que Pennylane (le rapprochement des loyers marche tel quel). Limite : gratuit seulement pour les comptes que Théo relie lui-même ; pour les autres utilisateurs, contrat payant Enable Banking.
 
@@ -76,6 +78,17 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 20/11/2026 (nuit) — retours de Max : tout traité côté appli ; baux commerciaux et professionnels
+
+- Retours de Max revérifiés : tout est codé et en ligne (fiche immeuble, vraies dates, meublé, alertes, ordures ménagères au départ, fiches remplies avec les papiers, banque expliquée). Ses données (SCI NIMAR, lecture seule) : immeuble pas encore transformé, fiches toujours vides (surface, DPE, e-mails, assurances), banque 0 compte. Rien modifié chez lui.
+- Trou trouvé chez lui : "Local commercial" (type "Local") loué à une EURL avec un bail "vide" → révision à l'IRL, gel DPE, préavis et lettre de congé d'un logement, "assurance habitation". Nouveau :
+  - Types de bail "commercial" (3-6-9, 9 ans) et "professionnel" (6 ans). `estPro(b)`, `estLocalPro(bi)` (type/nom : local, commerce, boutique, bureau, cabinet, atelier, entrepôt).
+  - Indices ILC et ILAT (tables INSEE 2019 → T2 2026, séries 001532540 et 001617112, vérifiées le 20/11), mis à jour tout seuls comme l'IRL (`S.ilcPerso`, `S.ilatPerso`, seulement si un bail les utilise). `indiceDe(b)` (choix possible dans le bail), `idxVal`, `idxEnVigueur`, `qPubIdx` (ILC/ILAT publiés ~3 mois après le trimestre). `revInfo` renvoie `idx` ; pas de gel DPE hors IRL. Textes de révision, courrier, fiche du locataire : le bon indice.
+  - Préavis 6 mois et texte de fin de période adapté ; congé du bailleur : explication (commissaire de justice), pas de lettre ; pas de "Générer le bail" ; "assurance du local" ; pas de plafond de dépôt.
+  - Nouveau locataire sur un local : bail commercial proposé d'office (indice ILC). Bail d'habitation sur un local : À faire "X loue un local : c'est un bail commercial ?" › "Oui, bail commercial" / "Bail professionnel" (`passerBailPro`, Annuler).
+  - Lecture IA d'un bail et connecteur Claude (MCP) : types commercial et professionnel acceptés (fonctions ia et mcp redéployées).
+- Test98 (nouveau, 17 contrôles) OK.
 
 ### 19/11/2026 (nuit, suite) — banque des autres utilisateurs ; tableau de bord par logement
 

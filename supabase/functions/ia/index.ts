@@ -38,7 +38,7 @@ const S_BAIL = {
   required: ["nom", "colocataires", "email", "tel", "adresse_precedente", "type_bail", "date_entree", "duree_mobilite_mois", "loyer_hc", "charges", "charges_mode", "jour_paiement", "depot", "irl_trimestre", "revision_annuelle", "garant_nom", "garant_contact", "visale", "clauses_particulieres", "adresse_logement", "remarques"],
   properties: {
     nom: { type: "string" }, colocataires: { type: "string" }, email: { type: "string" }, tel: { type: "string" }, adresse_precedente: { type: "string" },
-    type_bail: { type: "string", enum: ["vide", "meuble", "etudiant", "mobilite", "inconnu"] }, date_entree: { type: "string" }, duree_mobilite_mois: { type: "number" },
+    type_bail: { type: "string", enum: ["vide", "meuble", "etudiant", "mobilite", "commercial", "professionnel", "inconnu"] }, date_entree: { type: "string" }, duree_mobilite_mois: { type: "number" },
     loyer_hc: { type: "number" }, charges: { type: "number" }, charges_mode: { type: "string", enum: ["provision", "forfait", "inconnu"] }, jour_paiement: { type: "number" }, depot: { type: "number" },
     irl_trimestre: { type: "string" }, revision_annuelle: { type: "boolean" }, garant_nom: { type: "string" }, garant_contact: { type: "string" }, visale: { type: "string" },
     clauses_particulieres: { type: "string" }, adresse_logement: { type: "string" }, remarques: { type: "string" },
@@ -48,7 +48,7 @@ const CONSIGNE_BAIL = `Tu lis un contrat de location (bail d'habitation françai
 Recopie exactement ce qui est écrit, sans rien inventer : chaîne vide "" ou 0 quand l'information n'est pas dans le document.
 - nom : le ou les locataires titulaires, "Prénom Nom" ; s'il y en a plusieurs, le premier dans nom et les autres dans colocataires (séparés par des virgules).
 - adresse_precedente : l'adresse du locataire écrite dans le bail (son domicile avant l'entrée), pas celle du logement loué.
-- type_bail : vide (location nue, loi de 1989), meuble, etudiant (meublé 9 mois), mobilite (bail mobilité), sinon inconnu.
+- type_bail : vide (location nue, loi de 1989), meuble, etudiant (meublé 9 mois), mobilite (bail mobilité), commercial (bail commercial 3-6-9, code de commerce, local commercial), professionnel (bail professionnel, profession libérale, 6 ans), sinon inconnu.
 - date_entree : date de prise d'effet du bail, au format AAAA-MM-JJ. duree_mobilite_mois seulement pour un bail mobilité.
 - loyer_hc : loyer mensuel HORS charges en euros. charges : montant mensuel des provisions ou du forfait de charges. charges_mode : provision (avec régularisation) ou forfait.
 - jour_paiement : jour du mois où le loyer est payable (ex : "le 5 de chaque mois" -> 5 ; "terme à échoir le 1er" -> 1).

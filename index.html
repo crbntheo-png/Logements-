@@ -1935,12 +1935,18 @@ function quotePart(lot) {
 const cleRepartition = im => { const L = lotsDe(im.id); return L.length && L.every(x => +x.tantiemes > 0) ? "les tantièmes" : L.length && L.every(x => +x.surface > 0) ? "la surface" : "parts égales"; };
 const prixAchatDe = bi => +bi.prixAchat > 0 ? +bi.prixAchat : (immeubleDe(bi) && +immeubleDe(bi).prixAchat > 0 ? Math.round(+immeubleDe(bi).prixAchat * quotePart(bi)) : 0);
 const bailActifDuBien = id => S.baux.find(b => b.bienId === id && isActive(b));
-const TYPES_BAIL = { vide: "Location vide (loi du 6 juillet 1989)", meuble: "Location meublée", etudiant: "Location meublée étudiant (9 mois)", mobilite: "Bail mobilité" };
+const TYPES_BAIL = { vide: "Location vide (loi du 6 juillet 1989)", meuble: "Location meublée", etudiant: "Location meublée étudiant (9 mois)", mobilite: "Bail mobilité", commercial: "Bail commercial (3-6-9) — local, boutique", professionnel: "Bail professionnel (6 ans) — cabinet, bureau" };
+/* Bail commercial ou professionnel : pas un logement (autre indice, autres délais, assurance du local, pas de bail type à générer) */
+const estPro = b => !!b && (b.typeBail === "commercial" || b.typeBail === "professionnel");
+const estLocalPro = bi => !!bi && /\b(local|commerc|boutique|bureau|cabinet|atelier|entrep)/i.test(sansAccent(`${bi.type || ""} ${bi.nom || ""}`));
+const assTxt = b => estPro(b) ? "assurance du local" : "assurance habitation";
 
 function dureeBail(b) {
   if (b.typeBail === "vide") return S.sci.familiale || estPerso() ? { mois: 36, txt: "3 ans" } : { mois: 72, txt: "6 ans" };
   if (b.typeBail === "meuble") return { mois: 12, txt: "1 an" };
   if (b.typeBail === "etudiant") return { mois: 9, txt: "9 mois" };
+  if (b.typeBail === "commercial") return { mois: 108, txt: "9 ans" };
+  if (b.typeBail === "professionnel") return { mois: 72, txt: "6 ans" };
   return { mois: +b.dureeMobilite || 10, txt: (+b.dureeMobilite || 10) + " mois" };
 }
 function loyerAt(b, m) {
@@ -2090,12 +2096,12 @@ function editPlan(bailId) {
 /* Message très simple au locataire : où il en est, ce qu'il doit payer chaque mois, jusqu'à quand */
 function docDemandeAssurance(bailId) {
   const b = bail(bailId), bi = bien(b.bienId), prenomL = String(nomCourt(b.nom)).split(/\s+/)[0];
-  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : attestation d'assurance habitation</b></p>
-  <p>Bonjour ${esc(prenomL)},</p><p>Comme chaque année, pouvez-vous nous envoyer l'<b>attestation d'assurance habitation</b> du logement situé ${esc(adresseBien(bi))} ?</p>
+  const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : attestation d'${assTxt(b)}</b></p>
+  <p>Bonjour ${esc(prenomL)},</p><p>Comme chaque année, pouvez-vous nous envoyer l'<b>attestation d'${assTxt(b)}</b> ${estPro(b) ? "des locaux" : "du logement"} situé${estPro(b) ? "s" : ""} ${esc(adresseBien(bi))} ?</p>
   <p>C'est un document d'une page que votre assureur vous donne (souvent téléchargeable dans votre espace en ligne ou votre appli d'assurance). Une photo ou un PDF suffit.</p>
-  <p class="small">Rappel : l'assurance contre les risques locatifs (incendie, dégât des eaux…) est obligatoire pour le locataire (loi n° 89-462 du 6 juillet 1989, article 7 g).</p><p>Merci d'avance,</p>${signature()}`;
+  <p class="small">${estPro(b) ? "Rappel : votre bail vous oblige à assurer les locaux (incendie, dégât des eaux, responsabilité civile)." : "Rappel : l'assurance contre les risques locatifs (incendie, dégât des eaux…) est obligatoire pour le locataire (loi n° 89-462 du 6 juillet 1989, article 7 g)."}</p><p>Merci d'avance,</p>${signature()}`;
   showDoc(html, { titre: "Demande d'attestation d'assurance", fichier: `Demande-assurance-${slug(b.nom)}`, to: b.email, bailId: b.id,
-    email: { objet: "Votre attestation d'assurance habitation", corps: `Bonjour ${prenomL},\n\nComme chaque année, pouvez-vous nous envoyer l'attestation d'assurance habitation du logement ? C'est une page que votre assureur vous donne (souvent dans votre espace en ligne). Une photo ou un PDF suffit, en réponse à ce message.\n\nMerci d'avance,\n${S.sci.gerant || ""}` } });
+    email: { objet: `Votre attestation d'${assTxt(b)}`, corps: `Bonjour ${prenomL},\n\nComme chaque année, pouvez-vous nous envoyer l'attestation d'${assTxt(b)} ${estPro(b) ? "des locaux" : "du logement"} ? C'est une page que votre assureur vous donne (souvent dans votre espace en ligne). Une photo ou un PDF suffit, en réponse à ce message.\n\nMerci d'avance,\n${S.sci.gerant || ""}` } });
 }
 function assuranceRecue(bailId, dejaRangee) {
   const b = bail(bailId);
@@ -2156,6 +2162,19 @@ const IRL = {
   "2025-1": 145.47, "2025-2": 146.68, "2025-3": 145.77, "2025-4": 145.78,
   "2026-1": 146.60, "2026-2": 148.37, "2026-3": 148.06
 };
+/* Loyers commerciaux (ILC) et activités tertiaires (ILAT), INSEE (séries 001532540 et 001617112) */
+const ILC = {
+  "2019-1": 114.64, "2019-2": 115.21, "2019-3": 115.6, "2019-4": 116.16, "2020-1": 116.23, "2020-2": 115.42, "2020-3": 115.7, "2020-4": 115.79,
+  "2021-1": 116.73, "2021-2": 118.41, "2021-3": 119.7, "2021-4": 118.59, "2022-1": 120.61, "2022-2": 123.65, "2022-3": 126.13, "2022-4": 126.05,
+  "2023-1": 128.68, "2023-2": 131.81, "2023-3": 133.66, "2023-4": 132.63, "2024-1": 134.58, "2024-2": 136.72, "2024-3": 137.71, "2024-4": 135.3,
+  "2025-1": 135.87, "2025-2": 136.81, "2025-3": 137.09, "2025-4": 134.62, "2026-1": 135.26, "2026-2": 137.16
+};
+const ILAT = {
+  "2019-1": 113.88, "2019-2": 114.47, "2019-3": 114.85, "2019-4": 115.43, "2020-1": 115.53, "2020-2": 114.33, "2020-3": 114.23, "2020-4": 114.06,
+  "2021-1": 114.87, "2021-2": 116.46, "2021-3": 117.61, "2021-4": 118.97, "2022-1": 120.73, "2022-2": 122.65, "2022-3": 124.53, "2022-4": 126.66,
+  "2023-1": 128.59, "2023-2": 130.64, "2023-3": 132.15, "2023-4": 133.69, "2024-1": 135.13, "2024-2": 136.45, "2024-3": 137.12, "2024-4": 137.29,
+  "2025-1": 137.29, "2025-2": 137.15, "2025-3": 137.07, "2025-4": 137.21, "2026-1": 137.42, "2026-2": 138.01
+};
 const qKey = l => { const m = /T\s*([1-4])\D*(\d{4})/i.exec(l || ""); return m ? m[2] + "-" + m[1] : null; };
 const qLabel = k => { const [y, q] = k.split("-"); return "T" + q + " " + y; };
 const qPub = k => { const [y, q] = k.split("-").map(Number); return q === 4 ? new Date(y + 1, 0, 15) : new Date(y, q * 3, 15); };
@@ -2165,6 +2184,14 @@ const irlCles = () => Object.keys(irlTable()).sort((a, b) => { const [ya, qa] = 
 function irlEnVigueur(d) { const ks = irlCles(); let best = null; ks.forEach(k => { if (qPub(k) <= d) best = k; }); return best || ks[0]; }
 function irlProchain() { const ks = irlCles(), [y, q] = ks[ks.length - 1].split("-").map(Number); const k = q === 4 ? (y + 1) + "-1" : y + "-" + (q + 1); return { k, pub: qPub(k) }; }
 const fmtIrl = v => String(v).replace(".", ",");
+const INDICES = { IRL: { base: IRL, perso: "irlPerso", serie: "001515333", nom: "Indice de référence des loyers" }, ILC: { base: ILC, perso: "ilcPerso", serie: "001532540", nom: "Indice des loyers commerciaux" }, ILAT: { base: ILAT, perso: "ilatPerso", serie: "001617112", nom: "Indice des loyers des activités tertiaires" } };
+const indiceDe = b => b && INDICES[b.indice] ? b.indice : b && b.typeBail === "commercial" ? "ILC" : b && b.typeBail === "professionnel" ? "ILAT" : "IRL";
+const idxTable = n => n === "IRL" ? irlTable() : Object.assign({}, INDICES[n].base, S[INDICES[n].perso] || {});
+const idxVal = (n, k) => idxTable(n)[k];
+const idxCles = n => Object.keys(idxTable(n)).sort((a, b) => { const [ya, qa] = a.split("-").map(Number), [yb, qb] = b.split("-").map(Number); return ya - yb || qa - qb; });
+// l'ILC et l'ILAT sortent environ 3 mois après la fin du trimestre (l'IRL, 2 semaines)
+const qPubIdx = (n, k) => { if (n === "IRL") return qPub(k); const [y, q] = k.split("-").map(Number); return new Date(y, q * 3 + 2, 25); };
+function idxEnVigueur(n, d) { const ks = idxCles(n); let best = null; ks.forEach(k => { if (qPubIdx(n, k) <= d) best = k; }); return best || ks[0]; }
 
 /* Révision annuelle : ce qu'il faut faire pour un bail, calculé tout seul */
 function revInfo(b) {
@@ -2176,16 +2203,16 @@ function revInfo(b) {
   if (lastRev && P(lastRev) >= addDays(anniv, -45)) return null;
   const key = "rev-" + b.id + "-" + iso(anniv);
   if (fait(key)) return null;
-  const bi = bien(b.bienId);
-  if (bi && (bi.dpe === "F" || bi.dpe === "G")) return { key, anniv, statut: "gele" };
-  const ref = qKey(b.irlTrimestre) || irlEnVigueur(entree), q = ref.split("-")[1];
-  let y = anniv.getFullYear() + 1; while (qPub(y + "-" + q) > anniv) y--;
+  const bi = bien(b.bienId), idx = indiceDe(b);
+  if (idx === "IRL" && bi && (bi.dpe === "F" || bi.dpe === "G")) return { key, anniv, statut: "gele", idx };
+  const ref = qKey(b.irlTrimestre) || idxEnVigueur(idx, entree), q = ref.split("-")[1];
+  let y = anniv.getFullYear() + 1; while (qPubIdx(idx, y + "-" + q) > anniv) y--;
   const newKey = y + "-" + q, oldKey = (y - 1) + "-" + q;
-  const newVal = irlVal(newKey), oldVal = irlVal(oldKey) || +b.irlValeur;
+  const newVal = idxVal(idx, newKey), oldVal = idxVal(idx, oldKey) || +b.irlValeur;
   const ancien = loyerAt(b, mk(anniv)).hc;
-  if (!newVal || !oldVal) return { key, anniv, statut: "attente", newKey, pub: qPub(newKey), ancien };
+  if (!newVal || !oldVal) return { key, anniv, statut: "attente", newKey, pub: qPubIdx(idx, newKey), ancien, idx };
   const nouveau = r2(ancien * newVal / oldVal);
-  return { key, anniv, statut: "pret", newKey, oldKey, newVal, oldVal, ancien, nouveau, charges: loyerAt(b, mk(anniv)).ch };
+  return { key, anniv, statut: "pret", newKey, oldKey, newVal, oldVal, ancien, nouveau, charges: loyerAt(b, mk(anniv)).ch, idx };
 }
 
 /* ================= Tâches automatiques ================= */
@@ -2270,11 +2297,11 @@ function taches() {
     if (rv && rv.statut === "pret")
       add({ bailId: b.id, key: rv.key, prio: rv.anniv <= TODAY ? "soon" : "info", date: rv.anniv, done: true,
         t: `Augmenter le loyer de ${esc(b.nom)} : ${eur(rv.ancien)} → ${eur(rv.nouveau)}`,
-        d: `Date anniversaire du bail : ${fd(rv.anniv)}. Indice IRL ${qLabel(rv.newKey)} (${fmtIrl(rv.newVal)}) comparé à ${qLabel(rv.oldKey)} (${fmtIrl(rv.oldVal)}), soit ${rv.nouveau >= rv.ancien ? "+" : ""}${eur(rv.nouveau - rv.ancien)} par mois. ${rv.anniv < TODAY ? "Pas de rattrapage possible : la hausse s'applique à partir du prochain loyer." : "À appliquer à partir de cette date."} Possible jusqu'au ${fd(addYears(rv.anniv, 1))}.`,
+        d: `Date anniversaire du bail : ${fd(rv.anniv)}. Indice ${rv.idx} ${qLabel(rv.newKey)} (${fmtIrl(rv.newVal)}) comparé à ${qLabel(rv.oldKey)} (${fmtIrl(rv.oldVal)}), soit ${rv.nouveau >= rv.ancien ? "+" : ""}${eur(rv.nouveau - rv.ancien)} par mois. ${rv.anniv < TODAY ? "Pas de rattrapage possible : la hausse s'applique à partir du prochain loyer." : "À appliquer à partir de cette date."} Possible jusqu'au ${fd(addYears(rv.anniv, 1))}.`,
         acts: [["Appliquer", `revision('${b.id}')`, "primary"]] });
     if (rv && rv.statut === "attente")
       add({ bailId: b.id, key: rv.key, prio: "info", date: rv.anniv, done: true, t: `Révision du loyer de ${esc(b.nom)} au ${fd(rv.anniv)}`,
-        d: `Il faut l'indice IRL ${qLabel(rv.newKey)}, publié par l'INSEE vers le ${fd(rv.pub)}. Dès qu'il est dans l'appli (Réglages), le nouveau loyer se calcule tout seul.`, acts: [] });
+        d: `Il faut l'indice ${rv.idx} ${qLabel(rv.newKey)}, publié par l'INSEE vers le ${fd(rv.pub)}. Dès qu'il est dans l'appli (Réglages), le nouveau loyer se calcule tout seul.`, acts: [] });
     if (rv && rv.statut === "gele")
       add({ bailId: b.id, key: rv.key, prio: "info", date: rv.anniv, done: true, t: `Loyer de ${esc(b.nom)} bloqué (DPE ${esc(bi.dpe)})`,
         d: `Logement classé F ou G : la loi interdit toute augmentation, y compris la révision annuelle. Il faut faire des travaux pour pouvoir réviser.`, acts: [] });
@@ -2283,7 +2310,7 @@ function taches() {
       const fin = P(b.assuranceFin); const k = "ass-" + b.id + "-" + (b.assuranceFin || "x");
       if ((!fin || fin <= addDays(TODAY, 30)) && !fait(k) && !depotsAVoir().some(f => f.bailId === b.id))
         add({ bailId: b.id, key: k, prio: fin && fin < TODAY || !fin ? "soon" : "info", date: fin || TODAY, done: true,
-          t: `Attestation d'assurance habitation : ${esc(b.nom)}`,
+          t: `Attestation d'${assTxt(b)} : ${esc(b.nom)}`,
           d: (fin ? `Son assurance se termine le ${fd(fin)}. ` : "Tu n'as pas encore son attestation d'assurance. ") + "À lui demander une fois par an.",
           acts: [SB ? ["📲 Lui demander (son espace)", `demanderAssuranceEspace('${b.id}')`, "primary"] : ["Lui demander", `docDemandeAssurance('${b.id}')`, "primary"], SB ? ["Lettre", `docDemandeAssurance('${b.id}')`] : null, ["Je l'ai reçue", `assuranceRecue('${b.id}')`]].filter(Boolean) });
     }
@@ -2304,12 +2331,12 @@ function taches() {
     if (actif && !b.dateSortie) {
       const du = dureeBail(b); let ech2 = addMonthsDate(entree, du.mois);
       while (ech2 < TODAY) ech2 = addMonthsDate(ech2, du.mois);
-      const preavis = b.typeBail === "vide" ? 6 : 3; const lim = addMonthsDate(ech2, -preavis); const k = "fin-" + b.id + iso(ech2);
+      const preavis = b.typeBail === "vide" || estPro(b) ? 6 : 3; const lim = addMonthsDate(ech2, -preavis); const k = "fin-" + b.id + iso(ech2);
       if (b.typeBail === "etudiant" && daysBetween(TODAY, ech2) <= 60 && !fait(k))
         add({ bailId: b.id, key: k, prio: "soon", date: ech2, done: true, t: `Fin du bail étudiant de ${esc(b.nom)} le ${fd(ech2)}`, d: "Le bail étudiant de 9 mois se termine sans reconduction. Prévoir l'état des lieux de sortie ou un nouveau bail.", acts: [] });
       else if (b.typeBail !== "mobilite" && b.typeBail !== "etudiant" && daysBetween(TODAY, lim) <= 45 && !fait(k))
         add({ bailId: b.id, key: k, prio: TODAY > lim ? "info" : "soon", date: lim, done: true, t: `Fin de période du bail de ${esc(b.nom)} le ${fd(ech2)}`,
-          d: TODAY > lim ? `Rien à faire : le bail se renouvelle tout seul le ${fd(ech2)}. Le délai pour donner congé (vente, reprise) est passé : il fallait l'envoyer avant le ${fd(lim)}.` : `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: TODAY > lim ? [] : [["📤 Préparer un congé", `congeBailleur('${b.id}')`]] });
+          d: estPro(b) ? `Fin des ${du.txt} du bail le ${fd(ech2)}. Sans congé, il continue tout seul. Pour donner congé, il faut le faire au moins 6 mois avant (le ${fd(lim)}), par commissaire de justice : fais-toi conseiller.` : TODAY > lim ? `Rien à faire : le bail se renouvelle tout seul le ${fd(ech2)}. Le délai pour donner congé (vente, reprise) est passé : il fallait l'envoyer avant le ${fd(lim)}.` : `Le bail se renouvelle tout seul. Pour donner congé (vente, reprise, motif sérieux), il faut l'envoyer avant le ${fd(lim)} (${preavis} mois avant).`, acts: TODAY > lim ? [] : [["📤 Préparer un congé", `congeBailleur('${b.id}')`]] });
     }
     // 8. Régularisation annuelle des charges
     if ((b.chargesMode || "provision") === "provision" && (+b.charges > 0 || (b.revisions || []).some(r => +r.charges > 0 && r.depuis <= (y - 1) + "-12"))) {
@@ -2573,7 +2600,7 @@ function cartePoint(s) {
   }
   if (s.type === "revision") {
     const b = bail(s.bailId), rv = revInfo(b);
-    return `<div class="pt-av">${avatar(b.nom)}</div><p class="pt-k">Révision annuelle · indice IRL ${qLabel(rv.newKey)}</p><h2>Augmenter le loyer de ${esc(nomCourt(b.nom))} ?</h2>
+    return `<div class="pt-av">${avatar(b.nom)}</div><p class="pt-k">Révision annuelle · indice ${rv.idx} ${qLabel(rv.newKey)}</p><h2>Augmenter le loyer de ${esc(nomCourt(b.nom))} ?</h2>
       <p class="pt-montant">${eur(rv.ancien)} → ${eur(rv.nouveau)}</p><p class="pt-d">+${eur(rv.nouveau - rv.ancien)} par mois, soit +${eur((rv.nouveau - rv.ancien) * 12)} par an.</p>
       <div class="pt-acts">${btn("📈 Oui, appliquer", `revision('${b.id}')`, "primary")}${btn("Non, pas cette année", `marquerFait('${rv.key}');pointSuivant(true)`)}${passer}</div>`;
   }
@@ -3770,7 +3797,7 @@ function pageBail(id) {
   return `<div><a class="back" href="#locataires">← Accueil</a>
   <div class="profil">${avatar(b.nom)}<div><h1>${esc(b.nom)}</h1><p>${esc(bienLabel(bi))} · ${esc(adresseBien(bi))}</p></div></div></div>
   <div class="contacts">${b.tel ? `<a class="chip" href="tel:${esc(b.tel.replace(/\s/g, ""))}">📞 ${esc(b.tel)}</a>` : ""}${b.email ? `<button class="chip" onclick="copierTexte('${esc(b.email)}')">✉️ ${esc(b.email)}</button>` : `<button class="chip" onclick="editBail('${b.id}')">✉️ Ajouter l'e-mail</button>`}</div>
-  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button>${menuPlus([["📝 Générer le bail", `docBailOpen('${b.id}')`], ["📈 Réviser le loyer", `revision('${b.id}')`], ["✍️ Avenant au bail", `avenant('${b.id}')`], ["🔑 Il s'en va (départ)", `finBail('${b.id}')`], !LECTURE && b.typeBail !== "mobilite" && b.typeBail !== "etudiant" ? ["📤 Lui donner congé (vente, reprise)", `congeBailleur('${b.id}')`] : null, SB && !LECTURE ? ["🔗 Son espace locataire", `ouvrirPortail('${b.id}')`] : null, S.sci.relanceAuto && !LECTURE ? [b.sansRelanceAuto ? "🔔 Remettre les relances automatiques" : "🔕 Pas de relance automatique pour lui", `basculerRelanceBail('${b.id}')`] : null])}</div>
+  <div class="row"><button class="primary" onclick="documentsPour('${b.id}')">📄 Documents</button><button onclick="editBail('${b.id}')">Modifier</button>${menuPlus([estPro(b) ? null : ["📝 Générer le bail", `docBailOpen('${b.id}')`], ["📈 Réviser le loyer", `revision('${b.id}')`], ["✍️ Avenant au bail", `avenant('${b.id}')`], ["🔑 Il s'en va (départ)", `finBail('${b.id}')`], !LECTURE && b.typeBail !== "mobilite" && b.typeBail !== "etudiant" ? [estPro(b) ? "📤 Lui donner congé" : "📤 Lui donner congé (vente, reprise)", `congeBailleur('${b.id}')`] : null, SB && !LECTURE ? ["🔗 Son espace locataire", `ouvrirPortail('${b.id}')`] : null, S.sci.relanceAuto && !LECTURE ? [b.sansRelanceAuto ? "🔔 Remettre les relances automatiques" : "🔕 Pas de relance automatique pour lui", `basculerRelanceBail('${b.id}')`] : null])}</div>
   <div class="kpis">
     <div class="kpi"><span>Loyer actuel</span><b>${eur(l.hc + l.ch)}</b><small>${eur(l.hc)} + ${eur(l.ch)} de charges</small></div>
     ${(() => { const pe = planEtat(b), suit = pe && !pe.fait && pe.ok; return `<div class="kpi ${dette && !suit ? "bad" : ""}"><span>Doit</span><b>${eur(dette)}</b><small>${!dette ? "rien, tout est payé" : suit ? "étalé, il suit l'accord" : "loyers en retard"}</small></div>`; })()}
@@ -3800,7 +3827,7 @@ function pageBail(id) {
       ${b.colocataires ? `<dt>Colocataires</dt><dd>${esc(b.colocataires)}</dd>` : ""}
       <dt>Type</dt><dd>${esc(TYPES_BAIL[b.typeBail] || "")}</dd><dt>Paiement le</dt><dd>${esc(b.jourPaiement || 1)} du mois</dd>
       <dt>Charges</dt><dd>${b.chargesMode === "forfait" ? "forfait" + cq("forfait") : "provision + régul. annuelle" + cq("provision")}</dd>
-      <dt>Indice IRL${cq("irl")}</dt><dd>${esc(b.irlTrimestre || "—")} ${b.irlValeur ? "= " + fmtIrl(b.irlValeur) : ""}</dd>
+      <dt>Indice ${indiceDe(b)}${cq(indiceDe(b) === "IRL" ? "irl" : "ilc")}</dt><dd>${esc(b.irlTrimestre || "—")} ${b.irlValeur ? "= " + fmtIrl(b.irlValeur) : ""}</dd>
       <dt>Garant${cq("garant")}</dt><dd>${esc(b.garantNom || "—")}</dd><dt>Assurance jusqu'au</dt><dd>${b.assuranceFin ? fds(b.assuranceFin) : "—"}</dd>
     </dl>${b.notes ? `<p class="note">${nl2br(b.notes)}</p>` : ""}</div>
     ${(b.revisions || []).length ? `<h3 style="margin-top:14px">Révisions et avenants</h3><ul class="note">${b.revisions.map((r, i) => r.type === "avenant" ? `<li>${fm(r.depuis)} : avenant n° ${r.num}, ${eur(r.loyerHC)} + ${eur(r.charges)} de charges <button class="small ghost" onclick="docAvenantOpen('${b.id}',${i})">Avenant</button></li>` : `<li>${fm(r.depuis)} : ${eur(r.loyerHC)} HC (IRL ${esc(r.trimestre)} ${esc(r.irlNouveau)}) <button class="small ghost" onclick="docRevisionOpen('${b.id}',${i})">Courrier</button></li>`).join("")}</ul>` : ""}
@@ -5268,7 +5295,7 @@ function aCompleterBien(bi) {
   const b = bailActifDuBien(bi.id); let tot = 6;
   if (b) { tot += 2; const pn = prenom(b.nom);
     k = "email:" + b.id; c(b.email, "✉️", `L'e-mail de ${pn}`, "Pour lui envoyer quittances et documents.", "Ajouter", `editBail('${b.id}')`);
-    k = "assurance:" + b.id; c(b.assuranceFin, "🛡", `L'assurance habitation de ${pn}`, "Obligatoire chaque année : sa date de fin, pour la redemander à temps.", "Noter", `editBail('${b.id}')`); }
+    k = "assurance:" + b.id; c(b.assuranceFin, "🛡", `L'${assTxt(b)} de ${pn}`, "Obligatoire chaque année : sa date de fin, pour la redemander à temps.", "Noter", `editBail('${b.id}')`); }
   return { L, pct: Math.round((tot - L.length) / tot * 100) };
 }
 function aCompleterImmeuble(im) {
@@ -5320,7 +5347,7 @@ async function lirePapierBien(bienId, bailId) {
 
 function editBail(id, bienId, pre) {
   const b = id ? bail(id) : { bienId: bienId && !estImm(bien(bienId)) ? bienId : (logements()[0] || {}).id, typeBail: "vide", jourPaiement: 5, dateEntree: "", suiviDepuis: TODAY.getDate() > 5 ? addM(CUR, 1) : CUR, chargesMode: "provision", revisable: true }; // la vraie date d'entrée est demandée (la date du jour créait un prorata et des impayés)
-  if (!id && b.bienId) { const bi = bien(b.bienId); if (bi) { b.typeBail = bi.meuble === "meuble" ? "meuble" : "vide"; b.loyerHC = bi.loyerRef || ""; } }
+  if (!id && b.bienId) { const bi = bien(b.bienId); if (bi) { b.typeBail = estLocalPro(bi) ? "commercial" : bi.meuble === "meuble" ? "meuble" : "vide"; b.loyerHC = bi.loyerRef || ""; } }
   if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
   if (!logements().length) { confirmer("Ajoute d'abord le logement : le locataire y sera rattaché.", () => editBien()); return; }
   modal(id ? "Modifier le locataire" : "Nouveau locataire", `
@@ -5337,25 +5364,27 @@ function editBail(id, bienId, pre) {
     ${fld("Loyer hors charges (€)", "loyerHC", b.loyerHC, "number", "", "required")}${fld("Charges (€ / mois)", "charges", b.charges || 0, "number")}
     ${sel("Charges", "chargesMode", b.chargesMode, [["provision", "Provision + régularisation annuelle"], ["forfait", "Forfait (meublé / colocation)"]])}${fld("Payé le … de chaque mois", "jourPaiement", b.jourPaiement, "number", "", 'min="1" max="31" step="1"')}
     ${fld("Dépôt de garantie (€)", "depot", b.depot, "number")}${fld("Dépôt rendu le", "depotRestitue", b.depotRestitue, "date")}
-    ${sel("Indice IRL de référence (dernier publié à la signature)", "irlTrimestre", qKey(b.irlTrimestre) ? qLabel(qKey(b.irlTrimestre)) : qLabel(irlEnVigueur(P(b.dateEntree) || TODAY)), irlCles().slice().reverse().map(k => [qLabel(k), qLabel(k) + " — " + fmtIrl(irlVal(k))]), "full")}
+    <div class="full ch-indice" ${estPro(b) || (b.indice && b.indice !== "IRL") ? "" : "hidden"}>${sel("Indice de révision", "indice", indiceDe(b), [["ILC", "ILC — commerce, artisan"], ["ILAT", "ILAT — bureau, profession libérale"], ["IRL", "IRL — comme un logement"]], "full")}</div>
+    ${sel("Trimestre de l'indice de référence (dernier publié à la signature)", "irlTrimestre", qKey(b.irlTrimestre) ? qLabel(qKey(b.irlTrimestre)) : qLabel(idxEnVigueur(indiceDe(b), P(b.dateEntree) || TODAY)), irlCles().slice().reverse().map(k => [qLabel(k), qLabel(k)]), "full")}
     <label class="fl chk full"><input type="checkbox" name="revisable" ${b.revisable !== false ? "checked" : ""}> Le bail prévoit une révision annuelle du loyer</label>
     <p class="note full" id="depotWarn"></p></fieldset>
     <fieldset><legend>Garanties</legend>
     ${fld("Garant (nom)", "garantNom", b.garantNom)}${fld("Garant (téléphone / e-mail)", "garantContact", b.garantContact)}
     ${fld("N° de visa Visale (si garantie Visale)", "visale", b.visale)}<p class="note" style="align-self:end"><a href="https://www.visale.fr" target="_blank" rel="noopener">Vérifier un visa sur visale.fr ↗</a></p>
-    ${fld("Assurance habitation valable jusqu'au", "assuranceFin", b.assuranceFin, "date")}${fld("État des lieux d'entrée fait le", "edlEntree", b.edlEntree, "date")}</fieldset>
+    ${fld("Assurance du locataire valable jusqu'au", "assuranceFin", b.assuranceFin, "date")}${fld("État des lieux d'entrée fait le", "edlEntree", b.edlEntree, "date")}</fieldset>
     <label class="fl chk full"><input type="checkbox" name="sansQuittance" ${b.sansQuittance ? "checked" : ""}> Il n'a pas besoin de quittance chaque mois (l'appli ne te le demandera plus)</label>
     ${SB ? fld("Nom sur ses virements, si différent (ex : FRAVELLE ; séparer par des virgules)", "motsBanque", b.motsBanque, "text", "full") : ""}
     ${area("Clauses particulières pour ce bail (reprises dans le bail)", "clauses", b.clauses)}
     ${area("Notes (pour vous, jamais dans le bail)", "notes", b.notes)}`,
     d => {
-      d.revisable = !!d.revisable; d.sansQuittance = !!d.sansQuittance; d.irlValeur = irlVal(qKey(d.irlTrimestre)) || b.irlValeur || "";
+      d.revisable = !!d.revisable; d.sansQuittance = !!d.sansQuittance; if (!estPro(d) && d.indice !== "IRL" && !(b.indice && b.indice !== "IRL")) delete d.indice; d.irlValeur = idxVal(indiceDe(d), qKey(d.irlTrimestre)) || b.irlValeur || "";
       // locataire qui entre ce mois-ci (ou plus tard) : son 1er loyer (prorata) est suivi, même si la case est restée sur le mois prochain
       if (!id && d.dateEntree && d.suiviDepuis && d.dateEntree.slice(0, 7) >= CUR && d.suiviDepuis > d.dateEntree.slice(0, 7)) d.suiviDepuis = d.dateEntree.slice(0, 7);
       if (id) { const vrai = bail(id); if (vrai && vrai !== b) Object.assign(vrai, d); Object.assign(b, d); } else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); if (!surDemarrage()) setTimeout(() => go("bail-" + nb.id)); }
       apresModifDrive();
     },
-    Object.assign({ after: f => { let irlTouche = !!id; f.irlTrimestre.addEventListener("change", () => irlTouche = true); f.dateEntree.addEventListener("change", () => { if (!irlTouche && f.dateEntree.value) f.irlTrimestre.value = qLabel(irlEnVigueur(P(f.dateEntree.value))); }); const chk = () => { const t = f.typeBail.value, dep = +f.depot.value, hc = +f.loyerHC.value, max = t === "vide" ? hc : t === "mobilite" ? 0 : hc * 2; document.getElementById("depotWarn").textContent = dep > max + 0.001 ? `⚠ Dépôt trop élevé : maximum légal ${eur(max)} pour ce type de bail (${t === "vide" ? "1 mois de loyer HC" : t === "mobilite" ? "interdit en bail mobilité" : "2 mois de loyer HC"}).` : ""; }; f.addEventListener("input", chk); chk(); } },
+    Object.assign({ after: f => { let irlTouche = !!id; f.irlTrimestre.addEventListener("change", () => irlTouche = true); f.dateEntree.addEventListener("change", () => { if (!irlTouche && f.dateEntree.value) f.irlTrimestre.value = qLabel(idxEnVigueur(indiceDe({ typeBail: f.typeBail.value, indice: f.indice.value }), P(f.dateEntree.value))); });
+        f.typeBail.addEventListener("change", () => { const pro = estPro({ typeBail: f.typeBail.value }); f.indice.value = f.typeBail.value === "commercial" ? "ILC" : f.typeBail.value === "professionnel" ? "ILAT" : "IRL"; f.querySelector(".ch-indice").hidden = !pro; }); const chk = () => { const t = f.typeBail.value, dep = +f.depot.value, hc = +f.loyerHC.value, max = t === "commercial" || t === "professionnel" ? Infinity : t === "vide" ? hc : t === "mobilite" ? 0 : hc * 2; document.getElementById("depotWarn").textContent = dep > max + 0.001 ? `⚠ Dépôt trop élevé : maximum légal ${eur(max)} pour ce type de bail (${t === "vide" ? "1 mois de loyer HC" : t === "mobilite" ? "interdit en bail mobilité" : "2 mois de loyer HC"}).` : ""; }; f.addEventListener("input", chk); chk(); } },
       id ? { del: () => { S.baux = S.baux.filter(x => x.id !== id); S.paiements = S.paiements.filter(p => p.bailId !== id); location.hash = "locataires"; }, delMsg: "Supprimer ce locataire et tout son historique de paiements ? (Pour un départ normal, utilisez plutôt \"Départ du locataire\".)" } : {}));
 }
 
@@ -5440,7 +5469,7 @@ function revision(id) {
   const ok = rv && rv.statut === "pret";
   const dateEffet = iso(rv && rv.anniv > TODAY ? rv.anniv : TODAY);
   modal(`Révision du loyer — ${esc(b.nom)}`, `
-    <p class="full note">${ok ? `Tout est calculé avec l'indice officiel de l'INSEE. Vérifie et appuie sur "Appliquer".` : `Indique les deux indices IRL (même trimestre, à un an d'écart).`} Nouveau loyer = loyer actuel × nouvel indice ÷ ancien indice.${cq("irl")}</p>
+    <p class="full note">${ok ? `Tout est calculé avec l'indice officiel de l'INSEE. Vérifie et appuie sur "Appliquer".` : `Indique les deux indices ${indiceDe(b)} (même trimestre, à un an d'écart).`} Nouveau loyer = loyer actuel × nouvel indice ÷ ancien indice.${cq("irl")}</p>
     ${fld("Loyer hors charges actuel (€)", "ancien", ok ? rv.ancien : l.hc, "number")}${fld("Charges (inchangées) (€)", "charges", ok ? rv.charges : l.ch, "number")}
     ${fld("Ancien trimestre", "trimestreAncien", ok ? qLabel(rv.oldKey) : b.irlTrimestre)}${fld("Ancien indice", "irlAncien", ok ? rv.oldVal : b.irlValeur, "number", "", "required")}
     ${fld("Nouveau trimestre", "trimestre", ok ? qLabel(rv.newKey) : "")}${fld("Nouvel indice", "irlNouveau", ok ? rv.newVal : "", "number", "", "required")}
@@ -7280,7 +7309,7 @@ function docRevisionOpen(id, i, secours) {
   const b = bail(id), r = ((b && b.revisions) || [])[i] || secours, bi = b && bien(b.bienId);
   if (!b || !r) { toast("Courrier introuvable : ouvre-le depuis la fiche du locataire › Historique."); return; }
   showDoc(`<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA(P(r.date))}<p><b>Objet : Révision annuelle du loyer</b></p>
-  <p>Madame, Monsieur,</p><p>Conformément à la clause de révision prévue à votre bail pour le logement situé ${esc(adresseBien(bi))}, et à l'article 17-1 de la loi du 6 juillet 1989, votre loyer est révisé selon la variation de l'indice de référence des loyers (IRL) publié par l'INSEE.</p>
+  <p>Madame, Monsieur,</p><p>Conformément à la clause de révision prévue à votre bail ${estPro(b) ? `pour les locaux situés ${esc(adresseBien(bi))}, votre loyer est révisé selon la variation de l'${INDICES[indiceDe(b)].nom.replace(/^I/, "i")} (${indiceDe(b)}) publié par l'INSEE.` : `pour le logement situé ${esc(adresseBien(bi))}, et à l'article 17-1 de la loi du 6 juillet 1989, votre loyer est révisé selon la variation de l'indice de référence des loyers (IRL) publié par l'INSEE.`}</p>
   <table><tbody><tr><td>Loyer hors charges actuel</td><td class="right">${eur(r.ancien)}</td></tr><tr><td>Indice de référence (${esc(r.trimestreAncien || "")})</td><td class="right">${esc(r.irlAncien)}</td></tr><tr><td>Nouvel indice (${esc(r.trimestre)})</td><td class="right">${esc(r.irlNouveau)}</td></tr><tr><td>Calcul</td><td class="right">${eur(r.ancien)} × ${esc(r.irlNouveau)} ÷ ${esc(r.irlAncien)}</td></tr><tr><td><b>Nouveau loyer hors charges</b></td><td class="right"><b>${eur(r.loyerHC)}</b></td></tr><tr><td>Charges (inchangées)</td><td class="right">${eur(r.charges)}</td></tr><tr><td><b>Nouveau total mensuel</b></td><td class="right"><b>${eur(r.loyerHC + r.charges)}</b></td></tr></tbody></table>
   <p>Ce nouveau loyer s'applique à compter de l'échéance du <b>${fd(r.depuis + "-01")}</b> (loyer de ${fm(r.depuis)}).</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`,
     { titre: "Révision du loyer", fichier: `Revision-loyer-${slug(b.nom)}-${r.depuis}`, to: b.email, bailId: b.id, email: { objet: "Révision annuelle de votre loyer", corps: `Bonjour,\n\nComme prévu dans votre bail, votre loyer est révisé selon l'indice IRL. À partir du loyer de ${fm(r.depuis)}, il passe à ${eur(r.loyerHC)} hors charges, soit ${eur(r.loyerHC + r.charges)} charges comprises. Le détail est dans le courrier joint.\n\nBonne journée,\n${S.sci.gerant || ""}` } });
@@ -7442,9 +7471,9 @@ function etapesArrivee(b) {
   return [
     { k: "arr-dossier", ok: !!(b.garantNom || b.visale) || faitBail(b, "arr-dossier"), t: "Dossier et garantie", d: `Pièces du locataire, garant ou visa Visale${cq("visale")}. Pas de garant et une assurance loyers impayés en même temps (sauf étudiant).`, btn: ["Compléter", `editBail('${b.id}')`] },
     { k: "arr-diag", ok: aDoc("Diagnostics (DPE…)") || faitBail(b, "arr-diag"), t: "Diagnostics à joindre au bail", d: "DPE, état des risques (ERP, moins de 6 mois), électricité et gaz si l'installation a plus de 15 ans, plomb avant 1949, amiante avant 1997, surface (loi Boutin).", btn: ["Ajouter", `ajouterDocument('${b.bienId}','${b.id}','Diagnostics (DPE…)')`] },
-    { k: "arr-bail", ok: aDoc("Bail") || faitBail(b, "arr-bail"), t: "Bail signé", d: "L'appli le prépare avec toutes les mentions obligatoires. Une fois signé, range-le ici.", btn: ["Générer le bail", `docBailOpen('${b.id}')`] },
+    { k: "arr-bail", ok: aDoc("Bail") || faitBail(b, "arr-bail"), t: "Bail signé", d: estPro(b) ? "Un bail commercial ou professionnel se fait avec un professionnel (notaire, avocat). Une fois signé, range-le ici." : "L'appli le prépare avec toutes les mentions obligatoires. Une fois signé, range-le ici.", btn: estPro(b) ? null : ["Générer le bail", `docBailOpen('${b.id}')`] },
     { k: "arr-depot", ok: !(+b.depot > 0) || faitBail(b, "arr-depot"), t: `Dépôt de garantie reçu${+b.depot > 0 ? " (" + eur(b.depot) + ")" : ""}`, d: `${cq("depot")} À encaisser à la signature, à rendre au départ.`, btn: null },
-    { k: "arr-ass", ok: !!b.assuranceFin, t: "Attestation d'assurance habitation", d: "Obligatoire dès la remise des clés.", btn: ["Je l'ai reçue", `assuranceRecue('${b.id}')`] },
+    { k: "arr-ass", ok: !!b.assuranceFin, t: `Attestation d'${assTxt(b)}`, d: "Obligatoire dès la remise des clés.", btn: ["Je l'ai reçue", `assuranceRecue('${b.id}')`] },
     { k: "arr-edl", ok: !!e || !!b.edlEntree, t: "État des lieux d'entrée, avec photos", d: `${cq("edl")} Pièce par pièce sur le téléphone, signé par vous deux. Sans lui, impossible de retenir quoi que ce soit au départ.`, btn: e ? ["Ouvrir", `go('edl-${e ? e.id : ""}')`] : ["Commencer", `nouvelEdl('${b.id}','entree')`] },
     { k: "arr-cpt", ok: !!(e && (e.compteurs.elec || e.compteurs.eauFroide)) || faitBail(b, "arr-cpt"), t: "Compteurs relevés et clés remises", d: "Dans l'état des lieux. Pense à dire au locataire d'ouvrir ses contrats d'électricité, de gaz et d'internet.", btn: null }
   ];
@@ -7505,6 +7534,7 @@ function infoConge(b) {
 }
 function congeBailleur(bailId) {
   const b = bail(bailId); if (!b) return;
+  if (estPro(b)) { toast(b.typeBail === "commercial" ? "Bail commercial : le congé du bailleur passe par un commissaire de justice (ex-huissier), 6 mois avant la fin, souvent avec une indemnité. L'appli ne fait pas cette lettre." : "Bail professionnel : le congé du bailleur se donne 6 mois avant la fin des 6 ans, par lettre recommandée ou commissaire de justice. Fais-le relire par un professionnel."); return; }
   if (b.typeBail === "mobilite" || b.typeBail === "etudiant") { toast(b.typeBail === "mobilite" ? "Un bail mobilité se termine tout seul à sa date de fin : pas de congé à donner." : "Un bail étudiant de 9 mois se termine tout seul : pas de congé à donner."); return; }
   const c = infoConge(b), sciNonFam = !estPerso() && !S.sci.familiale, j = daysBetween(TODAY, c.lim);
   const motifs = [["vente", "🏷️ Je vends le logement"], ["reprise", "🏠 Je le reprends pour y habiter (moi ou un proche)"], ["motif", "⚖️ Motif légitime et sérieux (impayés, troubles…)"]];
@@ -8012,7 +8042,17 @@ function sectionTravaux(bi) {
 }
 
 /* ================= Rappels légaux (logement aux normes) ================= */
+/* Un local (commerce, bureau) loué avec un bail d'habitation : on propose, en un geste, le bon type de bail */
+function passerBailPro(id, type) {
+  const b = bail(id); if (!b) return; const avant = b.typeBail;
+  b.typeBail = type; delete b.indice; b.irlValeur = idxVal(indiceDe(b), qKey(b.irlTrimestre)) || b.irlValeur || ""; save(); render();
+  toastActions(type === "commercial" ? "✓ Bail commercial : loyer révisé avec l'ILC" : "✓ Bail professionnel : loyer révisé avec l'ILAT", [["Annuler", `passerBailPro('${id}','${avant}')`]]);
+}
 function tachesLegales(add, y) {
+  S.baux.filter(b => (isActive(b) || P(b.dateEntree) > TODAY) && !estPro(b) && estLocalPro(bien(b.bienId)) && !fait("bail-pro-" + b.id)).forEach(b =>
+    add({ bailId: b.id, key: "bail-pro-" + b.id, prio: "soon", date: TODAY, done: true, t: `${esc(nomCourt(b.nom))} loue un local : c'est un bail commercial ?`,
+      d: "Pour un commerce ou un bureau, le loyer ne suit pas l'IRL et les délais ne sont pas ceux d'un logement.",
+      acts: [["Oui, bail commercial", `passerBailPro('${b.id}','commercial')`, "primary"], ["Bail professionnel", `passerBailPro('${b.id}','professionnel')`]] }));
   S.biens.forEach(bi => {
     const occupe = !!bailActifDuBien(bi.id), ch = sansAccent(bi.chauffage || "").toLowerCase();
     const sansPno = (bi.sansBesoin || []).includes("pno") || !!(immeubleDe(bi) && (immeubleDe(bi).sansBesoin || []).includes("pno"));
@@ -8248,6 +8288,12 @@ function sectionNotif() { setTimeout(chargerNotif, 0); return `<section class="c
 async function majIrlInsee(force) {
   try { if (!force && localStorage.getItem("gestion-irl-vu") === iso(TODAY)) return; } catch (e) {}
   try {
+    // indices des baux commerciaux / professionnels (ILC, ILAT) : seulement s'il y en a dans l'espace
+    for (const n of ["ILC", "ILAT"]) { if (!S.baux.some(b => indiceDe(b) === n)) continue;
+      try { const r2_ = await fetch(`https://bdm.insee.fr/series/sdmx/data/SERIES_BDM/${INDICES[n].serie}?lastNObservations=8`); if (!r2_.ok) continue; const x2 = await r2_.text(), nv = {};
+        for (const m of x2.matchAll(/TIME_PERIOD="(\d{4})-Q([1-4])"\s+OBS_VALUE="([\d.]+)"/g)) { const k = m[1] + "-" + m[2], v = +m[3]; if (v > 0 && !idxVal(n, k)) nv[k] = v; }
+        if (Object.keys(nv).length) { S[INDICES[n].perso] = Object.assign({}, S[INDICES[n].perso], nv); if (!LECTURE && (MODE === "local" || MODE === "partage")) saveAuto(); }
+      } catch (e) {} }
     const r = await fetch("https://bdm.insee.fr/series/sdmx/data/SERIES_BDM/001515333?lastNObservations=8"); if (!r.ok) return;
     const x = await r.text(), neufs = {}; let n = 0;
     for (const m of x.matchAll(/TIME_PERIOD="(\d{4})-Q([1-4])"\s+OBS_VALUE="([\d.]+)"/g)) { const k = m[1] + "-" + m[2], v = +m[3]; if (v > 0 && !irlVal(k)) { neufs[k] = v; n++; } }
@@ -8265,7 +8311,7 @@ function icsAgenda() {
   const add = (d, t, desc, id) => { if (d >= addDays(TODAY, -1) && d <= fin) ev.push({ d, t, desc: desc || "", id }); };
   S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).forEach(b => {
     for (let k = 0, m = CUR; k < 13; k++, m = addM(m, 1)) { const e = echeance(b, m); if (e && e.du > 0) add(e.dueDate, `💶 Loyer ${nomCourt(b.nom)} (${eur(e.du)})`, `Loyer de ${fm(m)} · ${bienLabel(bien(b.bienId))}`, `loyer-${b.id}-${m}`); }
-    const rv = revInfo(b); if (rv) add(rv.anniv, `📈 Révision du loyer de ${nomCourt(b.nom)}`, "Date anniversaire du bail : la révision IRL est possible.", `rev-${b.id}`);
+    const rv = revInfo(b); if (rv) add(rv.anniv, `📈 Révision du loyer de ${nomCourt(b.nom)}`, `Date anniversaire du bail : la révision (${rv.idx}) est possible.`, `rev-${b.id}`);
     if (b.assuranceFin) add(P(b.assuranceFin), `🛡 Assurance de ${nomCourt(b.nom)} à renouveler`, "Demander la nouvelle attestation.", `ass-${b.id}`);
     if (b.dateSortie) add(P(b.dateSortie), `🔑 Départ de ${nomCourt(b.nom)}`, "État des lieux de sortie, compteurs, clés.", `dep-${b.id}`);
     if (isActive(b) && !b.dateSortie && b.typeBail !== "mobilite") { const du = dureeBail(b); let e2 = addMonthsDate(P(b.dateEntree), du.mois); while (e2 < TODAY) e2 = addMonthsDate(e2, du.mois); add(addMonthsDate(e2, -(b.typeBail === "vide" ? 6 : 3)), `🗓 Dernier jour pour donner congé à ${nomCourt(b.nom)}`, `Fin de période du bail le ${fd(e2)}.`, `conge-${b.id}`); }
@@ -8405,6 +8451,7 @@ function toast(msg) {
 /* ================= Comprendre : lexique "C'est quoi ?", "Pourquoi ?" des tâches, tons des relances ================= */
 const LEXIQUE = {
   gmbi: ["Déclaration d'occupation (GMBI)", "Chaque année, avant le 1er juillet, le propriétaire indique aux impôts les changements d'occupants de ses logements survenus entre le 2 janvier de l'année d'avant et le 1er janvier (arrivée, départ, logement vide). Ça se fait sur impots.gouv, service \"Gérer mes biens immobiliers\" (espace professionnel pour une SCI). Sans changement, rien à faire. Oubli ou erreur : amende de 150 € par logement (article 1770 terdecies du CGI)."],
+  ilc: ["Indice des loyers commerciaux (ILC) / des activités tertiaires (ILAT)", "Pour un local commercial (ILC) ou un bureau, un cabinet (ILAT), le loyer suit cet indice de l'INSEE au lieu de l'IRL, si le bail le prévoit (clause d'indexation). L'appli fait le calcul à la date anniversaire."],
   irl: ["Indice de référence des loyers (IRL)", "Un chiffre publié par l'INSEE chaque trimestre. Une fois par an, à la date anniversaire du bail, le loyer peut suivre son évolution. Exemple : l'indice monte de 2 %, le loyer peut monter de 2 %. L'appli fait le calcul."],
   provision: ["Provision sur charges", "Une avance que le locataire paie chaque mois pour les charges (eau, ordures ménagères, entretien…). Une fois par an, on compare avec les vraies dépenses : il paie le manque ou on lui rend le trop-perçu."],
   forfait: ["Forfait de charges", "Un montant fixe de charges, sans comparaison en fin d'année. Possible surtout en meublé et en colocation."],
