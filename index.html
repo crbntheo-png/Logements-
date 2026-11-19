@@ -145,6 +145,7 @@ button.small .ic { width: 16px; height: 16px; }
 .doc-tuiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } @media (min-width: 700px) { .doc-tuiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 #app .doc-tuile { display: grid; gap: 4px; padding: 14px; border-radius: 14px; background: var(--surface); box-shadow: var(--sh-1); color: var(--ink); text-decoration: none; min-width: 0; border: 0; text-align: left; font: inherit; cursor: pointer; }
 #app .doc-tuile b { font-size: .95rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25; } #app .doc-tuile small { color: var(--muted); } #app .doc-tuile .t-ico { font-size: 1.3rem; }
+#app .propose-recu { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px; background: var(--soft, rgba(16,120,90,.08)); font-size: .92em; }
 #app .doc-tuile.a-ranger { box-shadow: inset 0 0 0 1.5px var(--warn); }
 #app .ia-ligne { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; justify-content: flex-start; border: 0; font: inherit; color: var(--ink); cursor: pointer; } #app .ia-ligne .tx { flex: 1; display: grid; } #app .ia-ligne small { color: var(--muted); font-weight: 400; }
 .sig-distance { border: 1px dashed var(--line); border-radius: 12px; padding: 12px; margin: 10px 0; display: grid; gap: 6px; } .sig-distance p { margin: 0; }
@@ -396,6 +397,7 @@ details.pq summary::-webkit-details-marker { display: none; } details.pq p { mar
 .parcours .etapes { list-style: none; margin: 10px 0 0; padding: 0; } .parcours .etape .note { margin: 4px 0 8px; }
 tr.pire td { background: var(--bad-soft); }
 input.auto, select.auto, textarea.auto { background: var(--warn-soft); }
+input.a-remplir:placeholder-shown, input.a-remplir:invalid { box-shadow: 0 0 0 2px var(--warn); }
 /* Toucher : pas de zoom sur double toucher, et un petit enfoncement qui montre que le toucher est pris en compte */
 button, .btn, a, summary, label, [role="link"], .tile-head, .lr-main { touch-action: manipulation; }
 @media (hover: none) { button:active, .btn:active, .suite:active, .vit:active, .doc-tuile:active, .lr-main:active, .tile-head:active { transform: scale(.97); transition: transform .08s; } }
@@ -414,6 +416,7 @@ ol.dem { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px;
 .dem-e { display: flex; gap: 12px; background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-1); padding: 14px; }
 .dem-e .num { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--surface-2); color: var(--muted); }
 .dem-e.ok .num { background: var(--ok-soft); color: var(--ok); } .dem-e.ok .tx > b { color: var(--muted); }
+.dem-e.passee .num { background: var(--surface-2); color: var(--muted); } .dem-e.passee .tx > b { color: var(--muted); } .dem-e .tx > button { margin-top: 6px; }
 .dem-e.cur { outline: 2px solid var(--accent); } .dem-e.cur .num { background: var(--accent); color: var(--accent-ink); }
 .dem-e:not(.ok):not(.cur) { opacity: .6; }
 .dem-e .tx { flex: 1; display: grid; gap: 3px; min-width: 0; } .dem-e .tx > small { color: var(--ink-2); font-size: .82rem; }
@@ -478,6 +481,7 @@ details.plus-infos[open] > summary { border-bottom: 1px solid var(--line); }
 button.suite, button.dpe-chip { text-align: left !important; justify-content: flex-start !important; } /* le téléphone centre les boutons par défaut */
 .suite-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); box-shadow: var(--sh-1); font-size: 1.2rem; flex: none; }
 .bienvenue { display: grid; gap: 10px; }
+.forme-choix button { flex: 1; min-width: 140px; }
 .bienvenue h2 { margin: 0; }
 .bienvenue > p { margin: 0; }
 .a-completer .barre { margin: 6px 0 4px; }
@@ -1075,7 +1079,7 @@ function memoriserCache() {
   clearTimeout(CACHE_T);
   CACHE_T = setTimeout(() => { if (!SB_USER || !ESPACE) return; try { localStorage.setItem(CACHE_KEY, JSON.stringify({ v: 1, uid: SB_USER.id, espace: ESPACE, espaces: ESPACES, lecture: LECTURE, synced })); } catch (e) {} }, 800);
 }
-function oublierCache() { clearTimeout(CACHE_T); try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(KEY); } catch (e) {} }
+function oublierCache() { clearTimeout(CACHE_T); LU = null; try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(KEY); Object.keys(localStorage).filter(k => k.startsWith("gestion-drive-contenu-")).forEach(k => localStorage.removeItem(k)); } catch (e) {} }
 function ouvrirDepuisCache(c) {
   ESPACE = c.espace; ESPACES = c.espaces || []; S = blank(); synced = {}; APERCU = true; BANQUE = lireCache("banque", ESPACE) || BANQUE; MEMBRES = lireCache("membres", ESPACE);
   Object.entries(c.synced).forEach(([k, j]) => { const i = k.indexOf("/"); try { appliquerLigne({ coll: k.slice(0, i), doc_id: k.slice(i + 1), data: JSON.parse(j) }); } catch (e) {} });
@@ -2308,7 +2312,8 @@ function taches() {
     // 8. Régularisation annuelle des charges
     if ((b.chargesMode || "provision") === "provision" && (+b.charges > 0 || (b.revisions || []).some(r => +r.charges > 0 && r.depuis <= (y - 1) + "-12"))) {
       const yy = y - 1, k = "regul-" + b.id + "-" + yy;
-      const actifAnnee = P(b.dateEntree) <= new Date(yy, 11, 31) && (!b.dateSortie || P(b.dateSortie) >= new Date(yy, 0, 1));
+      // pas pour une année d'avant le suivi dans l'appli : elle n'a pas les provisions payées, le calcul serait faux
+      const actifAnnee = P(b.dateEntree) <= new Date(yy, 11, 31) && (!b.dateSortie || P(b.dateSortie) >= new Date(yy, 0, 1)) && (b.suiviDepuis || mk(P(b.dateEntree))) <= yy + "-12";
       if (actifAnnee && !fait(k))
         add({ bailId: b.id, key: k, prio: TODAY.getMonth() >= 5 ? "soon" : "info", date: new Date(y, 5, 30), done: true, t: `Régulariser les charges ${yy} : ${esc(b.nom)}`,
           d: `Comparer les provisions encaissées en ${yy} aux charges réelles (copropriété, taxe d'ordures ménagères, eau…), envoyer le décompte au locataire 1 mois avant la régularisation.`, acts: [["Faire le décompte", `regulCharges('${b.id}',${yy})`, "primary"]] });
@@ -2691,7 +2696,7 @@ function historique(b) {
 /* ================= Navigation ================= */
 const PAGES = [["locataires", "Accueil"], ["afaire", "À faire"], ["biens", "Biens"], ["docs", "Docs"], ["compta", "Compta"], ["reglages", "Réglages"]];
 const ICONES = { locataires: "home", afaire: "tasks", biens: "building", docs: "folder", compta: "chart", reglages: "settings" };
-const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
+const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : h === "ajouter-doc" ? "docs" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
 window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); memoriserPage(); });
@@ -2818,14 +2823,17 @@ function etapesDemarrage() {
   const drive = racinesPartagees().length > 0 || (DRIVEG.etat === "oui" && !rienChoisi());
   const r = (S.sci.ia || {}).res, P = r ? propositionsIA() : [];
   const loc = r ? (r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))) : [];
-  const ap = biensACompleterPapiers();
+  const ap = biensACompleterPapiers(), docsRanges = S.fichiers.some(f => f.bienId);
   return [
-    { k: "drive", ico: "📁", t: "Branche ton Google Drive", s: "L'appli lit les dossiers de tes locations, en lecture seule.", fait: (drive && DOCS.etat === "pret" && DOCS.fichiers.length > 0) || passe("drive") },
-    { k: "bilan", ico: "🏠", t: "L'IA trouve tes logements", s: "D'après les noms de tes dossiers. Tu corriges avant de valider.", fait: (!!r && S.biens.length > 0 && !P.some(p => p.type === "creer" || p.type === "lien")) || passe("bilan") || (!drive && S.biens.length > 0 && passe("drive")) },
-    { k: "locataires", ico: "👤", t: "Tes locataires", s: "Créés depuis leur bail : l'IA remplit nom, dates, loyer, dépôt.", fait: (S.baux.length > 0 && !loc.length) || passe("locataires"), loc },
-    { k: "fiches", ico: "✨", t: "Les fiches remplies avec tes papiers", s: "DPE, surface, e-mails, assurance, taxe foncière : lus dans tes documents.", fait: (S.biens.length > 0 && !ap.length) || passe("fiches"), ap },
-  ].map((e, i, L) => ({ ...e, fait: e.fait && L.slice(0, i).every(x => x.fait) })); // dans l'ordre : une étape n'est cochée que si les précédentes le sont
+    { k: "drive", ico: "📁", t: "Branche ton Google Drive", s: "L'appli lit les dossiers de tes locations, en lecture seule.", vrai: drive && DOCS.etat === "pret" && DOCS.fichiers.length > 0 },
+    drive || !passe("drive") ? { k: "bilan", ico: "🏠", t: "L'IA trouve tes logements", s: "D'après les noms de tes dossiers. Tu corriges avant de valider.", vrai: !!r && S.biens.length > 0 && !P.some(p => p.type === "creer" || p.type === "lien") }
+      : { k: "bilan", ico: "🏠", t: "Tes logements", s: "Tape l'adresse : la surface et le DPE se remplissent tout seuls.", vrai: S.biens.length > 0 },
+    { k: "locataires", ico: "👤", t: "Tes locataires", s: "Créés depuis leur bail : l'IA remplit nom, dates, loyer, dépôt.", vrai: S.baux.length > 0 && !loc.length, loc },
+    { k: "fiches", ico: "✨", t: "Les fiches remplies avec tes papiers", s: "DPE, surface, e-mails, assurance, taxe foncière : lus dans tes documents.", vrai: S.biens.length > 0 && !ap.length && docsRanges, rien: S.biens.length > 0 && !docsRanges, ap },
+  ].map(e => ({ ...e, passee: !e.vrai && !e.rien && passe(e.k), fait: !!(e.vrai || e.rien || passe(e.k)) }))
+   .map((e, i, L) => ({ ...e, fait: e.fait && L.slice(0, i).every(x => x.fait) })); // dans l'ordre : une étape n'est cochée que si les précédentes le sont
 }
+function reprendreEtape(k) { if (S.faits) delete S.faits["dem-" + k]; save(); render(); }
 function passerEtape(k) { S.faits = S.faits || {}; S.faits["dem-" + k] = iso(TODAY); save(); render(); scrollTo(0, 0); }
 function pageDemarrage() {
   if (!SB || !estProprio()) return `<a class="back" href="#locataires">← Accueil</a><div class="empty">Le démarrage guidé est réservé au propriétaire de l'espace.</div>`;
@@ -2853,11 +2861,13 @@ function pageDemarrage() {
         <div class="row"><button class="primary" onclick="completerAvecPapiers()">🤖 Compléter les fiches</button><button class="ghost small" onclick="passerEtape('fiches')">Plus tard</button></div>`;
     return "";
   };
-  const etape = (e, i) => `<li class="dem-e ${e.fait ? "ok" : e === cur ? "cur" : ""}"><span class="num" aria-hidden="true">${e.fait ? "✓" : i + 1}</span><div class="tx"><b>${e.ico} ${e.t}</b><small>${e.s}</small>${e === cur ? `<div class="dem-c">${corps(e)}</div>` : ""}</div></li>`;
+  // fait = ✓ ; passée = ↪ (on peut la reprendre) ; rien à faire pour l'instant = –
+  const etape = (e, i) => `<li class="dem-e ${e.passee || e.rien ? "passee" : e.fait ? "ok" : e === cur ? "cur" : ""}"><span class="num" aria-hidden="true">${e.passee ? "↪" : e.rien && e.fait ? "–" : e.fait ? "✓" : i + 1}</span><div class="tx"><b>${e.ico} ${e.t}</b><small>${e.passee ? "Passée pour l'instant." : e.rien && e.fait ? "Pas encore de papier dans tes logements : les fiches se rempliront quand tu en ajouteras." : e.s}</small>${e.passee ? `<button class="small ghost" onclick="reprendreEtape('${e.k}')">Reprendre</button>` : ""}${e === cur ? `<div class="dem-c">${corps(e)}</div>` : ""}</div></li>`;
+  const passees = E.filter(e => e.passee);
   const nbComplets = S.biens.filter(bi => !aCompleterBien(bi).L.length).length, nbDocs = S.fichiers.filter(f => f.bienId).length;
   return `<a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>🚀 Démarrage en 5 minutes</h1><p>L'appli fait le travail, toi tu vérifies. ${faites}/${E.length} étapes faites.</p></div></div>
     <div class="barre"><i style="width:${Math.round(faites / E.length * 100)}%"></i></div>
-    ${cur ? "" : `<section class="card bienvenue">${grosMsg("ok", "🎉 C'est prêt !", "Ton espace est en place. L'appli suit maintenant tes loyers, te prévient de ce qu'il faut faire et range les nouveaux papiers.")}
+    ${cur ? "" : `<section class="card bienvenue">${grosMsg("ok", passees.length ? "✅ C'est en place" : "🎉 C'est prêt !", "Ton espace est en place. L'appli suit maintenant tes loyers, te prévient de ce qu'il faut faire et range les nouveaux papiers." + (passees.length ? ` Étape${passees.length > 1 ? "s" : ""} passée${passees.length > 1 ? "s" : ""} : ${passees.map(e => e.t[0].toLowerCase() + e.t.slice(1)).join(", ")}. Tu peux ${passees.length > 1 ? "les" : "la"} reprendre ci-dessous quand tu veux.` : ""))}
       <div class="dem-recap"><div><b>${S.biens.length}</b><span>logement${S.biens.length > 1 ? "s" : ""}</span></div>${(() => { const n = S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).length; return `<div><b>${n}</b><span>locataire${n > 1 ? "s" : ""}</span></div>`; })()}<div><b>${nbDocs}</b><span>document${nbDocs > 1 ? "s" : ""} rangé${nbDocs > 1 ? "s" : ""}</span></div><div><b>${nbComplets}/${S.biens.length}</b><span>fiches complètes</span></div></div>
       <div class="row"><a class="btn primary" href="#locataires">Voir mon accueil</a>${nbComplets < S.biens.length ? `<a class="btn" href="#biens">Ce qui manque encore</a>` : ""}</div></section>`}
     <ol class="dem">${E.map(etape).join("")}</ol>`;
@@ -2986,10 +2996,13 @@ function boutonAide() {
   if (!b && visible) { b = document.createElement("button"); b.id = "aideBtn"; b.className = "icon-btn aide-top"; b.type = "button"; b.setAttribute("aria-label", "Signaler un problème, proposer une idée ou poser une question"); b.title = "Un souci ? Une idée ?"; b.textContent = "?"; b.onclick = ouvrirSignalement; const t = document.querySelector(".top-acts"), r = t && t.querySelector('a[href="#reglages"]'); if (t) t.insertBefore(b, r); else document.body.appendChild(b); }
   if (b) b.hidden = !visible;
 }
+function choisirForme(f) { S.sci.forme = f; save(); render(); toast(f === "perso" ? "✓ En ton nom : noté" : "✓ Avec une SCI : noté"); }
 function pageBienvenue() {
   return `<div class="greet"><h1>Bienvenue 👋</h1><p>On commence par tes logements. Ensuite l'appli suit tes loyers, prépare quittances et relances, et range tes papiers.</p></div>
-  ${LECTURE ? "" : `<section class="card bienvenue"><h2>🏢 Crée tes logements</h2><p class="note">Choisis le plus simple pour toi. Tu pourras tout corriger ensuite, et rien n'est envoyé à personne sans ton accord.</p>${choixCreerBiens()}</section>`}
-  ${blocGuide(false).replace('<button class="small ghost" onclick="S.faits.guideMasque=iso(TODAY);save();render()">Masquer ce guide</button>', '<a class="btn small ghost" href="#aide">Comment ça marche ?</a>')}
+  ${LECTURE || S.sci.forme || (SB && !estProprio()) ? "" : `<section class="card forme-q"><h2>D'abord : tu loues comment ?</h2><p class="note">Ça change quelques mots sur tes quittances et tes baux. Tu pourras le changer dans Réglages.</p>
+    <div class="row forme-choix"><button class="primary" onclick="choisirForme('sci')">🏢 Avec une SCI</button><button onclick="choisirForme('perso')">🙋 En mon nom</button></div></section>`}
+  ${LECTURE ? "" : `<section class="card bienvenue"><h2>🏢 ${S.sci.forme ? "Ensuite, crée" : "Crée"} tes logements</h2><p class="note">Choisis le plus simple pour toi. Tu pourras tout corriger ensuite, et rien n'est envoyé à personne sans ton accord.</p>${choixCreerBiens()}</section>`}
+  <p class="note center">Ensuite, l'appli te guide pas à pas : locataires, loyers, papiers. <a href="#aide">Comment ça marche ?</a></p>
   ${SB ? "" : `<div class="banner" style="background:var(--surface);box-shadow:var(--sh-1)"><span>✨ Envie de voir à quoi ça ressemble d'abord ?</span><button class="small" onclick="chargerDemo()">Charger un exemple</button></div>`}`;
 }
 function ancienneBienvenue() {
@@ -3267,9 +3280,21 @@ function ajouterDocument(bienId, bailId, cat) {
   modal("Ajouter un document", `${drv ? `<div class="full"><button type="button" class="primary btn-drive" onclick="choisirFichierDrive({bienId:'${bienId}',bailId:document.querySelector('#overlay [name=bailId]').value,cat:document.querySelector('#overlay [name=cat]').value})">📁 Choisir dans mon Google Drive</button></div>`
       : estProprio() && SB ? `<p class="full note">Tes documents sont dans Google Drive ? <a href="#" onclick="event.preventDefault();closeOverlay();connecterDrive()">Connecte ton Drive</a> pour les choisir directement.</p>` : ""}
     <label class="fl full">${drv ? "Ou depuis ton téléphone (photo, PDF, scan…)" : "Fichier (PDF, photo, scan…)"}<input type="file" name="fichier" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
-    ${sel("Catégorie", "cat", cat || "Bail", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", bailId || "", concerne(bienId))}
+    ${sel("Catégorie", "cat", cat || "Autre", CATS_DOC.map(c => [c, c]))}<p class="note full" id="cat_devinee" hidden></p>${sel("Concerne", "bailId", bailId || "", concerne(bienId))}
     ${fld("Nom affiché (facultatif)", "nom", "", "text", "full")}`,
-    d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast(drv ? "Choisis un fichier dans ton Drive ou sur ton téléphone." : "Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); });
+    d => { const f = document.querySelector('#overlay input[name=fichier]').files[0]; if (!f) { toast(drv ? "Choisis un fichier dans ton Drive ou sur ton téléphone." : "Choisis un fichier."); return false; } envoyerDocument(bienId, d, f); },
+    { after: form => { if (cat) form.elements.cat.dataset.choisi = "1"; form.elements.cat.addEventListener("change", () => { form.elements.cat.dataset.choisi = "1"; });
+      form.elements.fichier.addEventListener("change", () => devinerCatFichier(form, bienId)); } });
+}
+/* La catégorie devinée d'après le nom du fichier, sinon d'après ce qui est écrit dedans (PDF, sans IA) ; jamais si la personne l'a choisie */
+async function devinerCatFichier(form, bienId) {
+  const f = form.elements.fichier.files[0], sc = form.elements.cat, info = document.getElementById("cat_devinee"); if (!f || sc.dataset.choisi) return;
+  let g = deviner({ titre: f.name, chemin: [] }), source = "son nom";
+  if (!g.cat && /pdf/.test(f.type || "")) { try { const x = " " + phraseDe(await texteSeulPdf(f)).slice(0, 4000) + " "; const gc = devinerContenu(x); if (gc.cat) { g = { ...g, cat: gc.cat, bailId: gc.bailId }; source = "ce qui est écrit dedans"; } } catch (e) {} }
+  if (sc.dataset.choisi || !document.body.contains(sc)) return;
+  if (g.cat) { sc.value = g.cat; sc.classList.add("auto"); }
+  const b = g.bailId && bail(g.bailId); if (b && b.bienId === bienId && form.elements.bailId && !form.elements.bailId.value) { form.elements.bailId.value = b.id; form.elements.bailId.classList.add("auto"); }
+  if (info) { info.hidden = !g.cat; info.textContent = g.cat ? `Deviné d'après ${source} : corrige si ce n'est pas ça.` : ""; }
 }
 /* Choisir des fichiers avec le sélecteur officiel de Google, puis les copier dans l'appli.
    L'appli ne reçoit l'accès qu'aux fichiers cochés dans le sélecteur (droit "drive.file"), rien d'autre du Drive. */
@@ -3468,33 +3493,110 @@ function ancienDepuisDrive(fid, nom, bienId) {
    Entrée : la liste des fichiers du Drive { id, titre, type, lien, chemin: [dossiers] }.
    Sortie : des propositions que l'utilisateur valide (rien n'est fait sans lui). */
 const REGLES_DOCS = [
-  [/\b(ETAT DES LIEUX|EDL)\b/, "État des lieux"], [/\bBAIL\b|CONTRAT DE LOCATION/, "Bail"],
-  [/\bDPE\b|DIAGNOST|AMIANTE|PLOMB|CREP|\bERP\b|ASSAINISSEMENT|AUDIT|INSTALLATION ELEC|RAPPORT ELEC|SYNTHESE/, "Diagnostics (DPE…)"],
+  [/\b(ETAT DES LIEUX|EDL)\b/, "État des lieux"],
+  // Papiers du locataire qui contiennent des mots d'autres catégories (caution ≠ acte d'achat, assurance habitation ≠ assurance du propriétaire)
+  [/\bCAUTION(NEMENT)?\b|\bGARANT|\bVISALE\b|ASSURANCE HABITATION|MULTIRISQUE|\bPREAVIS\b|\bCONGE\b|LETTRE DE DEPART/, "Locataire (pièces, garant…)"],
+  [/\bBAIL\b|\bBAUX\b|CONTRAT DE LOCATION|\bAVENANT\b/, "Bail"],
+  [/\bDPE\b|DIAGNOST|\bDIAGS?\b|AMIANTE|\bPLOMB\b|\bCREP\b|\bERP\b|\bERNMT\b|ETAT DES RISQUES|ASSAINISSEMENT|\bAUDIT\b|TERMITES?\b|CARREZ|\bBOUTIN\b|MESURAGE|SURFACE HABITABLE|INSTALLATION ELEC|RAPPORT ELEC|SYNTHESE/, "Diagnostics (DPE…)"],
   [/TAXES? FONCI|AVIS.*FONCI|\bTEOM\b|ORDURES MENAGERES/, "Taxe foncière"],
   [/ASSURANCE|\bPNO\b|\bIPID\b|CONDITIONS PARTICULIERES/, "Assurance"],
-  [/COMPROMIS|\bACTE\b|ATTESTATION (AVEC|SANS) PRIX|PRET|NOTAIRE|CADASTR|SEQUESTRE|PROC(URATION)?\b/, "Acte d'achat / prêt"],
+  [/COMPROMIS|\bACTE\b|ATTESTATION (AVEC|SANS) PRIX|\bPRETS?\b|NOTAIRE|NOTARI|CADASTR|SEQUESTRE|\bPROC(URATION)?\b|AMORTISSEMENT|OFFRE DE CREDIT/, "Acte d'achat / prêt"],
   [/COPRO|SYNDIC|APPEL DE FONDS/, "Copropriété"],
-  [/QUITTANCE|BULLETIN|\bBS\b|AVIS D.?IMPOSITION|PASSEPORT|IDENTITE|\bCNI\b|KBIS|JUSTIF|GARANT|ATTESTATION DE LOYER|VISALE/, "Locataire (pièces, garant…)"],
-  [/FACTURE|DEVIS|TICKET|TRAVAUX|ACOMPTE|AVOIR|LEROY|BRICO|CASTORAMA|WELDOM|VELUX|CUISINE|CHAUFFE/, "Factures et travaux"]
+  [/QUITTANCE|BULLETIN|\bBS\b|FICHES? DE PAIE|\bPAIE\b|SALAIRE|CONTRAT DE TRAVAIL|AVIS D.?IMPOSITION|PASSEPORT|IDENTITE|\bCNI\b|TITRE DE SEJOUR|JUSTIF|ATTESTATION DE LOYER/, "Locataire (pièces, garant…)"],
+  [/FACTURE|\bDEVIS\b|TICKET|TRAVAUX|ACOMPTE|\bAVOIR\b|LEROY|BRICO|CASTORAMA|WELDOM|VELUX|CUISINE|CHAUFFE|CHAUDIERE|RAMONAGE|ENTRETIEN|PLOMBIER|ELECTRICIEN|ARTISAN/, "Factures et travaux"]
 ];
-const MOTS_GENERIQUES = new Set(["RUE", "AVENUE", "BOULEVARD", "CHEMIN", "PLACE", "ALLEE", "IMPASSE", "DES", "DU", "DE", "LA", "LE", "LES", "SAINT", "APPARTEMENT", "APPART", "MAISON", "STUDIO", "LOGEMENT", "ETAGE", "PORTE", "BIS"]);
+const MOTS_GENERIQUES = new Set(["RUE", "AVENUE", "BOULEVARD", "CHEMIN", "PLACE", "ALLEE", "IMPASSE", "DES", "DU", "DE", "LA", "LE", "LES", "SAINT", "APPARTEMENT", "APPART", "MAISON", "STUDIO", "LOGEMENT", "ETAGE", "PORTE", "BIS", "EXEMPLE"]);
 const motsDe = t => normTxt(t).replace(/[^A-Z0-9]+/g, " ").split(" ").filter(m => m && !MOTS_GENERIQUES.has(m) && (m.length >= 3 || /^\d+$/.test(m)));
-function deviner(f) {
-  const titre = " " + normTxt(f.titre).replace(/[^A-Z0-9]+/g, " ") + " ", tout = " " + normTxt([...(f.chemin || []), f.titre].join(" ")).replace(/[^A-Z0-9]+/g, " ") + " ";
+const phraseDe = t => normTxt(t).replace(/[^A-Z0-9]+/g, " ").trim();
+/* Le logement d'un fichier d'après son chemin : nom complet du logement (le plus sûr), sinon numéro + nom de rue, sinon mots de son nom.
+   Rend { bienId, fort } : fort = assez sûr pour ranger tout seul. */
+function devinerBien(tout) {
+  const sc = S.biens.map(bi => {
+    const nom = phraseDe(bi.nom), ms = [...new Set([...motsDe(bi.nom), ...motsDe(bi.adresse || "")])], num = ms.filter(x => /^\d+$/.test(x)), txt = ms.filter(x => !/^\d+$/.test(x));
+    const tx = txt.filter(x => tout.includes(" " + x + " ")).length, nu = tx ? num.filter(x => tout.includes(" " + x + " ")).length : 0; // un numéro seul ("Facture du 21 mars") ne compte pas
+    const phrase = nom.length >= 5 && /\s/.test(nom) && tout.includes(" " + nom + " ");
+    return { bi, phrase, n: (phrase ? 10 : 0) + nu * 2 + tx, fort: phrase || (nu > 0 && tx > 0) || tx >= 2 };
+  }).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
+  if (!sc.length || (sc.length > 1 && sc[0].n === sc[1].n)) return { bienId: null, fort: false };
+  return { bienId: sc[0].bi.id, fort: sc[0].fort && (sc.length === 1 || sc[0].n - sc[1].n >= 2 || sc[0].phrase) };
+}
+function deviner(f, texte) {
+  const titre = " " + phraseDe(f.titre) + " ", tout = " " + phraseDe([...(f.chemin || []), f.titre].join(" ")) + " ";
   // 1. Dossier relié à un logement (le plus proche du fichier) : le logement vient de là, avant toute devinette
   const liens = S.sci.driveLogements || {}, dRelie = (f.ancetres || []).slice().reverse().find(id => liens[id] && bien(liens[id]));
   // Catégorie : d'abord le nom du fichier ; le nom du dossier seulement en secours (sauf « diagnostics », trop souvent mal nommé)
   const r = REGLES_DOCS.find(([re]) => re.test(titre)) || REGLES_DOCS.find(([re, c]) => c !== "Diagnostics (DPE…)" && re.test(tout));
-  // Locataire reconnu par son nom (le plus fiable), sinon le bien par son adresse / son nom
+  // Locataire reconnu par son nom (le plus fiable), sinon le bien par son nom complet ou son adresse
   const baux = S.baux.filter(b => (!dRelie || b.bienId === liens[dRelie]) && (() => { const m = motsDe(b.nom).filter(x => !/^\d+$/.test(x)); return m.length && m.some(x => x.length >= 4 && tout.includes(" " + x + " ")); })());
-  let bail = baux.length === 1 ? baux[0] : null, bienId = dRelie ? liens[dRelie] : bail ? bail.bienId : null;
-  if (!bienId) {
-    const sc = S.biens.map(bi => { const ms = [...new Set([...motsDe(bi.nom), ...motsDe(bi.adresse || "")])]; const num = ms.filter(x => /^\d+$/.test(x)), txt = ms.filter(x => !/^\d+$/.test(x));
-      const n = num.filter(x => tout.includes(" " + x + " ")).length * 2 + txt.filter(x => tout.includes(" " + x + " ")).length; return { bi, n }; }).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
-    if (sc.length && (sc.length === 1 || sc[0].n > sc[1].n)) bienId = sc[0].bi.id;
-  }
-  // "sûr" = type trouvé ET logement trouvé sans égalité (ou par un dossier relié) : peut être rangé tout seul
-  return { cat: r ? r[1] : null, bienId, bailId: bail ? bail.id : "", viaDossier: !!dRelie, sur: !!(r && bienId) };
+  const bail = baux.length === 1 ? baux[0] : null, parChemin = dRelie ? null : devinerBien(tout);
+  let bienId = dRelie ? liens[dRelie] : bail ? bail.bienId : parChemin.bienId, fort = !!(dRelie || bail || parChemin.fort);
+  // Le locataire et le chemin désignent deux logements différents : on ne range pas tout seul
+  if (bail && parChemin && parChemin.bienId && parChemin.fort && parChemin.bienId !== bail.bienId) fort = false;
+  let cat = r ? r[1] : null, bailId = bail && bail.bienId === bienId ? bail.id : "", viaContenu = false;
+  // Le nom ne suffit pas : ce que dit le texte du PDF (lu sans IA, gardé sur l'appareil)
+  const c = (!cat || !bienId || !fort) && (texte || (f.id && (luContenu()[f.id] || {}).x));
+  if (c) { const gc = devinerContenu(c);
+    if (!cat && gc.cat) { cat = gc.cat; viaContenu = true; }
+    if (!bienId && gc.bienId) { bienId = gc.bienId; bailId = gc.bailId; fort = gc.fort; viaContenu = true; }
+    else if (bienId && gc.bienId && gc.bienId !== bienId) fort = false;
+    else if (bienId && gc.bienId === bienId && !fort && gc.fort) { fort = true; bailId = bailId || gc.bailId; viaContenu = true; } }
+  // "sûr" = type trouvé ET logement trouvé sans doute (dossier relié, locataire, nom complet ou adresse) : peut être rangé tout seul
+  return { cat, bienId, bailId, viaDossier: !!dRelie, viaContenu, sur: !!(cat && bienId && fort) };
+}
+/* ===== Lecture du contenu (gratuite, sans IA) des PDF du Drive dont le nom ne dit rien ("Scan0001.pdf") =====
+   Le texte du début de chaque PDF est gardé sur l'appareil (effacé à la déconnexion), jamais envoyé ailleurs. */
+const CONTENU_DOCS = [
+  [/DIAGNOSTIC DE PERFORMANCE ENERGETIQUE|CONSTAT DE RISQUE D EXPOSITION AU PLOMB|REPERAGE (DES MATERIAUX|AMIANTE)|ETAT DE L INSTALLATION INTERIEURE|ETAT DES RISQUES|ETAT RELATIF A LA PRESENCE DE TERMITES|ATTESTATION DE SURFACE|LOI CARREZ/, "Diagnostics (DPE…)"],
+  [/ETAT DES LIEUX (D ENTREE|DE SORTIE|CONTRADICTOIRE)/, "État des lieux"],
+  [/ACTE DE CAUTIONNEMENT|CAUTION SOLIDAIRE|VISALE|ASSURANCE (MULTIRISQUE )?HABITATION|RESPONSABILITE CIVILE DU LOCATAIRE|DONNE CONGE|PREAVIS DE DEPART/, "Locataire (pièces, garant…)"],
+  [/CONTRAT DE LOCATION|BAIL D HABITATION|BAIL MEUBLE|LOGEMENT MEUBLE|AVENANT AU (CONTRAT|BAIL)/, "Bail"],
+  [/TAXES? FONCIERES?|TAXE D ENLEVEMENT DES ORDURES/, "Taxe foncière"],
+  [/PROPRIETAIRE NON OCCUPANT|ASSURANCE PNO|CONDITIONS PARTICULIERES/, "Assurance"],
+  [/ACTE DE VENTE|COMPROMIS DE VENTE|PROMESSE DE VENTE|OFFRE DE PRET|TABLEAU D AMORTISSEMENT|OFFICE NOTARIAL/, "Acte d'achat / prêt"],
+  [/APPEL DE FONDS|SYNDIC|ASSEMBLEE GENERALE DES COPROPRIETAIRES|COPROPRIETE/, "Copropriété"],
+  [/BULLETIN DE (PAIE|SALAIRE)|AVIS D IMPOT SUR LE REVENU|CARTE NATIONALE D IDENTITE|TITRE DE SEJOUR|QUITTANCE DE LOYER|CONTRAT DE TRAVAIL/, "Locataire (pièces, garant…)"],
+  [/\bFACTURE\b|\bDEVIS\b|NET A PAYER|TOTAL TTC/, "Factures et travaux"]
+];
+let LU = null, LU_ESP = null, LECTURE_CONTENU = false;
+const cleLu = () => "gestion-drive-contenu-" + ESPACE;
+function luContenu() {
+  if (LU && LU_ESP === ESPACE) return LU;
+  LU_ESP = ESPACE; try { LU = JSON.parse(localStorage.getItem(cleLu()) || "{}") || {}; } catch (e) { LU = {}; }
+  return LU;
+}
+function garderLu() { try { const k = Object.keys(LU || {}); k.slice(0, Math.max(0, k.length - 400)).forEach(x => delete LU[x]); localStorage.setItem(cleLu(), JSON.stringify(LU)); } catch (e) {} }
+/* Ce que dit le texte : type (titre du document en priorité), locataire (prénom ET nom), logement (nom complet ou numéro + rue) */
+function devinerContenu(x) {
+  // L'adresse de la SCI (en-tête des factures, du bail) ne désigne pas un logement
+  [S.sci.siege, String(S.sci.siege || "").split(",")[0]].map(phraseDe).filter(a => a.length > 8 && /\d/.test(a)).forEach(a => { x = x.split(" " + a + " ").join(" "); });
+  const r = CONTENU_DOCS.find(([re]) => re.test(x.slice(0, 1500))) || CONTENU_DOCS.find(([re]) => re.test(x));
+  const baux = S.baux.filter(b => { const m = motsDe(b.nom).filter(y => !/^\d+$/.test(y) && y.length >= 3); return m.length >= 2 && m.every(y => x.includes(" " + y + " ")); });
+  const bail = baux.length === 1 ? baux[0] : null, gb = devinerBien(x);
+  const bienId = bail ? bail.bienId : gb.bienId, fort = bail ? !(gb.bienId && gb.fort && gb.bienId !== bail.bienId) : gb.fort && /\d/.test(x) && gb.bienId && !!adresseBien(bien(gb.bienId));
+  return { cat: r ? r[1] : null, bienId, bailId: bail ? bail.id : "", fort: !!(bienId && fort) };
+}
+/* Texte seul (pas de lecture d'image : un scan sans texte est laissé à l'IA, à la demande) */
+async function texteSeulPdf(blob, pages = 3) {
+  const L = await libPdf(), doc = await L.getDocument({ data: await blob.arrayBuffer() }).promise; let t = "";
+  for (let i = 1; i <= Math.min(doc.numPages, pages); i++) { const c = await (await doc.getPage(i)).getTextContent(); t += c.items.map(y => y.str).join(" ") + "\n"; }
+  return t;
+}
+async function lireContenusDrive(max = 15) {
+  if (LECTURE_CONTENU || MCP || !SB || LECTURE || !estProprio() || !DOCS || DOCS.etat !== "pret" || !S.biens.length) return 0;
+  const lu = luContenu(), dejaLies = new Set(S.fichiers.filter(y => y.url).map(y => (y.url.match(/[-\w]{25,}/) || [""])[0]));
+  const aLire = DOCS.fichiers.filter(f => /pdf/.test(f.type || "") && !(f.taille > 10e6) && !dejaLies.has(f.id) && !fait("drv-ign-" + f.id) && !(lu[f.id] && lu[f.id].m === (f.modif || "")) && !deviner(f).sur).slice(0, max);
+  if (!aLire.length) return 0;
+  LECTURE_CONTENU = true; let n = 0;
+  try {
+    for (const f of aLire) {
+      try { const t = await texteSeulPdf(await blobDrive({ id: f.id, mimeType: f.type, partage: f.partage })); lu[f.id] = { m: f.modif || "", x: " " + phraseDe(t).slice(0, 4000) + " " }; n++; }
+      catch (e) { lu[f.id] = { m: f.modif || "", x: "" }; }
+    }
+    garderLu();
+  } finally { LECTURE_CONTENU = false; }
+  if (n) rangerAuto("contenu");
+  if (pageCourante() === "docs") render();
+  return n;
 }
 function analyserDrive(fichiers) {
   const dejaLies = new Set(S.fichiers.filter(x => x.url).map(x => (x.url.match(/[-\w]{25,}/) || [""])[0]));
@@ -3534,7 +3636,7 @@ function sectionPropositionsDrive() {
   return `<section class="card props-drive"><h2>🔎 Ce que l'appli a trouvé dans ton Drive</h2>
     ${a.remplir.length ? `<h3>À compléter (${a.remplir.length})</h3><ul class="todo">${a.remplir.map(x => `<li><span class="tx">${x.t}<small>${x.d}</small></span><span class="row"><button class="small primary" onclick="${x.action[1]}">${x.action[0]}</button><button class="small ghost" onclick="marquerFait('drv-${x.cle}')">Ignorer</button></span></li>`).join("")}</ul>` : ""}
     ${a.ranger.length ? `<h3>À ranger dans tes logements (${a.ranger.length})</h3><p class="note">L'appli a deviné le logement et le type de chaque document d'après son nom et son dossier. Décoche ce qui est faux, puis range.</p>
-    <form onsubmit="event.preventDefault();rangerCoches(this)">${Object.entries(parBien).map(([bid, l]) => `<h4>${esc(bien(bid).nom)}</h4><ul class="todo">${l.map(([x, i]) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="r${i}" checked><span class="tx">${esc(x.f.titre)}<small>${esc(x.cat)}${x.bailId && bail(x.bailId) ? " · " + esc(bail(x.bailId).nom) : ""}${x.f.chemin && x.f.chemin.length ? " · dossier " + esc(x.f.chemin.join(" › ")) : ""}</small></span></label></li>`).join("")}</ul>`).join("")}
+    <form onsubmit="event.preventDefault();rangerCoches(this)">${Object.entries(parBien).map(([bid, l]) => `<h4>${esc(bien(bid).nom)}</h4><ul class="todo">${l.map(([x, i]) => `<li><label class="chk" style="display:flex;gap:10px;align-items:center;flex:1"><input type="checkbox" name="r${i}" checked><span class="tx">${esc(x.f.titre)}<small>${esc(x.cat)}${x.bailId && bail(x.bailId) ? " · " + esc(bail(x.bailId).nom) : ""}${x.viaContenu ? " · d'après ce qui est écrit dedans" : ""}${x.f.chemin && x.f.chemin.length ? " · dossier " + esc(x.f.chemin.join(" › ")) : ""}</small></span></label></li>`).join("")}</ul>`).join("")}
     <div class="row"><button class="primary">Ranger les documents cochés</button></div></form>` : ""}</section>`;
 }
 function rangerCoches(f) {
@@ -3936,19 +4038,55 @@ async function chargerBoite() {
 const recusBoite = () => (S.fichiers || []).filter(f => f.boite && !f.bienId);
 function sectionBoite() {
   if (!SB) return "";
-  if (BOITE.etat === "inconnu") { setTimeout(chargerBoite, 0); return ""; }
-  if (BOITE.etat !== "ok") return "";
+  if (BOITE.etat === "inconnu") setTimeout(chargerBoite, 0);
   const R = recusBoite(), moi = (SB_USER && SB_USER.email) || "ton adresse";
+  if (R.some(f => !LU_RECUS[f.id]) && !LECTURE_RECUS) setTimeout(lireRecus, 300);
   const ligne = f => `<li class="lr"><div class="lr-main"><span class="ico-cat" aria-hidden="true">${/pdf/.test(f.type) ? "📄" : "🖼️"}</span><span class="tx"><b>${esc(f.nom)}</b><small>${f.de ? "de " + esc(f.de) + " · " : ""}${fds(P(f.date))}${f.objet ? " · « " + esc(f.objet.slice(0, 50)) + " »" : ""}</small></span></div>
-    <div class="actions-courtes">${estProprio() ? `<button class="small primary" onclick="lireDocIA({ fichier: '${f.id}' })">🤖 Lire et ranger</button>` : ""}<button class="small" onclick="rangerRecu('${f.id}')">🏠 Ranger</button><button class="small ghost" onclick="ouvrirDocument('${f.id}')">Ouvrir</button><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></div></li>`;
-  if (!BOITE.code) return LECTURE ? "" : `<section class="card boite"><h2>📨 Ta boîte à documents</h2><p class="note">Une adresse e-mail rien qu'à toi : <b>transfère-y tes factures, avis de taxe foncière, attestations d'assurance…</b> Ils arrivent ici tout seuls, et l'IA peut les lire et les ranger dans le bon logement.</p><div class="row"><button class="primary" onclick="creerBoite()">Créer mon adresse</button></div>${R.length ? `<h3>À ranger</h3><ul class="lr-list">${R.map(ligne).join("")}</ul>` : ""}</section>`;
+    ${(() => { const g = LU_RECUS[f.id]; return g && g.bienId && bien(g.bienId) && estProprio() ? `<div class="propose-recu"><span>💡 C'est sûrement pour <b>${esc(bien(g.bienId).nom)}</b>${g.cat ? " · " + esc(g.cat) : ""}</span><button class="small primary" onclick="rangerPropose('${f.id}')">✓ Oui, ranger</button></div>` : ""; })()}
+    <div class="actions-courtes">${estProprio() ? `<button class="small ${LU_RECUS[f.id] && LU_RECUS[f.id].bienId ? "" : "primary"}" onclick="lireDocIA({ fichier: '${f.id}' })">🤖 Lire et ranger</button>` : ""}<button class="small" onclick="rangerRecu('${f.id}')">🏠 Ranger</button><button class="small ghost" onclick="ouvrirDocument('${f.id}')">Ouvrir</button><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></div></li>`;
+  const aRanger = R.length ? `<section class="card boite a-ranger-recus"><h2>📥 À ranger <span class="count">${R.length}</span></h2><p class="note">Les papiers que tu as envoyés. L'appli les lit et range tout seuls ceux dont elle est sûre.</p><ul class="lr-list">${R.map(ligne).join("")}</ul></section>` : "";
+  if (BOITE.etat !== "ok") return aRanger;
+  if (!BOITE.code) return aRanger + (LECTURE ? "" : `<section class="card boite"><h2>📨 Ta boîte à documents</h2><p class="note">Une adresse e-mail rien qu'à toi : <b>transfère-y tes factures, avis de taxe foncière, attestations d'assurance…</b> Ils arrivent ici tout seuls, et l'IA peut les lire et les ranger dans le bon logement.</p><div class="row"><button class="primary" onclick="creerBoite()">Créer mon adresse</button></div></section>`);
   const adr = `${BOITE.code}@${DOMAINE_BOITE}`;
 
-  return `<section class="card boite"><div class="sec-head"><h2>📨 Ta boîte à documents${R.length ? ` <span class="count">${R.length}</span>` : ""}</h2></div>
+  return aRanger + `<section class="card boite"><div class="sec-head"><h2>📨 Ta boîte à documents</h2></div>
     <p class="note">Transfère-y factures et avis : ils arrivent ici.</p>
     <div class="boite-adr"><b>${esc(adr)}</b><button class="small" onclick="copierTexte('${esc(adr)}')">Copier</button></div>
     <details class="boite-aide"><summary>Comment ça marche ?</summary><p class="note">Transfère tes factures et avis à cette adresse, <b>depuis ${esc(moi)}</b> (ou l'adresse d'un associé). Les e-mails des autres sont refusés${(BOITE.expediteurs || []).length ? `, sauf : ${BOITE.expediteurs.map(esc).join(", ")}` : ""}. <a href="#" onclick="event.preventDefault();expediteursBoite()">Autoriser une autre adresse (syndic, comptable…)</a></p></details>
-    ${R.length ? `<h3>À ranger</h3><ul class="lr-list">${R.map(ligne).join("")}</ul>` : ""}</section>`;
+    </section>`;
+}
+/* Papiers reçus (boîte e-mail, partage depuis le téléphone) : lus sans IA dès l'arrivée ;
+   rangés tout seuls si c'est sûr (Annuler les remet ici), sinon le logement deviné est proposé en un geste */
+const LU_RECUS = {};
+let LECTURE_RECUS = false;
+async function lireRecus() {
+  if (LECTURE_RECUS || LECTURE || !SB || MCP || !estProprio() || !S.biens.length) return 0;
+  const R = recusBoite().filter(f => !LU_RECUS[f.id]).slice(0, 10); if (!R.length) return 0;
+  LECTURE_RECUS = true; const ranges = [];
+  try {
+    for (const f of R) {
+      let x = "";
+      try { if (/pdf/.test(f.type || "")) x = " " + phraseDe(await texteSeulPdf((await blobFichier(f)).bl)).slice(0, 4000) + " "; } catch (e) {}
+      const g = deviner({ id: "", titre: [f.nom, f.objet].filter(Boolean).join(" "), chemin: [] }, x.trim() ? x : "");
+      LU_RECUS[f.id] = g;
+      if (g.sur && !f.bienId) { Object.assign(f, { bienId: g.bienId, cat: g.cat, bailId: g.bailId || "", rangeSeul: new Date().toISOString() }); ranges.push(f); }
+    }
+  } finally { LECTURE_RECUS = false; }
+  if (ranges.length) { saveAuto(); render();
+    toastActions(ranges.length > 1 ? `📁 ${ranges.length} papiers reçus rangés tout seuls` : `📁 "${ranges[0].nom}" rangé dans ${bien(ranges[0].bienId).nom} · ${ranges[0].cat}`, [["Annuler", `remettreDansBoite('${ranges.map(f => f.id).join(",")}')`]]);
+    // comme pour le Drive : ce que le papier peut remplir (taxe foncière, DPE, assurance…) est proposé ensuite
+    const ids = ranges.filter(f => /pdf/.test(f.type || "")).map(f => f.id); if (ids.length) setTimeout(() => completerAvecPapiers(null, { discret: true, ids }), 2500); }
+  else if (pageCourante() === "docs") render();
+  return ranges.length;
+}
+function remettreDansBoite(ids) {
+  if (!estProprio()) { toast(msgProprio("ranger les documents")); return; }
+  const L = S.fichiers.filter(f => ids.split(",").includes(f.id)); L.forEach(f => { f.bienId = ""; f.bailId = ""; delete f.rangeSeul; LU_RECUS[f.id] = { ...(LU_RECUS[f.id] || {}), sur: false }; });
+  save(); render(); toast(L.length > 1 ? "Remis dans ta boîte à documents" : "Remis dans ta boîte à documents");
+}
+function rangerPropose(id) {
+  const f = S.fichiers.find(x => x.id === id), g = LU_RECUS[id]; if (!f || !g || !g.bienId || !bien(g.bienId)) return;
+  Object.assign(f, { bienId: g.bienId, cat: g.cat || f.cat || "Autre", bailId: g.bailId || "" }); save(); render(); toast(`✓ Rangé dans ${bien(g.bienId).nom}`);
 }
 async function creerBoite() {
   const base = slug(S.sci.nom || "espace").toLowerCase().slice(0, 20).replace(/-+$/, "") || "espace";
@@ -4945,7 +5083,8 @@ function supprimerBien(id) {
    un papier du logement (DPE, bail, taxe foncière…) peut aussi tout remplir via l'IA. Rien n'est gardé sans "Enregistrer". */
 const TYPE_COURT = { Appartement: "Appart", Maison: "Maison", Studio: "Studio", Local: "Local", "Parking / garage": "Parking" };
 function nomAuto(type, ville, adresse) {
-  const base = `${TYPE_COURT[type] || "Logement"} ${ville || String(adresse || "").replace(/^\d+\s*(bis|ter)?\s*/i, "").slice(0, 24)}`.trim();
+  const rue = String(adresse || "").replace(/^\d+\s*(bis|ter)?\s*,?\s*/i, "").trim(), court = rue.length > 26 ? rue.slice(0, 26).replace(/\s+\S*$/, "").replace(/(\s+(de|du|des|la|le|les|d'|l'|et|sur|en))+$/i, "") : rue; // coupé à la fin d'un mot, sans "de" qui pend
+  const base = `${TYPE_COURT[type] || "Logement"} ${ville || court}`.trim();
   let n = base, k = 2; while (S.biens.some(x => x.nom === n)) n = `${base} ${k++}`;
   return n;
 }
@@ -4984,14 +5123,16 @@ function editBien(id) {
       d.nom = String(d.nom || "").trim(); d.immeuble = d.type === TYPE_IMM; if (d.immeuble) d.immeubleId = ""; else if (d.immeubleId === undefined) delete d.immeubleId;
       if (!d.nom) { if (!String(d.adresse || "").trim() && !String(d.ville || "").trim()) { toast("Donne au moins l'adresse ou un nom au logement."); return false; } d.nom = nomAuto(d.type, d.ville, d.adresse); }
       const avantDpe = id ? b.dpe : "", avantMeuble = id ? (b.meuble || "vide") : "";
-      if (id) { Object.assign(b, d); setTimeout(() => revisionDebloquee(id, avantDpe), 300);
+      if (id) { const vrai = bien(id); if (vrai && vrai !== b) Object.assign(vrai, d); Object.assign(b, d); setTimeout(() => revisionDebloquee(id, avantDpe), 300); // la fiche a pu être rechargée pendant que la fenêtre était ouverte
         // meublé / vide : le bail du locataire en place (et à venir) suit le logement, une seule saisie
         if (avantMeuble !== (d.meuble || "vide")) { const L = S.baux.filter(x => x.bienId === id && (isActive(x) || P(x.dateEntree) > TODAY) && x.typeBail === (d.meuble === "meuble" ? "vide" : "meuble"));
           L.forEach(x => { x.typeBail = d.meuble === "meuble" ? "meuble" : "vide"; });
           if (L.length) setTimeout(() => toast(`Le bail de ${L.map(x => prenomBrut(x.nom)).join(", ")} passe aussi en ${d.meuble === "meuble" ? "meublé" : "vide"}`), 400); } }
       else { const nid = uid(), doc = BIEN_DOC; S.biens.push({ id: nid, ...d }); BIEN_DOC = null;
         if (doc && SB) setTimeout(() => envoyerDocument(nid, { cat: doc.cat, nom: "", bailId: "", discret: true }, doc.file).then(x => x && toast("📁 Le document est rangé dans le logement")), 600);
-        setTimeout(() => { go("bien-" + nid); setTimeout(() => d.immeuble ? choisirLots(nid) : apresNouveauBien(nid), 150); }, 30); }
+        // Depuis "Démarrage en 5 minutes" : on reste sur le guide (étape suivante visible)
+        setTimeout(() => { if (surDemarrage()) { render(); if (d.immeuble) choisirLots(nid); else toast(`✓ ${(bien(nid) || {}).nom || "Logement"} ajouté`); return; }
+          go("bien-" + nid); setTimeout(() => d.immeuble ? choisirLots(nid) : apresNouveauBien(nid), 150); }, 30); }
       apresModifDrive();
     },
     Object.assign({ after: f => { brancherAutoAdresse();
@@ -5036,7 +5177,10 @@ async function remplirBienDepuisDoc(btn) {
     if (d.adresse_logement) {
       const a = (await chercherAdresses(d.adresse_logement, 1).catch(() => []))[0];
       const poser = (k, v) => { if (v) { f[k].value = v; f[k].classList.add("auto"); } }; // sans relancer la liste d'adresses
-      if (a && a.score >= 0.5) { poser("adresse", a.rue); poser("cp", a.cp); poser("ville", a.ville); f.banId.value = a.banId; f.lat.value = a.lat; f.lon.value = a.lon; banId = a.banId; }
+      // la suggestion de la base des adresses n'est prise que si c'est la même rue (sinon on garde l'adresse lue dans le document)
+      const rueLue = String(d.adresse_logement).split(/,|\b\d{5}\b/)[0], motsRue = motsDe(rueLue).filter(x => !/^\d+$/.test(x) && x.length >= 4), numLu = (rueLue.match(/^\s*(\d+)/) || [])[1];
+      const memeRue = a && (!motsRue.length || motsRue.some(x => (" " + phraseDe(a.rue) + " ").includes(" " + x + " "))) && (!numLu || new RegExp("^\\s*" + numLu + "\\b").test(a.rue));
+      if (a && a.score >= 0.5 && memeRue) { poser("adresse", a.rue); poser("cp", a.cp); poser("ville", a.ville); f.banId.value = a.banId; f.lat.value = a.lat; f.lon.value = a.lon; banId = a.banId; }
       else { const m = String(d.adresse_logement).match(/^(.*?)[,\s]+(\d{5})\s+(.+)$/); if (m) { poser("adresse", m[1].trim()); poser("cp", m[2]); poser("ville", m[3].trim()); } else poser("adresse", d.adresse_logement); }
       faits.push("adresse");
     }
@@ -5116,7 +5260,7 @@ async function lirePapierBien(bienId, bailId) {
 }
 
 function editBail(id, bienId, pre) {
-  const b = id ? bail(id) : { bienId: bienId && !estImm(bien(bienId)) ? bienId : (logements()[0] || {}).id, typeBail: "vide", jourPaiement: 5, dateEntree: "", suiviDepuis: CUR, chargesMode: "provision", revisable: true }; // la vraie date d'entrée est demandée (la date du jour créait un prorata et des impayés)
+  const b = id ? bail(id) : { bienId: bienId && !estImm(bien(bienId)) ? bienId : (logements()[0] || {}).id, typeBail: "vide", jourPaiement: 5, dateEntree: "", suiviDepuis: TODAY.getDate() > 5 ? addM(CUR, 1) : CUR, chargesMode: "provision", revisable: true }; // la vraie date d'entrée est demandée (la date du jour créait un prorata et des impayés)
   if (!id && b.bienId) { const bi = bien(b.bienId); if (bi) { b.typeBail = bi.meuble === "meuble" ? "meuble" : "vide"; b.loyerHC = bi.loyerRef || ""; } }
   if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
   if (!logements().length) { confirmer("Ajoute d'abord le logement : le locataire y sera rattaché.", () => editBien()); return; }
@@ -5129,7 +5273,7 @@ function editBail(id, bienId, pre) {
     <fieldset><legend>Bail</legend>
     ${sel("Logement", "bienId", b.bienId, logements().map(x => [x.id, x.nom]))}${sel("Type de bail", "typeBail", b.typeBail, Object.entries(TYPES_BAIL))}
     ${fld("Date d'entrée (celle du bail)", "dateEntree", b.dateEntree, "date", "", "required")}${fld("Date de sortie (si connue)", "dateSortie", b.dateSortie, "date")}
-    ${fld("Suivre les loyers à partir de (mois)", "suiviDepuis", b.suiviDepuis, "month")}${id ? "" : `<p class="note full">Avant ce mois-là, rien n'est compté comme impayé : mets le mois du prochain loyer que tu attends.</p>`}${fld("Durée bail mobilité (mois)", "dureeMobilite", b.dureeMobilite || 10, "number")}</fieldset>
+    ${fld("Suivre les loyers à partir de (mois)", "suiviDepuis", b.suiviDepuis, "month")}${id ? "" : `<p class="note full">Avant ce mois-là, rien n'est compté comme impayé : mets le mois du prochain loyer que tu attends.${b.suiviDepuis > CUR ? ` Tu attends encore le loyer de ${esc(fm(CUR))} ? Choisis ${esc(fm(CUR))}.` : ""}</p>`}${fld("Durée bail mobilité (mois)", "dureeMobilite", b.dureeMobilite || 10, "number")}</fieldset>
     <fieldset><legend>Argent</legend>
     ${fld("Loyer hors charges (€)", "loyerHC", b.loyerHC, "number", "", "required")}${fld("Charges (€ / mois)", "charges", b.charges || 0, "number")}
     ${sel("Charges", "chargesMode", b.chargesMode, [["provision", "Provision + régularisation annuelle"], ["forfait", "Forfait (meublé / colocation)"]])}${fld("Payé le … de chaque mois", "jourPaiement", b.jourPaiement, "number", "", 'min="1" max="31" step="1"')}
@@ -5147,7 +5291,9 @@ function editBail(id, bienId, pre) {
     ${area("Notes (pour vous, jamais dans le bail)", "notes", b.notes)}`,
     d => {
       d.revisable = !!d.revisable; d.sansQuittance = !!d.sansQuittance; d.irlValeur = irlVal(qKey(d.irlTrimestre)) || b.irlValeur || "";
-      if (id) Object.assign(b, d); else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); if (!surDemarrage()) setTimeout(() => go("bail-" + nb.id)); }
+      // locataire qui entre ce mois-ci (ou plus tard) : son 1er loyer (prorata) est suivi, même si la case est restée sur le mois prochain
+      if (!id && d.dateEntree && d.suiviDepuis && d.dateEntree.slice(0, 7) >= CUR && d.suiviDepuis > d.dateEntree.slice(0, 7)) d.suiviDepuis = d.dateEntree.slice(0, 7);
+      if (id) { const vrai = bail(id); if (vrai && vrai !== b) Object.assign(vrai, d); Object.assign(b, d); } else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); if (!surDemarrage()) setTimeout(() => go("bail-" + nb.id)); }
       apresModifDrive();
     },
     Object.assign({ after: f => { let irlTouche = !!id; f.irlTrimestre.addEventListener("change", () => irlTouche = true); f.dateEntree.addEventListener("change", () => { if (!irlTouche && f.dateEntree.value) f.irlTrimestre.value = qLabel(irlEnVigueur(P(f.dateEntree.value))); }); const chk = () => { const t = f.typeBail.value, dep = +f.depot.value, hc = +f.loyerHC.value, max = t === "vide" ? hc : t === "mobilite" ? 0 : hc * 2; document.getElementById("depotWarn").textContent = dep > max + 0.001 ? `⚠ Dépôt trop élevé : maximum légal ${eur(max)} pour ce type de bail (${t === "vide" ? "1 mois de loyer HC" : t === "mobilite" ? "interdit en bail mobilité" : "2 mois de loyer HC"}).` : ""; }; f.addEventListener("input", chk); chk(); } },
@@ -5231,7 +5377,7 @@ function saveSci(f) {
 }
 
 function revision(id) {
-  const b = bail(id), rv = revInfo(b), l = loyerAt(b, CUR);
+  const b = bail(id), b0 = b, rv = revInfo(b), l = loyerAt(b, CUR);
   const ok = rv && rv.statut === "pret";
   const dateEffet = iso(rv && rv.anniv > TODAY ? rv.anniv : TODAY);
   modal(`Révision du loyer — ${esc(b.nom)}`, `
@@ -5243,11 +5389,12 @@ function revision(id) {
     <div class="calc" id="calc"></div>`,
     d => {
       const nv = r2(+d.ancien * +d.irlNouveau / +d.irlAncien); if (!isFinite(nv) || nv <= 0) return false;
-      b.revisions = b.revisions || [];
       if (P(d.date) < TODAY) { toast("La révision ne peut pas être rétroactive : choisis aujourd'hui ou une date future."); return false; }
-      b.revisions.push({ depuis: moisEffet(d.date), date: d.date, loyerHC: nv, charges: +d.charges, ancien: +d.ancien, irlAncien: +d.irlAncien, irlNouveau: +d.irlNouveau, trimestre: d.trimestre, trimestreAncien: d.trimestreAncien });
-      b.irlTrimestre = d.trimestre; b.irlValeur = +d.irlNouveau;
-      setTimeout(() => docRevisionOpen(b.id, b.revisions.length - 1), 50);
+      const b = bail(id) || b0; b.revisions = b.revisions || []; // la fiche a pu être rechargée pendant que la fenêtre était ouverte
+      const rev = { depuis: moisEffet(d.date), date: d.date, loyerHC: nv, charges: +d.charges, ancien: +d.ancien, irlAncien: +d.irlAncien, irlNouveau: +d.irlNouveau, trimestre: d.trimestre, trimestreAncien: d.trimestreAncien };
+      b.revisions.push(rev); b.irlTrimestre = d.trimestre; b.irlValeur = +d.irlNouveau;
+      // la fiche peut avoir été rechargée entre-temps : on retrouve la révision par son contenu, pas par sa place
+      setTimeout(() => { const L = (bail(b.id) || b).revisions || []; const k = L.findIndex(x => x.date === rev.date && +x.loyerHC === nv && x.trimestre === rev.trimestre); docRevisionOpen(b.id, k >= 0 ? k : L.length - 1, rev); }, 50);
     },
     { ok: "Appliquer", after: f => { const c = () => { const nv = +f.ancien.value * +f.irlNouveau.value / +f.irlAncien.value; document.getElementById("calc").innerHTML = isFinite(nv) && nv > 0 ? `Nouveau loyer hors charges : <b>${eur(nv)}</b> (${nv >= +f.ancien.value ? "+" : ""}${eur(nv - +f.ancien.value)} par mois), appliqué à partir du loyer de <b>${f.date.value ? fm(moisEffet(f.date.value)) : "…"}</b>.` : "Saisis le nouvel indice."; }; f.addEventListener("input", c); c(); } });
 }
@@ -5787,7 +5934,7 @@ function papiersUtiles(bi) {
   if (b && !b.assuranceFin) { const f = docs.filter(x => (x.cat === "Locataire (pièces, garant…)" || x.cat === "Assurance") && /assur|attest|habitation|mrh|multirisque/i.test(x.nom || "") && !/pno|immeuble|propriétaire|proprietaire/i.test(x.nom || ""))[0]; if (f) T.push({ quoi: "assurance", f, b }); }
   const an = TODAY.getFullYear() - (TODAY.getMonth() < 8 ? 1 : 0);
   if (!immeubleDe(bi) && !(S.taxes || []).some(t => t.bienId === bi.id && +t.annee >= an - 1)) { const f = prend("Taxe foncière", /taxe|fonci/i, /taxe\s+fonci/i); if (f) T.push({ quoi: "taxe", f }); }
-  return T;
+  const vus = new Set(); return T.filter(t => !vus.has(t.f.id) && vus.add(t.f.id)); // un même papier n'est lu qu'une fois (ex. "dpe.pdf" rangé en Bail)
 }
 let COMPL = null;
 /* discret : lancé tout seul quand un papier arrive ; sans IA (texte du PDF seulement), sans fenêtre d'attente,
@@ -5837,7 +5984,7 @@ async function completerAvecPapiers(bienId, opts = {}) {
   COMPL.encours = false;
   if (!discret) { marquerLus(); save(); } // lus une fois = la tâche ne revient plus, même si on ferme sans enregistrer
   if (discret) { if (!COMPL.props.some(x => !x.cache) || !document.getElementById("overlay").hidden) return; COMPL.lus = [...new Set(COMPL.props.map(x => x.src && taches.find(t => (t.f.nom || "document") === x.src)).filter(Boolean).map(t => t.f.id))]; }
-  montrerPropositions(bienId, taches.length, ia, rates, discret);
+  montrerPropositions(bienId, new Set(taches.map(t => t.f.id)).size, ia, rates, discret);
 }
 function montrerPropositions(bienId, lus, ia, rates, discret) {
   const L = COMPL.props, vis = L.map((x, i) => [x, i]).filter(([x]) => !x.cache);
@@ -6218,7 +6365,7 @@ function rangerAuto(source) {
   const lot = "lot-" + uid(), date = new Date().toISOString();
   surs.forEach(x => S.fichiers.push({ id: "drv-" + x.f.id.slice(0, 24) + "-" + x.bienId, bienId: x.bienId, bailId: x.bailId || "", cat: x.cat, nom: x.f.titre.replace(/\.[a-z0-9]{2,4}$/i, ""), titreDrive: x.f.titre, url: x.f.lien, date: iso(TODAY), auto: true, lot }));
   S.sci.driveLots = [{ id: lot, date, n: surs.length, source }, ...(S.sci.driveLots || [])].slice(0, 10);
-  save(); render();
+  saveAuto(); render();
   toastActions(`${surs.length} document${surs.length > 1 ? "s" : ""} rangé${surs.length > 1 ? "s" : ""} automatiquement`, [["Voir", "voirLots()"], ["Annuler", `annulerLot('${lot}')`]]);
   const ids = surs.map(x => "drv-" + x.f.id.slice(0, 24) + "-" + x.bienId); setTimeout(() => completerAvecPapiers(null, { discret: true, ids }), 2500);
   return surs.length;
@@ -6247,7 +6394,8 @@ async function lectureDriveFond(raison) {
   if (raison === "modif" && DOCS.etat === "pret") return rangerAuto(raison);
   await indexerAppli(pageCourante() !== "docs");
   try { localStorage.setItem(cle, String(Date.now())); } catch (e) {}
-  return DOCS.etat === "pret" ? rangerAuto(raison) : 0;
+  if (DOCS.etat !== "pret") return 0;
+  const n = rangerAuto(raison); setTimeout(() => lireContenusDrive(), 4000); return n;
 }
 function apresModifDrive() { setTimeout(() => lectureDriveFond("modif"), 400); }
 function attendreRolePuisLire(n = 0) { if (MEMBRES) { lectureDriveFond("ouverture"); return; } if (n < 15) setTimeout(() => attendreRolePuisLire(n + 1), 1000); }
@@ -6730,7 +6878,7 @@ function pageDocsDrive() {
   const recents = DOCS.fichiers.slice().sort((x, y) => String(y.modif || "").localeCompare(String(x.modif || ""))).slice(0, 5);
   const iaFaite = S.sci.ia && S.sci.ia.res;
   return `<div class="head"><div><h1>Documents</h1><p>Tous les papiers de tes logements, rangés.</p></div>
-    <div class="row"><button class="small" onclick="indexerDrive()">↻ Actualiser</button></div></div>
+    <div class="row">${estProprio() && !LECTURE ? `<button class="small primary" onclick="go('ajouter-doc')">+ Ajouter un document</button>` : ""}${racinesPartagees().length || DRIVEG.etat === "oui" ? `<button class="small" onclick="indexerDrive()">↻ Actualiser</button>` : ""}</div></div>
   ${recherche("Chercher : bail, taxe, nom d'un locataire…")}
   ${q ? `<div id="docres">${listeDocs(chercherDocsDans(q, ""), lim)}</div>` : `
   ${sectionPropositionsDrive()}
@@ -7069,8 +7217,9 @@ function relance(bailId, m) {
       email: { objet: N.titre, corps: niv === 0 ? tonsRelance(b, m, e, totalDette).gentil : tonsRelance(b, m, e, totalDette).officiel, tons: tonsRelance(b, m, e, totalDette) },
       onSent: () => S.relances.push({ id: uid(), bailId, mois: m, niveau: niv, date: iso(TODAY) }), sentLabel: "Marquer la relance comme envoyée" });
 }
-function docRevisionOpen(id, i) {
-  const b = bail(id), r = b.revisions[i], bi = bien(b.bienId);
+function docRevisionOpen(id, i, secours) {
+  const b = bail(id), r = ((b && b.revisions) || [])[i] || secours, bi = b && bien(b.bienId);
+  if (!b || !r) { toast("Courrier introuvable : ouvre-le depuis la fiche du locataire › Historique."); return; }
   showDoc(`<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA(P(r.date))}<p><b>Objet : Révision annuelle du loyer</b></p>
   <p>Madame, Monsieur,</p><p>Conformément à la clause de révision prévue à votre bail pour le logement situé ${esc(adresseBien(bi))}, et à l'article 17-1 de la loi du 6 juillet 1989, votre loyer est révisé selon la variation de l'indice de référence des loyers (IRL) publié par l'INSEE.</p>
   <table><tbody><tr><td>Loyer hors charges actuel</td><td class="right">${eur(r.ancien)}</td></tr><tr><td>Indice de référence (${esc(r.trimestreAncien || "")})</td><td class="right">${esc(r.irlAncien)}</td></tr><tr><td>Nouvel indice (${esc(r.trimestre)})</td><td class="right">${esc(r.irlNouveau)}</td></tr><tr><td>Calcul</td><td class="right">${eur(r.ancien)} × ${esc(r.irlNouveau)} ÷ ${esc(r.irlAncien)}</td></tr><tr><td><b>Nouveau loyer hors charges</b></td><td class="right"><b>${eur(r.loyerHC)}</b></td></tr><tr><td>Charges (inchangées)</td><td class="right">${eur(r.charges)}</td></tr><tr><td><b>Nouveau total mensuel</b></td><td class="right"><b>${eur(r.loyerHC + r.charges)}</b></td></tr></tbody></table>
@@ -7604,7 +7753,7 @@ async function deposerDansBoite(fichiers, de) {
     const up = await SB.storage.from("documents").upload(chemin, blob, { contentType: blob.type || type }); if (up.error) throw up.error;
     S.fichiers.push({ id: uid(), boite: true, bienId: "", nom: (f.name || "Document").replace(/\.[a-z0-9]+$/i, "") || "Document", chemin, type: blob.type || type, taille: blob.size, date: iso(TODAY), de }); n++;
   }
-  if (n) save(); return n;
+  if (n) { save(); setTimeout(lireRecus, 200); } return n;
 }
 async function traiterPartageRecu() {
   if (RECU.etat) return; RECU = { etat: "en cours" }; render();
@@ -7622,14 +7771,14 @@ function pagePartageRecu() {
   return RECU.etat === "erreur" ? `<div class="empty">Le document n'a pas pu être reçu : ${esc(RECU.msg)} <a href="#docs">Retour</a></div>` : `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Réception du document…</div>`;
 }
 function pageAjouterDoc() {
-  return `<a class="back" href="#docs">← Documents</a><div class="head"><div><h1>📸 Facture ou document</h1><p>Prends-le en photo ou choisis le fichier : il arrive dans ta boîte à documents, et l'IA peut le lire et le ranger dans le bon logement.</p></div></div>
+  return `<a class="back" href="#docs">← Documents</a><div class="head"><div><h1>📸 Facture ou document</h1><p>Prends-le en photo ou choisis le fichier : l'appli le lit et le range dans le bon logement. Si elle n'est pas sûre, elle te le propose dans Documents › À ranger.</p></div></div>
   <section class="card ajout-doc"><label class="btn primary big">📸 Prendre en photo<input type="file" accept="image/*" capture="environment" hidden onchange="ajouterDocRapide(this)"></label>
     <label class="btn big">📄 Choisir un fichier (PDF, photo)<input type="file" accept="image/*,application/pdf" multiple hidden onchange="ajouterDocRapide(this)"></label>
     <p class="note">Astuce : depuis Gmail ou WhatsApp, touche <b>Partager › Gestion locative</b> sur une pièce jointe, ça marche aussi (appli installée sur le téléphone).</p></section>`;
 }
 async function ajouterDocRapide(inp) {
   const fs = [...inp.files]; if (!fs.length) return; if (!SB || !ESPACE) { toast("Connecte-toi d'abord."); return; }
-  toast("Envoi…"); try { const n = await deposerDansBoite(fs, "ton téléphone"); toast(`📥 ${n} document${n > 1 ? "s" : ""} dans ta boîte : à ranger`); view.docVue = ""; location.hash = "docs"; setTimeout(() => { const el = document.querySelector(".boite"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 400); }
+  toast("Envoi…"); try { const n = await deposerDansBoite(fs, "ton téléphone"); toast(`📥 ${n} document${n > 1 ? "s" : ""} reçu${n > 1 ? "s" : ""} : je ${n > 1 ? "les" : "le"} lis…`); view.docVue = ""; location.hash = "docs"; setTimeout(() => { const el = document.querySelector(".boite"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 400); }
   catch (e) { toast("Envoi impossible : " + (e.message || e)); }
 }
 
@@ -7870,8 +8019,11 @@ async function remplirDepuisBail(btn) {
     const txt = /pdf/.test(file.type) ? await lireTextePdf(file, info) : await lireTexteImage(file, info), r = lireBail(txt), trouves = [];
     const noms = { nom: "nom", email: "e-mail", tel: "téléphone", dateEntree: "date d'entrée", loyerHC: "loyer", charges: "charges", depot: "dépôt", jourPaiement: "jour de paiement", typeBail: "type" };
     Object.entries(r).forEach(([k, v]) => { const el = f && f.elements[k]; if (el && v !== "" && v !== undefined && !(typeof v === "number" && !isFinite(v))) { el.value = v; el.classList.add("auto"); trouves.push(noms[k]); } });
-    info(trouves.length ? `✓ Rempli depuis le bail : ${trouves.join(", ")}. Vérifie chaque case surlignée.` : "Je n'ai rien trouvé de sûr dans ce document : remplis à la main.");
+    // ce qui manque encore parmi l'indispensable : on le dit, et le curseur va dans la 1re case vide
+    const manque = [["nom", "nom du locataire"], ["dateEntree", "date d'entrée"], ["loyerHC", "loyer"]].filter(([k]) => f && f.elements[k] && !String(f.elements[k].value || "").trim());
+    info((trouves.length ? `✓ Rempli depuis le bail : ${trouves.join(", ")}. Vérifie chaque case surlignée.` : "Je n'ai rien trouvé de sûr dans ce document : remplis à la main.") + (trouves.length && manque.length ? ` Il manque : ${manque.map(x => x[1]).join(", ")}, à taper toi-même.` : ""));
     if (trouves.length) f.dispatchEvent(new Event("input"));
+    if (manque.length) { const el = f.elements[manque[0][0]]; el.classList.add("a-remplir"); setTimeout(() => el.focus(), 100); }
   } catch (e) { info("Lecture impossible : " + e.message); }
   btn.disabled = false;
 }

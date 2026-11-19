@@ -31,19 +31,27 @@ const TAXE = `<html><body style="font-family:sans-serif"><h2>DIRECTION GÉNÉRAL
   t(await appel({ code, de: 'test-a@gestion-test.fr', pjs: [] }) === 422, 'sans pièce jointe : refusé');
   const st = await appel({ code: code.toUpperCase(), de: 'Test-A@gestion-test.fr', objet: 'TR: Avis de taxe foncière 2026', pjs: [{ nom: 'avis-tf-2026.pdf', type: 'application/pdf', b64: pdf }, { nom: 'virus.exe', type: 'application/x-msdownload', b64: 'AAAA' }] });
   t(st === 200, 'e-mail d\'un membre : accepté');
-  await p.waitForTimeout(4000); await p.evaluate(() => render());
-  const R = await p.evaluate(() => recusBoite().map(f => ({ nom: f.nom, de: f.de, objet: f.objet })));
-  t(R.length === 1 && R[0].nom === 'avis-tf-2026' && R[0].de === 'test-a@gestion-test.fr', 'le PDF arrive dans "À ranger" (le .exe est ignoré)');
-  t(/avis-tf-2026/.test(await p.locator('.boite').innerText()), 'visible dans la carte, avec l\'objet du mail');
+  await p.waitForFunction(() => S.fichiers.some(f => f.boite), null, { timeout: 20000 }).catch(() => {}); await p.evaluate(() => render());
+  await p.waitForTimeout(500); await p.waitForFunction(() => !LECTURE_RECUS && S.fichiers.some(f => f.boite && (f.bienId || LU_RECUS[f.id])), null, { timeout: 30000 }).catch(() => {});
+  // Depuis le 19/11 : un papier reçu est lu sans IA dès l'arrivée et rangé tout seul si c'est sûr
+  const A = await p.evaluate(() => S.fichiers.filter(f => f.boite).map(f => ({ nom: f.nom, de: f.de, objet: f.objet, bienId: f.bienId, cat: f.cat, seul: !!f.rangeSeul })));
+  t(A.length === 1 && A[0].nom === 'avis-tf-2026' && A[0].de === 'test-a@gestion-test.fr' && /Avis de taxe/.test(A[0].objet || ''), 'le PDF arrive (le .exe est ignoré), avec l\'objet du mail');
+  t(A[0].bienId === 'b41' && A[0].cat === 'Taxe foncière' && A[0].seul, 'lu sans IA et rangé tout seul : 41 Beauchamps, Taxe foncière');
+  await p.evaluate(() => { closeOverlay(); remettreDansBoite(S.fichiers.find(f => f.nom === 'avis-tf-2026').id); render(); }); await p.waitForTimeout(400);
+  t(/avis-tf-2026/.test(await p.locator('.boite').first().innerText()) && /sûrement pour/.test(await p.locator('.boite').first().innerText()), 'Annuler : de retour dans "À ranger", avec la proposition');
   await p.screenshot({ path: __dirname + '/shots58/boite-recu.png' });
   // IA : lire et ranger
-  await p.click('.boite button:has-text("Lire et ranger")'); await p.waitForSelector('#overlay:not([hidden]) .gros-msg', { timeout: 120000 }); await p.waitForTimeout(2500);
+  await p.click('.boite button:has-text("Lire et ranger") >> nth=0'); await p.waitForSelector('#overlay:not([hidden]) .gros-msg', { timeout: 120000 }); await p.waitForTimeout(2500);
   const f = await p.evaluate(() => S.fichiers.find(x => x.nom === 'avis-tf-2026'));
   t(f.bienId === 'b41' && f.cat === 'Taxe foncière', 'IA : rangé tout seul dans 41 Beauchamps, catégorie Taxe foncière');
   t(/Taxe foncière 2026 — 41 Beauchamps/.test(await p.locator('#overlay h2').innerText()), 'IA : la fiche taxe foncière s\'ouvre déjà remplie');
   // ranger à la main un 2e envoi
-  await appel({ code, de: 'test-a@gestion-test.fr', objet: 'Facture', pjs: [{ nom: 'facture.pdf', type: 'application/pdf', b64: pdf }] }); await p.waitForTimeout(4000);
-  await p.evaluate(() => { closeOverlay(); render(); }); const id2 = await p.evaluate(() => (recusBoite()[0] || {}).id);
+  await appel({ code, de: 'test-a@gestion-test.fr', objet: 'Facture', pjs: [{ nom: 'facture.pdf', type: 'application/pdf', b64: pdf }] });
+  await p.waitForFunction(() => S.fichiers.some(f => f.nom === 'facture'), null, { timeout: 20000 }).catch(() => {});
+  await p.evaluate(() => { closeOverlay(); render(); }); await p.waitForTimeout(500); await p.waitForFunction(() => !LECTURE_RECUS, null, { timeout: 30000 }).catch(() => {});
+  // (même PDF que l'avis : rangé tout seul ; on le remet dans "À ranger" pour essayer le rangement à la main)
+  await p.evaluate(() => { const f = S.fichiers.find(x => x.nom === 'facture'); if (f && f.bienId) remettreDansBoite(f.id); closeOverlay(); render(); });
+  const id2 = await p.evaluate(() => (recusBoite()[0] || {}).id);
   await p.evaluate(id => rangerRecu(id), id2); await p.selectOption('#overlay select[name=bienId]', 'b43'); await p.selectOption('#overlay select[name=cat]', 'Factures et travaux'); await p.click('#overlay button.primary'); await p.waitForTimeout(300);
   t(await p.evaluate(id => { const x = S.fichiers.find(y => y.id === id); return x.bienId === 'b43' && x.cat === 'Factures et travaux' && !recusBoite().length; }, id2), '"Ranger" à la main : logement et catégorie choisis');
   // expéditeur autorisé en plus

@@ -8,7 +8,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
 (async () => {
   const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {}); const errs = [];
   const p = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' })).newPage();
-  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); await p.route('**/jszip/3.10.1/jszip.min.js', r => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync('/tmp/claude-0/-home-user-Logements-/d313f993-ac07-5053-899e-0d1094f4ea9f/scratchpad/jszip/package/dist/jszip.min.js') }));
+  p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort()); await p.route('**/jszip/3.10.1/jszip.min.js', r => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(__dirname + '/vendor/jszip/package/dist/jszip.min.js') }));
   await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
   await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
   await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test import zip'); await p.click('#esp_btn'); await p.waitForTimeout(2000);

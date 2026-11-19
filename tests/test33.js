@@ -23,6 +23,7 @@ const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); if (!v) KO++;
   await p.route('https://www.googleapis.com/drive/v3/files?**', r => {
     appelsGoogle++;
     const q = new URL(r.request().url()).searchParams.get('q');
+    if (!q) return r.fulfill({ status: 404, body: '' }); // téléchargement d'un fichier (lecture du contenu) : pas simulé ici
     const id = /sharedWithMe/.test(q) ? 'partages' : (q.match(/'([^']+)' in parents/) || [])[1];
     let l = (ARBRE[id] || []).map(x => ({ ...x, webViewLink: 'https://drive.google.com/file/d/' + x.id + '/view', modifiedTime: '2026-11-01T10:00:00Z' }));
     if (/mimeType = /.test(q)) l = l.filter(x => x.mimeType === F);
