@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "f782738", "date": "2026-11-19T13:38"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "daabd55", "date": "2026-11-19T16:30"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -429,6 +429,10 @@ button, .btn, a, summary, label, [role="link"], .tile-head, .lr-main { touch-act
 .compl-cta .tx small { color: var(--ink-2); font-size: .8rem; line-height: 1.35; }
 @media (max-width: 480px) { .compl-cta { flex-direction: column; align-items: stretch; } }
 .compl-h { margin: 12px 0 4px; font-size: .95rem; }
+.gf { display: grid; gap: 12px; } .gf-b { background: var(--surface-2); border-radius: var(--r); padding: 10px; display: grid; gap: 8px; }
+.gf-t { display: flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; } .gf-t b { flex: 1; } .gf-t .chev { opacity: .5; }
+.gf-acts { display: grid; gap: 6px; }
+button.gf-a { justify-content: flex-start !important; text-align: left !important; gap: 10px; height: auto; min-height: 48px; padding: 10px 12px; background: var(--surface); box-shadow: var(--sh-1); white-space: normal; font-weight: 650; border-radius: 12px; }
 .biens-l li.lot .lr-main { padding-left: 34px; } .biens-l li.lot { border-left: 3px solid var(--accent-soft); }
 .biens-l li.imm .ico-cat { background: var(--accent-soft); }
 ol.dem { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
@@ -3101,6 +3105,7 @@ function aFaireCourt(T) {
   prend(t => t.key.startsWith("dep-")).forEach(t => out.push({ ico: "🔑", prio: t.prio, t: `Rendre le dépôt de garantie à ${prenom(bail(t.bailId).nom)}`, btn: t.acts[0] }));
   T.filter(t => !vus.has(t) && t.prio !== "info" && !t.key.startsWith("av-") && !t.key.startsWith("vac-")).forEach(t => out.push({ ico: t.prio === "urgent" ? "⚠️" : "📌", prio: t.prio, t: t.t, btn: t.acts && t.acts[0] }));
   const ap = biensACompleterPapiers(); if (ap.length) out.push({ ico: "🤖", prio: "soon", t: `${ap.length > 1 ? `${ap.length} fiches de logement` : "1 fiche de logement"} à compléter avec tes papiers`, s: "DPE, surface, e-mail des locataires… lus dans tes documents rangés", btn: ["Compléter", "completerAvecPapiers()"] });
+  else if (!LECTURE) { const inc = S.biens.filter(bi => (bi.immeuble ? aCompleterImmeuble(bi) : aCompleterBien(bi)).L.length).length; if (inc) out.push({ ico: "✨", prio: "info", t: `${inc > 1 ? `${inc} fiches de logement` : "1 fiche de logement"} à compléter`, btn: ["Compléter", "guideFiches()"] }); }
   const o = { urgent: 0, soon: 1, info: 2 };
   return out.sort((a, b) => o[a.prio] - o[b.prio]);
 }
@@ -5807,7 +5812,7 @@ async function completerAvecPapiers(bienId, opts = {}) {
   const progres = (i, f) => { ov.innerHTML = `<div class="modal" role="dialog" aria-label="Lecture des papiers"><div class="mh"><h2>🤖 Je lis tes papiers…</h2><button class="ghost" onclick="COMPL.stop=true" aria-label="Arrêter">✕</button></div>
     <p class="note">${i + 1} sur ${taches.length} : <b>${esc(f.nom || "document")}</b></p><div class="barre"><i style="width:${Math.round(i / taches.length * 100)}%"></i></div>
     <p class="note small">L'appli lit d'abord le texte du document. Pour un scan, elle demande à l'IA (1 lecture de tes crédits).</p></div>`; ov.hidden = false; };
-  let ia = 0, rates = 0;
+  let ia = 0, rates = 0; COMPL.erreurs = [];
   for (let i = 0; i < taches.length && !COMPL.stop; i++) {
     const t = taches[i], P0 = [];
     if (!discret) progres(i, t.f);
@@ -5835,9 +5840,10 @@ async function completerAvecPapiers(bienId, opts = {}) {
       if (t.quoi === "taxe" && r.taxe && !taxeDe(bi.id, r.taxe.annee)) P0.push({ cible: "taxe", id: bi.id, champ: "taxe", label: `Taxe foncière ${r.taxe.annee}`, valeur: r.taxe, affiche: `${eur(r.taxe.total)} dont ${eur(r.taxe.teom)} d'ordures ménagères`, src });
       if (!P0.filter(x => !x.cache).length) rates++;
       COMPL.props.push(...P0);
-    } catch (e) { rates++; }
+    } catch (e) { rates++; COMPL.erreurs.push({ nom: t.f.nom || "document", msg: String(e && e.message || e).slice(0, 120) }); }
   }
   COMPL.encours = false;
+  if (!discret) { marquerLus(); save(); } // lus une fois = la tâche ne revient plus, même si on ferme sans enregistrer
   if (discret) { if (!COMPL.props.some(x => !x.cache) || !document.getElementById("overlay").hidden) return; COMPL.lus = [...new Set(COMPL.props.map(x => x.src && taches.find(t => (t.f.nom || "document") === x.src)).filter(Boolean).map(t => t.f.id))]; }
   montrerPropositions(bienId, taches.length, ia, rates, discret);
 }
@@ -5845,15 +5851,26 @@ function montrerPropositions(bienId, lus, ia, rates, discret) {
   const L = COMPL.props, vis = L.map((x, i) => [x, i]).filter(([x]) => !x.cache);
   const parBien = {}; vis.forEach(([x, i]) => { const bid = x.cible === "bail" ? bail(x.id).bienId : x.id; (parBien[bid] = parBien[bid] || []).push([x, i]); });
   const reste = IA.credits && !IA.credits.illimite ? ` Il te reste ${IA.credits.docs_restants} lecture${IA.credits.docs_restants > 1 ? "s" : ""} par l'IA ce mois-ci.` : "";
-  if (!vis.length) { modal("🤖 Compléter avec mes papiers", `<div class="full">${grosMsg("attention", "Rien de sûr trouvé", `J'ai lu ${plur(lus, "document")}${ia ? ` (dont ${ia} par l'IA)` : ""}, sans trouver d'info fiable à remplir. Ouvre la fiche et complète à la main, ou donne une photo plus nette.${reste}`)}</div>`, () => { marquerLus(); save(); return true; }, { ok: "Fermer", lecture: true }); return; }
+  if (!vis.length) { guideFiches(bienId, `Rien de sûr dans tes papiers (${plur(lus, "lu")}${ia ? `, dont ${ia} par l'IA` : ""}) : complète en un geste`); return; }
   modal(discret ? "🤖 Ton nouveau papier peut remplir la fiche" : "🤖 Trouvé dans tes papiers", `<div class="full">${grosMsg("ok", `${plur(vis.length, "info")} à remplir`, `Lu dans ${plur(lus, "document")}${ia ? ` (dont ${ia} par l'IA)` : ""}. Décoche ce qui est faux, puis Enregistrer.${rates ? ` ${plur(rates, "document")} n'a rien donné.` : ""}${reste}`)}</div>
     <div class="full">${Object.entries(parBien).map(([bid, X]) => `<h3 class="compl-h">${esc((bien(bid) || {}).nom || "")}</h3><ul class="todo compl">${X.map(([x, i]) => `<li><label class="chk"><input type="checkbox" name="p${i}" checked><span class="tx"><b>${esc(x.label)} : ${esc(x.affiche)}</b><small>lu dans : ${esc(x.src)}</small></span></label></li>`).join("")}</ul>`).join("")}</div>`,
     d => { let n = 0; marquerLus();
       L.forEach((x, i) => { const parent = x.cache ? L.find(y => !y.cache && y.cible === x.cible && y.id === x.id && y.champ === "dpe") : null; const ok = x.cache ? parent && d["p" + L.indexOf(parent)] : d["p" + i]; if (!ok) return;
         if (x.cible === "taxe") { enregistrerTaxe(x.id, x.valeur.annee, x.valeur.total, x.valeur.teom); n++; return; }
         const o = x.cible === "bien" ? bien(x.id) : bail(x.id); if (o && !o[x.champ]) { o[x.champ] = x.valeur; if (!x.cache) n++; } });
-      toast(n ? `✓ ${plur(n, "info")} ${n > 1 ? "ajoutées" : "ajoutée"} aux fiches` : "Rien d'enregistré"); },
+      toast(n ? `✓ ${plur(n, "info")} ${n > 1 ? "ajoutées" : "ajoutée"} aux fiches` : "Rien d'enregistré");
+      setTimeout(() => guideFiches(bienId, "C'est rempli. Il manque encore :", true), 600); },
     { ok: "Enregistrer" });
+}
+/* Ce qui manque encore, fiche par fiche, avec le bouton qui le fait : jamais d'impasse (les gens ne lisent pas, ils touchent) */
+function guideFiches(bienId, titre, silencieuxSiRien) {
+  const L = (bienId ? [bien(bienId)].filter(Boolean) : ordreBiens()).map(bi => ({ bi, ...(bi.immeuble ? aCompleterImmeuble(bi) : aCompleterBien(bi)) })).filter(x => x.L.length);
+  if (!L.length) { if (!silencieuxSiRien) toast("✓ Tes fiches sont complètes"); return; }
+  const err = COMPL && COMPL.erreurs && COMPL.erreurs.length ? `<p class="note full">⚠️ ${plur(COMPL.erreurs.length, "papier")} pas ouvert${COMPL.erreurs.length > 1 ? "s" : ""} (${esc(COMPL.erreurs[0].msg)}).</p>` : "";
+  window.__GF = L.flatMap(x => x.L.map(it => it.f));
+  modal(`✨ ${esc(titre || "Ce qui manque sur tes fiches")}`, `<div class="full gf">${L.slice(0, 8).map(x => `<section class="gf-b"><a class="gf-t" href="#bien-${x.bi.id}" onclick="closeOverlay()"><b>${esc(x.bi.nom)}</b><span class="pill ${x.pct >= 80 ? "ok" : "warn"}">${x.pct} %</span>${ic("chevR", "chev")}</a>
+      <div class="gf-acts">${x.L.slice(0, 3).map(it => `<button type="button" class="gf-a" onclick="closeOverlay();setTimeout(()=>{${esc(it.f)}},60)"><span aria-hidden="true">${it.ico}</span>${esc(it.t.replace(/<[^>]+>/g, ""))}</button>`).join("")}</div></section>`).join("")}</div>${err}`,
+    () => true, { ok: "Plus tard", lecture: true });
 }
 /* Un papier lu une fois n'est plus reproposé (même si on a décoché ce qu'il disait) */
 function marquerLus() { (COMPL && COMPL.lus || []).forEach(id => { const f = S.fichiers.find(x => x.id === id); if (f) f.luLe = iso(TODAY); }); }

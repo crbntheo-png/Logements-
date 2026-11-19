@@ -74,6 +74,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 (fin d'après-midi) — plus d'impasse après "Compléter avec mes papiers"
+- Constat Théo (GTP) : "Compléter avec mes papiers" → "Rien de sûr trouvé" sans suite, et la tâche "3 fiches à compléter avec tes papiers" revenait. GTP : tous les documents sont des liens Drive.
+- Corrigé : les papiers sont marqués lus dès la fin de la lecture (même si on ferme sans enregistrer) ; "rien trouvé" ouvre directement "✨ Ce qui manque sur tes fiches" (guideFiches) : chaque logement, son %, et un gros bouton par info manquante qui fait l'action (taxe, risques, DPE, prix, e-mail…) ; après "Enregistrer", ce qui manque encore s'affiche aussi ; un papier qui n'a pas pu être ouvert est signalé avec la raison. À faire : quand il n'y a plus de papiers à lire, "N fiches de logement à compléter" › Compléter ouvre ce même écran.
+- CLAUDE.md : règle "Les gens ne lisent pas" (bouton qui se suffit, jamais d'impasse, une phrase max).
+- Deux sessions en parallèle (perso + pro sur le Mac) : avant de publier, git fetch + comparer la version en ligne (version.json / contenu) avec la branche ; la version en ligne f782738 était identique à la branche (rien écrasé).
+- Pas vérifié : pourquoi la lecture n'a rien donné chez GTP (liens Drive : ouverture du fichier ou texte sans info) ; la nouvelle version affichera la raison si un papier ne s'ouvre pas.
+
 ### 19/11/2026 — série complète de tests relancée ; 4 vrais bugs trouvés et corrigés
 - Série complète (71 tests) : 71 OK en fin de session. 5 tests ne tournent pas ici (sites bloqués depuis la machine de test ou comptes spéciaux) : test2, 4, 30, 37, 50.
 - Bugs trouvés grâce aux tests et corrigés :

@@ -9,6 +9,11 @@
 - Branche unique : `ccr-6df8be48-11wmro` (c'est l'appli en ligne). Pas de pull request.
 - `index.html` est gros (près de 7 000 lignes) : chercher avec grep, lire seulement le morceau utile.
 
+## Les gens ne lisent pas (règle d'interface, Théo, 19/11)
+- Ils touchent le bouton sans lire le texte à côté : tout doit se comprendre au bouton lui-même (verbe clair, gros, à l'endroit où on regarde).
+- Jamais d'impasse : après chaque action (même "rien trouvé"), proposer la suite en un geste (bouton qui ouvre la bonne fiche ou fait l'action), pas un texte qui explique quoi faire.
+- Peu de texte, une phrase max ; l'explication va dans un "Pourquoi ?" replié.
+
 ## Règles qui ne bougent pas
 - Pennylane : lecture seule, jamais aucune écriture (seulement des GET sur /me, /bank_accounts, /transactions).
 - Aucun e-mail envoyé sans aperçu et confirmation du propriétaire.
