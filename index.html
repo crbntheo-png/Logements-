@@ -485,6 +485,7 @@ button.suite, button.dpe-chip { text-align: left !important; justify-content: fl
 .bienvenue h2 { margin: 0; }
 .bienvenue > p { margin: 0; }
 .a-completer .barre { margin: 6px 0 4px; }
+.suivi-bien h3 { margin: 14px 0 6px; font-size: .9rem; color: var(--muted); } .sb-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .sb-s { background: var(--bg, rgba(0,0,0,.03)); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; } .sb-s b { font-size: 1.05rem; overflow-wrap: anywhere; } .sb-s span { font-size: .8rem; color: var(--muted); } .sb-s small { font-size: .72rem; color: var(--muted); } .sb-s.bad b { color: var(--bad); } .sb-s.ok b { color: var(--ok, inherit); } .sb-s.warn b { color: var(--accent); } .sb-dates { list-style: none; margin: 0; padding: 0; } .sb-dates li { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; } .sb-dates li:first-child { border-top: 0; } .sb-d { flex: none; color: var(--muted); min-width: 74px; }
 .a-completer .acts-c { display: flex; flex-direction: column; align-items: stretch; gap: 4px; flex: none; } .a-completer .pas-besoin { font-size: .8rem; padding: 4px 8px; min-height: 0; color: var(--muted); }
 .a-completer ul.todo li .tx small { display: block; }
 details.pli-mini > summary { cursor: pointer; font-size: .85rem; color: var(--accent); padding: 6px 0; }
@@ -3434,6 +3435,7 @@ function pageBien(id) {
       ${(() => { const n = rentaNette(bi); return n ? `<div class="kpi"><span>Rentabilité nette</span><b>${n.net.toFixed(1).replace(".", ",")} %</b><small>après charges, taxe, assurances, intérêts</small></div><div class="kpi ${n.cash < 0 ? "bad" : ""}"><span>Cash-flow</span><b>${n.cash >= 0 ? "+" : ""}${eur(n.cash)}</b><small>par mois, après la mensualité du prêt</small></div>` : ""; })()}
       <div class="kpi"><span>Taxe foncière${cq("teom")}</span><b>${tf ? eur(tf.total) : "—"}</b><small>${tf ? tf.annee : `<button class="small ghost" onclick="taxeFonciere('${bi.id}')">Renseigner</button>`}</small></div>
     </div>
+    ${blocSuiviBien(bi)}
     ${blocRentaNette(bi)}
     <div class="stack">
     <section class="card"><h2>🏠 Le logement</h2><div class="bien"><dl>
@@ -3451,6 +3453,28 @@ function pageBien(id) {
     ${sectionTravaux(bi)}
     ${listeDocuments(bi.id)}
     </div>`;
+}
+/* Tableau de bord du logement : l'année en un coup d'œil (loyers reçus / attendus, occupation, retard) et les 3 prochaines dates */
+function blocSuiviBien(bi) {
+  const baux = S.baux.filter(b => b.bienId === bi.id), y = TODAY.getFullYear(), m0 = y + "-01";
+  let du = 0, paye = 0, retard = 0;
+  baux.forEach(b => { for (let m = m0; m <= CUR; m = addM(m, 1)) { const e = echeance(b, m); if (!e) continue; du += e.du; paye += Math.min(e.du, e.paye); if (e.statut === "retard") retard += e.reste; } });
+  // occupation sur les 12 derniers mois (jours couverts par un bail)
+  const debut = addDays(TODAY, -364); let occ = 0;
+  for (let d = new Date(debut); d <= TODAY; d = addDays(d, 7)) if (baux.some(b => isActive(b, d))) occ++;
+  const pctOcc = Math.round(occ / 53 * 100);
+  const ids = new Set([bi.id, ...baux.map(b => b.id)]);
+  const prochaines = icsAgenda().ev.filter(e => !/^loyer-|^fisc-|^rap-/.test(e.id) && [...ids].some(id => e.id.endsWith("-" + id) || e.id.includes("-" + id + "-"))).sort((a, b) => a.d - b.d).slice(0, 3);
+  if (!baux.length && !prochaines.length) return "";
+  const e0 = x => Math.round(x).toLocaleString("fr-FR") + " €";
+  const stat = (t, v, sub, cls = "") => `<div class="sb-s ${cls}"><b>${v}</b><span>${t}</span>${sub ? `<small>${sub}</small>` : ""}</div>`;
+  return `<section class="card suivi-bien"><h2>📊 ${y} en un coup d'œil</h2>
+    <div class="sb-stats">
+      ${stat("loyers reçus", e0(paye), du ? `sur ${e0(du)} attendus` : "rien d'attendu")}
+      ${stat("occupé", Math.min(100, pctOcc) + " %", "sur les 12 derniers mois", pctOcc < 80 ? "warn" : "")}
+      ${retard > 0 ? stat("en retard", e0(retard), "", "bad") : stat("en retard", "0 €", "tout est à jour", "ok")}
+    </div>
+    ${prochaines.length ? `<h3>Prochaines dates</h3><ul class="sb-dates">${prochaines.map(e => `<li><span class="sb-d">${fds(iso(e.d))}</span><span>${esc(e.t)}</span></li>`).join("")}</ul>` : ""}</section>`;
 }
 /* ================= Historique du logement : anciens locataires (avant l'appli) et leurs documents =================
    Rangés dans le logement (bi.anciens), jamais mêlés aux locataires actuels : aucun loyer n'est calculé pour eux. */

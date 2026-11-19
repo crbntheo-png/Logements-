@@ -11,6 +11,7 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Banque pour tous (Théo)** : envoyer les demandes de devis Enable Banking (formulaire "Get a quote") et Bridge ; avec un contrat Enable Banking, rien à recoder. En attendant, les autres utilisateurs reçoivent 0 compte.
 - [ ] **Banque en direct (Théo)** : application créée le 18/11. Reste : Réglages › Banque › Relier ma banque (connexion sur le site de la banque). Ancienne note : : Enable Banking, mode "restricted production". 1) https://enablebanking.com/sign-in/ (e-mail, lien reçu) ; 2) https://enablebanking.com/cp/applications › "Add a new application" : environnement Production, clé privée générée par défaut, nom "Gestion locative", URL de retour https://sci-gestion-locative.com/ › Register (un fichier .pem se télécharge, son nom = l'identifiant de l'application) ; 3) sur la page de l'application : "Link accounts" et relier le compte de la SCI ; 4) envoyer à Claude le contenu du .pem et l'identifiant. Ensuite (Claude, 1 session) : fonction serveur, choix de la banque dans l'appli, relevés lus dans les mêmes tables que Pennylane (le rapprochement des loyers marche tel quel). Limite : gratuit seulement pour les comptes que Théo relie lui-même ; pour les autres utilisateurs, contrat payant Enable Banking.
 
 - [ ] **Boîte à documents (Théo, 2 min)** : activer Email Routing sur sci-gestion-locative.com et envoyer l'adresse catch-all au Worker "boite-documents" (étapes dans l'Historique du 18/11, "boîte à documents").
@@ -60,7 +61,7 @@ Vague 4 — PRIORITÉ depuis le 18/11 (Théo : "une interface fluide, intuitive,
 19. ✅ (18/11) **Congé donné par le bailleur** (vente, reprise, motif sérieux) : lettre + date limite + offre de vente (Rentila : 30 courriers types).
 20. ✅ (18/11) **Suivi des interventions** : demande du locataire → artisan prévenu, date, réglé, facture ; dans À faire jusqu'à la fin.
 21. ✅ (18/11) **Candidatures en ligne** : lien pour déposer le dossier, pièces vérifiées, loyer < 1/3 des revenus (Rentila, Qalimo). Les candidats existent déjà par logement : à ouvrir aux candidats eux-mêmes.
-22. **Tableau de bord par logement** : occupation, rentabilité (prix d'achat repris de l'acte par l'IA), prochain événement.
+22. ✅ (19/11) **Tableau de bord par logement** : carte "AAAA en un coup d'œil" sur la fiche (loyers reçus / attendus de l'année, % occupé sur 12 mois, retard) + 3 prochaines dates (révision, assurance, congé, PNO, DPE). Rentabilité déjà dans les chiffres du haut.
 
 Vague 3 — EN PAUSE (plus de comptable, tout depuis la banque ; GTP est une SCI à l'IS) — dans l'ordre :
 11. ✅ (18/11) **Chaque opération de banque classée** (entrées comprises : loyers, dépôts, apports d'associés), compteur "il reste N opérations à classer".
@@ -75,6 +76,11 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 19/11/2026 (nuit, suite) — banque des autres utilisateurs ; tableau de bord par logement
+
+- **Banque de Max** : toujours 0 compte (dernier essai 19/11 17 h 30, CIC pro). Cause confirmée : Enable Banking en production restreinte (gratuite) = seuls les comptes reliés par Théo. Recherche : aucune solution gratuite pour les comptes des autres (GoCardless fermé aux nouveaux depuis 07/2025 ; Enable Banking, Bridge, Powens sur devis, facturé par compte relié et par mois). Avec un contrat Enable Banking, rien à changer dans l'appli. Messages de demande de devis (Enable Banking en anglais, Bridge en français) donnés à Théo dans la conversation.
+- **Tableau de bord par logement** (feuille de route n° 22) : `blocSuiviBien(bi)` sur la fiche, après les chiffres du haut. Les dates viennent de `icsAgenda()` (mêmes dates que l'agenda abonné), filtrées sur le logement et ses baux, sans les loyers. Test97 complété (26 contrôles).
 
 ### 19/11/2026 (nuit) — retour de Théo : "infos à compléter" introuvables, "Pas besoin", bouton retour logique
 

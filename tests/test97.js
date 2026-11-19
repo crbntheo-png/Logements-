@@ -53,6 +53,10 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
   await p.click('#bottomnav a[href="#biens"]'); await p.waitForTimeout(300);
   await p.evaluate(id => go('bien-' + id), bid); await p.waitForTimeout(300);
   ok('fiche du logement : retour "← Biens"', /^← Biens \| #biens$/.test(await back()));
+  await p.screenshot({ path: __dirname + '/shots97/fiche-logement.png', fullPage: true });
+  const sb = await p.evaluate(() => { const c = document.querySelector('#app .suivi-bien'); return c ? { n: c.querySelectorAll('.sb-s').length, t: c.innerText } : null; });
+  ok('tableau de bord du logement : 3 chiffres (reçus, occupé, retard)', sb && sb.n === 3 && /loyers reçus/.test(sb.t) && /occupé/.test(sb.t) && /retard/.test(sb.t));
+  ok('tableau de bord : prochaines dates', sb && /Prochaines dates/.test(sb.t));
   ok('Redemander dans le menu Plus', await p.locator('#app .menu-plus', { hasText: 'Redemander les infos mises de côté' }).count() === 1);
   const nomBien = await p.evaluate(id => bien(id).nom, bid);
   await p.evaluate(id => go(lienDocs(id, -1, '').slice(1)), bid); await p.waitForTimeout(300);
