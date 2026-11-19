@@ -85,6 +85,7 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 - Ce qui est envoyé (`contexteQuestion()`) : un résumé de l'espace (logements, locataires actuels avec loyers, dette, mois en retard, révision, anciens locataires, À faire, chiffres de l'année, taxes foncières). Jamais de document, jamais de code.
 - Serveur (fonction ia, action "question", Claude Opus 5.5, effort low, réponse JSON) : consigne "français simple, chiffres tirés des données, rien d'inventé, conseiller un pro pour le juridique délicat, ne rien dire de l'appli". Boutons filtrés (pages connues seulement). Quota à part : `ia_usage.nb_q`, `ia_reserver_q` / `ia_rembourser_q` (supabase/ia_questions.sql, appliqué), 5 questions par jour et 30 par mois par personne (IA_Q_JOUR, IA_Q_MOIS) ; coût compté dans le budget IA global.
 - Budget IA global : IA_BUDGET_MOIS n'est pas posé, donc 3 $ par mois pour toute l'appli (hors comptes IA_SANS_LIMITE) ; 2,56 $ déjà dépensés en novembre au 20/11. Une question coûte environ 0,03 $.
+- Nouveauté "pose-question" envoyée AVEC notification (--annoncer) : erreur, une annonce était déjà partie le 19/11 au matin ("appli-epuree") alors que la règle est une par semaine. Prochaine annonce pas avant le 26/11.
 - Test99 (vraie base + vraie IA, 1 question) : "Seul Paul Durand te doit 650 € (loyer d'octobre)…", boutons "Voir la fiche de Paul" / "Voir les loyers". OK.
 
 ### 20/11/2026 (nuit) — retours de Max : tout traité côté appli ; baux commerciaux et professionnels
