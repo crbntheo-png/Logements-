@@ -74,6 +74,17 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 — série complète de tests relancée ; 4 vrais bugs trouvés et corrigés
+- Série complète (71 tests) : 71 OK en fin de session. 5 tests ne tournent pas ici (sites bloqués depuis la machine de test ou comptes spéciaux) : test2, 4, 30, 37, 50.
+- Bugs trouvés grâce aux tests et corrigés :
+  1. Ouverture instantanée cassée depuis le 18/11 : deux fonctions "lireCache" (la 2e écrasait la 1re) → l'appli attendait le serveur à chaque ouverture. Renommée lireCacheSession : écran prêt en 0,5 s au lieu de 1,7 s.
+  2. Lecture IA des papiers bloquée à tort quand les analyses du Drive du mois étaient épuisées (quota à part) : docsBloques().
+  3. Une fiche modifiée ailleurs (associé, Claude) pouvait être ignorée au rechargement si l'appli l'avait écrite elle-même dans les 2 min : maintenant seulement pendant 8 s (ECHOS_T).
+  4. Menu "Plus" refermé tout seul par une mise à jour de l'écran : les menus ouverts restent ouverts (ils se ferment toujours en touchant un choix ou à côté).
+- Nouveautés chargées 3 s après l'ouverture (pastille "🆕" de Réglages prête).
+- Tests mis à jour (changements voulus) : 9 (rubrique Membres repliée), 65 (Claude dans Plus de réglages), 78 (nouveautés discrètes), 85 (crée son espace), 88 (date d'entrée obligatoire). Les comptes de test sont nettoyés entre chaque test. test31 a besoin de NODE_USE_ENV_PROXY=1 ici.
+- En ligne.
+
 ### 19/11/2026 — retours de Max revérifiés point par point ; départ : part d'ordures ménagères
 - Ajouté : étape "Sa part d'ordures ménagères" dans le parcours de départ (teomDepart) : avis de l'année connu → montant au prorata jusqu'à la sortie + lettre ; sinon estimation d'après le dernier avis, bouton "Garder sur le dépôt" (retenue). Les parts sont recalculées quand on note un départ (recalculerTaxesDe).
 - Test93 (nouveau) : révision IRL (date anniversaire, nouveau loyer, courrier), ordures ménagères par an par défaut, départ (lettre du 01/01 au jour du départ, estimation sur le dépôt), alertes. Test92 : Claude refuse un locataire sans vraie date.

@@ -12,7 +12,7 @@ const DPE = `<html><body style="font:14px Arial;padding:30px"><h1>DIAGNOSTIC DE 
   p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort());
   await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
   await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
-  await p.waitForTimeout(3000);
+  await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test DPE nouveau logement'); await p.click('#esp_btn'); await p.waitForTimeout(2500);
   ok('connecté dans un espace dont il est propriétaire', await p.evaluate(() => !!ESPACE && estProprio()));
   console.log(await p.evaluate(() => ({ sb: !!SB, mcp: typeof MCP !== 'undefined' ? MCP : 'undef', prop: estProprio(), lect: LECTURE })));
   await p.evaluate(b64 => { window.__f = new File([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], 'dpe.pdf', { type: 'application/pdf' }); choisirFichier = async () => window.__f; editBien(); }, pdf);
@@ -25,6 +25,7 @@ const DPE = `<html><body style="font:14px Arial;padding:30px"><h1>DIAGNOSTIC DE 
   ok('adresse lue', /Beauchamps/i.test(r.adr) && r.cp === '35000');
   ok('surface 38 m² lue', +r.surf === 38); ok('2 pièces', +r.pieces === 2); ok('DPE E, numéro', r.dpe === 'E' && r.num === '2635E1234567X'); ok('nom proposé', /Rennes/.test(r.nom));
   await p.evaluate(() => closeOverlay()); // rien enregistré
+  await p.evaluate(async () => { await SB.from('espaces').delete().eq('id', ESPACE); });
   ok('aucune erreur JavaScript', !errs.length); if (errs.length) console.log(errs);
   await b.close(); srv.close(); console.log(KO ? `\n${KO} échec(s)` : '\nTout est bon'); process.exit(KO ? 1 : 0);
 })();
