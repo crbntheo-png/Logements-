@@ -74,6 +74,17 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 — appli épurée pour l'iPhone (objectif : prêt lundi)
+- Tour complet sur iPhone simulé (SE, 13, 13 Pro Max), avec un espace réel de test. Avant : accueil 3,5 écrans (2 bandeaux + guide + nouveautés + 5 tâches avant les loyers), À faire 11 écrans, Réglages 20 rubriques, aide 8 000 px.
+- Accueil : les loyers du mois en premier, puis 3 tâches, puis le guide, puis les locataires ; cartes locataires à 2 boutons au plus (Étaler, Pas besoin, Autre montant restent dans la fiche) ; "espaces locataires" sous les locataires ; "Tous mes espaces" et "Nouveautés" en lignes discrètes ; lien "Tout ce que l'appli peut faire pour toi" en bas.
+- Un seul bandeau en haut à la fois (mise à jour > lecture seule > Drive > exemple > installation) ; celui d'installation seulement sur l'accueil.
+- À faire : les tâches du même genre (3 ou plus : quittances, impayés, régularisations…) regroupées sous une ligne repliée ; descriptions coupées à 2 lignes sur téléphone ("Pourquoi ?" garde le détail). 4 300 → 2 400 px.
+- Réglages : À régler / L'essentiel / Automatique (+ "Sur ton téléphone" si pas installée) ; 10 rubriques rares dans "Plus de réglages" replié (ouvert tout seul si une rubrique est demandée). 3 100 → 2 000 px.
+- Aide (#aide) devient "✨ Ce que l'appli fait pour toi" : vitrine en 4 thèmes, une tuile par fonction qui mène au bon endroit ; guide court ; lexique replié. Lien aussi dans la fenêtre du bouton "?".
+- Carte des loyers compacte sur petit iPhone (tient en 1/3 d'écran).
+- Tests : test5, test84, test26/34/38/40/41/58/64/67/81 OK, test51 OK au 2e essai. Échouaient déjà avant (pas liés) : test2 (délai), test4 (fichier jspdf de test manquant), test30 et test37 (sites externes bloqués ici), test39 (copie hebdo : bouton introuvable, à regarder). Rien ne dépasse en largeur sur iPhone SE et Pro Max (pages + fenêtres).
+- En ligne, annoncé dans Quoi de neuf (appli-epuree). Pas vérifié sur un vrai iPhone (Safari) : seulement en simulation.
+
 ### 18/11/2026 — vidéo Google retirée par YouTube ; Gmail : erreur de branchement expliquée
 - YouTube a retiré 2 vidéos de démo (17/11 et 18/11) pour "informations personnelles" (e-mails, adresses). Plan : compte Gmail dédié à la démo, espace "SCI Démo" avec données inventées, e-mail flouté dans YouTube Studio, vidéo "Non répertoriée". Brouillon de réponse à Google prêt dans Gmail, À NE PAS ENVOYER avant d'y mettre le nouveau lien.
 - Page de confidentialité : drive.file (sélecteur Google) et lecture IA des fichiers choisis précisées pour Google.

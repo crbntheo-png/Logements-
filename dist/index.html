@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "b0f79fe", "date": "2026-11-18T21:24"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "f24407b", "date": "2026-11-19T06:50"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -227,6 +227,7 @@ html:has(body.ptr-actif), body.ptr-actif { overscroll-behavior-y: contain; }
 .hero-stats b { color: #fff; }
 .hero .cta { background: #fff; color: var(--night); height: 42px; padding: 0 16px; border-radius: 12px; font-weight: 750; }
 .hero .cta:hover { background: #eef2f7; }
+@media (max-width: 420px) { .hero { padding: 16px 18px; gap: 10px; } .hero-amount { font-size: 1.9rem; } .hero-amount small { white-space: nowrap; display: inline-block; } .hero-stats { gap: 6px 12px; font-size: .8rem; } .hero .cta { height: 36px; padding: 0 12px; font-size: .84rem; } }
 .hero .cta .ic { color: var(--gold); fill: var(--gold); stroke: var(--gold); }
 
 /* Liste "À faire" courte */
@@ -420,6 +421,34 @@ details.pq summary::-webkit-details-marker { display: none; } details.pq p { mar
 .parcours .etapes { list-style: none; margin: 10px 0 0; padding: 0; } .parcours .etape .note { margin: 4px 0 8px; }
 tr.pire td { background: var(--bad-soft); }
 input.auto, select.auto, textarea.auto { background: var(--warn-soft); }
+a.aide-lien { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r); background: var(--accent-soft); color: var(--ink); text-decoration: none; margin: 14px 0 6px; font-size: 1.1rem; }
+a.aide-lien span { flex: 1; display: grid; gap: 2px; font-size: .9rem; }
+a.aide-lien small { color: var(--ink-2); font-size: .78rem; }
+a.aide-lien .chev { opacity: .5; }
+.vitrine { margin-bottom: 18px; }
+.vit-grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 760px) { .vit-grille { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+button.vit { display: grid; justify-items: start; align-content: start; gap: 4px; height: auto; min-height: 112px; padding: 14px; border-radius: var(--r); background: var(--surface); box-shadow: var(--sh-1); white-space: normal; text-align: left !important; justify-content: start !important; font-weight: 500; }
+button.vit b { font-size: .9rem; line-height: 1.25; }
+button.vit small { color: var(--ink-2); font-size: .78rem; line-height: 1.35; }
+.vit-i { font-size: 1.3rem; }
+details.plus-rgl > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+details.plus-rgl > summary::-webkit-details-marker { display: none; }
+details.plus-rgl > summary small { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--muted); flex-basis: 100%; }
+details.plus-rgl > summary .chev { margin-left: auto; transition: transform .2s; }
+details.plus-rgl[open] > summary .chev { transform: rotate(90deg); }
+details.plus-rgl > summary small + .chev { position: absolute; right: 0; }
+details.plus-rgl > summary { position: relative; padding-right: 28px; }
+details.grp-t { background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-1); margin-bottom: 10px; }
+details.grp-t > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+details.grp-t > summary::-webkit-details-marker { display: none; }
+details.grp-t > summary .tx { flex: 1; display: grid; gap: 2px; min-width: 0; }
+details.grp-t > summary .tx small { color: var(--ink-2); font-size: .8rem; }
+details.grp-t > summary .chev { transition: transform .2s; opacity: .5; }
+details.grp-t[open] > summary .chev { transform: rotate(90deg); }
+details.grp-t[open] { padding-bottom: 6px; }
+details.grp-t .task { box-shadow: none; border-top: 1px solid var(--line); border-radius: 0; margin: 0; }
+@media (max-width: 600px) { .tasks .task .d { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } }
 .auto-aide { background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 6px; font-size: .9rem; }
 .auto-aide p { margin: 0; color: var(--ink-2); line-height: 1.4; }
 .auto-aide .row { margin-top: 4px; }
@@ -2642,7 +2671,9 @@ function render0() {
   document.querySelector(".brand").onclick = SB ? (ev => { ev.preventDefault(); choisirEspace(); }) : null;
   if (document.getElementById("brandSub").innerHTML !== sub) document.getElementById("brandSub").innerHTML = sub;
   const vide = !S.biens.length && !S.baux.length;
-  const banner = bandeauMaj() + bandeauDrive() + (LECTURE ? `<div class="banner"><span>👀 <b>Lecture seule</b> : tu vois tout, tu ne modifies rien.</span></div>` : "") + bandeauInstall() + (S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "");
+  // Un seul bandeau à la fois, le plus important (l'installation seulement sur l'accueil) : moins de bruit en haut de l'écran
+  const accueil = h === "locataires";
+  const banner = [bandeauMaj(), LECTURE ? `<div class="banner"><span>👀 <b>Lecture seule</b> : tu vois tout, tu ne modifies rien.</span></div>` : "", bandeauDrive(), S.demo ? `<div class="banner"><span><b>Ceci est un exemple.</b></span><button class="small primary" onclick="viderDemo()">Commencer avec mes biens</button></div>` : "", accueil ? bandeauInstall() : ""].find(x => x) || "";
   let html;
   if (h.startsWith("bail-")) html = pageBail(h.slice(5));
   else if (h.startsWith("edl-")) html = pageEdl(h.slice(4));
@@ -2717,19 +2748,42 @@ function guideCompact() {
     <p class="gc-t">${e.ico} <b>${e.t}</b> · <span class="note">${e.pourquoi}</span></p>
     <div class="row"><button class="small primary" onclick="${e.btn[1]}">${e.btn[0]}</button><a class="btn small ghost" href="#aide">Voir toutes les étapes</a></div></section>`;
 }
+/* "Tout ce que l'appli sait faire" : une vitrine courte, une ligne par fonction, un toucher mène au bon endroit */
+const VITRINE = [
+  ["💶", "Tes loyers, sans effort", [
+    ["✅", "Qui a payé, qui est en retard", "L'accueil le montre chaque mois, prorata compris.", "go('locataires')"],
+    ["🏦", "Loyers cochés tout seuls", "Branche ta banque : les virements reçus se cochent seuls.", "reglage('banque')", 1],
+    ["📄", "Quittances en un geste", "Ou envoyées toutes seules dès que le loyer arrive.", "reglage('quittances')", 1],
+    ["🔁", "Relances automatiques", "Un rappel gentil à J+3, ferme à J+8. Ou tu relances toi-même.", "reglage('relances')", 1],
+    ["📈", "Augmentation de loyer (IRL)", "Calculée et proposée au bon moment, courrier prêt.", "go('afaire')"]]],
+  ["👤", "Tes locataires", [
+    ["🤖", "Un locataire créé depuis son bail", "Donne le PDF ou une photo : l'IA remplit tout.", "editBail()"],
+    ["🔗", "Son espace locataire", "Quittances, bail, attestation d'assurance, signaler un problème.", "go('locataires')", 1],
+    ["📋", "État des lieux sur le téléphone", "Pièce par pièce, avec photos, signé au doigt.", "go('biens')"],
+    ["✍️", "Signature à distance", "Bail ou avenant signé par le locataire depuis son téléphone.", "go('biens')", 1],
+    ["📨", "Candidatures en ligne", "Un lien pour déposer le dossier, les revenus vérifiés.", "go('biens')", 1]]],
+  ["🏢", "Tes logements et papiers", [
+    ["📍", "Logement rempli depuis l'adresse", "Surface et DPE retrouvés dans la base de l'État.", "editBien()"],
+    ["📁", "Ton Drive rangé par l'IA", "Chaque document va dans le bon logement.", "go('docs')", 1],
+    ["📸", "Une photo d'un papier suffit", "Taxe foncière, facture, assurance : l'IA lit et range.", "go('ajouter-doc')", 1],
+    ["🛠", "Suivi des travaux", "Demande du locataire → artisan prévenu → facture.", "go('biens')"]]],
+  ["📊", "Ta compta et tes associés", [
+    ["📊", "Résultat par logement", "Et la part de chaque associé, en direct.", "go('compta')"],
+    ["🧾", "Export pour le comptable", "Un fichier propre en fin d'année.", "go('compta')"],
+    ["🤝", "Associés et comptable invités", "Chacun voit les mêmes chiffres sur son téléphone.", "reglage('membres')", 1],
+    ["📅", "Toutes tes dates dans ton agenda", "Loyers, révisions, assurances, taxe foncière.", "reglage('agenda')", 1]]],
+];
+function vitrine() {
+  return VITRINE.map(([ico, titre, L]) => { const f = L.filter(x => !x[4] || SB); return `<section class="vitrine"><h2 class="sec">${ico} ${titre}</h2><div class="vit-grille">${f.map(([i, t, d, go]) => `<button type="button" class="vit" onclick="${go}"><span class="vit-i" aria-hidden="true">${i}</span><b>${t}</b><small>${d}</small></button>`).join("")}</div></section>`; }).join("");
+}
 function pageAide() {
-  const bloc = (ico, t, sert, quand, auto) => `<section class="card aide"><h2>${ico} ${t}</h2><p><span class="lbl">À quoi ça sert :</span> ${sert}</p><p><span class="lbl">Quand y aller :</span> ${quand}</p>${auto ? `<p><span class="lbl">Ce que l'appli fait pour toi :</span> ${auto}</p>` : ""}</section>`;
-  return `<div><a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>Comment ça marche ?</h1><p>L'appli tient tes loyers, tes documents et ta compta. Toi, tu valides.</p></div></div></div>
-    ${blocGuide(true)}
-    <div class="stack">
-    ${bloc("🏠", "Accueil", "Voir en 5 secondes où en sont les loyers du mois, qui a payé, qui est en retard, et les prochaines échéances.", "Chaque fois que tu ouvres l'appli.", "Calcule ce qui est dû (avec prorata d'arrivée et de départ) et repère les retards.")}
-    ${bloc("✅", "À faire", "La liste de tout ce qui demande une action : quittance à envoyer, relance, révision de loyer, assurance à demander, taxe foncière à répartir…", "Une fois par semaine, ou quand le petit chiffre rouge apparaît.", "Prépare les documents et les messages. Chaque envoi s'ouvre en aperçu : rien ne part sans ton accord.")}
-    ${bloc("🏢", "Biens", "La fiche de chaque logement : occupant, loyer, rentabilité, états des lieux et tous les documents rangés par type.", "Quand tu cherches un document ou que tu fais un état des lieux.", "Range les documents par logement et par locataire, garde les photos des états des lieux.")}
-    ${bloc("📁", "Docs", "Tes documents et ton dossier Google Drive.", "Quand tu veux ouvrir le Drive de la société.", "")}
-    ${bloc("📊", "Compta", "Ce qui est entré et sorti, logement par logement, le résultat de l'année et la part de chaque associé. Ta banque y est branchée.", "Une fois par mois, après le relevé, et en fin d'année pour le comptable.", "Reconnaît les loyers dans la banque, classe les dépenses (prêt, assurance, taxe, eau…) et retient tes choix. Export pour le comptable en un clic.")}
-    ${bloc("⚙️", "Réglages", "Tes infos, tes associés, l'envoi d'e-mails depuis ton adresse, l'installation sur le téléphone.", "Au début, puis rarement.", "")}
-    ${sectionLexique()}<section class="card aide"><h2>🔒 Ce qui ne se fait jamais sans toi</h2><p>Aucun e-mail ne part tout seul : quittances, relances et courriers s'ouvrent en aperçu, tu vérifies l'adresse et le texte, puis tu confirmes. Les dépenses trouvées dans la banque attendent ta validation.</p></section>
-    </div>`;
+  const E = etapesGuide(), reste = E.some(e => !e.ok);
+  return `<div><a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>✨ Ce que l'appli fait pour toi</h1><p>Touche une ligne pour y aller. Toi, tu valides : rien ne part sans ton accord.</p></div></div></div>
+    ${reste ? blocGuide(false).replace(/<div class="row"><button class="small ghost" onclick="S\.faits\.guideMasque[^<]*<\/button><\/div>/, "").replace('<a class="more" href="#aide">Comment ça marche ?</a>', "") : ""}
+    ${vitrine()}
+    <details class="card pli"><summary><h2>📖 Les mots compliqués, expliqués</h2>${ic("chevR", "s")}</summary>${sectionLexique().replace('<h2>📖 Petit lexique</h2>', "")}</details>
+    <section class="card aide"><h2>🔒 Ce qui ne se fait jamais sans toi</h2><p>Aucun e-mail ne part tout seul (sauf si tu actives l'envoi automatique) : chaque envoi s'ouvre en aperçu et tu confirmes. Les dépenses trouvées dans la banque attendent ta validation. Rien n'est jamais supprimé tout seul.</p></section>
+    ${SB ? `<div class="row" style="margin:6px 0 18px"><button onclick="ouvrirSignalement()">💬 Une question, un souci, une idée ?</button></div>` : ""}`;
 }
 /* ================= Demander une intégration avec une autre appli (Dropbox, banque, signature…) =================
    Enregistrée comme signalement de type "integration" : l'administrateur est prévenu (e-mail + notification) et voit le classement (#integrations). */
@@ -2782,7 +2836,7 @@ async function ouvrirSignalement(type) {
   if (!SB) { toast("Le bouton « ? » marche dans l'appli installée (version en ligne)."); return; }
   const bt = document.getElementById("aideBtn"); if (bt) bt.classList.add("charge");
   CAPTURE = await capturerEcran(); if (bt) bt.classList.remove("charge");
-  modal("Un souci ? Une idée ?", `<div class="full types-sig" role="radiogroup" aria-label="Type de message">
+  modal("Un souci ? Une idée ?", `<a class="full aide-lien" href="#aide" onclick="closeOverlay()">✨ <span><b>Ce que l'appli sait faire</b><small>Toutes les fonctions, une ligne chacune</small></span>${ic("chevR", "chev")}</a><div class="full types-sig" role="radiogroup" aria-label="Type de message">
       <label><input type="radio" name="type" value="bug" ${type === "bug" ? "checked" : ""}><span>🐞 Ça ne marche pas</span></label>
       <label><input type="radio" name="type" value="idee" ${type === "idee" ? "checked" : ""}><span>💡 Une idée</span></label>
       <label><input type="radio" name="type" value="question" ${type === "question" ? "checked" : ""}><span>❓ Une question</span></label></div>
@@ -2865,7 +2919,7 @@ function carteLocataire(b) {
     ${act ? `<a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span class="who"><b>${esc(b.nom)}</b><small>${esc(bienLabel(bi))}</small></span>${ic("chevR", "chev")}</a>
     <div class="tile-state"><i class="dot ${dot}" aria-hidden="true"></i>${etat}<span class="money">${montant}</span></div>`
     : `<a class="tile-head" href="#bail-${b.id}">${avatar(b.nom)}<span class="who"><b>${esc(b.nom)}</b><small><i class="dot ${dot}" aria-hidden="true"></i> ${etat} · ${esc(bienLabel(bi))}</small></span><span class="money">${montant}</span>${ic("chevR", "chev")}</a>`}
-    ${act ? `<div class="row">${act}</div>` : ""}
+    ${act ? `<div class="row">${act.replace(/<button class="ghost"[^>]*>[\s\S]*?<\/button>/g, "")}</div>` : ""}
   </article>`;
 }
 function pageAccueil(T) {
@@ -2873,16 +2927,11 @@ function pageAccueil(T) {
   const vides = S.biens.filter(bi => !bailActifDuBien(bi.id) && !S.baux.some(b => b.bienId === bi.id && P(b.dateEntree) > TODAY));
   const anciens = S.baux.filter(b => b.dateSortie && P(b.dateSortie) < TODAY).sort((a, b) => b.dateSortie.localeCompare(a.dateSortie));
   const mois = S.baux.map(b => echeance(b, CUR)).filter(Boolean), recus = mois.filter(e => e.statut === "paye").length;
-  const items = aFaireCourt(T), vis = items.slice(0, 5);
+  const items = aFaireCourt(T), vis = items.slice(0, 3);
   const attendu = mois.reduce((t, e) => t + e.du, 0), encaisse = mois.reduce((t, e) => t + Math.min(e.paye, e.du), 0);
   const enRetard = mois.filter(e => e.statut === "retard").length, etales = mois.filter(e => e.statut === "etale").length, pct = attendu ? Math.round(encaisse / attendu * 100) : 0;
   const h = new Date().getHours(), salut = h < 5 ? "Bonsoir" : h < 18 ? "Bonjour" : "Bonsoir";
   return `<div class="greet"><h1>${salut}${S.sci.gerant ? " " + esc(String(S.sci.gerant).split(/\s+/)[0]) : ""}</h1><p>${fd(TODAY).replace(/^./, c => c.toUpperCase())} · ${items.length ? `${items.length} chose${items.length > 1 ? "s" : ""} à faire` : "tout est en ordre"}</p></div>
-  ${!S.faits.guideMasque && etapesGuide().some(e => !e.ok) ? guideCompact() : ""}
-  ${bandeauNouveautes()}
-  <section><div class="sec-head"><h2 class="sec">À faire ${items.length ? `<span class="count">${items.length}</span>` : ""}</h2>${items.length > 5 ? `<a class="more" href="#afaire">Tout voir ${ic("chevR", "s")}</a>` : ""}</div>
-    ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}${i.btn2 || (i.btn && i.btn[0].length > 8) ? " deux" : ""}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn || i.btn2 ? `<span class="acts-li">${i.btn2 ? `<button class="small ghost" onclick="${i.btn2[1]}">${i.btn2[0]}</button>` : ""}${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</span>` : ""}</li>`).join("")}</ul>` : `<div class="empty party">🎉 Rien à faire, tout est en ordre.</div>`}
-  </section>
   <section class="hero" aria-label="Loyers du mois">
     <p class="hero-k">Loyers de ${fm(CUR)}</p>
     <p class="hero-amount">${eur(encaisse)} <small>/ ${eur(attendu)}</small></p>
@@ -2892,15 +2941,21 @@ function pageAccueil(T) {
       <button class="cta" onclick="lancerPoint()">⚡ Faire le point</button>
     </div>
   </section>
-  ${SB && ESPACES.length > 1 ? `<a class="card banque-mini" href="#tous"><span class="bq-ico" aria-hidden="true">🏢</span><span class="tx"><small>Tous mes espaces</small><b>${ESPACES.length} espaces sur un écran</b><small>Loyers, retards et urgences de chacun</small></span></a>` : ""}${carteBanqueAccueil()}${carteActivite()}
+  <section><div class="sec-head"><h2 class="sec">À faire ${items.length ? `<span class="count">${items.length}</span>` : ""}</h2>${items.length > 3 ? `<a class="more" href="#afaire">Tout voir ${ic("chevR", "s")}</a>` : ""}</div>
+    ${vis.length ? `<ul class="todo">${vis.map(i => `<li class="${i.prio}${i.btn2 || (i.btn && i.btn[0].length > 8) ? " deux" : ""}"><span class="ico" aria-hidden="true">${i.ico}</span><span class="tx">${i.t}${i.s ? `<small>${i.s}</small>` : ""}</span>${i.btn || i.btn2 ? `<span class="acts-li">${i.btn2 ? `<button class="small ghost" onclick="${i.btn2[1]}">${i.btn2[0]}</button>` : ""}${i.btn ? `<button class="small ${i.prio === "urgent" ? "primary" : ""}" onclick="${i.btn[1]}">${i.btn[0]}</button>` : ""}</span>` : ""}</li>`).join("")}</ul>` : `<div class="empty party">🎉 Rien à faire, tout est en ordre.</div>`}
+  </section>
+  ${!S.faits.guideMasque && etapesGuide().some(e => !e.ok) ? guideCompact() : ""}
   <section><div class="sec-head"><h2 class="sec">Locataires <span class="count">${actifs.length}</span></h2><button class="small" onclick="editBail()">➕ Ajouter</button></div>
-    ${(() => { if (!SB || LECTURE || S.faits.portailsMasque) return ""; const sans = actifs.filter(b => isActive(b) && !b.portail); if (!sans.length) return "";
-      return `<div class="card portails-cta"><span class="nv-ico" aria-hidden="true">🔗</span><span class="tx"><b>${sans.length === actifs.length ? "Aucun locataire n'a encore son espace" : `${sans.length} locataire${sans.length > 1 ? "s n'ont" : " n'a"} pas encore son espace`}</b><small>Quittances, bail, attestation d'assurance, signature à distance, signaler un problème : tout en un lien.</small></span><div class="row"><button class="small primary" onclick="creerTousPortails()">Créer ${sans.length > 1 ? "les " + sans.length + " espaces" : "son espace"}</button><button class="small ghost" onclick="S.faits.portailsMasque=iso(TODAY);save();render()">Plus tard</button></div></div>`; })()}
     <div class="tiles">${actifs.map(b => [b, ({ retard: 0, partiel: 1, etale: 2, avenir: 3, paye: 4 })[(echeance(b, CUR) || {}).statut] ?? 5]).sort((x, y) => x[1] - y[1]).map(x => carteLocataire(x[0])).join("")}
     ${vides.map(bi => `<article class="tile info"><div class="tile-head"><span class="avatar vide" aria-hidden="true">🔑</span><span class="who"><b>${esc(bi.nom)}</b><small>Logement vide</small></span></div><div class="tile-state"><i class="dot"></i>Disponible</div><div class="row"><button class="primary" onclick="editBail(null,'${bi.id}')">➕ Mettre un locataire</button></div></article>`).join("")}</div>
     ${anciens.length ? `<details class="anciens"><summary>${ic("chevR", "s")} Anciens locataires (${anciens.length})</summary><ul class="todo">${anciens.map(b => `<li>${avatar(b.nom)}<span class="tx"><a href="#bail-${b.id}">${esc(b.nom)}</a><small>${esc(bienLabel(bien(b.bienId)))} · parti le ${fds(b.dateSortie)}</small></span>${ic("chevR", "chev")}</li>`).join("")}</ul></details>` : ""}
+    ${(() => { if (!SB || LECTURE || S.faits.portailsMasque) return ""; const sans = actifs.filter(b => isActive(b) && !b.portail); if (!sans.length) return "";
+      return `<div class="card portails-cta"><span class="nv-ico" aria-hidden="true">🔗</span><span class="tx"><b>${sans.length === actifs.length ? "Aucun locataire n'a encore son espace" : `${sans.length} locataire${sans.length > 1 ? "s n'ont" : " n'a"} pas encore son espace`}</b><small>Quittances, bail, attestation d'assurance, signature à distance, signaler un problème : tout en un lien.</small></span><div class="row"><button class="small primary" onclick="creerTousPortails()">Créer ${sans.length > 1 ? "les " + sans.length + " espaces" : "son espace"}</button><button class="small ghost" onclick="S.faits.portailsMasque=iso(TODAY);save();render()">Plus tard</button></div></div>`; })()}
   </section>
-  ${echeancier()}`;
+  ${SB && ESPACES.length > 1 ? `<a class="aide-lien" href="#tous">🏢 <span><b>Tes ${ESPACES.length} espaces sur un écran</b><small>Loyers, retards et urgences de chacun</small></span>${ic("chevR", "chev")}</a>` : ""}${carteBanqueAccueil()}${carteActivite()}
+  ${bandeauNouveautes()}
+  ${echeancier()}
+  <a class="aide-lien" href="#aide">✨ <span><b>Tout ce que l'appli peut faire pour toi</b><small>Quittances automatiques, espace locataire, IA, signature…</small></span>${ic("chevR", "chev")}</a>`;
 }
 /* Les choses à faire, regroupées et résumées en une ligne chacune */
 function aFaireCourt(T) {
@@ -2920,11 +2975,20 @@ function aFaireCourt(T) {
   const o = { urgent: 0, soon: 1, info: 2 };
   return out.sort((a, b) => o[a.prio] - o[b.prio]);
 }
+/* Les tâches du même genre (3 ou plus) sont regroupées sous une ligne repliée : la page reste courte sur téléphone */
+const LIB_TACHES = { q: ["quittances à envoyer", "Envoie-les toutes d'un geste avec le bouton en haut."], imp: ["loyers impayés", ""], regul: ["régularisations de charges à faire", ""], rev: ["loyers à augmenter (révision IRL)", ""], ass: ["attestations d'assurance à demander", ""], vac: ["logements vides", ""], teom: ["ordures ménagères à récupérer", ""], fisc: ["démarches fiscales", ""], rap: ["rappels", ""] };
+function corpsTaches(g) {
+  const ty = t => t.key.split("-")[0], vus = new Set(), out = [];
+  g.forEach(t => { const k = ty(t); if (vus.has(k)) return; const memes = g.filter(x => ty(x) === k);
+    if (memes.length >= 3 && LIB_TACHES[k]) { vus.add(k); out.push(`<details class="grp-t"><summary><span class="ico" aria-hidden="true">${icoTache(t)}</span><span class="tx"><b>${memes.length} ${LIB_TACHES[k][0]}</b>${LIB_TACHES[k][1] ? `<small>${LIB_TACHES[k][1]}</small>` : `<small>Touche pour voir le détail</small>`}</span>${ic("chevR", "chev")}</summary>${memes.map(taskHtml).join("")}</details>`); }
+    else out.push(taskHtml(t)); });
+  return out.join("");
+}
 function pageAFaire(T) {
   const groups = [["urgent", "Urgent"], ["soon", "À faire bientôt"], ["info", "À surveiller"]];
   return `<div class="head"><div><h1>À faire</h1><p>Tout ce qui demande une action, pour les locataires et pour la SCI.</p></div><div class="row"><button onclick="editRappel()">+ Rappel</button></div></div>
   ${(() => { const n = T.filter(t => t.key.startsWith("q-")).length; return n > 1 && peutEnvoyer() ? `<div class="banner q-banner"><span>📄 <span><b>${n} quittances à envoyer</b>, en un seul geste.</span></span><button class="small primary" onclick="envoyerToutesQuittances()">Envoyer les ${n} quittances</button></div>` : ""; })()}
-  <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); const vis = view.afaireTout || g.length <= 60 ? g : g.slice(0, 40); if (!g.length) return ""; const corps = vis.map(taskHtml).join("") + (vis.length < g.length ? `<button class="ghost small" onclick="view.afaireTout=true;render()">Voir les ${g.length - vis.length} autres</button>` : "");
+  <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); const vis = view.afaireTout || g.length <= 60 ? g : g.slice(0, 40); if (!g.length) return ""; const corps = corpsTaches(vis) + (vis.length < g.length ? `<button class="ghost small" onclick="view.afaireTout=true;render()">Voir les ${g.length - vis.length} autres</button>` : "");
     // "À surveiller" : rien d'urgent, replié pour garder la page lisible (déplié s'il n'y a rien d'autre)
     return k === "info" && T.some(t => t.prio !== "info") ? `<details class="surv" ${view.survOuvert ? "open" : ""} ontoggle="view.survOuvert=this.open"><summary class="group-title">${l} (${g.length}) · rien d'urgent</summary>${corps}</details>` : `<p class="group-title">${l} (${g.length})</p>` + corps; }).join("") : `<div class="empty">Rien à faire. Tout est à jour.</div>`}</section>`;
 }
@@ -4425,6 +4489,12 @@ function avanceRemboursee(nom) {
     d => { L.forEach(x => x.rembourseLe = d.date); toast(`✓ ${nom} : remboursé`); }, { ok: "Oui, c'est remboursé" });
 }
 /* Réglages : des rubriques repliées, une ligne chacune ; on touche pour ouvrir */
+/* Les réglages dont on se sert rarement : repliés sous une seule ligne (ouverte d'office si l'un d'eux est demandé) */
+function plusReglages(L, ids) {
+  const h = L.filter(Boolean); if (!h.length) return "";
+  const ouvert = view.plusRgl || ids.some(k => view.rgl && view.rgl[k]);
+  return `<details class="plus-rgl" ${ouvert ? "open" : ""} ontoggle="view.plusRgl=this.open"><summary class="group-title">Plus de réglages (${h.length}) <small>sauvegarde, historique, agenda, Claude…</small>${ic("chevR", "chev")}</summary>${h.join("")}</details>`;
+}
 function reglage(id) {
   view.rgl = Object.assign({}, view.rgl, { [id]: true });
   if (pageCourante() === "reglages") render(); else go("reglages");
@@ -4513,8 +4583,8 @@ function pageReglages() {
   const essentiels = [["sci", rSci], ["banque", rBanque], ["drive", rDrive], ["gmail", rGmail]];
   const aRegler = essentiels.filter(([k]) => pasFait[k]).map(x => x[1]), regles = essentiels.filter(([k]) => !pasFait[k]).map(x => x[1]);
   const groupes = SB ? (aRegler.length ? `<div class="rgl-a-regler">${groupe(`⚡ À régler en premier (${aRegler.length})`, aRegler)}</div>` : "") + groupe("L'essentiel", [...regles, rMembres])
-    + groupe("Automatique", [rQuit, rRel, rNotif, rRappels, rIrl]) + groupe("Ton appli", [rInstall, rMaj, rNouv, rSauv, rHisto])
-    + groupe("En plus", [rAgenda, rClaude, rInteg, rBientot])
+    + groupe("Automatique", [rQuit, rRel, rNotif]) + (estInstallee() ? "" : groupe("Sur ton téléphone", [rInstall]))
+    + plusReglages([estInstallee() ? rInstall : "", rNouv, rSauv, rHisto, rRappels, rAgenda, rIrl, rClaude, rInteg, rMaj, rBientot], ["install", "nouveautes", "sauv", "historique", "rappels", "agenda", "irl", "claude", "integrations", "maj", "bientot"])
     : groupe("Ton compte", compte) + groupe("Outils", outils);
   return `<div class="head"><div><h1>Réglages</h1><p>Touche une rubrique pour l'ouvrir.</p></div></div>
   <div class="rgl-aide ${SB ? "" : "seul"}"><a class="rgl-t" href="#aide"><span class="rgl-i i-aide" aria-hidden="true">💬</span><b>Aide</b><small>Comment ça marche</small></a>${SB ? `<button type="button" class="rgl-t" onclick="ouvrirSignalement('bug')" aria-label="Signaler un problème"><span class="rgl-i i-bug" aria-hidden="true">🐞</span><b>Un souci</b><small>Ça ne marche pas</small></button><button type="button" class="rgl-t" onclick="ouvrirSignalement('idee')" aria-label="Proposer une idée"><span class="rgl-i i-idee" aria-hidden="true">💡</span><b>Une idée</b><small>Améliorer l'appli</small></button>` : ""}</div>
