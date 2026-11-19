@@ -74,6 +74,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 (soir) — banque de Max : reliée mais 0 compte
+- Diagnostic (lecture seule) : SCI NIMAR, CIC, espace "professionnel" : session Enable Banking AUTHORIZED, valable jusqu'au 18/05/2027, mais 0 compte transmis. Application Enable Banking "Gestion locative" en PRODUCTION mais mode restreint (gratuit) : seuls les comptes reliés par Théo dans son espace Enable Banking sont transmis. Autre cause possible : compte de la SCI dans l'espace "particuliers" du CIC.
+- Appli : plus de "✅ Ta banque est reliée" avec 0 compte → fenêtre "Ta banque a dit oui, mais n'a donné aucun compte" + boutons "Réessayer en compte personnel / professionnel" + "Pourquoi ?" ; Réglages › Banque : "⚠️ aucun compte reçu" ; À faire : "Ta banque n'a donné aucun compte" › Régler. Le choix s'appelle maintenant "Espace professionnel / Espace particuliers (même pour une SCI)".
+- Synchro : revenir dans l'appli après plus de 20 s ailleurs (site de la banque, autre appli) relit tout (rafraichirTout) sans recharger.
+- À faire (Théo + Max) : 1) Max réessaie en "Espace particuliers" ; 2) si toujours 0 compte : Théo relie le compte de Max dans https://enablebanking.com/cp/applications › Gestion locative › Link accounts (Max se connecte à son CIC), ou passe en contrat payant Enable Banking pour tous les utilisateurs.
+- Tests banque (17, 23, 35, 42, 51, 55, 58, 66, 67, 69, 70, 71, 72, 83) OK. En ligne.
+
 ### 19/11/2026 (fin d'après-midi) — plus d'impasse après "Compléter avec mes papiers"
 - Constat Théo (GTP) : "Compléter avec mes papiers" → "Rien de sûr trouvé" sans suite, et la tâche "3 fiches à compléter avec tes papiers" revenait. GTP : tous les documents sont des liens Drive.
 - Corrigé : les papiers sont marqués lus dès la fin de la lecture (même si on ferme sans enregistrer) ; "rien trouvé" ouvre directement "✨ Ce qui manque sur tes fiches" (guideFiches) : chaque logement, son %, et un gros bouton par info manquante qui fait l'action (taxe, risques, DPE, prix, e-mail…) ; après "Enregistrer", ce qui manque encore s'affiche aussi ; un papier qui n'a pas pu être ouvert est signalé avec la raison. À faire : quand il n'y a plus de papiers à lire, "N fiches de logement à compléter" › Compléter ouvre ce même écran.

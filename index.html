@@ -1476,7 +1476,9 @@ function sectionBanqueReglages() {
   if (!SB) return `<p class="note">La banque se branche dans l'appli installée.</p>`;
   if (!estProprio()) return `<p class="note">La banque de l'espace est branchée et gérée par le propriétaire (<b>${esc(nomProprio())}</b>).</p>`;
   const D = BANQUE.directe, PL = BANQUE.pennylane, nomsDe = src => (BANQUE.comptesTous || []).filter(c => c.source === src).map(c => esc(c.nom)).join(", ");
-  const blocD = D ? `<div class="bq-bloc ok"><b>🏦 Ta banque en direct</b> <span class="pill ok">référence</span><p class="note">${esc(D.banque || "")}${nomsDe("enablebanking") ? " · " + nomsDe("enablebanking") : ""}. Lue toutes les 6 heures${D.derniere_synchro ? " · dernière " + ilYa(D.derniere_synchro) : ""}. Accord jusqu'au <b>${D.valide_jusqua ? fds(new Date(D.valide_jusqua)) : "?"}</b>.${D.erreur ? `<br>⚠️ ${esc(D.erreur)}` : ""}</p>
+  const zero = D && !(D.comptes || []).length && !nomsDe("enablebanking");
+  const blocD = zero ? `<div class="bq-bloc warn"><b>🏦 ${esc(D.banque || "Ta banque")} : reliée, mais aucun compte reçu</b>${aideZeroCompte(D.banque)}<div class="row"><button class="small ghost" onclick="debrancherDirecte()">Débrancher</button></div></div>`
+    : D ? `<div class="bq-bloc ok"><b>🏦 Ta banque en direct</b> <span class="pill ok">référence</span><p class="note">${esc(D.banque || "")}${nomsDe("enablebanking") ? " · " + nomsDe("enablebanking") : ""}. Lue toutes les 6 heures${D.derniere_synchro ? " · dernière " + ilYa(D.derniere_synchro) : ""}. Accord jusqu'au <b>${D.valide_jusqua ? fds(new Date(D.valide_jusqua)) : "?"}</b>.${D.erreur ? `<br>⚠️ ${esc(D.erreur)}` : ""}</p>
       <div class="row">${D.erreur ? `<button class="small primary" onclick="relierBanque()">Reconnecter ma banque</button>` : `<button class="small" onclick="actualiserDirecte(this)">↻ Relire maintenant</button>`}<button class="small ghost" onclick="debrancherDirecte()">Débrancher</button></div></div>`
     : `<div class="bq-bloc"><b>🏦 Ta banque en direct</b><p class="note">Les virements arrivent tout seuls depuis ta banque (lecture seule, gratuit).</p>${explicationBanque(false)}<div class="row"><button class="small primary" onclick="relierBanque()">🏦 Relier ma banque</button></div></div>`;
   const blocP = PL ? `<div class="bq-bloc ok"><b>📒 Pennylane</b> ${D ? `<span class="pill">pour comparer</span>` : `<span class="pill ok">référence</span>`}<p class="note">${nomsDe("pennylane") || "Branché"}. Lu toutes les heures${PL.derniere_synchro ? " · dernière " + ilYa(PL.derniere_synchro) : ""}.${PL.erreur ? `<br>⚠️ ${esc(PL.erreur)}` : ""}</p>
@@ -1592,6 +1594,12 @@ function appliquerFile() {
 }
 addEventListener("online", () => setTimeout(viderFile, 800));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") setTimeout(viderFile, 800); });
+// Revenir dans l'appli après plus de 20 s ailleurs (site de la banque, autre appli) : tout est relu, sans recharger la page
+let CACHEE_LE = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") { CACHEE_LE = Date.now(); return; }
+  if (CACHEE_LE && Date.now() - CACHEE_LE > 20000 && SB && ESPACE && MODE === "partage" && document.getElementById("overlay").hidden) { CACHEE_LE = 0; rafraichirTout().then(() => render(), () => {}); }
+});
 function pageConnexion() {
   const e = CONNEXION;
   return `<div class="auth"><div class="auth-card">
@@ -2192,6 +2200,7 @@ function taches() {
     const fin = BANQUE.directe && BANQUE.directe.valide_jusqua ? new Date(BANQUE.directe.valide_jusqua) : null, j = fin ? Math.ceil((fin - TODAY) / 864e5) : 99;
     if (BANQUE.lien.erreur || j <= 15) add({ key: "bq-renouv-" + (fin ? iso(fin) : "err"), prio: BANQUE.lien.erreur || j <= 3 ? "urgent" : "soon", date: TODAY, t: BANQUE.lien.erreur ? "🏦 Ta banque ne répond plus : reconnecte-la" : `🏦 Renouvelle l'accès à ta banque (fin ${j > 0 ? "dans " + j + " jour" + (j > 1 ? "s" : "") : "aujourd'hui"})`, d: BANQUE.lien.erreur ? esc(BANQUE.lien.erreur) : "Les banques demandent ton accord tous les 6 mois. 1 minute : tu te reconnectes sur le site de ta banque.", acts: [["Reconnecter", "relierBanque()", "primary"]] });
   }
+  if (SB && BANQUE.directe && !(BANQUE.directe.comptes || []).length && !BANQUE.directe.erreur && estProprio()) add({ key: "bq-zero", prio: "soon", date: TODAY, t: `Ta banque (${esc(BANQUE.directe.banque || "")}) n'a donné aucun compte`, d: "Les loyers ne peuvent pas se cocher tout seuls. Souvent : choisir l'espace \"particuliers\" au lieu de \"professionnel\".", acts: [["Régler", "reglage('banque')", "primary"]] });
   if (SB && BANQUE.directe && BANQUE.pennylane && estProprio()) { let c = null; try { c = comparaisonBanques(); } catch (e) {} if (c && c.ecarts) add({ key: "bq-ecarts-" + c.ecarts + "-" + c.periode, prio: "soon", date: TODAY, done: true, t: `🔎 ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""} entre ta banque et Pennylane`, d: `Sur la période ${c.periode} : ${c.seulBanque.length} seulement à la banque, ${c.seulPennylane.length} seulement dans Pennylane.`, acts: [["Voir", "voirComparaison()", "primary"]] }); }
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
@@ -4196,7 +4205,7 @@ async function relierBanque() {
   modal("🏦 Relier ma banque", `<div class="full">${grosMsg("attention", "Lecture seule, par la voie officielle", "Tu te connectes sur le site de ta banque (l'appli ne voit jamais tes codes). L'appli lit seulement les soldes et les opérations : elle ne peut faire aucun virement. Accord valable 6 mois, renouvelable.")}</div>
     <div class="full">${explicationBanque(false)}</div>
     <label class="fl full">Ta banque<input id="bq_q" type="search" placeholder="Crédit Mutuel, BNP, Boursorama…" autocomplete="off"></label><div class="full" id="bq_liste"><p class="note">Chargement des banques…</p></div>
-    ${sel("Type de compte", "type", estPerso() ? "personal" : "business", [["business", "Compte professionnel (SCI, société)"], ["personal", "Compte personnel"]])}
+    ${sel("Ton accès en ligne à la banque", "type", BQ_TYPE || (estPerso() ? "personal" : "business"), [["business", "Espace professionnel (entreprises, SCI)"], ["personal", "Espace particuliers (même pour une SCI)"]])}
     <p class="full note small">Gratuit, avec Enable Banking (prestataire agréé). ${BANQUE.pennylane ? "Pennylane reste branché : l'appli compare les deux et te signale les décalages." : ""}</p>`,
     (d, f) => { const b = f.querySelector("input[name=bq]:checked"); if (!b) { toast("Choisis ta banque."); return false; } setTimeout(() => partirVersBanque(b.value, d.type), 50); return true; }, { ok: "Continuer vers ma banque", lecture: true,
     after: async () => {
@@ -4206,6 +4215,13 @@ async function relierBanque() {
       document.getElementById("bq_q").addEventListener("input", liste); liste();
     } });
 }
+/* Banque reliée sans aucun compte : les deux causes connues, et le bouton qui règle la plus probable */
+function aideZeroCompte(banque) {
+  return `<p class="note">La banque a dit oui, mais n'a transmis aucun compte à l'appli.</p>
+    <div class="row"><button class="small primary" onclick="BQ_TYPE='personal';relierBanque()">Réessayer en "compte personnel"</button><button class="small" onclick="BQ_TYPE='business';relierBanque()">Réessayer en "professionnel"</button></div>
+    <details class="pq"><summary>Pourquoi ?</summary><p>1. Beaucoup de SCI ont leur compte dans l'espace "particuliers" de la banque : il faut alors choisir "compte personnel". 2. Sur l'écran de ta banque, coche bien le compte de la SCI quand elle te demande lesquels partager. 3. Le service bancaire de l'appli est encore en mode limité : si ça ne marche toujours pas, préviens Théo, il doit autoriser ton compte chez Enable Banking.</p></details>`;
+}
+let BQ_TYPE = "";
 async function partirVersBanque(nom, type) {
   toast("Ouverture de ta banque…");
   try { const j = await fnBanque({ action: "connecter", espace: ESPACE, banque: nom, type }); location.href = j.url; } catch (e) { toast(e.message); }
@@ -4219,6 +4235,7 @@ async function retourBanque() {
     const j = await fnBanque({ action: "valider", code: r.code, state: r.state });
     if (j.espace && j.espace !== ESPACE) await ouvrirEspace(j.espace);
     await chargerBanque(false);
+    if (!j.comptes) { modal("🏦 Aucun compte reçu", `<div class="full">${grosMsg("attention", "Ta banque a dit oui, mais n'a donné aucun compte", "")}</div><div class="full">${aideZeroCompte()}</div>`, () => true, { ok: "Fermer", lecture: true }); return; }
     modal("🏦 Banque reliée", `<div class="full">${grosMsg("ok", "✅ Ta banque est reliée", `${j.comptes} compte${j.comptes > 1 ? "s" : ""} · ${j.operations} opérations lues. Les loyers reçus se cochent tout seuls, la trésorerie part de ton vrai solde.${j.erreur ? " ⚠️ " + esc(j.erreur) : ""}`)}</div>`, () => true, { ok: "Super", lecture: true });
   } catch (e) { modal("🏦 Banque pas reliée", `<div class="full">${grosMsg("stop", "Ça n'a pas marché", esc(e.message))}</div>`, () => true, { ok: "Fermer", lecture: true }); }
 }
@@ -4710,7 +4727,7 @@ function pageReglages() {
     rubrique("membres", "👥", "Membres", "Qui voit l'espace · inviter un associé ou le comptable", sansCarte(sectionMembres())),
     estProprio() ? rubrique("drive", LOGO_DRIVE, "Google Drive", resumeDrive(), sectionDriveReglages())
       : rubrique("drive", LOGO_DRIVE, "Google Drive", `Géré par ${esc(nomProprio())}`, `<p class="note">Le Drive de l'espace est connecté et rangé par le propriétaire de l'espace (<b>${esc(nomProprio())}</b>), pour que les documents restent au bon endroit. Tu n'as rien à connecter.</p>`),
-    rubrique("banque", "🏦", "Banque", [BANQUE.directe ? "Banque en direct" + (BANQUE.directe.erreur ? " ⚠️" : "") : "", BANQUE.pennylane ? "Pennylane" + (BANQUE.pennylane.erreur ? " ⚠️" : "") : ""].filter(Boolean).join(" + ") + (BANQUE.directe && BANQUE.pennylane ? (() => { const c = comparaisonBanques(); return c ? (c.ecarts ? ` · ⚠️ ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""}` : " · ✅ concordent") : ""; })() : "") || "Pas branchée · ta banque, Pennylane ou relevé", sectionBanqueReglages()),
+    rubrique("banque", "🏦", "Banque", [BANQUE.directe ? "Banque en direct" + (BANQUE.directe.erreur ? " ⚠️" : !(BANQUE.directe.comptes || []).length ? " ⚠️ aucun compte reçu" : "") : "", BANQUE.pennylane ? "Pennylane" + (BANQUE.pennylane.erreur ? " ⚠️" : "") : ""].filter(Boolean).join(" + ") + (BANQUE.directe && BANQUE.pennylane ? (() => { const c = comparaisonBanques(); return c ? (c.ecarts ? ` · ⚠️ ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""}` : " · ✅ concordent") : ""; })() : "") || "Pas branchée · ta banque, Pennylane ou relevé", sectionBanqueReglages()),
     rubrique("gmail", LOGO_GMAIL, "Envoi des e-mails", GMAIL ? (GMAIL.mode === "google" ? `Depuis ${esc(GMAIL.adresse)}` : "⚠️ À rebrancher avec Google (plus sûr)") : "Pas encore branché sur ton Gmail", sansCarte(sectionGmail())),
     estProprio() && SB ? rubrique("quittances", "🧾", "Quittances automatiques", S.sci.quittanceAuto ? "Activées · envoyées dès que le loyer arrive" : "Arrêtées · proposées en un geste quand le loyer arrive", sansCarte(sectionQuittanceAuto())) : "",
     estProprio() && SB ? rubrique("relances", "🔁", "Relances automatiques", S.sci.relanceAuto ? "Activées · J+3 gentil, J+8 ferme" : "Arrêtées · tu relances toi-même", sansCarte(sectionRelanceAuto())) : "",
