@@ -1055,7 +1055,7 @@ async function bootSupabase() {
   let session = null;
   try { session = (await SB.auth.getSession()).data.session; } catch (e) {}
   if (!session) { MODE = "connexion"; render(); return; }
-  const copie = lireCache(session.user.id);
+  const copie = lireCacheSession(session.user.id);
   if (copie) { SB_USER = session.user; ouvrirDepuisCache(copie); return apresConnexion(session.user, true); }
   await apresConnexion(session.user);
 }
@@ -1063,7 +1063,7 @@ async function bootSupabase() {
    puis on les remet à jour en ligne sans bloquer. Effacées à la déconnexion. */
 const CACHE_KEY = "gestion-sci-cache";
 let CACHE_T = null, APERCU = false;
-function lireCache(userId) {
+function lireCacheSession(userId) {
   try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); return c && c.v === 1 && c.uid === userId && c.espace && c.synced ? c : null; } catch (e) { return null; }
 }
 function memoriserCache() {
@@ -1109,13 +1109,16 @@ async function ouvrirEspace(id, enFond) {
   if (enFond) {
     if (!ok) return;
     // On remet à jour ce qui a changé depuis la dernière ouverture, sans toucher à ce que tu viens de modifier
-    const file = lireFile(), enCours = k => (ECHOS[k] && ECHOS[k].size) || !!file[k], vus = new Set();
+    // "en cours" = dans la file d'attente, ou écrite par nous il y a moins de 8 s (pas encore arrivée au serveur).
+    // Au-delà, la version du serveur gagne : sinon une modif d'un associé ou de Claude sur cette fiche serait ignorée.
+    const file = lireFile(), enCours = k => !!file[k] || (ECHOS[k] && ECHOS[k].size && Date.now() - (ECHOS_T[k] || 0) < 8000), vus = new Set();
     lignes.forEach(l => { const k = l.coll + "/" + l.doc_id; vus.add(k); if (!enCours(k)) appliquerLigne(l); });
     Object.keys(synced).forEach(k => { if (vus.has(k) || enCours(k) || k === "meta/main") return; const i = k.indexOf("/"), coll = k.slice(0, i), did = k.slice(i + 1); delete synced[k]; S[coll] = (S[coll] || []).filter(x => x.id !== did); });
     APERCU = false;
   } else { const file = lireFile(); lignes.forEach(l => { if (!file[l.coll + "/" + l.doc_id]) appliquerLigne(l); }); appliquerFile(); }
   const esp = ESPACES.find(e => e.id === id);
   if (esp && !S.sci.nom) S.sci.nom = esp.nom;
+  if (NV.etat === "inconnu") setTimeout(chargerNouveautes, 3000); // pour la pastille "🆕" de Réglages (plus de bandeau sur l'accueil)
   SB_CANAL = SB.channel("docs-" + id)
     .on("postgres_changes", { event: "*", schema: "public", table: "docs", filter: "espace_id=eq." + id }, p => {
       if (ESPACE !== id) return;
@@ -1526,7 +1529,8 @@ let ECRITURE = Promise.resolve();
    sinon un ancien écho pourrait écraser une modification plus récente faite entre-temps. */
 const ECHOS = {};
 const canon = v => Array.isArray(v) ? "[" + v.map(canon).join(",") + "]" : v && typeof v === "object" ? "{" + Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => JSON.stringify(k) + ":" + canon(v[k])).join(",") + "}" : JSON.stringify(v === undefined ? null : v);
-function noterEcho(k, v) { const c = canon(v); (ECHOS[k] = ECHOS[k] || new Set()).add(c); setTimeout(() => { ECHOS[k] && ECHOS[k].delete(c); }, 120000); }
+const ECHOS_T = {}; // heure de notre dernière écriture de chaque fiche
+function noterEcho(k, v) { const c = canon(v); (ECHOS[k] = ECHOS[k] || new Set()).add(c); ECHOS_T[k] = Date.now(); setTimeout(() => { ECHOS[k] && ECHOS[k].delete(c); }, 120000); }
 const estMonEcho = (k, v) => !!(ECHOS[k] && ECHOS[k].has(canon(v)));
 /* ================= Ne rien perdre : file des modifications gardée sur l'appareil =================
    Chaque modification est d'abord notée dans la file (localStorage, par espace), puis envoyée.
@@ -2730,10 +2734,11 @@ function render0() {
   // Fluidité : on ne redessine que si quelque chose a changé, et les blocs que la personne a ouverts restent ouverts
   const neuf = banner + html;
   if (app.__html !== neuf || app.__premier !== app.firstChild) {
-    const cle = d => d.id || ((d.querySelector("summary") || {}).textContent || "").replace(/[^A-Za-zÀ-ÿ]+/g, " ").trim().slice(0, 80); // seulement les lettres : nombres et icônes du titre peuvent changer
-    const ouverts = app.__page === h ? [...app.querySelectorAll("details[open]:not([ontoggle]):not(.menu-plus)")].map(cle) : [];
+    // seulement les lettres du titre (nombres et icônes peuvent changer) ; un menu "Plus" est aussi repéré par sa place dans la page
+    const cle = d => d.id || (d.classList.contains("menu-plus") ? "menu" + [...app.querySelectorAll("details.menu-plus")].indexOf(d) + ":" : "") + ((d.querySelector("summary") || {}).textContent || "").replace(/[^A-Za-zÀ-ÿ]+/g, " ").trim().slice(0, 80);
+    const ouverts = app.__page === h ? [...app.querySelectorAll("details[open]:not([ontoggle])")].map(cle) : [];
     app.innerHTML = neuf; app.__html = neuf; app.__premier = app.firstChild;
-    if (ouverts.length) app.querySelectorAll("details:not([ontoggle]):not(.menu-plus)").forEach(d => { if (!d.open && ouverts.includes(cle(d))) d.open = true; });
+    if (ouverts.length) app.querySelectorAll("details:not([ontoggle])").forEach(d => { if (!d.open && ouverts.includes(cle(d))) d.open = true; });
   }
   app.__page = h;
   if (h.startsWith("edl-") || h.startsWith("bail-") || page === "biens") setTimeout(hydraterPhotos, 0);
@@ -5648,7 +5653,7 @@ async function signalerLocataire(f) {
    d'un locataire → sa date de fin ; facture, assurance, charges de copropriété → nouvelle dépense. Toujours vérifié avant d'enregistrer. */
 async function lireDocIA(src) {
   if (!SB || !estProprio()) { toast("L'IA est réservée au propriétaire de l'espace."); return; }
-  if (IA.credits && iaBloquee(IA.credits) || (IA.credits && !IA.credits.illimite && IA.credits.docs_restants <= 0)) { grosMsgToast(); return; }
+  if (docsBloques(IA.credits)) { grosMsgToast(); return; }
   let bl, type, nom, bienId = "", bailId = "";
   try {
     if (src.fichier) {
@@ -5673,7 +5678,7 @@ async function corpsLectureIA(bl, type, nom) {
   else { const r = /^image\/(jpeg|png|webp)$/.test(type) && bl.size < 3e6 ? bl : await reduirePhoto(bl); corps.fichier_b64 = await b64Blob(r); corps.type = r.type || "image/jpeg"; }
   return corps;
 }
-const iaSansCredit = () => IA.credits && (iaBloquee(IA.credits) || (!IA.credits.illimite && IA.credits.docs_restants <= 0));
+const iaSansCredit = () => docsBloques(IA.credits);
 function grosMsgToast() { modal("🤖 Lecture par l'IA", `<div class="full">${grosMsg("stop", "⛔ Plus de lecture de document ce mois-ci", "Tes crédits reviennent le 1er du mois. En attendant, remplis à la main.")}</div>`, () => true, { ok: "Fermer", lecture: true }); }
 const resteDocsTxt = c => c && !c.illimite && c.docs_restants !== undefined ? ` Il te reste ${c.docs_restants} lecture${c.docs_restants > 1 ? "s" : ""} ce mois-ci.` : "";
 const dateOk = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") ? v : "";
@@ -6389,7 +6394,8 @@ function chargerCreditsIA() {
 }
 const plur = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 const resteIA = c => !c ? "" : c.illimite ? "Analyses illimitées pour toi." : `Il te reste ${plur(c.mois_restant, "analyse")} ce mois-ci (${plur(Math.min(c.jour_restant, c.mois_restant), "analyse")} aujourd'hui).`;
-const iaBloquee = c => c && !c.illimite && (c.pause || c.mois_restant <= 0 || c.jour_restant <= 0);
+const iaBloquee = c => c && !c.illimite && (c.pause || c.mois_restant <= 0 || c.jour_restant <= 0); // analyses du Drive
+const docsBloques = c => !!(c && !c.illimite && (c.pause || c.docs_restants <= 0)); // lectures de papiers : un quota à part
 const msgBlocage = c => c.pause ? grosMsg("stop", "⛔ L'IA est en pause pour tout le monde", "Le budget de l'appli pour ce mois est atteint. Elle revient le 1er du mois.") : c.mois_restant <= 0 ? grosMsg("stop", `⛔ Tu as utilisé tes ${c.par_mois} analyses de ce mois-ci`, "Elles reviennent le 1er du mois. Tout ce que l'IA a déjà proposé reste disponible ci-dessous.") : grosMsg("stop", `⛔ Tu as utilisé tes ${c.par_jour} analyses d'aujourd'hui`, "Reviens demain. Tout ce que l'IA a déjà proposé reste disponible ci-dessous.");
 function donneesIA() {
   // Pour chaque dossier : ses fichiers directs ET tout ce qu'il y a dans ses sous-dossiers (sinon un dossier "Lot 1" dont les papiers
@@ -6556,7 +6562,7 @@ function bailDansDrive(nom) {
 }
 async function creerDepuisBailDrive(fid, bienId) {
   const f = DOCS.fichiers.find(x => x.id === fid); if (!f) return;
-  if (iaBloquee(IA.credits) || (IA.credits && !IA.credits.illimite && IA.credits.docs_restants <= 0)) { toast("Plus de lecture de document par l'IA ce mois-ci : remplis la fiche à la main."); editBail(null, bienId); return; }
+  if (docsBloques(IA.credits)) { toast("Plus de lecture de document par l'IA ce mois-ci : remplis la fiche à la main."); editBail(null, bienId); return; }
   toast("🤖 L'IA lit le bail « " + f.titre + " »… (30 secondes environ)");
   try {
     const bl = await blobDrive({ id: f.id, mimeType: f.type, partage: f.partage }), type = /google-apps/.test(f.type) ? "application/pdf" : (f.type || bl.type);

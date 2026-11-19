@@ -18,7 +18,7 @@ const sql = q => JSON.parse(execSync(`python3 ${__dirname}/sql.py ${JSON.stringi
   await p.evaluate(() => { S.biens.push({ id: 'b1', nom: 'T2', adresse: '1 rue', cp: '35000', ville: 'Rennes' }); S.baux.push({ id: 'l1', bienId: 'b1', nom: 'Jean Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save(); go('locataires'); render(); });
   await p.waitForTimeout(3000); await p.evaluate(() => render());
   t(!(await p.locator('.nv-bandeau').count()), 'accueil : pas de bandeau de nouveautés (Théo : "ça va les saouler")');
-  const pastille = async () => { await p.evaluate(() => { go('reglages'); render(); }); await p.waitForTimeout(400); return (await p.locator('details.plus-rgl summary').innerText().catch(() => '')).replace(/\n/g, ' '); };
+  const pastille = async () => { await p.evaluate(() => { go('reglages'); render(); }); await p.waitForTimeout(1500); return p.evaluate(() => ((document.querySelector('details.plus-rgl summary') || {}).textContent || '').replace(/\s+/g, ' ')); };
   let ban = await pastille();
   t(/🆕 \d+ nouveautés?/.test(ban), 'Réglages › Plus de réglages : pastille "🆕 N nouveautés" (' + ban + ')');
   await p.evaluate(() => { go('nouveautes'); render(); }); await p.waitForTimeout(1500);

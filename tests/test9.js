@@ -39,7 +39,7 @@ const log = (...a) => console.log(...a);
   const ecrit = await B.evaluate(async (id) => { const r = await SB.from('docs').insert({ espace_id: id, coll: 'biens', doc_id: 'pirate', data: { id: 'pirate' } }); return r.error ? 'refusé: ' + r.error.code : 'ACCEPTÉ'; }, await A.evaluate(() => ESPACE));
   log('B écrit chez A ?', ecrit);
   // A invite B
-  await A.evaluate(() => location.hash = 'reglages'); await A.waitForTimeout(1200);
+  await A.evaluate(() => reglage('membres')); await A.waitForTimeout(1200); // rubrique repliée : on l'ouvre comme le fait un utilisateur
   await A.fill('#inv_email', 'test-b@gestion-test.fr'); await A.click('form.row button.primary'); await A.waitForTimeout(1500);
   await A.screenshot({ path: out + '/4-membres.png', fullPage: true });
   // B se reconnecte : rejoint l'espace
