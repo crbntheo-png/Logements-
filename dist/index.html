@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "923c333", "date": "2026-11-19T12:40"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "17464b7", "date": "2026-11-19T12:48"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -5156,7 +5156,28 @@ function finBail(id) {
   const b = bail(id);
   modal("Départ du locataire", `<p class="full note">Le locataire a donné son préavis (1 mois en meublé ou en zone tendue, 3 mois sinon en location vide) ? Indiquez la date de sortie. Le dernier loyer sera calculé au prorata.</p>
     ${fld("Date de sortie (remise des clés)", "dateSortie", b.dateSortie || "", "date", "", "required")}${fld("Préavis reçu le", "preavisRecu", b.preavisRecu, "date")}`,
-    d => { Object.assign(bail(id), d); toast("Départ noté : le parcours de départ est sur sa fiche"); });
+    d => { Object.assign(bail(id), d); recalculerTaxesDe(bail(id)); toast("Départ noté : le parcours de départ est sur sa fiche"); });
+}
+/* La part d'ordures ménagères dépend des jours passés dans le logement : on la recalcule quand une date d'entrée ou de sortie change */
+function recalculerTaxesDe(b) {
+  const bi = bien(b.bienId), im = immeubleDe(bi), ids = [b.bienId, im && im.id].filter(Boolean);
+  (S.taxes || []).filter(t => ids.includes(t.bienId)).forEach(t => enregistrerTaxe(t.bienId, t.annee, t.total, t.teom));
+}
+/* Au départ : sa part d'ordures ménagères de l'année (avis connu → lettre ; sinon estimation à garder sur le dépôt) */
+function teomDepart(b) {
+  if (!b.dateSortie) return null;
+  const yy = P(b.dateSortie).getFullYear(), bi = bien(b.bienId), im = immeubleDe(bi), ids = [b.bienId, im && im.id].filter(Boolean);
+  const t = (S.taxes || []).find(x => ids.includes(x.bienId) && +x.annee === yy), p = t && (partsTeomBien(t.bienId, yy, t.teom).parts.find(x => x.bailId === b.id) || t.parts.find(x => x.bailId === b.id)); // calcul à jour (départ noté après la taxe, ou par Claude)
+  if (t && p) { const st = t.parts.find(x => x.bailId === b.id) || {}; return { connu: true, t, p: { ...p, payeLe: st.payeLe, renonce: st.renonce, demandeLe: st.demandeLe }, montant: p.montant }; }
+  const der = (S.taxes || []).filter(x => ids.includes(x.bienId) && +x.annee < yy).sort((x, y) => y.annee - x.annee)[0]; if (!der) return { aucune: true };
+  const teomBien = der.bienId === b.bienId ? +der.teom : r2(+der.teom * quotePart(bi)), d0 = new Date(yy, 0, 1), a = P(b.dateEntree) > d0 ? P(b.dateEntree) : d0;
+  const nbJ = daysBetween(d0, new Date(yy, 11, 31)) + 1, jours = Math.max(0, daysBetween(a, P(b.dateSortie)) + 1);
+  return { estime: true, annee: der.annee, montant: r2(teomBien * jours / nbJ), jours };
+}
+function retenueTeom(bailId, montant, annee) {
+  const b = bail(bailId); b.retenues = (b.retenues || []).filter(x => !/ordures/i.test(x.l)).concat([{ l: `Ordures ménagères ${P(b.dateSortie).getFullYear()} (estimation d'après ${annee}, à régulariser à réception de l'avis)`, v: montant }]);
+  b.depotRetenu = r2(b.retenues.reduce((s, x) => s + x.v, 0)); b.depotMotif = b.retenues.map(x => `${x.l} : ${eur(x.v)}`).join("\n");
+  save(); render(); toast(`${eur(montant)} gardés sur le dépôt pour les ordures ménagères`);
 }
 function depotRendu(id) { const b = bail(id); modal("Dépôt de garantie rendu", `${fld("Rendu le", "depotRestitue", iso(TODAY), "date")}${fld("Montant retenu (€) si dégradations", "depotRetenu", b.depotRetenu || 0, "number")}${area("Motif des retenues (justificatifs à fournir)", "depotMotif", b.depotMotif)}`, d => Object.assign(b, d)); }
 
@@ -7213,8 +7234,12 @@ function etapesDepart(b) {
     { k: "dep-edl", ok: !!s2, t: "État des lieux de sortie", d: "Comparé pièce par pièce à celui d'entrée. Relève les compteurs, récupère toutes les clés.", btn: s2 ? ["Ouvrir", `go('edl-${s2 ? s2.id : ""}')`] : ["Commencer", `nouvelEdl('${b.id}','sortie')`] },
     { k: "dep-compare", ok: !!b.retenues || faitBail(b, "dep-compare"), t: "Comparer entrée et sortie, calculer les retenues", d: "Seulement les dégâts au-delà de l'usure normale, avec devis ou factures.", btn: ["Comparer", `comparerEdl('${b.id}')`] },
     { k: "dep-loyer", ok: !ech || ech.statut === "paye", t: "Dernier loyer (au prorata)", d: ech ? `${eur(ech.du)} pour ${ech.to - ech.from + 1} jours en ${fm(ech.m)}.` : "Indique la date de sortie.", btn: null },
+    (() => { const x = teomDepart(b); if (!x) return null;
+      if (x.aucune) return { k: "dep-teom", ok: faitBail(b, "dep-teom"), t: "Sa part d'ordures ménagères", d: "Renseigne la taxe foncière du logement : l'appli calcule sa part au prorata de ses jours.", btn: ["Renseigner la taxe", `taxeFonciere('${b.bienId}')`] };
+      if (x.connu) return { k: "dep-teom", ok: !!(x.p.payeLe || x.p.renonce || x.p.demandeLe) || faitBail(b, "dep-teom"), t: `Sa part d'ordures ménagères ${x.t.annee} : ${eur(x.montant)}`, d: `Calculée sur ${x.p.jours} jours, jusqu'à son départ. Envoie-lui la lettre, ou garde-la sur le dépôt.`, btn: ["Préparer la lettre", `recalculerTaxesDe(bail('${b.id}'));save();docTeom('${x.t.id}','${b.id}')`] };
+      return { k: "dep-teom", ok: (b.retenues || []).some(r => /ordures/i.test(r.l)) || faitBail(b, "dep-teom"), t: `Sa part d'ordures ménagères : environ ${eur(x.montant)}`, d: `L'avis ${P(b.dateSortie).getFullYear()} n'est pas encore arrivé : estimation d'après celui de ${x.annee} (${x.jours} jours). Tu peux la garder sur le dépôt et régulariser à réception de l'avis.`, btn: ["Garder sur le dépôt", `retenueTeom('${b.id}',${x.montant},${x.annee})`] }; })(),
     { k: "dep-depot", ok: !!b.depotRestitue, t: `Rendre le dépôt de garantie${+b.depot > 0 ? " (" + eur(b.depot) + ")" : ""}`, d: "1 mois après la remise des clés si tout va bien, 2 mois s'il y a des retenues. Sinon pénalité de 10 % du loyer par mois de retard.", btn: ["C'est rendu", `depotRendu('${b.id}')`] }
-  ];
+  ].filter(Boolean);
 }
 function parcoursBail(b) {
   const arr = P(b.dateEntree), recent = daysBetween(arr, TODAY) <= 75, dep = !!b.dateSortie && !b.depotRestitue && P(b.dateSortie) >= addDays(TODAY, -90);

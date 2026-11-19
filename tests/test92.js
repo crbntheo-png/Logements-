@@ -25,6 +25,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
     let r = await call('modifier_locataire', { locataire: 'Eva Dumas', date_entree: '2026-06-10', type_bail: 'meuble', jour_paiement: 10, suivi_depuis: '2026-12' });
     t(!r.err && r.j.champs.length === 4, 'modifier_locataire : date d\'entrée, type, jour, suivi (' + JSON.stringify(r.j) + ')');
     r = await call('modifier_locataire', { locataire: 'Eva Dumas', date_entree: '10/06/2026' }); t(r.err, 'date mal écrite refusée');
+    r = await call('creer_locataire', { nom: 'Sans Date', logement: 'T2 Lilas bis', loyer_hc: 400 }); t(r.err && /date_entree/.test(JSON.stringify(r.j)), 'créer un locataire sans sa vraie date : refusé');
     r = await call('modifier_logement', { logement: 'T2 Lilas', meuble: true, dpe: 'D', diag_elec_fin: '2027-02-01', pno_echeance: '2027-01-15' });
     t(!r.err && /meublé/.test(JSON.stringify(r.j)), 'modifier_logement : meublé, DPE, diagnostic, assurance');
     r = await call('creer_immeuble', { nom: 'Parties communes Lilas', lots: ['T2 Lilas', 'T3 Lilas'], prix_achat: 300000 });

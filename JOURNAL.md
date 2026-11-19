@@ -74,6 +74,10 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 — retours de Max revérifiés point par point ; départ : part d'ordures ménagères
+- Ajouté : étape "Sa part d'ordures ménagères" dans le parcours de départ (teomDepart) : avis de l'année connu → montant au prorata jusqu'à la sortie + lettre ; sinon estimation d'après le dernier avis, bouton "Garder sur le dépôt" (retenue). Les parts sont recalculées quand on note un départ (recalculerTaxesDe).
+- Test93 (nouveau) : révision IRL (date anniversaire, nouveau loyer, courrier), ordures ménagères par an par défaut, départ (lettre du 01/01 au jour du départ, estimation sur le dépôt), alertes. Test92 : Claude refuse un locataire sans vraie date.
+
 ### 19/11/2026 — retours de Max : fiche immeuble, Claude qui corrige, vraies dates, meublé, alertes
 - Vraie date d'entrée : nouveau locataire = date vide et obligatoire (plus la date du jour qui créait prorata et impayés) + aide sur "Suivre les loyers à partir de".
 - Meublé/vide : changer le logement change le bail du locataire en place (vide ↔ meublé ; étudiant/mobilité inchangés), avec un message.
