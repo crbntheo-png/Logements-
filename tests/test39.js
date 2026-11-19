@@ -19,6 +19,8 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
   const espace = await p.evaluate(() => ESPACE);
   await p.evaluate(() => { S.biens.push({ id: 'b1', nom: 'Studio', type: 'Studio', meuble: 'vide' }); save(); }); await p.waitForTimeout(1500);
   await p.evaluate(() => reglage('sauv')); await p.waitForTimeout(1500);
+  ok('sans Gmail branché : "Branche d\'abord ton Gmail"', await p.evaluate(() => /Branche d'abord ton Gmail/.test(document.querySelector('#rgl-sauv').innerText)));
+  await p.evaluate(() => { GMAIL = { mode: 'google', adresse: 'test-a@gestion-test.fr' }; render(); }); await p.waitForTimeout(800); // la copie part du Gmail de chacun (simulé ici : aucun envoi réel)
   ok('bouton "M\'envoyer une copie chaque semaine par e-mail"', await p.evaluate(() => /M'envoyer une copie chaque semaine par e-mail/.test(document.querySelector('#rgl-sauv').innerText)));
   await p.click('#rgl-sauv button:has-text("M\'envoyer une copie")'); await p.waitForTimeout(4000);
   await p.screenshot({ path: OUT + '/1-apercu.png' });

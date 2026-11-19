@@ -401,6 +401,17 @@ input.auto, select.auto, textarea.auto { background: var(--warn-soft); }
 .compl-cta .tx small { color: var(--ink-2); font-size: .8rem; line-height: 1.35; }
 @media (max-width: 480px) { .compl-cta { flex-direction: column; align-items: stretch; } }
 .compl-h { margin: 12px 0 4px; font-size: .95rem; }
+ol.dem { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
+.dem-e { display: flex; gap: 12px; background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-1); padding: 14px; }
+.dem-e .num { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--surface-2); color: var(--muted); }
+.dem-e.ok .num { background: var(--ok-soft); color: var(--ok); } .dem-e.ok .tx > b { color: var(--muted); }
+.dem-e.cur { outline: 2px solid var(--accent); } .dem-e.cur .num { background: var(--accent); color: var(--accent-ink); }
+.dem-e:not(.ok):not(.cur) { opacity: .6; }
+.dem-e .tx { flex: 1; display: grid; gap: 3px; min-width: 0; } .dem-e .tx > small { color: var(--ink-2); font-size: .82rem; }
+.dem-c { margin-top: 10px; display: grid; gap: 8px; } .dem-c .ia-card { box-shadow: none; padding: 0; border: 0; }
+.dem-recap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; text-align: center; }
+.dem-recap b { display: block; font-size: 1.3rem; } .dem-recap span { font-size: .75rem; color: var(--ink-2); }
+@media (max-width: 420px) { .dem-recap { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .doc-tuile .t-manque { color: var(--warn); font-weight: 650; } .doc-tuile .t-ok { color: var(--ok); font-weight: 650; }
 ul.compl li label.chk { display: flex; gap: 12px; align-items: flex-start; width: 100%; }
 ul.compl li .tx { display: grid; gap: 2px; } ul.compl li .tx small { color: var(--ink-2); }
@@ -2667,6 +2678,7 @@ function render0() {
   else if (h.startsWith("bien-")) html = pageBien(h.slice(5));
   else if (h.startsWith("docs-")) html = pageDocsBien(decodeURIComponent(h.slice(5)));
   else if (h === "aide") html = pageAide();
+  else if (h === "demarrage") html = pageDemarrage();
   else if (h === "legal") html = pageLegal();
   else if (h === "integrations") html = pageIntegrations();
   else if (h === "tous") html = pageTous();
@@ -2702,7 +2714,7 @@ function etapesGuide() {
   let installOk = false; try { installOk = estInstallee() || localStorage.getItem("gestion-sci-install-ok") === "1"; } catch (e) { installOk = estInstallee(); }
   const L = [
     { ok: !!(S.sci.nom && S.sci.gerant && S.sci.siege), ico: "🏛", t: estPerso() ? "Tes infos de propriétaire" : "Les infos de ta société", pourquoi: "Ton nom, ton adresse et le signataire apparaissent sur chaque quittance, bail et courrier. Sans eux, les documents sont incomplets.", comment: "Réglages › rubrique « La SCI ». 1 minute.", btn: ["Remplir", "reglage('sci')"] },
-    { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: SB ? "Le plus rapide : partage le dossier Drive de tes locations, l'IA te fait le bilan et crée tes logements (tu corriges avant). Tu as un tableur Excel ou une autre appli ? Biens › 📊 Depuis un tableur. Sinon : Biens › + Ajouter." : "Un par logement : adresse, surface, meublé ou vide.", btn: SB ? ["🤖 Depuis mon Drive", "go('docs')"] : ["Ajouter un logement", "editBien()"] },
+    { ok: S.biens.length > 0, ico: "🏢", t: "Tes logements", pourquoi: "Chaque logement a sa fiche : documents, DPE, taxe foncière, rentabilité, états des lieux.", comment: SB ? "Le plus rapide : partage le dossier Drive de tes locations, l'IA te fait le bilan et crée tes logements (tu corriges avant). Tu as un tableur Excel ou une autre appli ? Biens › 📊 Depuis un tableur. Sinon : Biens › + Ajouter." : "Un par logement : adresse, surface, meublé ou vide.", btn: SB ? ["🤖 Depuis mon Drive", "go('demarrage')"] : ["Ajouter un logement", "editBien()"] },
     { ok: S.baux.length > 0, ico: "👤", t: "Tes locataires", pourquoi: "L'appli calcule chaque mois ce qui est dû, te dit qui est en retard, prépare quittances et relances, et te rappelle la révision du loyer (IRL) au bon moment.", comment: "Nom, e-mail, date d'entrée, loyer. L'e-mail sert à envoyer les documents.", btn: ["Ajouter un locataire", "editBail()"] },
     { ok: relOk, ico: "🏦", t: "Ta banque", pourquoi: "Les loyers reçus se cochent tout seuls et la compta se remplit avec tes dépenses : plus de pointage à la main.", comment: "Ton relevé une fois par mois (2 min), ou Pennylane si tu l'as.", btn: ["Voir comment", "go('compta')"] },
     { ok: S.fichiers.length > 0 || S.edl.length > 0, ico: "📁", t: "Tes documents", pourquoi: "Bail signé, DPE, assurance, factures : tout est rangé par logement, sur ton téléphone et celui de tes associés. Fini de chercher dans les mails.", comment: "Fiche d'un logement › Documents › Ajouter un fichier (PDF ou photo).", btn: ["Ouvrir mes logements", "go('biens')"] },
@@ -2735,6 +2747,59 @@ function guideCompact() {
     <p class="gc-t">${e.ico} <b>${e.t}</b> · <span class="note">${e.pourquoi}</span></p>
     <div class="row"><button class="small primary" onclick="${e.btn[1]}">${e.btn[0]}</button><a class="btn small ghost" href="#aide">Voir toutes les étapes</a></div></section>`;
 }
+/* ================= Démarrage en 5 minutes (#demarrage) =================
+   Un seul parcours : Drive branché → l'IA trouve les logements → les locataires depuis leurs baux → les fiches remplies avec les papiers.
+   Chaque étape réutilise l'outil existant ; on peut passer une étape. Rien ne change sans validation. */
+const surDemarrage = () => location.hash === "#demarrage";
+function etapesDemarrage() {
+  const passe = k => !!(S.faits && S.faits["dem-" + k]);
+  const drive = racinesPartagees().length > 0 || (DRIVEG.etat === "oui" && !rienChoisi());
+  const r = (S.sci.ia || {}).res, P = r ? propositionsIA() : [];
+  const loc = r ? (r.locataires_actuels || []).filter(x => !S.baux.some(b => normTxt(b.nom) === normTxt(x.nom))) : [];
+  const ap = biensACompleterPapiers();
+  return [
+    { k: "drive", ico: "📁", t: "Branche ton Google Drive", s: "L'appli lit les dossiers de tes locations, en lecture seule.", fait: (drive && DOCS.etat === "pret" && DOCS.fichiers.length > 0) || passe("drive") },
+    { k: "bilan", ico: "🏠", t: "L'IA trouve tes logements", s: "D'après les noms de tes dossiers. Tu corriges avant de valider.", fait: (!!r && S.biens.length > 0 && !P.some(p => p.type === "creer" || p.type === "lien")) || passe("bilan") || (!drive && S.biens.length > 0 && passe("drive")) },
+    { k: "locataires", ico: "👤", t: "Tes locataires", s: "Créés depuis leur bail : l'IA remplit nom, dates, loyer, dépôt.", fait: (S.baux.length > 0 && !loc.length) || passe("locataires"), loc },
+    { k: "fiches", ico: "✨", t: "Les fiches remplies avec tes papiers", s: "DPE, surface, e-mails, assurance, taxe foncière : lus dans tes documents.", fait: (S.biens.length > 0 && !ap.length) || passe("fiches"), ap },
+  ].map((e, i, L) => ({ ...e, fait: e.fait && L.slice(0, i).every(x => x.fait) })); // dans l'ordre : une étape n'est cochée que si les précédentes le sont
+}
+function passerEtape(k) { S.faits = S.faits || {}; S.faits["dem-" + k] = iso(TODAY); save(); render(); scrollTo(0, 0); }
+function pageDemarrage() {
+  if (!SB || !estProprio()) return `<a class="back" href="#locataires">← Accueil</a><div class="empty">Le démarrage guidé est réservé au propriétaire de l'espace.</div>`;
+  if (DOCS.etat === "vide" && (racinesPartagees().length || DRIVEG.etat === "oui")) setTimeout(() => lectureDriveFond("demarrage"), 0);
+  if (DOCS.etat === "chargement") setTimeout(() => { if (surDemarrage()) render(); }, 2500);
+  if (PARTAGE.etat === "inconnu") setTimeout(chargerPartage, 0);
+  const E = etapesDemarrage(), cur = E.find(e => !e.fait), faites = E.filter(e => e.fait).length;
+  const corps = e => {
+    if (e.k === "drive") {
+      if (DOCS.etat === "chargement") return `<p class="note"><span class="spin" aria-hidden="true"></span> Je lis ton Drive… ${DOCS.n ? DOCS.n + " documents" : ""}</p>`;
+      return `<p class="note">Partage le dossier de tes locations avec l'appli, <b>comme avec un associé</b> : elle le lit en lecture seule, sous-dossiers compris, et rien d'autre de ton Drive.</p>
+        <div class="row"><button class="primary" onclick="ajouterDossierPartage()">📁 Partager mon dossier</button><button class="ghost small" onclick="passerEtape('drive')">Je n'utilise pas Drive</button></div>`;
+    }
+    if (e.k === "bilan") {
+      if (!(racinesPartagees().length || DRIVEG.etat === "oui")) return `<p class="note">Sans Drive, ajoute tes logements à la main : l'adresse suffit, la surface et le DPE se remplissent seuls.</p><div class="row"><button class="primary" onclick="editBien()">+ Ajouter un logement</button>${S.biens.length ? `<button class="ghost small" onclick="passerEtape('bilan')">C'est bon, j'ai tout</button>` : ""}</div>`;
+      return sectionIA() || `<p class="note">Je prépare ton Drive…</p>`;
+    }
+    if (e.k === "locataires") {
+      const r = (S.sci.ia || {}).res, bienDe = x => x.bien_id && bien(x.bien_id) ? x.bien_id : ((S.biens.find(bi => x.bien_a_creer && normTxt(bi.nom) === normTxt(x.bien_a_creer)) || {}).id || "");
+      const li = e.loc.map(x => { const bid = bienDe(x), fb = bid && bailDansDrive(x.nom); return `<li class="deux"><span class="tx">👤 <b>${esc(x.nom)}</b>${bid ? " · " + esc(bien(bid).nom) : ""}<small>${fb ? "Son bail est dans ton Drive : l'IA le lit." : esc(x.raison || "")}</small></span>${bid ? `<span class="acts-li">${fb ? `<button type="button" class="small primary" onclick="creerDepuisBailDrive('${fb.id}','${bid}')">🤖 Créer depuis son bail</button>` : `<button type="button" class="small" onclick="editBail(null,'${bid}')">Ajouter</button>`}</span>` : ""}</li>`; });
+      return `${li.length ? `<ul class="todo">${li.join("")}</ul>` : `<p class="note">${r ? "L'IA n'a pas trouvé d'autre locataire." : ""} Ajoute-les avec leur bail (PDF ou photo) : l'IA remplit tout.</p>`}
+        <div class="row"><button class="${li.length ? "small" : "primary"}" onclick="editBail()">+ Ajouter un locataire</button><button class="ghost small" onclick="passerEtape('locataires')">${S.baux.length ? "C'est bon, j'ai tout" : "Plus tard"}</button></div>`;
+    }
+    if (e.k === "fiches") return `<p class="note">${plur(e.ap.length, "fiche")} ${e.ap.length > 1 ? "peuvent" : "peut"} se remplir avec les papiers déjà rangés. Tu vois tout et tu coches avant d'enregistrer.</p>
+        <div class="row"><button class="primary" onclick="completerAvecPapiers()">🤖 Compléter les fiches</button><button class="ghost small" onclick="passerEtape('fiches')">Plus tard</button></div>`;
+    return "";
+  };
+  const etape = (e, i) => `<li class="dem-e ${e.fait ? "ok" : e === cur ? "cur" : ""}"><span class="num" aria-hidden="true">${e.fait ? "✓" : i + 1}</span><div class="tx"><b>${e.ico} ${e.t}</b><small>${e.s}</small>${e === cur ? `<div class="dem-c">${corps(e)}</div>` : ""}</div></li>`;
+  const nbComplets = S.biens.filter(bi => !aCompleterBien(bi).L.length).length, nbDocs = S.fichiers.filter(f => f.bienId).length;
+  return `<a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>🚀 Démarrage en 5 minutes</h1><p>L'appli fait le travail, toi tu vérifies. ${faites}/${E.length} étapes faites.</p></div></div>
+    <div class="barre"><i style="width:${Math.round(faites / E.length * 100)}%"></i></div>
+    ${cur ? "" : `<section class="card bienvenue">${grosMsg("ok", "🎉 C'est prêt !", "Ton espace est en place. L'appli suit maintenant tes loyers, te prévient de ce qu'il faut faire et range les nouveaux papiers.")}
+      <div class="dem-recap"><div><b>${S.biens.length}</b><span>logement${S.biens.length > 1 ? "s" : ""}</span></div>${(() => { const n = S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).length; return `<div><b>${n}</b><span>locataire${n > 1 ? "s" : ""}</span></div>`; })()}<div><b>${nbDocs}</b><span>document${nbDocs > 1 ? "s" : ""} rangé${nbDocs > 1 ? "s" : ""}</span></div><div><b>${nbComplets}/${S.biens.length}</b><span>fiches complètes</span></div></div>
+      <div class="row"><a class="btn primary" href="#locataires">Voir mon accueil</a>${nbComplets < S.biens.length ? `<a class="btn" href="#biens">Ce qui manque encore</a>` : ""}</div></section>`}
+    <ol class="dem">${E.map(etape).join("")}</ol>`;
+}
 /* "Tout ce que l'appli sait faire" : une vitrine courte, une ligne par fonction, un toucher mène au bon endroit */
 const VITRINE = [
   ["💶", "Tes loyers, sans effort", [
@@ -2751,7 +2816,7 @@ const VITRINE = [
     ["📨", "Candidatures en ligne", "Un lien pour déposer le dossier, les revenus vérifiés.", "go('biens')", 1]]],
   ["🏢", "Tes logements et papiers", [
     ["📍", "Logement rempli depuis l'adresse", "Surface et DPE retrouvés dans la base de l'État.", "editBien()"],
-    ["📁", "Ton Drive rangé par l'IA", "Chaque document va dans le bon logement.", "go('docs')", 1],
+    ["🚀", "Tout installé depuis ton Drive", "Logements, locataires, papiers rangés et fiches remplies, en 5 minutes.", "go('demarrage')", 1],
     ["📸", "Une photo d'un papier suffit", "Taxe foncière, facture, assurance : l'IA lit et range.", "go('ajouter-doc')", 1],
     ["🛠", "Suivi des travaux", "Demande du locataire → artisan prévenu → facture.", "go('biens')"]]],
   ["📊", "Ta compta et tes associés", [
@@ -3188,7 +3253,7 @@ async function envoyerDocument(bienId, d, f) {
   const r = await SB.storage.from("documents").upload(chemin, f, { contentType: f.type || "application/octet-stream" });
   if (r.error) { toast("Envoi impossible : " + r.error.message); return; }
   const id = uid(); S.fichiers.push(Object.assign({ id, bienId, cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) }, qui(d.bailId)));
-  save(); render(); if (!d.discret) toast("✓ Document ajouté"); return id;
+  save(); render(); if (!d.discret) { toast("✓ Document ajouté"); if (/pdf/.test(f.type || "")) setTimeout(() => completerAvecPapiers(bienId, { discret: true, ids: [id] }), 800); } return id;
 }
 function ajouterLienDoc(bienId, bailId, cat) {
   const baux = S.baux.filter(b => b.bienId === bienId);
@@ -4846,7 +4911,7 @@ const carteChoix = (ico, t, s, f, cls = "") => `<button type="button" class="sui
 function choixCreerBiens() {
   const ia = SB && estProprio() && !LECTURE;
   return `<div class="suites">
-    ${ia ? carteChoix("🤖", "Depuis ton Google Drive", "Le plus rapide : l'IA lit tes dossiers, crée les logements et les locataires, range les papiers. Tu valides avant.", "go('docs')", "reco") : ""}
+    ${ia ? carteChoix("🤖", "Depuis ton Google Drive", "Le plus rapide : l'IA lit tes dossiers, crée les logements et les locataires, range les papiers et remplit les fiches. Tu valides avant.", "go('demarrage')", "reco") : ""}
     ${carteChoix("📍", "À partir de l'adresse", "Un logement à la fois : tape l'adresse, la surface et le DPE se remplissent tout seuls.", "editBien()")}
     ${ia ? carteChoix("📊", "Depuis un tableur", "Tu as un fichier Excel ou l'export d'une autre appli ? L'IA comprend les colonnes.", "importerTableur()") : ""}
   </div>`;
@@ -4928,7 +4993,7 @@ function editBail(id, bienId, pre) {
     ${area("Notes (pour vous, jamais dans le bail)", "notes", b.notes)}`,
     d => {
       d.revisable = !!d.revisable; d.sansQuittance = !!d.sansQuittance; d.irlValeur = irlVal(qKey(d.irlTrimestre)) || b.irlValeur || "";
-      if (id) Object.assign(b, d); else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); setTimeout(() => go("bail-" + nb.id)); }
+      if (id) Object.assign(b, d); else { const nb = { id: uid(), revisions: [], ...d }; S.baux.push(nb); if (!surDemarrage()) setTimeout(() => go("bail-" + nb.id)); }
       apresModifDrive();
     },
     Object.assign({ after: f => { let irlTouche = !!id; f.irlTrimestre.addEventListener("change", () => irlTouche = true); f.dateEntree.addEventListener("change", () => { if (!irlTouche && f.dateEntree.value) f.irlTrimestre.value = qLabel(irlEnVigueur(P(f.dateEntree.value))); }); const chk = () => { const t = f.typeBail.value, dep = +f.depot.value, hc = +f.loyerHC.value, max = t === "vide" ? hc : t === "mobilite" ? 0 : hc * 2; document.getElementById("depotWarn").textContent = dep > max + 0.001 ? `⚠ Dépôt trop élevé : maximum légal ${eur(max)} pour ce type de bail (${t === "vide" ? "1 mois de loyer HC" : t === "mobilite" ? "interdit en bail mobilité" : "2 mois de loyer HC"}).` : ""; }; f.addEventListener("input", chk); chk(); } },
@@ -5549,11 +5614,16 @@ function papiersUtiles(bi) {
   return T;
 }
 let COMPL = null;
-async function completerAvecPapiers(bienId) {
-  if (!SB || !estProprio() || LECTURE) { toast(msgProprio("compléter les fiches")); return; }
-  const biens = bienId ? [bien(bienId)].filter(Boolean) : S.biens, taches = biens.flatMap(bi => papiersUtiles(bi).map(t => ({ ...t, bi })));
+/* discret : lancé tout seul quand un papier arrive ; sans IA (texte du PDF seulement), sans fenêtre d'attente,
+   et on ne montre les propositions que s'il y a quelque chose à remplir */
+async function completerAvecPapiers(bienId, opts = {}) {
+  const discret = !!opts.discret;
+  if (!SB || !estProprio() || LECTURE) { if (!discret) toast(msgProprio("compléter les fiches")); return; }
+  if (discret && (COMPL && COMPL.encours || !document.getElementById("overlay").hidden)) return;
+  const biens = bienId ? [bien(bienId)].filter(Boolean) : S.biens, taches = biens.flatMap(bi => papiersUtiles(bi).map(t => ({ ...t, bi }))).filter(t => !discret || !opts.ids || opts.ids.includes(t.f.id)).slice(0, discret ? 6 : 60);
+  if (discret && !taches.length) return;
   if (!taches.length) { modal("🤖 Compléter avec mes papiers", `<div class="full">${grosMsg("attention", "Aucun papier utile trouvé", "Il n'y a pas de DPE, de bail, d'attestation d'assurance ou d'avis de taxe foncière rangé dans " + (bienId ? "ce logement" : "tes logements") + " pour les infos qui manquent. Range-les d'abord (Docs), ou donne une photo du papier.")}</div>`, () => true, { ok: "Compris", lecture: true }); return; }
-  COMPL = { stop: false, props: [], lus: taches.map(t => t.f.id) };
+  COMPL = { stop: false, props: [], lus: taches.map(t => t.f.id), encours: true };
   const ov = document.getElementById("overlay");
   const progres = (i, f) => { ov.innerHTML = `<div class="modal" role="dialog" aria-label="Lecture des papiers"><div class="mh"><h2>🤖 Je lis tes papiers…</h2><button class="ghost" onclick="COMPL.stop=true" aria-label="Arrêter">✕</button></div>
     <p class="note">${i + 1} sur ${taches.length} : <b>${esc(f.nom || "document")}</b></p><div class="barre"><i style="width:${Math.round(i / taches.length * 100)}%"></i></div>
@@ -5561,7 +5631,7 @@ async function completerAvecPapiers(bienId) {
   let ia = 0, rates = 0;
   for (let i = 0; i < taches.length && !COMPL.stop; i++) {
     const t = taches[i], P0 = [];
-    progres(i, t.f);
+    if (!discret) progres(i, t.f);
     try {
       const { bl, type } = await blobFichier(t.f); let txt = "";
       if (/pdf/.test(type)) { try { txt = await texteToutPdf(bl); } catch (e) {} }
@@ -5569,7 +5639,7 @@ async function completerAvecPapiers(bienId) {
       let r = {};
       if (texteOk) r = t.quoi === "dpe" ? lireDpeTexte(txt) : t.quoi === "assurance" ? lireAssuranceTexte(txt) : t.quoi === "bail" ? (() => { const x = lireBail(txt); return { email: x.email, tel: x.tel, depot: x.depot, surface: surfaceTexte(txt.replace(/\s+/g, " ")) }; })() : {};
       const vide = !Object.values(r).some(v => v !== "" && v !== undefined && v !== null && v !== 0 && !Number.isNaN(v));
-      if (vide && !iaSansCredit()) {
+      if (vide && !discret && !iaSansCredit()) {
         ia++;
         if (t.quoi === "bail") { const j = await lireBailIA(bl, type), x = j.bail || {}; r = { email: x.email, tel: x.tel, depot: +x.depot || "" }; }
         else { const j = await fnIA(await corpsLectureIA(bl, type, t.f.nom || "document")), d = j.doc || {};
@@ -5588,14 +5658,16 @@ async function completerAvecPapiers(bienId) {
       COMPL.props.push(...P0);
     } catch (e) { rates++; }
   }
-  montrerPropositions(bienId, taches.length, ia, rates);
+  COMPL.encours = false;
+  if (discret) { if (!COMPL.props.some(x => !x.cache) || !document.getElementById("overlay").hidden) return; COMPL.lus = [...new Set(COMPL.props.map(x => x.src && taches.find(t => (t.f.nom || "document") === x.src)).filter(Boolean).map(t => t.f.id))]; }
+  montrerPropositions(bienId, taches.length, ia, rates, discret);
 }
-function montrerPropositions(bienId, lus, ia, rates) {
+function montrerPropositions(bienId, lus, ia, rates, discret) {
   const L = COMPL.props, vis = L.map((x, i) => [x, i]).filter(([x]) => !x.cache);
   const parBien = {}; vis.forEach(([x, i]) => { const bid = x.cible === "bail" ? bail(x.id).bienId : x.id; (parBien[bid] = parBien[bid] || []).push([x, i]); });
   const reste = IA.credits && !IA.credits.illimite ? ` Il te reste ${IA.credits.docs_restants} lecture${IA.credits.docs_restants > 1 ? "s" : ""} par l'IA ce mois-ci.` : "";
   if (!vis.length) { modal("🤖 Compléter avec mes papiers", `<div class="full">${grosMsg("attention", "Rien de sûr trouvé", `J'ai lu ${plur(lus, "document")}${ia ? ` (dont ${ia} par l'IA)` : ""}, sans trouver d'info fiable à remplir. Ouvre la fiche et complète à la main, ou donne une photo plus nette.${reste}`)}</div>`, () => { marquerLus(); save(); return true; }, { ok: "Fermer", lecture: true }); return; }
-  modal("🤖 Trouvé dans tes papiers", `<div class="full">${grosMsg("ok", `${plur(vis.length, "info")} à remplir`, `Lu dans ${plur(lus, "document")}${ia ? ` (dont ${ia} par l'IA)` : ""}. Décoche ce qui est faux, puis Enregistrer.${rates ? ` ${plur(rates, "document")} n'a rien donné.` : ""}${reste}`)}</div>
+  modal(discret ? "🤖 Ton nouveau papier peut remplir la fiche" : "🤖 Trouvé dans tes papiers", `<div class="full">${grosMsg("ok", `${plur(vis.length, "info")} à remplir`, `Lu dans ${plur(lus, "document")}${ia ? ` (dont ${ia} par l'IA)` : ""}. Décoche ce qui est faux, puis Enregistrer.${rates ? ` ${plur(rates, "document")} n'a rien donné.` : ""}${reste}`)}</div>
     <div class="full">${Object.entries(parBien).map(([bid, X]) => `<h3 class="compl-h">${esc((bien(bid) || {}).nom || "")}</h3><ul class="todo compl">${X.map(([x, i]) => `<li><label class="chk"><input type="checkbox" name="p${i}" checked><span class="tx"><b>${esc(x.label)} : ${esc(x.affiche)}</b><small>lu dans : ${esc(x.src)}</small></span></label></li>`).join("")}</ul>`).join("")}</div>`,
     d => { let n = 0; marquerLus();
       L.forEach((x, i) => { const parent = x.cache ? L.find(y => !y.cache && y.cible === x.cible && y.id === x.id && y.champ === "dpe") : null; const ok = x.cache ? parent && d["p" + L.indexOf(parent)] : d["p" + i]; if (!ok) return;
@@ -5960,6 +6032,7 @@ function rangerAuto(source) {
   S.sci.driveLots = [{ id: lot, date, n: surs.length, source }, ...(S.sci.driveLots || [])].slice(0, 10);
   save(); render();
   toastActions(`${surs.length} document${surs.length > 1 ? "s" : ""} rangé${surs.length > 1 ? "s" : ""} automatiquement`, [["Voir", "voirLots()"], ["Annuler", `annulerLot('${lot}')`]]);
+  const ids = surs.map(x => "drv-" + x.f.id.slice(0, 24) + "-" + x.bienId); setTimeout(() => completerAvecPapiers(null, { discret: true, ids }), 2500);
   return surs.length;
 }
 function annulerLot(id) {
@@ -6184,13 +6257,14 @@ function analyserIA() {
     <p class="note">Conseil : partage d'abord <b>tous</b> les dossiers de tes locations, puis lance une seule analyse.</p></div>`, () => { closeOverlay(); lancerIA(); return false; }, { ok: "Lancer l'analyse", lecture: true });
 }
 async function lancerIA() {
-  IA.etat = "en cours"; IA.fait = false; if (pageCourante() === "docs") render();
+  IA.etat = "en cours"; IA.fait = false; if (pageCourante() === "docs" || surDemarrage()) render();
   try {
     const j = await fnIA(donneesIA());
     S.sci.ia = { date: new Date().toISOString(), res: j }; save();
     IA.etat = "pret"; IA.fait = true;
     const n = propositionsIA().length; toast(n ? `🤖 L'IA propose ${plur(n, "changement")} : à vérifier ci-dessous` : "🤖 L'IA n'a rien à proposer : tout est en ordre.");
   } catch (e) { IA.etat = "erreur"; IA.err = e.message; toast(e.message); }
+  if (surDemarrage()) render();
   if (pageCourante() === "docs") { render(); setTimeout(() => { const el = document.querySelector(".ia-card"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100); }
 }
 /* Le bilan de l'IA se replie sur une ligne seulement quand il n'y a plus rien à faire dedans */

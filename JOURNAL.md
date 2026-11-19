@@ -74,6 +74,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 — démarrage en 5 minutes ; papiers lus dès leur arrivée ; vitesse mesurée
+- Copie de sauvegarde hebdo : pas de bug. Le test39 était périmé (la copie part du Gmail de chacun, il faut d'abord le brancher ; l'appli le dit). Test mis à jour : 12/12 OK.
+- Nouvelle page #demarrage ("🚀 Démarrage en 5 minutes") : 4 étapes dans l'ordre (Drive partagé → bilan de l'IA à corriger et appliquer → locataires depuis leur bail → fiches remplies avec les papiers), étape en cours dépliée, "Plus tard"/"Je n'utilise pas Drive" pour passer, récap final (logements, locataires, documents rangés, fiches complètes). On reste sur la page après chaque action. Entrées : bienvenue (carte Drive), guide "Tes logements", vitrine #aide.
+- Papiers lus dès leur arrivée : après un ajout de PDF dans un logement, ou un rangement automatique du Drive, l'appli lit le texte (sans IA, gratuit) et ne montre "Ton nouveau papier peut remplir la fiche" que si elle a trouvé quelque chose.
+- Vitesse : 1re ouverture < 1 s sur téléphone lent simulé (processeur ÷4, 4G 150 ms), 285 Ko compressés ; ensuite instantané (copie sur le téléphone). Rien à changer.
+- Tests : test88 (démarrage, Drive et IA simulés), test89 (papier lu à l'arrivée, sans IA) nouveaux OK ; test87, test5, test84, test86, test39 OK. En ligne. Nouveauté "demarrage-5min" sans notification.
+- Pas vérifié : le démarrage avec un vrai Drive et la vraie analyse IA (simulés dans le test).
+
 ### 19/11/2026 — fiches remplies avec les papiers déjà rangés ; ce qui manque, bien visible
 - Constat chez Max (SCI NIMAR, lecture seule) : 133 documents tous rangés, mais fiches vides (aucune surface, aucun DPE, aucun e-mail de locataire, aucune date d'assurance) alors que DPE, baux et pièces des locataires sont dans les dossiers. L'IA rangeait sans lire.
 - Nouveau "🤖 Compléter avec mes papiers" (completerAvecPapiers) : pour chaque logement, ce qui manque (surface, DPE et ses dates, e-mail/téléphone/dépôt du locataire, fin de son assurance, taxe foncière de l'année), le meilleur document rangé (DPE, bail, attestation, avis), lu d'abord par l'appli (texte du PDF, gratuit, pdf.js), puis par l'IA si c'est un scan (1 crédit). Une seule fenêtre de propositions, cases cochées, "lu dans : nom du document" ; rien n'est enregistré avant Enregistrer. Un papier lu n'est plus reproposé (f.luLe). Marche avec les fichiers copiés dans l'appli et les liens Drive (blobFichier ; lireDocIA aussi).
