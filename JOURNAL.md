@@ -12,7 +12,7 @@ Règle pour chaque session :
 ## À faire (priorités)
 
 - [ ] **Max (SCI NIMAR)** : dans À faire, toucher "Oui, bail commercial" pour l'EURL Velours & Végétal ; fiche "Immeuble / parties communes" › Transformer ; "Compléter avec mes papiers" sur chaque logement.
-- [ ] **Assistant "Pose ta question" (Claude)** : feuille de route n° 8, prochaine session.
+- [ ] **Budget IA (Théo)** : 3 $ par mois pour toute l'appli (réglage IA_BUDGET_MOIS absent) ; à monter si l'assistant et les lectures servent à d'autres utilisateurs.
 - [ ] **Banque pour tous (Théo)** : envoyer les demandes de devis Enable Banking (formulaire "Get a quote") et Bridge ; avec un contrat Enable Banking, rien à recoder. En attendant, les autres utilisateurs reçoivent 0 compte.
 - [ ] **Banque en direct (Théo)** : application créée le 18/11. Reste : Réglages › Banque › Relier ma banque (connexion sur le site de la banque). Ancienne note : : Enable Banking, mode "restricted production". 1) https://enablebanking.com/sign-in/ (e-mail, lien reçu) ; 2) https://enablebanking.com/cp/applications › "Add a new application" : environnement Production, clé privée générée par défaut, nom "Gestion locative", URL de retour https://sci-gestion-locative.com/ › Register (un fichier .pem se télécharge, son nom = l'identifiant de l'application) ; 3) sur la page de l'application : "Link accounts" et relier le compte de la SCI ; 4) envoyer à Claude le contenu du .pem et l'identifiant. Ensuite (Claude, 1 session) : fonction serveur, choix de la banque dans l'appli, relevés lus dans les mêmes tables que Pennylane (le rapprochement des loyers marche tel quel). Limite : gratuit seulement pour les comptes que Théo relie lui-même ; pour les autres utilisateurs, contrat payant Enable Banking.
 
@@ -54,7 +54,7 @@ Gratuit, dans l'ordre (une étape par session, tester puis mettre en ligne) :
 7. ✅ (18/11) **Surveillance quotidienne** (GitHub Action) : alerte e-mail + évite la pause de la base gratuite.
 
 Vague 2 (branchements et accès, 18/11) : ✅ relances automatiques J+3/J+8, ✅ agenda abonné, ✅ boîte à documents par e-mail (reste l'activation Cloudflare par Théo), ✅ import depuis un tableur. À faire ensuite, dans l'ordre :
-8. **Assistant IA "Pose ta question"** (comme Rentila) : question libre, réponse avec les données de l'espace (dettes, échéances, baux) et les règles de la loi de 1989 ; quota à part (nouvelle colonne dans `ia_usage`).
+8. ✅ (20/11) **Assistant IA "Pose ta question"** (comme Rentila) : question libre, réponse avec les données de l'espace (dettes, échéances, baux) et les règles de la loi de 1989 ; quota à part (nouvelle colonne dans `ia_usage`).
 9. ✅ (18/11) **Brancher l'appli sur Claude / ChatGPT (MCP)** (comme Rentila) : serveur MCP en fonction Supabase, lecture seule d'abord (loyers, retards, locataires, documents), lien secret par espace.
 10. ✅ (18/11) **Tous mes espaces sur un écran** (SCI + nom propre).
 
@@ -78,6 +78,14 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 20/11/2026 (nuit, suite) — assistant "Pose ta question" (feuille de route n° 8)
+
+- Appli : bouton "💬 Pose ta question" en haut de l'accueil et de la page "Ce que l'appli fait pour toi" (propriétaire seulement, appli en ligne). Fenêtre : la question + 4 exemples ; réponse en 1 à 4 phrases + 0 à 3 boutons qui ouvrent la bonne page (fiche du locataire, du logement, À faire, Loyers…) ; "Pourquoi ?" replié (ce qui est lu, peut se tromper, questions restantes).
+- Ce qui est envoyé (`contexteQuestion()`) : un résumé de l'espace (logements, locataires actuels avec loyers, dette, mois en retard, révision, anciens locataires, À faire, chiffres de l'année, taxes foncières). Jamais de document, jamais de code.
+- Serveur (fonction ia, action "question", Claude Opus 5.5, effort low, réponse JSON) : consigne "français simple, chiffres tirés des données, rien d'inventé, conseiller un pro pour le juridique délicat, ne rien dire de l'appli". Boutons filtrés (pages connues seulement). Quota à part : `ia_usage.nb_q`, `ia_reserver_q` / `ia_rembourser_q` (supabase/ia_questions.sql, appliqué), 5 questions par jour et 30 par mois par personne (IA_Q_JOUR, IA_Q_MOIS) ; coût compté dans le budget IA global.
+- Budget IA global : IA_BUDGET_MOIS n'est pas posé, donc 3 $ par mois pour toute l'appli (hors comptes IA_SANS_LIMITE) ; 2,56 $ déjà dépensés en novembre au 20/11. Une question coûte environ 0,03 $.
+- Test99 (vraie base + vraie IA, 1 question) : "Seul Paul Durand te doit 650 € (loyer d'octobre)…", boutons "Voir la fiche de Paul" / "Voir les loyers". OK.
 
 ### 20/11/2026 (nuit) — retours de Max : tout traité côté appli ; baux commerciaux et professionnels
 

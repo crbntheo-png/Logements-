@@ -485,6 +485,7 @@ button.suite, button.dpe-chip { text-align: left !important; justify-content: fl
 .bienvenue h2 { margin: 0; }
 .bienvenue > p { margin: 0; }
 .a-completer .barre { margin: 6px 0 4px; }
+.pose-q { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 14px; padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--card, #fff); color: var(--muted); font: inherit; text-align: left; cursor: pointer; } .pose-q span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .q-ex { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; } .q-rep { background: var(--accent-soft, rgba(0,0,0,.04)); border-radius: 12px; padding: 12px 14px; margin: 8px 0; } .q-rep p { margin: 0 0 8px; line-height: 1.45; }
 .suivi-bien h3 { margin: 14px 0 6px; font-size: .9rem; color: var(--muted); } .sb-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .sb-s { background: var(--bg, rgba(0,0,0,.03)); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; } .sb-s b { font-size: 1.05rem; overflow-wrap: anywhere; } .sb-s span { font-size: .8rem; color: var(--muted); } .sb-s small { font-size: .72rem; color: var(--muted); } .sb-s.bad b { color: var(--bad); } .sb-s.ok b { color: var(--ok, inherit); } .sb-s.warn b { color: var(--accent); } .sb-dates { list-style: none; margin: 0; padding: 0; } .sb-dates li { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; } .sb-dates li:first-child { border-top: 0; } .sb-d { flex: none; color: var(--muted); min-width: 74px; }
 .a-completer .acts-c { display: flex; flex-direction: column; align-items: stretch; gap: 4px; flex: none; } .a-completer .pas-besoin { font-size: .8rem; padding: 4px 8px; min-height: 0; color: var(--muted); }
 .a-completer ul.todo li .tx small { display: block; }
@@ -2956,7 +2957,7 @@ function vitrine() {
 function pageAide() {
   if (SB && NV.etat === "inconnu") setTimeout(chargerNouveautes, 300);
   const E = etapesGuide(), reste = E.some(e => !e.ok);
-  return `<div><a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>✨ Ce que l'appli fait pour toi</h1><p>Touche une ligne pour y aller. Toi, tu valides : rien ne part sans ton accord.</p></div></div></div>
+  return `<div><a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>✨ Ce que l'appli fait pour toi</h1><p>Touche une ligne pour y aller. Toi, tu valides : rien ne part sans ton accord.</p></div></div></div>${boutonQuestion()}
     ${SB && NV.liste.length ? `<a class="aide-lien" href="#nouveautes">🆕 <span><b>Dernières nouveautés de l'appli</b><small>${nvNonVues().length ? `${nvNonVues().length} pas encore vue${nvNonVues().length > 1 ? "s" : ""} · ` : ""}la plus récente : ${esc(NV.liste[0].titre)}</small></span>${ic("chevR", "chev")}</a>` : ""}
     ${reste ? blocGuide(false).replace(/<div class="row"><button class="small ghost" onclick="S\.faits\.guideMasque[^<]*<\/button><\/div>/, "").replace('<a class="more" href="#aide">Comment ça marche ?</a>', "") : ""}
     ${vitrine()}
@@ -3115,6 +3116,7 @@ function pageAccueil(T) {
   const enRetard = mois.filter(e => e.statut === "retard").length, etales = mois.filter(e => e.statut === "etale").length, pct = attendu ? Math.round(encaisse / attendu * 100) : 0;
   const h = new Date().getHours(), salut = h < 5 ? "Bonsoir" : h < 18 ? "Bonjour" : "Bonsoir";
   return `<div class="greet"><h1>${salut}${S.sci.gerant ? " " + esc(String(S.sci.gerant).split(/\s+/)[0]) : ""}</h1><p>${fd(TODAY).replace(/^./, c => c.toUpperCase())} · ${items.length ? `${items.length} chose${items.length > 1 ? "s" : ""} à faire` : "tout est en ordre"}</p></div>
+  ${boutonQuestion()}
   <section class="hero" aria-label="Loyers du mois">
     <p class="hero-k">Loyers de ${fm(CUR)}</p>
     <p class="hero-amount">${eur(encaisse)} <small>/ ${eur(attendu)}</small></p>
@@ -6650,6 +6652,46 @@ function retirerPartage(id) {
 let IA = { etat: "" };
 /* Message à lire absolument : gros titre, couleur selon le cas (attention, ok, stop) */
 const grosMsg = (type, titre, texte = "") => `<div class="gros-msg ${type}" role="${type === "stop" ? "alert" : "status"}"><b>${titre}</b>${texte ? `<p>${texte}</p>` : ""}</div>`;
+/* ================= Assistant "Pose ta question" (IA, réponses avec les données de l'espace) ================= */
+const peutQuestion = () => SB && !MCP && estProprio() && !LECTURE;
+const boutonQuestion = () => peutQuestion() ? `<button type="button" class="pose-q" onclick="poserQuestion()"><span aria-hidden="true">💬</span><span>Pose ta question : « qui me doit de l'argent ? »</span></button>` : "";
+const EXEMPLES_Q = ["Qui me doit de l'argent ?", "Quand puis-je augmenter mes loyers ?", "Combien j'ai encaissé cette année ?", "Qu'est-ce que je dois faire ce mois-ci ?"];
+/* Ce que l'assistant reçoit : un résumé des données de l'espace (jamais de document, jamais de code) */
+function contexteQuestion() {
+  const y = TODAY.getFullYear(), txt = h => String(h || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  const actifs = S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY);
+  let du = 0, recu = 0; S.baux.forEach(b => { for (let m = y + "-01"; m <= CUR; m = addM(m, 1)) { const e = echeance(b, m); if (e) { du += e.du; recu += Math.min(e.du, e.paye); } } });
+  const deps = {}; (S.depenses || []).filter(d => String(d.date).startsWith(String(y))).forEach(d => deps[d.categorie || "Autre"] = r2((deps[d.categorie || "Autre"] || 0) + (+d.montant || 0)));
+  return {
+    aujourdhui: iso(TODAY), espace: S.sci.nom || "", forme: estPerso() ? "en nom propre" : "SCI" + (S.sci.regime ? " à l'" + S.sci.regime : ""),
+    logements: S.biens.map(bi => ({ id: bi.id, nom: bi.nom, adresse: adresseBien(bi), type: bi.immeuble ? "immeuble" : bi.type || "", surface: bi.surface || "", dpe: bi.dpe || "", meuble: bi.meuble || "", prix_achat: prixAchatDe(bi) || "", echeance_assurance_pno: bi.pnoEcheance || "", risques_verifies: bi.risquesVerifies || "", occupe_par: (bailActifDuBien(bi.id) || {}).nom || "" })),
+    locataires: actifs.map(b => { const l = loyerAt(b, CUR), rv = revInfo(b), ret = echeancesBail(b).filter(e => e.statut === "retard" || e.statut === "etale");
+      return { id: b.id, nom: b.nom, logement_id: b.bienId, type_bail: TYPES_BAIL[b.typeBail] || b.typeBail, entree: b.dateEntree, sortie: b.dateSortie || "", loyer_hc: l.hc, charges: l.ch, depot: +b.depot || 0, paye_le: +b.jourPaiement || 1, email: b.email ? "oui" : "non", assurance_jusqu_au: b.assuranceFin || "", doit: detteBail(b), mois_en_retard: ret.map(e => ({ mois: e.m, reste: e.reste, statut: e.statut })), etalement: b.plan ? { par_mois: +b.plan.mensualite || 0 } : null,
+        revision: rv ? { statut: rv.statut, date: iso(rv.anniv), indice: rv.idx || "IRL", nouveau_loyer_hc: rv.nouveau || "" } : null }; }),
+    anciens_locataires: S.baux.filter(b => b.dateSortie && P(b.dateSortie) < TODAY).slice(0, 15).map(b => ({ nom: b.nom, logement_id: b.bienId, parti_le: b.dateSortie, depot_rendu: b.depotRestitue || "", doit_encore: detteBail(b) })),
+    a_faire: taches().filter(t => !t.done || t.prio !== "info").slice(0, 25).map(t => ({ quoi: txt(t.t), detail: txt(t.d).slice(0, 220), date: t.date ? iso(t.date) : "", urgent: t.prio === "urgent" })),
+    annee: { annee: y, loyers_attendus: r2(du), loyers_recus: r2(recu), depenses_par_categorie: deps, taxes_foncieres: (S.taxes || []).filter(t => t.annee >= y - 1).map(t => ({ logement_id: t.bienId, annee: t.annee, total: t.total })) },
+  };
+}
+function poserQuestion(q) {
+  if (!peutQuestion()) { toast("L'assistant est réservé au propriétaire de l'espace, dans l'appli en ligne."); return; }
+  const reste = IA.credits && !IA.credits.illimite && IA.credits.q_restantes != null ? IA.credits.q_restantes : null;
+  modal("💬 Pose ta question", `<div class="full"><label class="fl full">Ta question<textarea name="q" rows="3" maxlength="600" placeholder="Ex. : qui est en retard ce mois-ci ?">${esc(q || "")}</textarea></label>
+    <div class="q-ex">${EXEMPLES_Q.map(x => `<button type="button" class="chip" onclick="const t=document.querySelector('#mform [name=q]');t.value=this.textContent;t.focus()">${esc(x)}</button>`).join("")}</div>
+    <div id="q_rep" aria-live="polite"></div>
+    <details class="pli-mini"><summary>Pourquoi ?</summary><p class="note">L'assistant lit tes logements, tes locataires et tes loyers dans l'appli (jamais tes documents) et répond avec les règles de la location. Il peut se tromper : vérifie avant d'agir.${reste != null ? ` Il te reste ${plur(reste, "question")} ce mois-ci.` : ""}</p></details></div>`,
+    d => { demanderReponse(d.q); return false; }, { ok: "Demander", lecture: true, after: f => { setTimeout(() => f.q.focus(), 50); if (q) demanderReponse(q); } });
+}
+async function demanderReponse(q) {
+  const zone = document.getElementById("q_rep"), btn = document.querySelector("#mform > .full.row button.primary"); if (!zone || !String(q || "").trim()) return;
+  zone.innerHTML = `<p class="note"><span class="spin" aria-hidden="true"></span> Je regarde tes données…</p>`; if (btn) btn.disabled = true;
+  try {
+    const r = await fnIA({ action: "question", espace: ESPACE, question: q, contexte: contexteQuestion() });
+    zone.innerHTML = `<div class="q-rep"><p>${esc(r.reponse)}</p>${(r.boutons || []).length ? `<div class="row">${r.boutons.map((b, i) => `<button type="button" class="small ${i ? "" : "primary"}" onclick="closeOverlay();go('${esc(b.page)}')">${esc(b.texte)}</button>`).join("")}</div>` : ""}</div>`;
+    const t = document.querySelector("#mform [name=q]"); if (t) { t.value = ""; t.placeholder = "Une autre question ?"; }
+  } catch (e) { zone.innerHTML = `<p class="note">⚠️ ${esc(e.message)}</p>`; }
+  finally { if (btn) btn.disabled = false; }
+}
 async function fnIA(corps) {
   const s = (await SB.auth.getSession()).data.session;
   const r = await fetch(window.APP_SUPABASE.url + "/functions/v1/ia", { method: "POST", headers: { "Content-Type": "application/json", apikey: window.APP_SUPABASE.cle, Authorization: "Bearer " + (s && s.access_token) }, body: JSON.stringify(corps) });
