@@ -396,6 +396,15 @@ details.pq summary::-webkit-details-marker { display: none; } details.pq p { mar
 .parcours .etapes { list-style: none; margin: 10px 0 0; padding: 0; } .parcours .etape .note { margin: 4px 0 8px; }
 tr.pire td { background: var(--bad-soft); }
 input.auto, select.auto, textarea.auto { background: var(--warn-soft); }
+.compl-cta { display: flex; align-items: center; gap: 12px; background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; margin: 8px 0 10px; }
+.compl-cta .tx { flex: 1; display: grid; gap: 3px; min-width: 0; }
+.compl-cta .tx small { color: var(--ink-2); font-size: .8rem; line-height: 1.35; }
+@media (max-width: 480px) { .compl-cta { flex-direction: column; align-items: stretch; } }
+.compl-h { margin: 12px 0 4px; font-size: .95rem; }
+.doc-tuile .t-manque { color: var(--warn); font-weight: 650; } .doc-tuile .t-ok { color: var(--ok); font-weight: 650; }
+ul.compl li label.chk { display: flex; gap: 12px; align-items: flex-start; width: 100%; }
+ul.compl li .tx { display: grid; gap: 2px; } ul.compl li .tx small { color: var(--ink-2); }
+.nr-aide { display: grid; gap: 8px; margin-bottom: 12px; } .nr-aide p { margin: 0; }
 a.aide-lien { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r); background: var(--accent-soft); color: var(--ink); text-decoration: none; margin: 14px 0 6px; font-size: 1.1rem; }
 a.aide-lien span { flex: 1; display: grid; gap: 2px; font-size: .9rem; }
 a.aide-lien small { color: var(--ink-2); font-size: .78rem; }
@@ -2300,6 +2309,15 @@ function taches() {
 function addMonthsDate(d, n) { const r = new Date(d.getFullYear(), d.getMonth() + n, d.getDate()); if (r.getDate() !== d.getDate()) r.setDate(0); return r; }
 
 /* ================= Taxe foncière : part "ordures ménagères" au prorata du temps passé ================= */
+function enregistrerTaxe(bienId, an, total, teom) {
+  const c = partsTeom(bienId, an, +teom), old = taxeDe(bienId, an);
+  const parts = c.parts.map(p => { const o = old && old.parts.find(x => x.bailId === p.bailId); return o ? { ...p, demandeLe: o.demandeLe, payeLe: o.payeLe } : p; });
+  S.taxes = S.taxes || [];
+  const id = old ? old.id : uid();
+  S.taxes = S.taxes.filter(t => t.id !== id).concat([{ id, bienId, annee: an, total: +total, teom: +teom, parts, partSci: c.partSci }]);
+  const dep = S.depenses.find(x => x.taxeId === id);
+  if (dep) dep.montant = +total; else S.depenses.push({ id: uid(), taxeId: id, date: iso(new Date(an, 9, 15)), bienId, categorie: "Taxe foncière", libelle: "Taxe foncière " + an, montant: +total, recuperable: false });
+}
 const taxeDe = (bienId, an) => (S.taxes || []).find(t => t.bienId === bienId && +t.annee === +an);
 function partsTeom(bienId, an, teom) {
   const d0 = new Date(an, 0, 1), d1 = new Date(an, 11, 31), nbJ = daysBetween(d0, d1) + 1;
@@ -2325,13 +2343,7 @@ function taxeFonciere(bienId, an) {
     ${fld("Total de l'avis (€)", "total", t0.total, "number", "", "required")}${fld("Dont ordures ménagères (€)", "teom", t0.teom, "number", "", "required")}
     <div class="full" id="teomCalc"></div>`,
     d => {
-      const c = partsTeom(bienId, an, +d.teom), old = taxeDe(bienId, an);
-      const parts = c.parts.map(p => { const o = old && old.parts.find(x => x.bailId === p.bailId); return o ? { ...p, demandeLe: o.demandeLe, payeLe: o.payeLe } : p; });
-      S.taxes = S.taxes || [];
-      const id = old ? old.id : uid();
-      S.taxes = S.taxes.filter(t => t.id !== id).concat([{ id, bienId, annee: an, total: +d.total, teom: +d.teom, parts, partSci: c.partSci }]);
-      const dep = S.depenses.find(x => x.taxeId === id);
-      if (dep) dep.montant = +d.total; else S.depenses.push({ id: uid(), taxeId: id, date: iso(new Date(an, 9, 15)), bienId, categorie: "Taxe foncière", libelle: "Taxe foncière " + an, montant: +d.total, recuperable: false });
+      enregistrerTaxe(bienId, an, +d.total, +d.teom);
       setTimeout(() => toast("Enregistré · les parts apparaissent sur la carte de chaque locataire"), 50);
     },
     { del: taxeDe(bienId, an) ? () => { const t = taxeDe(bienId, an); S.taxes = S.taxes.filter(x => x !== t); S.depenses = S.depenses.filter(x => x.taxeId !== t.id); } : null, delMsg: "Supprimer cette taxe foncière ?",
@@ -2863,6 +2875,7 @@ function ancienneBienvenue() {
   </section>
   ${SB ? "" : `<div class="banner" style="background:var(--surface);box-shadow:var(--sh-1)"><span>✨ Envie de voir à quoi ça ressemble d'abord ?</span><button class="small" onclick="chargerDemo()">Charger un exemple</button></div>`}`;
 }
+const prenomBrut = nom => String(nom).replace(/\(.*?\)/g, "").trim().split(/\s+/)[0];
 const prenom = nom => esc(String(nom).replace(/\(.*?\)/g, "").trim().split(/\s+/)[0]);
 function carteLocataire(b) {
   const bi = bien(b.bienId), e = echeance(b, CUR), l = loyerAt(b, CUR);
@@ -2948,6 +2961,7 @@ function aFaireCourt(T) {
   if (reg.length) out.push({ ico: "🧾", prio: "soon", t: `Régulariser les charges (${reg.length} locataire${reg.length > 1 ? "s" : ""})`, btn: ["Voir", "go('afaire')"] });
   prend(t => t.key.startsWith("dep-")).forEach(t => out.push({ ico: "🔑", prio: t.prio, t: `Rendre le dépôt de garantie à ${prenom(bail(t.bailId).nom)}`, btn: t.acts[0] }));
   T.filter(t => !vus.has(t) && t.prio !== "info" && !t.key.startsWith("av-") && !t.key.startsWith("vac-")).forEach(t => out.push({ ico: t.prio === "urgent" ? "⚠️" : "📌", prio: t.prio, t: t.t, btn: t.acts && t.acts[0] }));
+  const ap = biensACompleterPapiers(); if (ap.length) out.push({ ico: "🤖", prio: "soon", t: `${ap.length > 1 ? `${ap.length} fiches de logement` : "1 fiche de logement"} à compléter avec tes papiers`, s: "DPE, surface, e-mail des locataires… lus dans tes documents rangés", btn: ["Compléter", "completerAvecPapiers()"] });
   const o = { urgent: 0, soon: 1, info: 2 };
   return out.sort((a, b) => o[a.prio] - o[b.prio]);
 }
@@ -2963,6 +2977,7 @@ function corpsTaches(g) {
 function pageAFaire(T) {
   const groups = [["urgent", "Urgent"], ["soon", "À faire bientôt"], ["info", "À surveiller"]];
   return `<div class="head"><div><h1>À faire</h1><p>Tout ce qui demande une action, pour les locataires et pour la SCI.</p></div><div class="row"><button onclick="editRappel()">+ Rappel</button></div></div>
+  ${(() => { const ap = biensACompleterPapiers(); return ap.length ? `<div class="banner q-banner"><span>🤖 <span><b>${ap.length > 1 ? `${ap.length} fiches de logement` : "1 fiche de logement"} à compléter</b> avec tes papiers déjà rangés (DPE, baux, attestations).</span></span><button class="small primary" onclick="completerAvecPapiers()">Compléter</button></div>` : ""; })()}
   ${(() => { const n = T.filter(t => t.key.startsWith("q-")).length; return n > 1 && peutEnvoyer() ? `<div class="banner q-banner"><span>📄 <span><b>${n} quittances à envoyer</b>, en un seul geste.</span></span><button class="small primary" onclick="envoyerToutesQuittances()">Envoyer les ${n} quittances</button></div>` : ""; })()}
   <section class="tasks">${T.length ? groups.map(([k, l]) => { const g = T.filter(t => t.prio === k); const vis = view.afaireTout || g.length <= 60 ? g : g.slice(0, 40); if (!g.length) return ""; const corps = corpsTaches(vis) + (vis.length < g.length ? `<button class="ghost small" onclick="view.afaireTout=true;render()">Voir les ${g.length - vis.length} autres</button>` : "");
     // "À surveiller" : rien d'urgent, replié pour garder la page lisible (déplié s'il n'y a rien d'autre)
@@ -3228,6 +3243,7 @@ function pageBien(id) {
   const tf = (S.taxes || []).filter(t => t.bienId === bi.id).sort((a, b) => b.annee - a.annee)[0];
   return `<div><a class="back" href="#biens">← Biens</a>
     <div class="head"><div><h1>${esc(bi.nom)}</h1><p>${esc(adresseBien(bi))}</p></div><div class="row"><button onclick="editBien('${bi.id}')">Modifier</button>${LECTURE ? "" : menuPlus([["🗑 Supprimer ce bien", `supprimerBien('${bi.id}')`]])}</div></div></div>
+    ${carteACompleter(bi)}
     <div class="kpis">
       <div class="kpi"><span>Occupant</span><b>${actuel ? `<a href="#bail-${actuel.id}">${esc(nomCourt(actuel.nom))}</a>` : "Vide"}</b><small>${actuel ? "depuis le " + fds(actuel.dateEntree) : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button>`}</small></div>
       <div class="kpi"><span>Loyer</span><b>${l ? eur(l.hc + l.ch) : "—"}</b><small>${l ? eur(l.hc) + " HC + " + eur(l.ch) + " de charges" : ""}</small></div>
@@ -3237,7 +3253,6 @@ function pageBien(id) {
     </div>
     ${blocRentaNette(bi)}
     <div class="stack">
-    ${carteACompleter(bi)}
     <section class="card"><h2>🏠 Le logement</h2><div class="bien"><dl>
       <dt>Type</dt><dd>${esc(bi.type || "—")} · ${bi.meuble === "meuble" ? "meublé" : "vide"}</dd>
       <dt>Surface</dt><dd>${bi.surface ? esc(bi.surface) + " m²" : "—"}${bi.pieces ? " · " + esc(bi.pieces) + " pièce(s)" : ""}</dd>
@@ -3403,6 +3418,7 @@ function rangerPropositions(liste) {
 }
 function pageBiens() {
   return `<div class="head"><div><h1>Biens</h1><p>${S.biens.length ? "Touche un logement pour tout voir : locataire, documents, ce qui manque." : "Tes logements, avec leurs papiers et leurs locataires."}</p></div><div class="row"><button class="primary" onclick="editBien()">+ Ajouter</button>${SB && estProprio() && !LECTURE ? `<button onclick="importerTableur()">📊 Depuis un tableur</button>` : ""}</div></div>
+  ${(() => { const L = S.biens.length ? biensACompleterPapiers() : []; return L.length ? `<div class="card compl-cta"><span class="tx"><b>🤖 ${L.length > 1 ? `${L.length} fiches peuvent` : "1 fiche peut"} se remplir avec tes papiers</b><small>L'appli lit tes DPE, baux, attestations et avis de taxe déjà rangés, et te propose surface, DPE, e-mails… Tu valides avant.</small></span><button class="small primary" onclick="completerAvecPapiers()">Compléter</button></div>` : ""; })()}
   ${S.biens.length ? `<ul class="lr-list biens-l">${S.biens.map(bi => {
     const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null, e = b && echeance(b, CUR), nDocs = S.fichiers.filter(f => f.bienId === bi.id).length;
     const manque = LECTURE ? 0 : aCompleterBien(bi).L.length, alerte = bi.dpe === "G" || bi.dpe === "F" ? `DPE ${bi.dpe} : attention` : manque ? `${manque} info${manque > 1 ? "s" : ""} à compléter` : "";
@@ -4845,13 +4861,19 @@ function aCompleterBien(bi) {
   c(bi.risquesVerifies, "🌊", "Les risques (inondation, radon…)", "À joindre à chaque nouveau bail. Vérifié en 1 minute, gratuit.", "Vérifier", `etatRisques('${bi.id}')`);
   c(bi.pnoEcheance, "🛡", "L'assurance du logement (PNO)", "Sa date d'échéance, pour être prévenu à temps.", "Noter", `editBien('${bi.id}')`);
   c(bi.prixAchat, "💶", "Le prix d'achat", "Pour voir ce que le logement te rapporte vraiment.", "Ajouter", `editBien('${bi.id}')`);
-  return { L, pct: Math.round((6 - L.length) / 6 * 100) };
+  const b = bailActifDuBien(bi.id); let tot = 6;
+  if (b) { tot += 2; const pn = prenom(b.nom);
+    c(b.email, "✉️", `L'e-mail de ${pn}`, "Pour lui envoyer quittances et documents.", "Ajouter", `editBail('${b.id}')`);
+    c(b.assuranceFin, "🛡", `L'assurance habitation de ${pn}`, "Obligatoire chaque année : sa date de fin, pour la redemander à temps.", "Noter", `editBail('${b.id}')`); }
+  return { L, pct: Math.round((tot - L.length) / tot * 100) };
 }
 function carteACompleter(bi) {
   if (LECTURE) return ""; const { L, pct } = aCompleterBien(bi); if (!L.length) return "";
+  const pap = SB && estProprio() ? papiersUtiles(bi).length : 0;
   const li = x => `<li><span class="ico" aria-hidden="true">${x.ico}</span><span class="tx"><b>${x.t}</b><small>${x.s}</small></span><button class="small" onclick="${x.f}">${x.btn}</button></li>`;
   return `<section class="card a-completer"><h2>✨ Fiche remplie à ${pct} %</h2>
     <div class="barre"><i style="width:${pct}%"></i></div>
+    ${pap ? `<div class="compl-cta"><span class="tx"><b>🤖 Remplis tout seul avec tes papiers</b><small>${plur(pap, "document")} déjà rangé${pap > 1 ? "s" : ""} ici peu${pap > 1 ? "vent" : "t"} compléter cette fiche (DPE, bail, assurance, taxe). Tu valides avant.</small></span><button class="small primary" onclick="completerAvecPapiers('${bi.id}')">Compléter</button></div>` : ""}
     <ul class="todo">${L.slice(0, 3).map(li).join("")}</ul>
     ${L.length > 3 ? `<details class="pli-mini"><summary>Voir les ${L.length - 3} autres</summary><ul class="todo">${L.slice(3).map(li).join("")}</ul></details>` : ""}</section>`;
 }
@@ -5420,8 +5442,7 @@ async function lireDocIA(src) {
       const f = S.fichiers.find(x => x.id === src.fichier); if (!f) return;
       nom = f.nom; bienId = f.bienId || ""; bailId = f.bailId || ""; type = f.type || "";
       toast("🤖 L'IA lit « " + nom + " »… (20 secondes environ)");
-      const r = await SB.storage.from("documents").download(f.chemin); if (r.error) throw new Error("Document introuvable : " + r.error.message);
-      bl = r.data; type = type || bl.type;
+      const x = await blobFichier(f); bl = x.bl; type = x.type;
     } else {
       const f = DOCS.fichiers.find(x => x.id === src.drive); if (!f) return;
       nom = f.titre; const rg = S.fichiers.find(x => x.driveId === f.id || (x.url || "").includes(f.id)); if (rg) { bienId = rg.bienId; bailId = rg.bailId || ""; }
@@ -5484,6 +5505,109 @@ function appliquerLectureDoc(d, ctx, credits) {
   }
   modal("🤖 Lecture par l'IA", `<div class="full">${grosMsg(d.type === "bail" ? "attention" : "ok", d.type === "bail" ? "C'est un bail" : "Rien à remplir pour ce document", esc(d.resume) + (d.type === "bail" ? " Pour créer le locataire, ouvre Biens › + Ajouter un locataire › 🤖 Remplir depuis le bail." : "") + esc(rem) + esc(reste))}</div>`, () => true, { ok: "Fermer", lecture: true });
 }
+/* ================= Compléter les fiches avec les papiers déjà rangés =================
+   Pour chaque logement : ce qui manque (surface et DPE, e-mail, téléphone et dépôt du locataire, fin de son assurance, taxe foncière),
+   le meilleur document rangé pour le trouver, lu d'abord par l'appli (texte du PDF : gratuit), puis par l'IA si c'est un scan.
+   Tout est proposé dans une seule fenêtre, cases cochées : rien n'est enregistré avant "Enregistrer". */
+const idDriveFichier = f => f.driveId || (/\/d\/([A-Za-z0-9_-]{10,})/.exec(f.url || "") || /[?&]id=([A-Za-z0-9_-]{10,})/.exec(f.url || "") || [])[1] || "";
+async function blobFichier(f) {
+  if (f.chemin) { const r = await SB.storage.from("documents").download(f.chemin); if (r.error) throw new Error("Document introuvable : " + r.error.message); return { bl: r.data, type: f.type || r.data.type }; }
+  const id = idDriveFichier(f); if (!id) throw new Error("Ce document n'a pas de fichier à lire.");
+  const x = DOCS.fichiers.find(d => d.id === id) || { id, type: "", partage: racinesPartagees().length > 0 };
+  const bl = await blobDrive({ id, mimeType: x.type, partage: x.partage });
+  return { bl, type: /google-apps/.test(x.type || "") ? "application/pdf" : (x.type || bl.type || "application/pdf") };
+}
+const dateFrTxt = v => { const m = /(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})/.exec(v || ""); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : ""; };
+const plusAns = (d, n) => { const x = P(d); if (!x) return ""; x.setFullYear(x.getFullYear() + n); x.setDate(x.getDate() - 1); return iso(x); };
+const surfaceTexte = T => { const m = /surface\s+(?:habitable|louée|du\s+logement)[^0-9]{0,40}(\d{1,3}(?:[.,]\d{1,2})?)\s*m/i.exec(T); return m ? +m[1].replace(",", ".") : 0; };
+function lireDpeTexte(t) {
+  const T = String(t || "").replace(/\s+/g, " "), r = {};
+  const cl = /classe\s+(?:d['’]\s*)?(?:énergie|energie|énergétique|energetique|de\s+consommation)\s*:?\s*([A-G])\b/i.exec(T) || /étiquette\s+(?:énergie|énergétique|DPE)\s*:?\s*([A-G])\b/i.exec(T) || /\bDPE\s*:?\s*(?:classe\s*)?([A-G])\b/.exec(T);
+  if (cl) r.dpe = cl[1].toUpperCase();
+  const g = /classe\s+(?:climat|GES|d['’]émissions?)(?:\s*\(GES\))?\s*:?\s*([A-G])\b/i.exec(T); if (g) r.dpeGes = g[1].toUpperCase();
+  const n = /\b(\d{4}[A-Z]\d{7}[A-Z])\b/.exec(T); if (n) r.dpeNumero = n[1];
+  const fait = /(?:établi|etabli|réalisé|realise|date\s+(?:de\s+)?(?:visite|réalisation|établissement|du\s+diagnostic))\s*(?:le\s*)?:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(T); if (fait) r.dpeDate = dateFrTxt(fait[1]);
+  const val = /valable\s+jusqu['’]\s*au\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(T); if (val) r.dpeValidite = dateFrTxt(val[1]); else if (r.dpeDate) r.dpeValidite = plusAns(r.dpeDate, 10);
+  const s = surfaceTexte(T); if (s) r.surface = s;
+  return r;
+}
+function lireAssuranceTexte(t) {
+  const T = String(t || "").replace(/\s+/g, " "); if (!/assurance|assuré|habitation|risques locatifs/i.test(T)) return {};
+  const m = /(?:du|période\s+du|valable\s+du)\s*(\d{1,2}\/\d{1,2}\/\d{4})\s*(?:au|jusqu['’]au)\s*(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(T) || /(?:valable|garanti|couvert)[^0-9]{0,30}jusqu['’]au\s*(\d{1,2}\/\d{1,2}\/\d{4})/i.exec(T);
+  return m ? { assuranceFin: dateFrTxt(m[2] || m[1]) } : {};
+}
+/* Ce qui manque pour un logement, et où le chercher */
+function papiersUtiles(bi) {
+  const b = bailActifDuBien(bi.id), docs = S.fichiers.filter(f => f.bienId === bi.id && !f.luLe && (f.chemin || idDriveFichier(f)));
+  const prend = (cat, re, aussi) => { const L = docs.filter(f => f.cat === cat || (aussi && aussi.test(f.nom || ""))); return L.sort((x, y) => (re.test(y.nom || "") - re.test(x.nom || "")) || String(y.date || "").localeCompare(String(x.date || "")))[0]; };
+  const T = [];
+  if (!bi.dpe || !(+bi.surface > 0)) { const f = prend("Diagnostics (DPE…)", /dpe|énerg|energ|perf/i, /\bdpe\b/i); if (f) T.push({ quoi: "dpe", f }); }
+  if (b && (!b.email || !b.tel || !(+b.depot > 0) || (!(+bi.surface > 0) && !T.length))) { const nomL = (motsDe(b.nom).find(m => m.length > 2) || "").toLowerCase(); const f = docs.filter(x => x.cat === "Bail" && !/avenant|congé|conge|révision|revision/i.test(x.nom || "")).sort((x, y) => (String(y.nom || "").toLowerCase().includes(nomL) - String(x.nom || "").toLowerCase().includes(nomL)) || String(y.date || "").localeCompare(String(x.date || "")))[0]; if (f) T.push({ quoi: "bail", f, b }); }
+  if (b && !b.assuranceFin) { const f = docs.filter(x => (x.cat === "Locataire (pièces, garant…)" || x.cat === "Assurance") && /assur|attest|habitation|mrh|multirisque/i.test(x.nom || "") && !/pno|immeuble|propriétaire|proprietaire/i.test(x.nom || ""))[0]; if (f) T.push({ quoi: "assurance", f, b }); }
+  const an = TODAY.getFullYear() - (TODAY.getMonth() < 8 ? 1 : 0);
+  if (!(S.taxes || []).some(t => t.bienId === bi.id && +t.annee >= an - 1)) { const f = prend("Taxe foncière", /taxe|fonci/i, /taxe\s+fonci/i); if (f) T.push({ quoi: "taxe", f }); }
+  return T;
+}
+let COMPL = null;
+async function completerAvecPapiers(bienId) {
+  if (!SB || !estProprio() || LECTURE) { toast(msgProprio("compléter les fiches")); return; }
+  const biens = bienId ? [bien(bienId)].filter(Boolean) : S.biens, taches = biens.flatMap(bi => papiersUtiles(bi).map(t => ({ ...t, bi })));
+  if (!taches.length) { modal("🤖 Compléter avec mes papiers", `<div class="full">${grosMsg("attention", "Aucun papier utile trouvé", "Il n'y a pas de DPE, de bail, d'attestation d'assurance ou d'avis de taxe foncière rangé dans " + (bienId ? "ce logement" : "tes logements") + " pour les infos qui manquent. Range-les d'abord (Docs), ou donne une photo du papier.")}</div>`, () => true, { ok: "Compris", lecture: true }); return; }
+  COMPL = { stop: false, props: [], lus: taches.map(t => t.f.id) };
+  const ov = document.getElementById("overlay");
+  const progres = (i, f) => { ov.innerHTML = `<div class="modal" role="dialog" aria-label="Lecture des papiers"><div class="mh"><h2>🤖 Je lis tes papiers…</h2><button class="ghost" onclick="COMPL.stop=true" aria-label="Arrêter">✕</button></div>
+    <p class="note">${i + 1} sur ${taches.length} : <b>${esc(f.nom || "document")}</b></p><div class="barre"><i style="width:${Math.round(i / taches.length * 100)}%"></i></div>
+    <p class="note small">L'appli lit d'abord le texte du document. Pour un scan, elle demande à l'IA (1 lecture de tes crédits).</p></div>`; ov.hidden = false; };
+  let ia = 0, rates = 0;
+  for (let i = 0; i < taches.length && !COMPL.stop; i++) {
+    const t = taches[i], P0 = [];
+    progres(i, t.f);
+    try {
+      const { bl, type } = await blobFichier(t.f); let txt = "";
+      if (/pdf/.test(type)) { try { txt = await texteToutPdf(bl); } catch (e) {} }
+      const texteOk = txt.replace(/\s/g, "").length > 400;
+      let r = {};
+      if (texteOk) r = t.quoi === "dpe" ? lireDpeTexte(txt) : t.quoi === "assurance" ? lireAssuranceTexte(txt) : t.quoi === "bail" ? (() => { const x = lireBail(txt); return { email: x.email, tel: x.tel, depot: x.depot, surface: surfaceTexte(txt.replace(/\s+/g, " ")) }; })() : {};
+      const vide = !Object.values(r).some(v => v !== "" && v !== undefined && v !== null && v !== 0 && !Number.isNaN(v));
+      if (vide && !iaSansCredit()) {
+        ia++;
+        if (t.quoi === "bail") { const j = await lireBailIA(bl, type), x = j.bail || {}; r = { email: x.email, tel: x.tel, depot: +x.depot || "" }; }
+        else { const j = await fnIA(await corpsLectureIA(bl, type, t.f.nom || "document")), d = j.doc || {};
+          if (t.quoi === "dpe") r = { dpe: d.dpe_classe, dpeGes: d.dpe_ges, dpeNumero: String(d.dpe_numero || "").toUpperCase().replace(/[^0-9A-Z]/g, ""), dpeDate: dateOk(d.dpe_date), dpeValidite: dateOk(d.dpe_validite), surface: +d.surface || "" };
+          if (t.quoi === "assurance") r = { assuranceFin: dateOk(d.assurance_fin) };
+          if (t.quoi === "taxe") r = d.type === "taxe_fonciere" && +d.montant_total > 0 ? { taxe: { annee: +d.annee > 2000 ? +d.annee : TODAY.getFullYear() - 1, total: +d.montant_total, teom: +d.montant_teom || 0 } } : {}; }
+      }
+      const src = t.f.nom || "document", bi = t.bi, b = t.b;
+      const ajoute = (cible, id, champ, label, valeur, affiche) => { if (valeur === "" || valeur === undefined || valeur === null || (typeof valeur === "number" && !(valeur > 0))) return; const o = cible === "bien" ? bien(id) : bail(id); if (!o || (o[champ] && champ !== "taxe") || COMPL.props.concat(P0).some(x => x.cible === cible && x.id === id && x.champ === champ)) return; P0.push({ cible, id, champ, label, valeur, affiche: affiche || String(valeur), src }); };
+      if (t.quoi === "dpe" || t.quoi === "bail") ajoute("bien", bi.id, "surface", "Surface", +r.surface || "", String(r.surface).replace(".", ",") + " m²");
+      if (t.quoi === "dpe" && /^[A-G]$/.test(r.dpe || "")) { ajoute("bien", bi.id, "dpe", "Classe DPE", r.dpe); ["dpeGes", "dpeNumero", "dpeDate", "dpeValidite"].forEach(k => r[k] && !bi[k] && P0.push({ cible: "bien", id: bi.id, champ: k, label: "", valeur: r[k], cache: true, src })); if (r.dpeValidite) P0.find(x => x.champ === "dpe") && (P0.find(x => x.champ === "dpe").affiche += ` · valable jusqu'au ${fds(r.dpeValidite)}`); }
+      if (t.quoi === "bail" && b) { ajoute("bail", b.id, "email", `E-mail de ${prenomBrut(b.nom)}`, String(r.email || "").trim().toLowerCase()); ajoute("bail", b.id, "tel", `Téléphone de ${prenomBrut(b.nom)}`, String(r.tel || "").trim()); ajoute("bail", b.id, "depot", "Dépôt de garantie", +r.depot || "", eur(+r.depot || 0)); }
+      if (t.quoi === "assurance" && b && r.assuranceFin) ajoute("bail", b.id, "assuranceFin", `Assurance de ${prenomBrut(b.nom)} jusqu'au`, r.assuranceFin, fds(r.assuranceFin));
+      if (t.quoi === "taxe" && r.taxe && !taxeDe(bi.id, r.taxe.annee)) P0.push({ cible: "taxe", id: bi.id, champ: "taxe", label: `Taxe foncière ${r.taxe.annee}`, valeur: r.taxe, affiche: `${eur(r.taxe.total)} dont ${eur(r.taxe.teom)} d'ordures ménagères`, src });
+      if (!P0.filter(x => !x.cache).length) rates++;
+      COMPL.props.push(...P0);
+    } catch (e) { rates++; }
+  }
+  montrerPropositions(bienId, taches.length, ia, rates);
+}
+function montrerPropositions(bienId, lus, ia, rates) {
+  const L = COMPL.props, vis = L.map((x, i) => [x, i]).filter(([x]) => !x.cache);
+  const parBien = {}; vis.forEach(([x, i]) => { const bid = x.cible === "bail" ? bail(x.id).bienId : x.id; (parBien[bid] = parBien[bid] || []).push([x, i]); });
+  const reste = IA.credits && !IA.credits.illimite ? ` Il te reste ${IA.credits.docs_restants} lecture${IA.credits.docs_restants > 1 ? "s" : ""} par l'IA ce mois-ci.` : "";
+  if (!vis.length) { modal("🤖 Compléter avec mes papiers", `<div class="full">${grosMsg("attention", "Rien de sûr trouvé", `J'ai lu ${plur(lus, "document")}${ia ? ` (dont ${ia} par l'IA)` : ""}, sans trouver d'info fiable à remplir. Ouvre la fiche et complète à la main, ou donne une photo plus nette.${reste}`)}</div>`, () => { marquerLus(); save(); return true; }, { ok: "Fermer", lecture: true }); return; }
+  modal("🤖 Trouvé dans tes papiers", `<div class="full">${grosMsg("ok", `${plur(vis.length, "info")} à remplir`, `Lu dans ${plur(lus, "document")}${ia ? ` (dont ${ia} par l'IA)` : ""}. Décoche ce qui est faux, puis Enregistrer.${rates ? ` ${plur(rates, "document")} n'a rien donné.` : ""}${reste}`)}</div>
+    <div class="full">${Object.entries(parBien).map(([bid, X]) => `<h3 class="compl-h">${esc((bien(bid) || {}).nom || "")}</h3><ul class="todo compl">${X.map(([x, i]) => `<li><label class="chk"><input type="checkbox" name="p${i}" checked><span class="tx"><b>${esc(x.label)} : ${esc(x.affiche)}</b><small>lu dans : ${esc(x.src)}</small></span></label></li>`).join("")}</ul>`).join("")}</div>`,
+    d => { let n = 0; marquerLus();
+      L.forEach((x, i) => { const parent = x.cache ? L.find(y => !y.cache && y.cible === x.cible && y.id === x.id && y.champ === "dpe") : null; const ok = x.cache ? parent && d["p" + L.indexOf(parent)] : d["p" + i]; if (!ok) return;
+        if (x.cible === "taxe") { enregistrerTaxe(x.id, x.valeur.annee, x.valeur.total, x.valeur.teom); n++; return; }
+        const o = x.cible === "bien" ? bien(x.id) : bail(x.id); if (o && !o[x.champ]) { o[x.champ] = x.valeur; if (!x.cache) n++; } });
+      toast(n ? `✓ ${plur(n, "info")} ${n > 1 ? "ajoutées" : "ajoutée"} aux fiches` : "Rien d'enregistré"); },
+    { ok: "Enregistrer" });
+}
+/* Un papier lu une fois n'est plus reproposé (même si on a décoché ce qu'il disait) */
+function marquerLus() { (COMPL && COMPL.lus || []).forEach(id => { const f = S.fichiers.find(x => x.id === id); if (f) f.luLe = iso(TODAY); }); }
+/* Logements dont la fiche peut être complétée avec des papiers déjà rangés */
+const biensACompleterPapiers = () => SB && estProprio() && !LECTURE ? S.biens.filter(bi => papiersUtiles(bi).length) : [];
 async function telechargerPdf() {
   if (!CURDOC) return;
   let doc; try { doc = fairePdf(CURDOC.html, await imagesDoc(CURDOC.o)); } catch (e) { toast(e.message); return; }
@@ -6328,7 +6452,8 @@ function pageDocsDrive() {
   if (vue === "tout" || vue === "nonranges") {
     const L = vue === "tout" ? chercherDocsDans(q, "") : chercherDocsDans(q, "").filter(f => !estRange(f));
     return `<a class="back" href="#docs" onclick="event.preventDefault();view.docVue='';view.docQ='';render()">← Documents</a>
-    <div class="head"><div><h1>${vue === "tout" ? "🗂 Tous les documents" : "📥 Pas encore rangés"}</h1><p>${vue === "tout" ? `${DOCS.fichiers.length} documents de ton Drive` : "Les documents du Drive qui ne sont dans aucun logement. Touche-en un pour le ranger."}</p></div></div>
+    <div class="head"><div><h1>${vue === "tout" ? "🗂 Tous les documents" : "📥 Pas encore rangés"}</h1><p>${vue === "tout" ? `${DOCS.fichiers.length} documents de ton Drive` : "Les documents de ton Drive qui ne sont dans aucun logement."}</p></div></div>
+    ${vue === "nonranges" ? `<div class="card nr-aide"><p><b>Pas d'inquiétude :</b> souvent ce sont des papiers de la SCI elle-même (statuts, Kbis, banque, compta, assemblées). Ils restent dans ton Drive et se retrouvent avec la recherche.</p>${SB && estProprio() ? `<p class="note">Pour ranger le reste d'un coup, l'IA regarde les noms et les dossiers et te propose un logement pour chacun.</p><div class="row"><button class="small primary" onclick="view.docVue='';lancerIA()">🤖 Ranger avec l'IA</button></div>` : ""}<p class="note small">Ou touche un document pour le ranger à la main.</p></div>` : ""}
     ${recherche("Chercher…")}<div id="docres">${listeDocs(L, lim)}</div>`;
   }
   const parBien = S.biens.map(bi => ({ bi, n: S.fichiers.filter(f => f.bienId === bi.id).length + edlsDuBien(bi.id).length }));
@@ -6340,7 +6465,7 @@ function pageDocsDrive() {
   ${q ? `<div id="docres">${listeDocs(chercherDocsDans(q, ""), lim)}</div>` : `
   ${sectionPropositionsDrive()}
   <section><h2 class="sec">Par logement</h2><div class="doc-tuiles">
-    ${parBien.map(({ bi, n }) => `<a class="doc-tuile" href="#docs-${bi.id}~-1"><span class="t-ico" aria-hidden="true">🏠</span><b>${esc(bi.nom)}</b><small>${n} document${n > 1 ? "s" : ""}</small></a>`).join("")}
+    ${parBien.map(({ bi, n }) => `<a class="doc-tuile" href="#docs-${bi.id}~-1"><span class="t-ico" aria-hidden="true">🏠</span><b>${esc(bi.nom)}</b><small>${n} document${n > 1 ? "s" : ""}</small>${(() => { if (LECTURE) return ""; const m = aCompleterBien(bi).L.length; return m ? `<small class="t-manque">⚠️ ${m} info${m > 1 ? "s" : ""} à compléter</small>` : `<small class="t-ok">✓ fiche complète</small>`; })()}</a>`).join("")}
     ${nonRanges.length && !charge ? `<button type="button" class="doc-tuile a-ranger" onclick="view.docVue='nonranges';view.docQ='';render();scrollTo(0,0)"><span class="t-ico" aria-hidden="true">📥</span><b>Pas encore rangés</b><small>${nonRanges.length} document${nonRanges.length > 1 ? "s" : ""}</small></button>` : ""}
     ${DOCS.fichiers.length ? `<button type="button" class="doc-tuile" onclick="view.docVue='tout';view.docQ='';render();scrollTo(0,0)"><span class="t-ico" aria-hidden="true">🗂</span><b>Tout le Drive</b><small>${DOCS.fichiers.length} documents</small></button>` : ""}
   </div></section>

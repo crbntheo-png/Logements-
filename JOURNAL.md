@@ -74,6 +74,16 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 — fiches remplies avec les papiers déjà rangés ; ce qui manque, bien visible
+- Constat chez Max (SCI NIMAR, lecture seule) : 133 documents tous rangés, mais fiches vides (aucune surface, aucun DPE, aucun e-mail de locataire, aucune date d'assurance) alors que DPE, baux et pièces des locataires sont dans les dossiers. L'IA rangeait sans lire.
+- Nouveau "🤖 Compléter avec mes papiers" (completerAvecPapiers) : pour chaque logement, ce qui manque (surface, DPE et ses dates, e-mail/téléphone/dépôt du locataire, fin de son assurance, taxe foncière de l'année), le meilleur document rangé (DPE, bail, attestation, avis), lu d'abord par l'appli (texte du PDF, gratuit, pdf.js), puis par l'IA si c'est un scan (1 crédit). Une seule fenêtre de propositions, cases cochées, "lu dans : nom du document" ; rien n'est enregistré avant Enregistrer. Un papier lu n'est plus reproposé (f.luLe). Marche avec les fichiers copiés dans l'appli et les liens Drive (blobFichier ; lireDocIA aussi).
+- Où : carte "✨ Fiche remplie à X %" remontée en haut de la fiche du logement (+ e-mail et assurance du locataire dans ce qui manque), bandeau sur Biens, tâche dans À faire (accueil et page), tuiles de Docs "⚠️ N infos à compléter" / "✓ fiche complète".
+- "Pas encore rangés" : explication (souvent les papiers de la SCI elle-même, c'est normal) + bouton "🤖 Ranger avec l'IA".
+- enregistrerTaxe() extraite du formulaire de taxe foncière (même calcul des parts).
+- Tests : test87 (nouveau, vraie base + vraie IA pour l'avis de taxe, 17 vérifications) OK : DPE, bail et attestation lus sans IA, taxe lue par l'IA (1 crédit). test5, test84, test86 OK. tests/vendor/pdfjs ajouté pour les tests (le site cdnjs n'est pas joignable d'ici).
+- Pas vérifié : la lecture des liens Drive en vrai (chez Max) ; pas testé sur ses données (interdit de modifier sans son accord).
+- En ligne. Nouveauté "fiches-papiers" ajoutée sans notification (déjà une annonce aujourd'hui).
+
 ### 19/11/2026 — fermer en touchant à côté ; nouveautés discrètes
 - Toute fenêtre se ferme en touchant à côté (comme la croix). Si un formulaire a été commencé : 1er toucher à côté = message "touche encore à côté pour fermer sans enregistrer", 2e = ferme. Glisser depuis l'intérieur ne ferme pas. Une confirmation fermée à côté = rien n'est fait. L'aperçu d'un document se ferme aussi (la protection "signature pas encore rangée" reste).
 - Plus de bandeau de nouveautés sur l'accueil. Elles restent dans Réglages › Plus de réglages (pastille "🆕 N nouveautés") et en haut de la page "Ce que l'appli fait pour toi" (#aide).
