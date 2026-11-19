@@ -111,6 +111,7 @@ Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`
 | `tests/test94.js` | Rangement automatique d'après le nom et le dossier : 59 noms réalistes (`tests/corpus-rangement.json`), aucun papier rangé seul au mauvais endroit |
 | `tests/test95.js` | Vraie base : PDF au nom muet ("Scan0001.pdf") lus sans IA et rangés d'après leur contenu, adresse de la SCI ignorée, Annuler |
 | `tests/test96.js` | Vraie base : parcours d'un débutant (accueil vide, Démarrage, locataire pas "impayé" à tort, catégorie devinée, papiers reçus rangés seuls) |
+| `tests/test97.js` | Vraie base : bouton retour (fil de navigation, onglet allumé), infos manquantes sur la page documents d'un logement, "Pas besoin" / Annuler / Redemander |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.

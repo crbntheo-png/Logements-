@@ -24,7 +24,7 @@ Règle pour chaque session :
 - [ ] **Copie de sauvegarde** : Réglages › Sauvegarde et import › "M'envoyer une copie chaque semaine" (case "maintenant" cochée pour vérifier la réception et rouvrir le .txt).
 - [ ] **Espace locataire** (fait le 18/11) : essayer avec un vrai locataire (fiche › Plus › Son espace locataire).
 - [ ] **Drive** : sur ton téléphone, choisir tes dossiers (plusieurs possibles), relier chaque dossier de logement (Docs › Dossiers et logements), vérifier le 1er rangement automatique (Annuler si besoin).
-- [ ] **DPE et risques** : sur chaque logement, "Retrouver le DPE" puis "État des risques" ; faire l'ERP officiel sur errial.georisques.gouv.fr avant le prochain bail.
+- [ ] **DPE et risques** : sur chaque logement, "Retrouver le DPE" puis "État des risques" ; faire l'ERP officiel sur errial.georisques.gouv.fr avant le prochain bail. Si une info ne sert pas : "Pas besoin" à côté (se remet par Plus › Redemander les infos mises de côté).
 - [ ] **Services payants** (Youtrust, GoCardless, Bridge/Powens, Stripe) : fiches dans l'Historique du 14/11 ; rien codé tant que Théo n'a pas ouvert de compte.
 - [ ] **Notifications** : activer les alertes sur ton téléphone (Réglages › Notifications, appli installée) et faire l'essai.
 - [ ] **Taxe foncière Agon 2026** : récupérer la page « détail par local » de l'avis n° 2650400237412 (impots.gouv › Espace professionnel › Consulter › Avis d'imposition), puis remplacer la répartition à parts égales (516,67 € par lot, ordures ménagères à 0) par les vrais montants. Antoine et Sofiane doivent leur part d'ordures ménagères.
@@ -75,6 +75,13 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 19/11/2026 (nuit) — retour de Théo : "infos à compléter" introuvables, "Pas besoin", bouton retour logique
+
+- **Ce qui manque, là où on le cherche** : Docs › un logement affichait "3 infos à compléter" mais la page ouverte ne disait pas lesquelles. La page des documents d'un logement montre maintenant en haut "⚠️ N infos manquent sur la fiche", chacune avec son bouton (`carteACompleter(bi, titre)`, seulement sur "Tous", sans locataire ni ancien).
+- **"Pas besoin"** sous chaque bouton d'info manquante (sauf l'adresse) : l'info n'est plus demandée nulle part (compteurs des tuiles et de Biens, guide des fiches, pourcentage, rappel PNO d'À faire). Rangé dans `bien.sansBesoin` (clés dpe, taxe, risques, pno, prix, email:<bail>, assurance:<bail> ; celles d'un immeuble valent pour ses lots). Toast "Annuler" ; "↩️ Redemander les infos mises de côté" dans le menu Plus du logement ou de l'immeuble. C'est un geste de l'utilisateur : `save()`.
+- **Navigation** : un fil (`PISTE`, gardé le temps de la session) remplace les liens retour figés. Un onglet du bas remet le fil à zéro ; chaque page ouverte ensuite s'y ajoute ; "‹ Retour" ramène toujours à la page d'avant (avec son nom), et l'onglet allumé reste celui d'où l'on vient. Docs › logement › ‹ Documents ; Biens › logement › Tout voir › ‹ logement › ‹ Biens ; Accueil › locataire › ‹ Accueil. Changer de type de document (puces) ne rallonge pas le chemin. Sans fil (lien ouvert directement), le lien prévu par la page reste.
+- Test : `tests/test97.js` (vraie base, espace temporaire, 22 contrôles) OK.
 
 ### 19/11/2026 (soir) — rangement automatique plus fort (nom + contenu, sans IA) ; parcours d'un débutant corrigé
 - Rangement par le nom (`deviner`, `devinerBien`) mesuré sur 59 noms de fichiers réalistes (`tests/corpus-rangement.json`, test94). Avant : type juste 35/50, logement juste 27/50, 3 papiers rangés tout seuls au mauvais endroit (ex. "Facture plombier" pris pour un diagnostic plomb). Après : 58/59 et 59/59, aucun mauvais rangement automatique.

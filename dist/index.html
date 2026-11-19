@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "c499425", "date": "2026-11-19T17:49"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "9e60a6e", "date": "2026-11-19T19:03"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -510,6 +510,7 @@ button.suite, button.dpe-chip { text-align: left !important; justify-content: fl
 .bienvenue h2 { margin: 0; }
 .bienvenue > p { margin: 0; }
 .a-completer .barre { margin: 6px 0 4px; }
+.a-completer .acts-c { display: flex; flex-direction: column; align-items: stretch; gap: 4px; flex: none; } .a-completer .pas-besoin { font-size: .8rem; padding: 4px 8px; min-height: 0; color: var(--muted); }
 .a-completer ul.todo li .tx small { display: block; }
 details.pli-mini > summary { cursor: pointer; font-size: .85rem; color: var(--accent); padding: 6px 0; }
 body.lecture #app .row > button, body.lecture #app .acts, body.lecture #app .tile .row, body.lecture #app .todo li > button, body.lecture .top-acts .primary, body.lecture .top-acts [aria-label="Ajouter"], body.lecture .hero .cta, body.lecture #app .card form button, body.lecture .parcours .row { display: none !important; }
@@ -2724,6 +2725,25 @@ const ICONES = { locataires: "home", afaire: "tasks", biens: "building", docs: "
 const pageCourante = () => { const h = (location.hash || "#locataires").slice(1); return h.startsWith("bail-") || h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : h === "ajouter-doc" ? "docs" : (PAGES.find(p => p[0] === h) ? h : "locataires"); };
 let view = { loyersMois: CUR, comptaAnnee: TODAY.getFullYear() };
 function go(h) { location.hash = h; }
+/* Le fil de navigation : un onglet du bas remet le fil à zéro, chaque page ouverte ensuite s'y ajoute.
+   "← Retour" ramène toujours à la page d'avant, et l'onglet allumé reste celui d'où l'on vient. */
+let PISTE = (() => { try { return JSON.parse(sessionStorage.getItem("gestion-piste") || "[]"); } catch (e) { return []; } })();
+const clePiste = h => { if (!h.startsWith("docs-")) return h; const [a, , c, d] = h.split("~"); return [a, c || "", d || ""].join("~"); };
+function majPiste(h) {
+  h = h || "locataires";
+  if (PAGES.some(p => p[0] === h)) PISTE = [h];
+  else { const j = PISTE.findIndex(x => clePiste(x) === clePiste(h)); if (j >= 0) { PISTE = PISTE.slice(0, j + 1); PISTE[j] = h; } else PISTE = [...PISTE, h].slice(-20); }
+  try { sessionStorage.setItem("gestion-piste", JSON.stringify(PISTE)); } catch (e) {}
+}
+function nomPagePiste(h) {
+  const t = PAGES.find(p => p[0] === h); if (t) return h === "docs" ? "Documents" : t[1];
+  if (h.startsWith("bail-")) return (bail(h.slice(5)) || {}).nom || "Locataire";
+  if (h.startsWith("bien-")) return (bien(h.slice(5)) || {}).nom || "Logement";
+  if (h.startsWith("docs-")) { const bi = bien(decodeURIComponent(h.slice(5)).split("~")[0]); return bi ? "Documents · " + bi.nom : "Documents"; }
+  if (h.startsWith("edl-")) return "État des lieux";
+  return { loyers: "Loyers", demarrage: "Démarrage", aide: "Ce que l'appli fait", historique: "Historique", "ajouter-doc": "Ajouter un document", tous: "Tous mes espaces", nouveautes: "Nouveautés", integrations: "Intégrations", bientot: "Prochaines sorties", legal: "Mentions légales" }[h] || "Retour";
+}
+const ongletPiste = () => PISTE.length && PAGES.some(p => p[0] === PISTE[0]) ? PISTE[0] : null;
 window.addEventListener("hashchange", () => { const o = document.getElementById("overlay"); if (!o.hidden) { o.hidden = true; o.innerHTML = ""; } window.scrollTo(0, 0); render(); memoriserPage(); });
 function render() {
   MEMO = new Map();
@@ -2740,8 +2760,10 @@ function render0() {
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
   const h = (location.hash || "#locataires").slice(1);
   const page = h.startsWith("bail-") ? "locataires" : h === "loyers" ? "locataires" : h.startsWith("edl-") || h.startsWith("bien-") || h.startsWith("docs-") ? "biens" : (PAGES.find(p => p[0] === h) ? h : "locataires");
+  if (PISTE[PISTE.length - 1] !== h) majPiste(h);
+  const onglet = ongletPiste() || page;
   const T = taches(), urg = T.filter(t => t.prio === "urgent").length;
-  const navHtml = PAGES.filter(p => p[0] !== "reglages").map(([k, l]) => `<a href="#${k}" class="${k === page ? "on" : ""}" ${k === page ? 'aria-current="page"' : ""}>${ic(ICONES[k])}<span>${l}</span>${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
+  const navHtml = PAGES.filter(p => p[0] !== "reglages").map(([k, l]) => `<a href="#${k}" class="${k === onglet ? "on" : ""}" ${k === onglet ? 'aria-current="page"' : ""}>${ic(ICONES[k])}<span>${l}</span>${k === "afaire" && urg ? `<i class="badge">${urg}</i>` : ""}</a>`).join("");
   const nav = document.getElementById("nav"), bn = document.getElementById("bottomnav");
   if (nav.innerHTML !== navHtml) nav.innerHTML = navHtml;
   if (bn.innerHTML !== navHtml) bn.innerHTML = navHtml;
@@ -2773,6 +2795,9 @@ function render0() {
   else if (h === "loyers") html = pageLoyers();
   else if (page === "locataires" && vide) html = pageBienvenue();
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
+  // "← Retour" : vers la page d'où l'on vient (le fil), sinon le lien prévu par la page
+  const prec = PISTE.length > 1 ? PISTE[PISTE.length - 2] : null;
+  if (prec) html = html.replace(/<a class="back" href="[^"]*">← [^<]*<\/a>/, `<a class="back" href="#${esc(prec)}">← ${esc(nomPagePiste(prec))}</a>`);
   const actif = document.activeElement, focusId = actif && actif.id && app.contains(actif) ? actif.id : null, selS = focusId && actif.selectionStart, selE = focusId && actif.selectionEnd;
   // Fluidité : on ne redessine que si quelque chose a changé, et les blocs que la personne a ouverts restent ouverts
   const neuf = banner + html;
@@ -3411,6 +3436,7 @@ function pageDocsBien(arg) {
   return `<div><a class="back" href="${b ? "#bail-" + b.id : "#bien-" + bi.id}">← ${esc(b ? b.nom : bi.nom)}</a>
     <div class="head"><div><h1>${anc ? "🕰 " + esc(anc.nom) : i >= 0 ? `${ICONES_CAT[cat] || ""} ${esc(cat)}` : "Tous les documents"}</h1><p>${esc(bi.nom)}${b ? " · " + esc(b.nom) : ""}${anc ? " · ancien locataire · " + periodeAncien(anc) : ""}</p></div>${anc && PEUT_MODIFIER() ? `<div class="row"><button class="small" onclick="editAncien('${bi.id}','${anc.id}')">Modifier</button></div>` : ""}</div></div>
     ${anc && anc.notes ? `<section class="card"><p class="note">📝 ${nl2br(anc.notes)}</p></section>` : ""}
+    ${i < 0 && !bailId && !anc ? carteACompleter(bi, n => `⚠️ ${n > 1 ? `${n} infos manquent` : "1 info manque"} sur la fiche`) : ""}
     ${G.length > 1 ? `<div class="chips-cat">${[`<a class="chip ${i < 0 ? "on" : ""}" href="${lienDocs(bienId, -1, bailId, ancienId)}">Tous</a>`, ...G.map(g => `<a class="chip ${g.i === i ? "on" : ""}" href="${lienDocs(bienId, g.i, bailId, ancienId)}">${esc(g.c.replace(/ \(.*\)$/, ""))} · ${g.l.length}</a>`)].join("")}</div>` : ""}
     <section class="card docs-bien">${groupes.length ? groupes.map(g => `${i < 0 ? `<h3>${esc(g.c)}</h3>` : ""}<ul class="todo">${g.l.map(ligne).join("")}</ul>`).join("") : `<p class="note">Rien ici pour l'instant.</p>`}
     <div class="row" style="margin-top:12px"><button class="primary" onclick="ajouterDocument('${bienId}','${anc ? "anc:" + anc.id : bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un fichier</button><button onclick="ajouterLienDoc('${bienId}','${anc ? "anc:" + anc.id : bailId || ""}'${i >= 0 ? `,'${cat.replace(/'/g, "\\'")}'` : ""})">+ Ajouter un lien</button></div></section>`;
@@ -3422,7 +3448,7 @@ function pageBien(id) {
   const imT = immeubleDe(bi), tfI = imT && (S.taxes || []).filter(t => t.bienId === imT.id).sort((a, b) => b.annee - a.annee)[0];
   const tf = (S.taxes || []).filter(t => t.bienId === bi.id).sort((a, b) => b.annee - a.annee)[0] || (tfI ? { annee: tfI.annee + " · part du lot", total: r2(tfI.total * quotePart(bi)) } : null);
   return `<div><a class="back" href="#biens">← Biens</a>
-    <div class="head"><div><h1>${esc(bi.nom)}</h1><p>${esc(adresseBien(bi))}</p></div><div class="row"><button onclick="editBien('${bi.id}')">Modifier</button>${LECTURE ? "" : menuPlus([["🗑 Supprimer ce bien", `supprimerBien('${bi.id}')`]])}</div></div></div>
+    <div class="head"><div><h1>${esc(bi.nom)}</h1><p>${esc(adresseBien(bi))}</p></div><div class="row"><button onclick="editBien('${bi.id}')">Modifier</button>${LECTURE ? "" : menuPlus([...((bi.sansBesoin || []).length ? [["↩️ Redemander les infos mises de côté", `remettreBesoins('${bi.id}')`]] : []), ["🗑 Supprimer ce bien", `supprimerBien('${bi.id}')`]])}</div></div></div>
     ${immeubleDe(bi) ? `<a class="aide-lien" href="#bien-${immeubleDe(bi).id}">🏢 <span><b>Fait partie de ${esc(immeubleDe(bi).nom)}</b><small>Acte, assurance, taxe foncière et travaux communs sont sur la fiche de l'immeuble · part de ce lot : ${Math.round(quotePart(bi) * 100)} %</small></span>${ic("chevR", "chev")}</a>` : ""}
     ${!LECTURE && !S.baux.some(x => x.bienId === bi.id) && /immeuble|commun|copro|général|general/i.test(bi.nom) ? `<div class="card compl-cta"><span class="tx"><b>🏢 C'est l'immeuble, pas un logement à louer ?</b><small>Transforme cette fiche en fiche immeuble : elle regroupe tes lots, garde l'acte, l'assurance, la taxe foncière et les travaux communs, et répartit le prix d'achat et les ordures ménagères entre les lots.</small></span><button class="small primary" onclick="transformerImmeuble('${bi.id}')">Transformer</button></div>` : ""}
     ${carteACompleter(bi)}
@@ -3703,7 +3729,7 @@ function pageImmeuble(im) {
   const loyers = L.reduce((s, l) => { const b = bailActifDuBien(l.id); if (!b) return s; const x = loyerAt(b, CUR); return s + x.hc + x.ch; }, 0);
   const deps = S.depenses.filter(d => d.bienId === im.id && String(d.date || "").startsWith(String(TODAY.getFullYear())));
   return `<div><a class="back" href="#biens">← Biens</a>
-    <div class="head"><div><h1>🏢 ${esc(im.nom)}</h1><p>${esc(adresseBien(im)) || "Immeuble"}</p></div><div class="row"><button onclick="editBien('${im.id}')">Modifier</button>${LECTURE ? "" : menuPlus([["🏠 Choisir les lots", `choisirLots('${im.id}')`], ["↩️ Ce n'est pas un immeuble", `defaireImmeuble('${im.id}')`], ["🗑 Supprimer", `supprimerBien('${im.id}')`]])}</div></div></div>
+    <div class="head"><div><h1>🏢 ${esc(im.nom)}</h1><p>${esc(adresseBien(im)) || "Immeuble"}</p></div><div class="row"><button onclick="editBien('${im.id}')">Modifier</button>${LECTURE ? "" : menuPlus([["🏠 Choisir les lots", `choisirLots('${im.id}')`], ...((im.sansBesoin || []).length ? [["↩️ Redemander les infos mises de côté", `remettreBesoins('${im.id}')`]] : []), ["↩️ Ce n'est pas un immeuble", `defaireImmeuble('${im.id}')`], ["🗑 Supprimer", `supprimerBien('${im.id}')`]])}</div></div></div>
     ${carteACompleter(im)}
     <div class="kpis">
       <div class="kpi"><span>Lots</span><b>${L.length}</b><small>${L.filter(l => bailActifDuBien(l.id)).length} loué${L.filter(l => bailActifDuBien(l.id)).length > 1 ? "s" : ""}</small></div>
@@ -5232,39 +5258,48 @@ function choixCreerBiens() {
 /* Ce qui manque sur la fiche d'un logement, avec le geste qui le remplit (souvent tout seul) */
 function aCompleterBien(bi) {
   const ia = SB && estProprio(), L = [], im = immeubleDe(bi), tf = (S.taxes || []).some(t => t.bienId === bi.id || (im && t.bienId === im.id));
-  const c = (ok, ico, t, s, btn, f) => { if (!ok) L.push({ ico, t, s, btn, f }); };
-  c(bi.adresse && bi.cp && bi.ville, "📍", "L'adresse complète", "Elle sert au bail, au DPE et aux risques.", "Compléter", `editBien('${bi.id}')`);
-  c(bi.dpe && bi.surface, "⚡", !bi.dpe ? "Le DPE" : "La surface", "Obligatoire dans le bail. L'appli le retrouve toute seule dans la base de l'État.", "🔎 Retrouver", `trouverDpe('${bi.id}')`);
-  c(tf, "🏛", "La taxe foncière", ia ? "Donne l'avis (photo ou PDF) : l'IA lit le total et les ordures ménagères à récupérer." : "Pour récupérer les ordures ménagères sur le locataire.", ia ? "📷 Donner l'avis" : "Renseigner", ia ? `lirePapierBien('${bi.id}')` : `taxeFonciere('${bi.id}')`);
-  c(bi.risquesVerifies || (im && im.risquesVerifies), "🌊", "Les risques (inondation, radon…)", "À joindre à chaque nouveau bail. Vérifié en 1 minute, gratuit.", "Vérifier", `etatRisques('${bi.id}')`);
-  c(bi.pnoEcheance || (im && im.pnoEcheance), "🛡", im ? "L'assurance de l'immeuble (PNO)" : "L'assurance du logement (PNO)", "Sa date d'échéance, pour être prévenu à temps.", "Noter", `editBien('${im ? im.id : bi.id}')`);
-  c(prixAchatDe(bi), "💶", im ? "Le prix d'achat de l'immeuble" : "Le prix d'achat", "Pour voir ce que le logement te rapporte vraiment.", "Ajouter", `editBien('${im ? im.id : bi.id}')`);
+  const pb = new Set([...(bi.sansBesoin || []), ...(im && im.sansBesoin || [])]);
+  let k = ""; const c = (ok, ico, t, s, btn, f) => { if (!ok && !pb.has(k)) L.push({ ico, t, s, btn, f, k, bienId: bi.id }); };
+  k = ""; c(bi.adresse && bi.cp && bi.ville, "📍", "L'adresse complète", "Elle sert au bail, au DPE et aux risques.", "Compléter", `editBien('${bi.id}')`);
+  k = "dpe"; c(bi.dpe && bi.surface, "⚡", !bi.dpe ? "Le DPE" : "La surface", "Obligatoire dans le bail. L'appli le retrouve toute seule dans la base de l'État.", "🔎 Retrouver", `trouverDpe('${bi.id}')`);
+  k = "taxe"; c(tf, "🏛", "La taxe foncière", ia ? "Donne l'avis (photo ou PDF) : l'IA lit le total et les ordures ménagères à récupérer." : "Pour récupérer les ordures ménagères sur le locataire.", ia ? "📷 Donner l'avis" : "Renseigner", ia ? `lirePapierBien('${bi.id}')` : `taxeFonciere('${bi.id}')`);
+  k = "risques"; c(bi.risquesVerifies || (im && im.risquesVerifies), "🌊", "Les risques (inondation, radon…)", "À joindre à chaque nouveau bail. Vérifié en 1 minute, gratuit.", "Vérifier", `etatRisques('${bi.id}')`);
+  k = "pno"; c(bi.pnoEcheance || (im && im.pnoEcheance), "🛡", im ? "L'assurance de l'immeuble (PNO)" : "L'assurance du logement (PNO)", "Sa date d'échéance, pour être prévenu à temps.", "Noter", `editBien('${im ? im.id : bi.id}')`);
+  k = "prix"; c(prixAchatDe(bi), "💶", im ? "Le prix d'achat de l'immeuble" : "Le prix d'achat", "Pour voir ce que le logement te rapporte vraiment.", "Ajouter", `editBien('${im ? im.id : bi.id}')`);
   const b = bailActifDuBien(bi.id); let tot = 6;
   if (b) { tot += 2; const pn = prenom(b.nom);
-    c(b.email, "✉️", `L'e-mail de ${pn}`, "Pour lui envoyer quittances et documents.", "Ajouter", `editBail('${b.id}')`);
-    c(b.assuranceFin, "🛡", `L'assurance habitation de ${pn}`, "Obligatoire chaque année : sa date de fin, pour la redemander à temps.", "Noter", `editBail('${b.id}')`); }
+    k = "email:" + b.id; c(b.email, "✉️", `L'e-mail de ${pn}`, "Pour lui envoyer quittances et documents.", "Ajouter", `editBail('${b.id}')`);
+    k = "assurance:" + b.id; c(b.assuranceFin, "🛡", `L'assurance habitation de ${pn}`, "Obligatoire chaque année : sa date de fin, pour la redemander à temps.", "Noter", `editBail('${b.id}')`); }
   return { L, pct: Math.round((tot - L.length) / tot * 100) };
 }
 function aCompleterImmeuble(im) {
-  const L = [], c = (ok, ico, t, s, btn, f) => { if (!ok) L.push({ ico, t, s, btn, f }); };
+  const L = [], pb = new Set(im.sansBesoin || []);
+  let k = ""; const c = (ok, ico, t, s, btn, f) => { if (!ok && !pb.has(k)) L.push({ ico, t, s, btn, f, k, bienId: im.id }); };
   c(im.adresse && im.cp && im.ville, "📍", "L'adresse complète", "Elle sert aux courriers et aux risques.", "Compléter", `editBien('${im.id}')`);
   c(lotsDe(im.id).length, "🏠", "Les lots de l'immeuble", "Choisis les logements qui en font partie.", "Choisir", `choisirLots('${im.id}')`);
-  c((S.taxes || []).some(t => t.bienId === im.id), "🏛", "La taxe foncière (une seule pour l'immeuble)", "Les ordures ménagères sont réparties entre les lots, puis entre les locataires.", "Renseigner", `taxeFonciere('${im.id}')`);
-  c(im.pnoEcheance, "🛡", "L'assurance de l'immeuble (PNO)", "Sa date d'échéance, pour être prévenu 4 mois avant.", "Noter", `editBien('${im.id}')`);
-  c(+im.prixAchat > 0, "💶", "Le prix d'achat global", `Réparti entre les lots selon ${cleRepartition(im)}.`, "Ajouter", `editBien('${im.id}')`);
-  c(im.risquesVerifies, "🌊", "Les risques (inondation, radon…)", "Une seule fois pour l'immeuble.", "Vérifier", `etatRisques('${im.id}')`);
+  k = "taxe"; c((S.taxes || []).some(t => t.bienId === im.id), "🏛", "La taxe foncière (une seule pour l'immeuble)", "Les ordures ménagères sont réparties entre les lots, puis entre les locataires.", "Renseigner", `taxeFonciere('${im.id}')`);
+  k = "pno"; c(im.pnoEcheance, "🛡", "L'assurance de l'immeuble (PNO)", "Sa date d'échéance, pour être prévenu 4 mois avant.", "Noter", `editBien('${im.id}')`);
+  k = "prix"; c(+im.prixAchat > 0, "💶", "Le prix d'achat global", `Réparti entre les lots selon ${cleRepartition(im)}.`, "Ajouter", `editBien('${im.id}')`);
+  k = "risques"; c(im.risquesVerifies, "🌊", "Les risques (inondation, radon…)", "Une seule fois pour l'immeuble.", "Vérifier", `etatRisques('${im.id}')`);
   return { L, pct: Math.round((6 - L.length) / 6 * 100) };
 }
-function carteACompleter(bi) {
+function carteACompleter(bi, titre) {
   if (LECTURE) return ""; const { L, pct } = bi.immeuble ? aCompleterImmeuble(bi) : aCompleterBien(bi); if (!L.length) return "";
   const pap = SB && estProprio() ? papiersUtiles(bi).length : 0;
-  const li = x => `<li><span class="ico" aria-hidden="true">${x.ico}</span><span class="tx"><b>${x.t}</b><small>${x.s}</small></span><button class="small" onclick="${x.f}">${x.btn}</button></li>`;
-  return `<section class="card a-completer"><h2>✨ Fiche remplie à ${pct} %</h2>
+  const li = x => `<li><span class="ico" aria-hidden="true">${x.ico}</span><span class="tx"><b>${x.t}</b><small>${x.s}</small></span><span class="acts-c"><button class="small" onclick="${x.f}">${x.btn}</button>${x.k && PEUT_MODIFIER() ? `<button class="small ghost pas-besoin" onclick="pasBesoin('${x.bienId}','${x.k}')">Pas besoin</button>` : ""}</span></li>`;
+  return `<section class="card a-completer"><h2>${titre ? titre(L.length) : `✨ Fiche remplie à ${pct} %`}</h2>
     <div class="barre"><i style="width:${pct}%"></i></div>
     ${pap ? `<div class="compl-cta"><span class="tx"><b>🤖 Remplis tout seul avec tes papiers</b><small>${plur(pap, "document")} déjà rangé${pap > 1 ? "s" : ""} ici peu${pap > 1 ? "vent" : "t"} compléter cette fiche (DPE, bail, assurance, taxe). Tu valides avant.</small></span><button class="small primary" onclick="completerAvecPapiers('${bi.id}')">Compléter</button></div>` : ""}
     <ul class="todo">${L.slice(0, 3).map(li).join("")}</ul>
     ${L.length > 3 ? `<details class="pli-mini"><summary>Voir les ${L.length - 3} autres</summary><ul class="todo">${L.slice(3).map(li).join("")}</ul></details>` : ""}</section>`;
 }
+/* "Pas besoin" : l'info ne sera plus demandée (ni compteur, ni À faire) ; Annuler en un geste, et "Remettre" dans le menu Plus du logement */
+function pasBesoin(id, k) {
+  const bi = bien(id); if (!bi) return;
+  bi.sansBesoin = [...new Set([...(bi.sansBesoin || []), k])]; save(); render();
+  toastActions("✓ Ne sera plus demandé", [["Annuler", `remettreBesoins('${id}','${k}')`]]);
+}
+function remettreBesoins(id, k) { const bi = bien(id); if (!bi) return; bi.sansBesoin = k ? (bi.sansBesoin || []).filter(x => x !== k) : []; if (!bi.sansBesoin.length) delete bi.sansBesoin; save(); render(); if (!k) toast("✓ Tout est de nouveau demandé"); }
 /* Juste après la création d'un logement : la suite la plus utile, expliquée */
 function apresNouveauBien(id) {
   const bi = bien(id); if (!bi) return;
@@ -7981,8 +8016,9 @@ function sectionTravaux(bi) {
 function tachesLegales(add, y) {
   S.biens.forEach(bi => {
     const occupe = !!bailActifDuBien(bi.id), ch = sansAccent(bi.chauffage || "").toLowerCase();
-    if (bi.immeuble) { if (!bi.pnoEcheance && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance de l'immeuble (PNO)`, d: "Note sa date d'échéance : l'appli te préviendra 4 mois avant.", acts: [["Noter", `editBien('${bi.id}')`]] }); return; }
-    if (!bi.pnoEcheance && !(immeubleDe(bi) && immeubleDe(bi).pnoEcheance) && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance propriétaire (PNO)`, d: `${cq("pno")} Obligatoire en copropriété, conseillée partout. Indique sa date d'échéance dans la fiche du bien pour être prévenu.`, acts: [["Indiquer", `editBien('${bi.id}')`]] });
+    const sansPno = (bi.sansBesoin || []).includes("pno") || !!(immeubleDe(bi) && (immeubleDe(bi).sansBesoin || []).includes("pno"));
+    if (bi.immeuble) { if (!sansPno && !bi.pnoEcheance && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance de l'immeuble (PNO)`, d: "Note sa date d'échéance : l'appli te préviendra 4 mois avant.", acts: [["Noter", `editBien('${bi.id}')`]] }); return; }
+    if (!sansPno && !bi.pnoEcheance && !(immeubleDe(bi) && immeubleDe(bi).pnoEcheance) && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance propriétaire (PNO)`, d: `${cq("pno")} Obligatoire en copropriété, conseillée partout. Indique sa date d'échéance dans la fiche du bien pour être prévenu.`, acts: [["Indiquer", `editBien('${bi.id}')`]] });
     if (!fait("leg-daaf-" + bi.id)) add({ key: "leg-daaf-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : détecteur de fumée`, d: "Obligatoire dans chaque logement, installé par le propriétaire (le locataire l'entretient). À vérifier à chaque arrivée.", acts: [] });
     if (occupe && /gaz|fioul|bois/.test(ch) && TODAY.getMonth() >= 8 && !fait("leg-chaud-" + bi.id + "-" + y)) add({ key: "leg-chaud-" + bi.id + "-" + y, prio: "info", date: new Date(y, 9, 1), done: true, t: `${esc(bi.nom)} : entretien annuel du chauffage`, d: `Chaudière gaz ou fioul : entretien chaque année${/bois/.test(ch) ? ", et ramonage (2 fois par an pour le bois)" : ""}, à la charge du locataire. Demande-lui l'attestation avant l'hiver.`, acts: [] });
     if (occupe && encadre(bi) && !fait("leg-enc-" + bi.id)) add({ key: "leg-enc-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : encadrement des loyers`, d: `${cq("encadrement")} ${esc(bi.ville)} plafonne les loyers. Vérifie que le loyer ne dépasse pas le loyer de référence majoré, et qu'il est écrit dans le bail.`, acts: [] });
