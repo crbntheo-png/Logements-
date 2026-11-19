@@ -26,7 +26,8 @@
 
 ## Canal "Quoi de neuf" (obligatoire)
 - Après chaque mise en ligne d'une nouveauté visible : `python3 tests/nouveaute.py ID "émoji" "Titre court" "Une phrase simple, en tutoyant : ce que ça change." "#page" --annoncer`.
-- Mots simples, pas de jargon, une seule phrase. `--annoncer` envoie une notification à tous les utilisateurs (une seule fois par ID). Pas pour une simple correction invisible.
+- Mots simples, pas de jargon, une seule phrase. Pas pour une simple correction invisible.
+- `--annoncer` (notification sur le téléphone de TOUS les utilisateurs) : seulement pour une grosse nouveauté, au plus une fois par semaine (Théo : "ça va les saouler"). Sinon, sans `--annoncer` : la nouveauté est juste listée dans Réglages › Plus de réglages et dans la page "Ce que l'appli fait pour toi". Aucun bandeau de nouveautés sur l'accueil.
 
 ## En fin de session
 - Ajouter une entrée en haut de l'Historique de `JOURNAL.md`, mettre à jour "À faire", commit et push.

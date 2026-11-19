@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "f24407b", "date": "2026-11-19T06:50"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "07ed808", "date": "2026-11-19T07:05"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2777,8 +2777,10 @@ function vitrine() {
   return VITRINE.map(([ico, titre, L]) => { const f = L.filter(x => !x[4] || SB); return `<section class="vitrine"><h2 class="sec">${ico} ${titre}</h2><div class="vit-grille">${f.map(([i, t, d, go]) => `<button type="button" class="vit" onclick="${go}"><span class="vit-i" aria-hidden="true">${i}</span><b>${t}</b><small>${d}</small></button>`).join("")}</div></section>`; }).join("");
 }
 function pageAide() {
+  if (SB && NV.etat === "inconnu") setTimeout(chargerNouveautes, 300);
   const E = etapesGuide(), reste = E.some(e => !e.ok);
   return `<div><a class="back" href="#locataires">← Accueil</a><div class="head"><div><h1>✨ Ce que l'appli fait pour toi</h1><p>Touche une ligne pour y aller. Toi, tu valides : rien ne part sans ton accord.</p></div></div></div>
+    ${SB && NV.liste.length ? `<a class="aide-lien" href="#nouveautes">🆕 <span><b>Dernières nouveautés de l'appli</b><small>${nvNonVues().length ? `${nvNonVues().length} pas encore vue${nvNonVues().length > 1 ? "s" : ""} · ` : ""}la plus récente : ${esc(NV.liste[0].titre)}</small></span>${ic("chevR", "chev")}</a>` : ""}
     ${reste ? blocGuide(false).replace(/<div class="row"><button class="small ghost" onclick="S\.faits\.guideMasque[^<]*<\/button><\/div>/, "").replace('<a class="more" href="#aide">Comment ça marche ?</a>', "") : ""}
     ${vitrine()}
     <details class="card pli"><summary><h2>📖 Les mots compliqués, expliqués</h2>${ic("chevR", "s")}</summary>${sectionLexique().replace('<h2>📖 Petit lexique</h2>', "")}</details>
@@ -2953,7 +2955,6 @@ function pageAccueil(T) {
       return `<div class="card portails-cta"><span class="nv-ico" aria-hidden="true">🔗</span><span class="tx"><b>${sans.length === actifs.length ? "Aucun locataire n'a encore son espace" : `${sans.length} locataire${sans.length > 1 ? "s n'ont" : " n'a"} pas encore son espace`}</b><small>Quittances, bail, attestation d'assurance, signature à distance, signaler un problème : tout en un lien.</small></span><div class="row"><button class="small primary" onclick="creerTousPortails()">Créer ${sans.length > 1 ? "les " + sans.length + " espaces" : "son espace"}</button><button class="small ghost" onclick="S.faits.portailsMasque=iso(TODAY);save();render()">Plus tard</button></div></div>`; })()}
   </section>
   ${SB && ESPACES.length > 1 ? `<a class="aide-lien" href="#tous">🏢 <span><b>Tes ${ESPACES.length} espaces sur un écran</b><small>Loyers, retards et urgences de chacun</small></span>${ic("chevR", "chev")}</a>` : ""}${carteBanqueAccueil()}${carteActivite()}
-  ${bandeauNouveautes()}
   ${echeancier()}
   <a class="aide-lien" href="#aide">✨ <span><b>Tout ce que l'appli peut faire pour toi</b><small>Quittances automatiques, espace locataire, IA, signature…</small></span>${ic("chevR", "chev")}</a>`;
 }
@@ -4491,9 +4492,11 @@ function avanceRemboursee(nom) {
 /* Réglages : des rubriques repliées, une ligne chacune ; on touche pour ouvrir */
 /* Les réglages dont on se sert rarement : repliés sous une seule ligne (ouverte d'office si l'un d'eux est demandé) */
 function plusReglages(L, ids) {
+  if (SB && NV.etat === "inconnu") setTimeout(chargerNouveautes, 300);
   const h = L.filter(Boolean); if (!h.length) return "";
   const ouvert = view.plusRgl || ids.some(k => view.rgl && view.rgl[k]);
-  return `<details class="plus-rgl" ${ouvert ? "open" : ""} ontoggle="view.plusRgl=this.open"><summary class="group-title">Plus de réglages (${h.length}) <small>sauvegarde, historique, agenda, Claude…</small>${ic("chevR", "chev")}</summary>${h.join("")}</details>`;
+  const nv = SB ? nvNonVues().length : 0;
+  return `<details class="plus-rgl" ${ouvert ? "open" : ""} ontoggle="view.plusRgl=this.open"><summary class="group-title">Plus de réglages (${h.length})${nv ? ` <span class="pill info">🆕 ${nv} nouveauté${nv > 1 ? "s" : ""}</span>` : ""} <small>nouveautés, sauvegarde, historique, agenda, Claude…</small>${ic("chevR", "chev")}</summary>${h.join("")}</details>`;
 }
 function reglage(id) {
   view.rgl = Object.assign({}, view.rgl, { [id]: true });
@@ -4609,9 +4612,21 @@ function modal(title, body, onSubmit, opts = {}) {
   const f = document.getElementById("mform");
   f.addEventListener("submit", ev => { ev.preventDefault(); const d = Object.fromEntries(new FormData(f).entries()); f.querySelectorAll("input[type=checkbox]").forEach(c => d[c.name] = c.checked); if ((opts.lecture ? onSubmit(d, f) : avecAnnuler(() => onSubmit(d, f))) !== false) { closeOverlay(); save(); render(); } });
   if (opts.del) document.getElementById("mdel").onclick = () => confirmer(opts.delMsg || "Supprimer ?", () => { opts.del(); save(); render(); });
+  f.addEventListener("input", () => { f.dataset.modifie = "1"; });
   if (opts.after) opts.after(f);
   const first = f.querySelector("input:not([type=checkbox]):not([type=radio]),select,textarea"); if (first && matchMedia("(pointer: fine)").matches) first.focus();
 }
+/* Toucher à côté d'une fenêtre la ferme, comme la croix (utile aussi si l'affichage bugue).
+   Si on a commencé à remplir un formulaire, il faut toucher une 2e fois à côté : rien ne se perd par erreur. */
+let FOND = { depart: null, avert: 0 };
+document.addEventListener("pointerdown", e => { FOND.depart = e.target; }, true);
+document.addEventListener("click", e => {
+  const o = document.getElementById("overlay"); if (!o || o.hidden || e.target !== o || FOND.depart !== o) return;
+  const f = document.getElementById("mform");
+  if (f && f.dataset.modifie && Date.now() - FOND.avert > 4000) { FOND.avert = Date.now(); toast("Tu as commencé à remplir : touche encore à côté pour fermer sans enregistrer."); return; }
+  FOND.avert = 0;
+  if (o.querySelector('.docwrap [onclick="fermerDoc()"]') && typeof fermerDoc === "function") fermerDoc(); else closeOverlay();
+});
 function closeOverlay() { fermerSigPad(); const o = document.getElementById("overlay"); o.hidden = true; o.innerHTML = ""; if (pendingRender) { pendingRender = false; } render(); }
 document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (document.getElementById("sigpad")) { fermerSigPad(); return; } if (!document.getElementById("overlay").hidden) closeOverlay(); });
 function confirmer(msg, yes) {
@@ -7285,7 +7300,7 @@ const nvNonVues = () => NV.liste.filter(x => x.cree_le > nvVu());
 async function chargerNouveautes() {
   if (!SB || NV.etat === "chargement") return; NV.etat = "chargement";
   const r = await SB.from("nouveautes").select("id, date, icone, titre, texte, lien, cree_le").order("cree_le", { ascending: false }).limit(60);
-  NV = { etat: r.error ? "erreur" : "ok", liste: r.data || [] }; if (nvNonVues().length || location.hash === "#nouveautes") render();
+  NV = { etat: r.error ? "erreur" : "ok", liste: r.data || [] }; if (nvNonVues().length || /^#(nouveautes|aide|reglages)$/.test(location.hash)) render();
 }
 function marquerNouveautesVues() { if (NV.liste[0]) try { localStorage.setItem("gestion-sci-nv-vu", NV.liste[0].cree_le); } catch (e) {} }
 function bandeauNouveautes() {

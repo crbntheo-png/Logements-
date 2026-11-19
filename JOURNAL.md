@@ -74,6 +74,12 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 19/11/2026 — fermer en touchant à côté ; nouveautés discrètes
+- Toute fenêtre se ferme en touchant à côté (comme la croix). Si un formulaire a été commencé : 1er toucher à côté = message "touche encore à côté pour fermer sans enregistrer", 2e = ferme. Glisser depuis l'intérieur ne ferme pas. Une confirmation fermée à côté = rien n'est fait. L'aperçu d'un document se ferme aussi (la protection "signature pas encore rangée" reste).
+- Plus de bandeau de nouveautés sur l'accueil. Elles restent dans Réglages › Plus de réglages (pastille "🆕 N nouveautés") et en haut de la page "Ce que l'appli fait pour toi" (#aide).
+- CLAUDE.md : `--annoncer` (notification à tous) seulement pour une grosse nouveauté, au plus une fois par semaine. "fermer-a-cote" ajoutée sans notification.
+- Tests : test86 (nouveau, iPhone + ordinateur, 19 vérifications) OK ; test5, test84 OK. En ligne.
+
 ### 19/11/2026 — appli épurée pour l'iPhone (objectif : prêt lundi)
 - Tour complet sur iPhone simulé (SE, 13, 13 Pro Max), avec un espace réel de test. Avant : accueil 3,5 écrans (2 bandeaux + guide + nouveautés + 5 tâches avant les loyers), À faire 11 écrans, Réglages 20 rubriques, aide 8 000 px.
 - Accueil : les loyers du mois en premier, puis 3 tâches, puis le guide, puis les locataires ; cartes locataires à 2 boutons au plus (Étaler, Pas besoin, Autre montant restent dans la fiche) ; "espaces locataires" sous les locataires ; "Tous mes espaces" et "Nouveautés" en lignes discrètes ; lien "Tout ce que l'appli peut faire pour toi" en bas.
