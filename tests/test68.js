@@ -27,7 +27,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.isVisible('#mcp_prompt') && /Range mon appli/.test(await p.locator('#mcp_prompt').innerText()), 'autorisé : message à coller dans Claude affiché');
   await p.screenshot({ path: __dirname + '/shots58/claude-ranger.png' });
   const tools = (await rpc('tools/list')).result.tools.map(x => x.name);
-  t(tools.length === 15 && tools.includes('creer_locataire') && !tools.some(n => /suppr|delete|envoy/.test(n)), '15 outils, aucun pour supprimer ou envoyer');
+  t(tools.length === 21 && tools.includes('creer_locataire') && tools.includes('modifier_locataire') && !tools.some(n => /envoy/.test(n)) && tools.filter(n => /suppr|delete/.test(n)).join() === 'supprimer_doublon', '21 outils : aucun pour envoyer, une seule suppression (doublon vide)');
   const init = (await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } })).result;
   t(/montre toujours ton plan/.test(init.instructions) && !/supabase|index\.html|function|SELECT/i.test(JSON.stringify(init) + JSON.stringify((await rpc('tools/list')).result)), 'consignes claires, rien sur la fabrication de l\'appli');
   t((await rpc('prompts/list')).result.prompts[0].name === 'ranger_mon_appli', 'invite « Ranger mon appli avec Claude » disponible');

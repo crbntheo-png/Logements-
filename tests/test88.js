@@ -36,7 +36,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
     ok('étape 3 : Jean Dupont, "Créer depuis son bail" (bail trouvé dans le Drive)', await p.evaluate(() => /2\/4 étapes/.test(document.body.innerText) && /Jean Dupont/.test(document.querySelector('.dem-e.cur').innerText) && /Créer depuis son bail/.test(document.querySelector('.dem-e.cur').innerText)));
     // ajout à la main : on reste sur le démarrage
     await p.evaluate(() => editBail(null, S.biens[0].id)); await p.waitForTimeout(300);
-    await p.fill('#mform input[name=nom]', 'Jean Dupont'); await p.fill('#mform input[name=loyerHC]', '500');
+    await p.fill('#mform input[name=nom]', 'Jean Dupont'); await p.fill('#mform input[name=loyerHC]', '500'); await p.fill('#mform input[name=dateEntree]', '2026-01-01');
     await p.screenshot({ path: OUT + '/3b-form.png' });
     await p.evaluate(() => document.getElementById('mform').requestSubmit()); await p.waitForTimeout(1200);
     console.log('   (hash après ajout :', await p.evaluate(() => location.hash + ' baux=' + S.baux.length + ' overlay=' + !document.getElementById('overlay').hidden + ' toast=' + ((document.getElementById('toast') || {}).textContent || '')), ')');

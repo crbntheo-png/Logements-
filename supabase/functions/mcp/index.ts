@@ -38,6 +38,24 @@ const OUTILS_ECRITURE = [
     date: { type: "string", description: "AAAA-MM-JJ" }, montant: { type: "number", description: "Montant TTC en euros, positif" }, categorie: { type: "string", enum: CATS }, libelle: { type: "string" }, logement: { type: "string", description: "Vide = la SCI en général" } } } },
   { name: "ajouter_rappel", description: "Ajoute un rappel dans « À faire » à une date (ex : « Demander l'attestation d'assurance de Jean »).", annotations: ECRIRE, inputSchema: { type: "object", additionalProperties: false, required: ["titre", "date"], properties: {
     titre: { type: "string" }, date: { type: "string", description: "AAAA-MM-JJ" }, logement: { type: "string" } } } },
+  { name: "modifier_locataire", description: "Corrige la fiche d'un locataire actuel (erreur de saisie) : date d'entrée, type de bail, jour de paiement, loyer, charges, dépôt, contact, fin d'assurance, mois à partir duquel les loyers sont suivis. Ne mets que les champs à changer. Pour une augmentation de loyer annuelle, utilise plutôt la révision dans l'appli.", annotations: ECRIRE, inputSchema: { type: "object", additionalProperties: false, required: ["locataire"], properties: {
+    locataire: { type: "string", description: "Nom (ou identifiant) du locataire" }, nom: { type: "string" }, colocataires: { type: "string" }, email: { type: "string" }, telephone: { type: "string" },
+    date_entree: { type: "string", description: "AAAA-MM-JJ (date du bail)" }, type_bail: { type: "string", enum: ["vide", "meuble", "etudiant", "mobilite"] }, jour_paiement: { type: "number", description: "1 à 31" },
+    loyer_hc: { type: "number" }, charges: { type: "number" }, depot: { type: "number" }, assurance_fin: { type: "string", description: "AAAA-MM-JJ" }, suivi_depuis: { type: "string", description: "AAAA-MM : avant ce mois, rien n'est compté comme impayé" } } } },
+  { name: "modifier_logement", description: "Corrige la fiche d'un logement : nom, adresse, type, meublé ou vide (le bail du locataire en place suit), surface, pièces, DPE, fins de validité des diagnostics, échéance de l'assurance, prix d'achat, rattachement à un immeuble. Ne mets que les champs à changer.", annotations: ECRIRE, inputSchema: { type: "object", additionalProperties: false, required: ["logement"], properties: {
+    logement: { type: "string", description: "Nom (ou identifiant) du logement" }, nom: { type: "string" }, adresse: { type: "string" }, code_postal: { type: "string" }, ville: { type: "string" },
+    type: { type: "string", enum: ["Appartement", "Studio", "Maison", "Parking", "Local commercial", "Autre"] }, meuble: { type: "boolean" }, surface: { type: "number" }, pieces: { type: "number" },
+    dpe: { type: "string", enum: ["A", "B", "C", "D", "E", "F", "G"] }, dpe_valide_jusqua: { type: "string", description: "AAAA-MM-JJ" }, diag_elec_fin: { type: "string", description: "AAAA-MM-JJ" }, diag_gaz_fin: { type: "string", description: "AAAA-MM-JJ" },
+    pno_echeance: { type: "string", description: "AAAA-MM-JJ" }, prix_achat: { type: "number" }, immeuble: { type: "string", description: "Nom de la fiche immeuble dont ce logement est un lot ('' pour le détacher)" } } } },
+  { name: "creer_immeuble", description: "Crée une fiche IMMEUBLE (pas un logement à louer) qui regroupe des lots : acte, assurance, taxe foncière, travaux communs et prix d'achat global répartis entre les lots. Ou transforme une fiche existante de type « parties communes » en immeuble.", annotations: ECRIRE, inputSchema: { type: "object", additionalProperties: false, required: ["nom", "lots"], properties: {
+    nom: { type: "string", description: "Nom de l'immeuble, ou nom d'une fiche existante à transformer" }, adresse: { type: "string" }, code_postal: { type: "string" }, ville: { type: "string" }, prix_achat: { type: "number", description: "Prix d'achat global, frais compris" },
+    lots: { type: "array", items: { type: "string" }, description: "Noms des logements qui en font partie" } } } },
+  { name: "enregistrer_loyer", description: "Enregistre un loyer reçu (ou un paiement partiel) pour un locataire et un mois. Vérifie avec 'locataires' ou 'impayes' que ce paiement n'est pas déjà noté : un paiement identique (même mois, même montant, même date) est refusé.", annotations: ECRIRE, inputSchema: { type: "object", additionalProperties: false, required: ["locataire", "mois", "montant", "date"], properties: {
+    locataire: { type: "string" }, mois: { type: "string", description: "Mois du loyer, AAAA-MM" }, montant: { type: "number" }, date: { type: "string", description: "Date de réception, AAAA-MM-JJ" }, mode: { type: "string", enum: ["virement", "prelevement", "cheque", "especes", "caf"] } } } },
+  { name: "noter_depart", description: "Note le départ d'un locataire (date de remise des clés) : il reste dans l'historique, le dernier loyer est calculé au prorata. Ne supprime rien.", annotations: ECRIRE, inputSchema: { type: "object", additionalProperties: false, required: ["locataire", "date_sortie"], properties: {
+    locataire: { type: "string" }, date_sortie: { type: "string", description: "AAAA-MM-JJ" }, preavis_recu: { type: "string", description: "AAAA-MM-JJ (facultatif)" } } } },
+  { name: "supprimer_doublon", description: "Supprime une fiche créée en double, SEULEMENT si elle est vide : un logement sans locataire ni document, ou un locataire sans aucun paiement. Montre-le à l'utilisateur et attends son accord avant. La fiche reste récupérable dans l'appli (Réglages › Historique et corbeille).", annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false }, inputSchema: { type: "object", additionalProperties: false, required: ["type", "fiche"], properties: {
+    type: { type: "string", enum: ["logement", "locataire"] }, fiche: { type: "string", description: "Nom ou identifiant exact de la fiche en double" } } } },
 ];
 const uidc = () => crypto.randomUUID().replace(/-/g, "").slice(0, 10);
 const dateOk = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(Date.parse(v));
@@ -53,6 +71,7 @@ async function ecrire(admin: any, e: string, nom: string, a: any, cx: any) {
   const inserer = async (coll: string, data: any) => { const { error } = await admin.from("docs").insert({ espace_id: e, coll, doc_id: data.id, data: { ...data, parClaude: true }, maj_le: new Date().toISOString() }); if (error) throw new Error(error.message); };
   const maj = async (coll: string, data: any) => { const { error } = await admin.from("docs").update({ data, maj_le: new Date().toISOString() }).eq("espace_id", e).eq("coll", coll).eq("doc_id", data.id); if (error) throw new Error(error.message); };
   const snap = (cle: string, o: any) => { cx.d[cle] = [...(cx.d[cle] || []), o]; cx.modifie = true; };
+  const majSnap = (cle: string, id: string, patch: any) => { if (!Array.isArray(cx.d[cle])) return; cx.d[cle] = cx.d[cle].map((x: any) => x.id === id ? { ...x, ...patch } : x); cx.modifie = true; };
   if (nom === "creer_logement") {
     const L = await lire("biens"); if (L.some((b: any) => norm(b.nom) === norm(a.nom))) return err(`Le logement « ${a.nom} » existe déjà.`);
     const b = { id: uidc(), nom: String(a.nom).slice(0, 80), adresse: String(a.adresse || "").slice(0, 160), cp: String(a.code_postal || "").slice(0, 10), ville: String(a.ville || "").slice(0, 80), type: a.type || "Appartement", meuble: a.meuble ? "meuble" : "vide", surface: +a.surface > 0 ? +a.surface : "" };
@@ -105,6 +124,79 @@ async function ecrire(admin: any, e: string, nom: string, a: any, cx: any) {
     const r = { id: uidc(), titre: String(a.titre).slice(0, 140), date: a.date, bienId, fait: false };
     await inserer("rappels", r); return R({ ok: true, cree: "rappel", titre: r.titre, date: r.date });
   }
+  if (nom === "modifier_locataire") {
+    const baux = (await lire("baux")).filter((x: any) => !x.dateSortie || x.dateSortie >= moisDe(parisAuj()) + "-01"), t = trouver(baux, a.locataire, "locataire"); if (t.e) return err(t.e);
+    const b = { ...t.x }, chg: string[] = [];
+    const pose = (cle: string, v: unknown, lib: string) => { if (v === undefined || v === null || v === "") return; b[cle] = v; chg.push(lib); };
+    if (a.date_entree !== undefined) { if (!dateOk(a.date_entree)) return err("date_entree doit être au format AAAA-MM-JJ."); pose("dateEntree", a.date_entree, "date d'entrée"); }
+    if (a.assurance_fin !== undefined) { if (!dateOk(a.assurance_fin)) return err("assurance_fin doit être au format AAAA-MM-JJ."); pose("assuranceFin", a.assurance_fin, "fin d'assurance"); }
+    if (a.suivi_depuis !== undefined) { if (!/^\d{4}-\d{2}$/.test(String(a.suivi_depuis))) return err("suivi_depuis doit être au format AAAA-MM."); pose("suiviDepuis", a.suivi_depuis, "suivi des loyers"); }
+    if (a.jour_paiement !== undefined) { const j = Math.round(+a.jour_paiement); if (!(j >= 1 && j <= 31)) return err("jour_paiement : de 1 à 31."); pose("jourPaiement", String(j), "jour de paiement"); }
+    if (a.loyer_hc !== undefined) { if (!(+a.loyer_hc > 0)) return err("loyer_hc doit être positif."); pose("loyerHC", String(+a.loyer_hc), "loyer"); }
+    if (a.charges !== undefined) { if (!(+a.charges >= 0)) return err("charges : montant positif ou 0."); b.charges = String(+a.charges); chg.push("charges"); }
+    if (a.depot !== undefined) { if (!(+a.depot >= 0)) return err("depot : montant positif ou 0."); b.depot = +a.depot; chg.push("dépôt"); }
+    pose("typeBail", a.type_bail, "type de bail"); pose("nom", a.nom && String(a.nom).slice(0, 120), "nom"); pose("colocataires", a.colocataires, "colocataires"); pose("email", a.email && String(a.email).trim(), "e-mail"); pose("tel", a.telephone, "téléphone");
+    if (!chg.length) return err("Rien à changer : indique au moins un champ.");
+    await maj("baux", { ...b, modifieParClaude: true }); majSnap("locataires", b.id, { nom: b.nom, entree: b.dateEntree, type_bail: b.typeBail, loyer_hc: +b.loyerHC || 0, charges: +b.charges || 0, jour_paiement: +b.jourPaiement || 0, depot: +b.depot || 0, email: b.email || "", telephone: b.tel || "", fin_assurance: b.assuranceFin || "" });
+    return R({ ok: true, modifie: t.x.nom, champs: chg });
+  }
+  if (nom === "modifier_logement") {
+    const B = await lire("biens"), t = trouver(B, a.logement, "logement"); if (t.e) return err(t.e);
+    const bi = { ...t.x }, chg: string[] = [], date = (v: unknown, cle: string, lib: string) => { if (v === undefined) return ""; if (!dateOk(v)) return `${lib} doit être au format AAAA-MM-JJ.`; bi[cle] = v; chg.push(lib); return ""; };
+    for (const [v, k, l] of [[a.dpe_valide_jusqua, "dpeValidite", "dpe_valide_jusqua"], [a.diag_elec_fin, "diagElecFin", "diag_elec_fin"], [a.diag_gaz_fin, "diagGazFin", "diag_gaz_fin"], [a.pno_echeance, "pnoEcheance", "pno_echeance"]] as any) { const e2 = date(v, k, l); if (e2) return err(e2); }
+    const pose = (cle: string, v: unknown, lib: string) => { if (v === undefined || v === null || v === "") return; bi[cle] = v; chg.push(lib); };
+    pose("nom", a.nom && String(a.nom).slice(0, 80), "nom"); pose("adresse", a.adresse, "adresse"); pose("cp", a.code_postal, "code postal"); pose("ville", a.ville, "ville"); pose("type", a.type, "type"); pose("dpe", a.dpe, "DPE");
+    if (+a.surface > 0) { bi.surface = +a.surface; chg.push("surface"); } if (+a.pieces > 0) { bi.pieces = +a.pieces; chg.push("pièces"); } if (+a.prix_achat > 0) { bi.prixAchat = +a.prix_achat; chg.push("prix d'achat"); }
+    let suit = "";
+    if (typeof a.meuble === "boolean" && (bi.meuble === "meuble") !== a.meuble) { bi.meuble = a.meuble ? "meuble" : "vide"; chg.push(a.meuble ? "meublé" : "vide");
+      const baux = (await lire("baux")).filter((x: any) => x.bienId === bi.id && (!x.dateSortie || x.dateSortie >= parisAuj().toISOString().slice(0, 10)) && x.typeBail === (a.meuble ? "vide" : "meuble"));
+      for (const x of baux) await maj("baux", { ...x, typeBail: a.meuble ? "meuble" : "vide" }); if (baux.length) suit = `Le bail de ${baux.map((x: any) => x.nom).join(", ")} suit (${a.meuble ? "meublé" : "vide"}).`; }
+    if (a.immeuble !== undefined) { if (a.immeuble === "") { delete bi.immeubleId; chg.push("détaché de l'immeuble"); } else { const ti = trouver(B.filter((x: any) => x.immeuble), a.immeuble, "immeuble"); if (ti.e) return err(ti.e + " (crée-le d'abord avec creer_immeuble)"); bi.immeubleId = ti.x.id; chg.push("lot de " + ti.x.nom); } }
+    if (!chg.length) return err("Rien à changer : indique au moins un champ.");
+    await maj("biens", { ...bi, modifieParClaude: true }); majSnap("logements", bi.id, { nom: bi.nom, type: bi.type, meuble: bi.meuble, surface: bi.surface || "", dpe: bi.dpe || "", dpe_valide_jusqua: bi.dpeValidite || "" });
+    return R({ ok: true, modifie: t.x.nom, champs: chg, info: suit || undefined });
+  }
+  if (nom === "creer_immeuble") {
+    const B = await lire("biens"), lots: any[] = [];
+    for (const l of (a.lots || [])) { const t = trouver(B.filter((x: any) => !x.immeuble), l, "logement"); if (t.e) return err(t.e); lots.push(t.x); }
+    const baux = await lire("baux"), exist = B.find((x: any) => norm(x.nom) === norm(a.nom));
+    let im: any;
+    if (exist) { if (baux.some((x: any) => x.bienId === exist.id)) return err(`« ${exist.nom} » a un locataire : ce n'est pas un immeuble.`); im = { ...exist, immeuble: true, type: "Immeuble (regroupe des lots)" }; delete im.immeubleId; }
+    else im = { id: uidc(), nom: String(a.nom).slice(0, 80), immeuble: true, type: "Immeuble (regroupe des lots)", meuble: "vide" };
+    if (a.adresse) im.adresse = String(a.adresse).slice(0, 160); if (a.code_postal) im.cp = String(a.code_postal); if (a.ville) im.ville = String(a.ville); if (+a.prix_achat > 0) im.prixAchat = +a.prix_achat;
+    if (exist) await maj("biens", { ...im, modifieParClaude: true }); else await inserer("biens", im);
+    for (const l of lots.filter(x => x.id !== im.id)) await maj("biens", { ...l, immeubleId: im.id, modifieParClaude: true });
+    return R({ ok: true, immeuble: im.nom, transforme: !!exist, lots: lots.map(x => x.nom), info: "La taxe foncière, l'assurance et les travaux communs se mettent sur la fiche de l'immeuble ; le prix d'achat est réparti entre les lots (surface ou tantièmes)." });
+  }
+  if (nom === "enregistrer_loyer") {
+    if (!/^\d{4}-\d{2}$/.test(String(a.mois))) return err("mois doit être au format AAAA-MM."); if (!dateOk(a.date)) return err("date doit être au format AAAA-MM-JJ."); if (!(+a.montant > 0)) return err("montant doit être positif.");
+    const t = trouver(await lire("baux"), a.locataire, "locataire"); if (t.e) return err(t.e);
+    const clo = (await admin.from("espaces").select("cloture_jusqua").eq("id", e).maybeSingle()).data?.cloture_jusqua;
+    if (clo && a.date.slice(0, 7) <= clo) return err(`Le mois ${a.date.slice(0, 7)} est clôturé dans l'appli : rien n'a été ajouté.`);
+    const P = await lire("paiements"), m = Math.round(+a.montant * 100) / 100;
+    if (P.some((x: any) => x.bailId === t.x.id && x.mois === a.mois && Math.abs(+x.montant - m) < 0.01 && x.date === a.date)) return R({ ok: true, deja: true, info: "Ce paiement est déjà enregistré : rien ajouté." });
+    const pay = { id: uidc(), bailId: t.x.id, mois: a.mois, montant: m, date: a.date, mode: a.mode || "virement" };
+    await inserer("paiements", pay); return R({ ok: true, enregistre: `${m} € de ${t.x.nom} pour ${a.mois}`, info: "La quittance est prête dans l'appli (l'envoi reste à confirmer par le propriétaire)." });
+  }
+  if (nom === "noter_depart") {
+    if (!dateOk(a.date_sortie)) return err("date_sortie doit être au format AAAA-MM-JJ."); if (a.preavis_recu && !dateOk(a.preavis_recu)) return err("preavis_recu doit être au format AAAA-MM-JJ.");
+    const t = trouver(await lire("baux"), a.locataire, "locataire"); if (t.e) return err(t.e);
+    if (a.date_sortie < t.x.dateEntree) return err("La date de sortie est avant la date d'entrée.");
+    await maj("baux", { ...t.x, dateSortie: a.date_sortie, ...(a.preavis_recu ? { preavisRecu: a.preavis_recu } : {}), modifieParClaude: true });
+    return R({ ok: true, depart: t.x.nom, le: a.date_sortie, info: "Le parcours de départ (état des lieux de sortie, dépôt de garantie, régularisation) est sur sa fiche dans l'appli." });
+  }
+  if (nom === "supprimer_doublon") {
+    if (a.type === "logement") { const B = await lire("biens"), t = trouver(B, a.fiche, "logement"); if (t.e) return err(t.e);
+      if ((await lire("baux")).some((x: any) => x.bienId === t.x.id)) return err(`« ${t.x.nom} » a un locataire : je ne la supprime pas (change d'abord le logement de ce locataire dans l'appli).`);
+      if ((await lire("fichiers")).some((f: any) => f.bienId === t.x.id)) return err(`« ${t.x.nom} » contient des documents : range-les d'abord ailleurs (ranger_document), puis réessaie.`);
+      if (B.some((x: any) => x.immeubleId === t.x.id)) return err(`« ${t.x.nom} » est un immeuble avec des lots : je ne le supprime pas.`);
+      const { error } = await admin.from("docs").delete().eq("espace_id", e).eq("coll", "biens").eq("doc_id", t.x.id); if (error) throw new Error(error.message);
+      return R({ ok: true, supprime: t.x.nom, info: "Récupérable dans l'appli : Réglages › Historique et corbeille." }); }
+    const t = trouver(await lire("baux"), a.fiche, "locataire"); if (t.e) return err(t.e);
+    if ((await lire("paiements")).some((x: any) => x.bailId === t.x.id)) return err(`${t.x.nom} a des paiements enregistrés : ce n'est pas un doublon vide, je ne supprime pas. Pour un départ, utilise noter_depart.`);
+    const { error } = await admin.from("docs").delete().eq("espace_id", e).eq("coll", "baux").eq("doc_id", t.x.id); if (error) throw new Error(error.message);
+    return R({ ok: true, supprime: t.x.nom, info: "Récupérable dans l'appli : Réglages › Historique et corbeille." });
+  }
   return null;
 }
 const PROMPT_RANGER = `Aide-moi à ranger mon espace de gestion locative, avec les outils « Gestion locative ».
@@ -146,7 +238,7 @@ Deno.serve(async (req) => {
     const ok = (result: unknown) => ({ jsonrpc: "2.0", id: m.id, result });
     switch (m.method) {
       case "initialize": { const v = m.params?.protocolVersion; return ok({ protocolVersion: VERSIONS.includes(v) ? v : VERSIONS[1], capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } }, serverInfo: { name: "gestion-locative", title: "Gestion locative", version: "1.0.0" },
-        instructions: `Données de gestion locative de « ${d.espace || "l'espace"} » (propriétaire bailleur${d.sci ? ", " + d.sci : ""}), mises à jour le ${d.maj || "?"}. Montants en euros. ${c.ecriture ? "Tu peux aussi RANGER l'espace (créer logements, locataires, ajouter des documents en lien, des dépenses, des rappels) : montre toujours ton plan et attends l'accord de l'utilisateur avant d'écrire ; jamais de doublon ; tu ne peux ni supprimer ni envoyer de message." : "Lecture seule : pour modifier, l'utilisateur passe par l'appli https://sci-gestion-locative.com."} Commence par resume_du_mois.` }); }
+        instructions: `Données de gestion locative de « ${d.espace || "l'espace"} » (propriétaire bailleur${d.sci ? ", " + d.sci : ""}), mises à jour le ${d.maj || "?"}. Montants en euros. ${c.ecriture ? "Tu peux aussi RANGER et CORRIGER l'espace (créer et modifier logements, immeubles et locataires, enregistrer un loyer reçu, noter un départ, ajouter des documents en lien, des dépenses, des rappels, supprimer un doublon VIDE) : montre toujours ton plan et attends l'accord de l'utilisateur avant d'écrire ; jamais de doublon ; demande les vraies dates (jamais la date du jour par défaut) ; une fiche immeuble n'est pas un logement à louer ; tu ne peux pas envoyer de message ni supprimer une fiche qui a des paiements ou des documents." : "Lecture seule : pour modifier, l'utilisateur passe par l'appli https://sci-gestion-locative.com."} Commence par resume_du_mois.` }); }
       case "ping": return ok({});
       case "tools/list": return ok({ tools: c.ecriture ? [...OUTILS, ...OUTILS_ECRITURE] : OUTILS });
       case "tools/call": { const n = String(m.params?.name || ""), a = m.params?.arguments || {};

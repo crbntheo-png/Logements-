@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "a4e4b47", "date": "2026-11-19T10:25"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": ""}; window.APP_VERSION = {"id": "923c333", "date": "2026-11-19T12:40"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -429,6 +429,8 @@ button, .btn, a, summary, label, [role="link"], .tile-head, .lr-main { touch-act
 .compl-cta .tx small { color: var(--ink-2); font-size: .8rem; line-height: 1.35; }
 @media (max-width: 480px) { .compl-cta { flex-direction: column; align-items: stretch; } }
 .compl-h { margin: 12px 0 4px; font-size: .95rem; }
+.biens-l li.lot .lr-main { padding-left: 34px; } .biens-l li.lot { border-left: 3px solid var(--accent-soft); }
+.biens-l li.imm .ico-cat { background: var(--accent-soft); }
 ol.dem { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
 .dem-e { display: flex; gap: 12px; background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-1); padding: 14px; }
 .dem-e .num { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--surface-2); color: var(--muted); }
@@ -1921,6 +1923,20 @@ const bail = id => S.baux.find(b => b.id === id);
 const bienLabel = b => b ? b.nom : "—";
 const adresseBien = b => b ? [b.adresse, [b.cp, b.ville].filter(Boolean).join(" ")].filter(Boolean).join(", ") : "";
 const isActive = (b, d = TODAY) => P(b.dateEntree) <= d && (!b.dateSortie || P(b.dateSortie) >= d);
+/* Immeuble : une fiche qui regroupe des lots (acte, assurance, taxe foncière, travaux, prix d'achat communs). Ce n'est pas un logement à louer. */
+const estImm = bi => !!(bi && bi.immeuble);
+const logements = () => S.biens.filter(b => !b.immeuble);
+const lotsDe = id => S.biens.filter(b => b.immeubleId === id && !b.immeuble);
+const immeubleDe = bi => bi && bi.immeubleId ? S.biens.find(x => x.id === bi.immeubleId && x.immeuble) || null : null;
+const TYPE_IMM = "Immeuble (regroupe des lots)";
+/* Part d'un lot dans l'immeuble : tantièmes si tous les lots en ont, sinon surface, sinon parts égales */
+function quotePart(lot) {
+  const im = immeubleDe(lot); if (!im) return 1; const L = lotsDe(im.id); if (!L.length) return 1;
+  const parT = L.every(x => +x.tantiemes > 0), parS = L.every(x => +x.surface > 0), v = x => parT ? +x.tantiemes : parS ? +x.surface : 1, tot = L.reduce((s, x) => s + v(x), 0);
+  return tot ? v(lot) / tot : 1 / L.length;
+}
+const cleRepartition = im => { const L = lotsDe(im.id); return L.length && L.every(x => +x.tantiemes > 0) ? "les tantièmes" : L.length && L.every(x => +x.surface > 0) ? "la surface" : "parts égales"; };
+const prixAchatDe = bi => +bi.prixAchat > 0 ? +bi.prixAchat : (immeubleDe(bi) && +immeubleDe(bi).prixAchat > 0 ? Math.round(+immeubleDe(bi).prixAchat * quotePart(bi)) : 0);
 const bailActifDuBien = id => S.baux.find(b => b.bienId === id && isActive(b));
 const TYPES_BAIL = { vide: "Location vide (loi du 6 juillet 1989)", meuble: "Location meublée", etudiant: "Location meublée étudiant (9 mois)", mobilite: "Bail mobilité" };
 
@@ -2308,7 +2324,7 @@ function taches() {
   });
   // 9. Biens vacants, DPE, assurance PNO
   S.biens.forEach(bi => {
-    if (!bailActifDuBien(bi.id)) {
+    if (!bi.immeuble && !bailActifDuBien(bi.id)) {
       const futur = S.baux.find(b => b.bienId === bi.id && P(b.dateEntree) > TODAY);
       add({ key: "vac-" + bi.id, prio: futur ? "info" : "soon", date: TODAY, t: `${esc(bi.nom)} est vide`,
         d: futur ? `Prochain locataire : ${esc(futur.nom)} le ${fd(futur.dateEntree)}.` : "Aucun locataire. Publier une annonce, faire les diagnostics à jour, préparer le bail.",
@@ -2317,7 +2333,14 @@ function taches() {
     if (bi.dpe === "G") add({ key: "dpeg-" + bi.id, prio: "urgent", date: TODAY, t: `${esc(bi.nom)} : DPE classé G`, d: "Interdit à la location pour tout nouveau bail ou renouvellement depuis le 1er janvier 2025. Travaux de rénovation à prévoir.", acts: [] });
     { const t = tacheDpeElec(bi); if (t) add(t); }
     if (bi.dpe === "F") add({ key: "dpef-" + bi.id, prio: "info", date: TODAY, t: `${esc(bi.nom)} : DPE classé F`, d: "Sera interdit à la location à partir du 1er janvier 2028. Anticiper les travaux.", acts: [] });
-    if (bi.dpeValidite && P(bi.dpeValidite) <= addDays(TODAY, 90)) add({ key: "dpev-" + bi.id, prio: P(bi.dpeValidite) < TODAY ? "soon" : "info", date: P(bi.dpeValidite), t: `${esc(bi.nom)} : DPE à refaire`, d: `Valable jusqu'au ${fd(bi.dpeValidite)}. Obligatoire pour signer un nouveau bail.`, acts: [["Modifier le bien", `editBien('${bi.id}')`]] });
+    // Diagnostics et assurance : prévenu 4 mois avant la fin, pour avoir le temps de les refaire ou de comparer
+    const fin = (champ, quoi, pourquoi) => { const v = bi[champ]; if (!v || !(P(v) <= addDays(TODAY, 120)) || fait(champ + "-" + bi.id + "-" + v)) return;
+      add({ key: champ + "-" + bi.id + "-" + v, prio: P(v) <= addDays(TODAY, 30) ? "soon" : "info", date: P(v), done: true, t: `${esc(bi.nom)} : ${quoi} ${P(v) < TODAY ? "expiré depuis le" : "à renouveler avant le"} ${fds(v)}`, d: pourquoi, acts: [["Mettre à jour la date", `editBien('${bi.id}')`]] }); };
+    fin("dpeValidite", "DPE", "Obligatoire pour signer un nouveau bail. Un diagnostiqueur le refait en une visite.");
+    fin("diagElecFin", "diagnostic électricité", "Obligatoire dans le bail si l'installation a plus de 15 ans (valable 6 ans pour une location).");
+    fin("diagGazFin", "diagnostic gaz", "Obligatoire dans le bail si l'installation gaz a plus de 15 ans (valable 6 ans pour une location).");
+    if (bi.pnoEcheance) { let e = P(bi.pnoEcheance); while (e < addDays(TODAY, -1)) e = addYears(e, 1); const k = "pno-ech-" + bi.id + "-" + iso(e);
+      if (e <= addDays(TODAY, 120) && !fait(k)) add({ key: k, prio: e <= addDays(TODAY, 30) ? "soon" : "info", date: e, done: true, t: `${esc(bi.nom)} : assurance du propriétaire (PNO) au ${fds(iso(e))}`, d: "Le bon moment pour comparer les prix ou la renouveler.", acts: [["Mettre à jour la date", `editBien('${bi.id}')`]] }); }
     if (bi.pnoEcheance) {
       let e = P(bi.pnoEcheance); while (e < addDays(TODAY, -15)) e = addYears(e, 1);
       const k = "pno-" + bi.id + iso(e);
@@ -2349,7 +2372,10 @@ function addMonthsDate(d, n) { const r = new Date(d.getFullYear(), d.getMonth() 
 
 /* ================= Taxe foncière : part "ordures ménagères" au prorata du temps passé ================= */
 function enregistrerTaxe(bienId, an, total, teom) {
-  const c = partsTeom(bienId, an, +teom), old = taxeDe(bienId, an);
+  const c = partsTeomBien(bienId, an, +teom), old = taxeDe(bienId, an);
+  if (estImm(bien(bienId))) { // la taxe de l'immeuble remplace celles saisies lot par lot la même année (sinon elle serait comptée plusieurs fois)
+    const lots = new Set(lotsDe(bienId).map(l => l.id)), anc = (S.taxes || []).filter(t => lots.has(t.bienId) && +t.annee === +an);
+    if (anc.length) { const ids = new Set(anc.map(t => t.id)); S.taxes = S.taxes.filter(t => !ids.has(t.id)); S.depenses = S.depenses.filter(d => !ids.has(d.taxeId)); setTimeout(() => toast(`${plur(anc.length, "taxe")} saisie${anc.length > 1 ? "s" : ""} lot par lot remplacée${anc.length > 1 ? "s" : ""} par celle de l'immeuble`), 900); } }
   const parts = c.parts.map(p => { const o = old && old.parts.find(x => x.bailId === p.bailId); return o ? { ...p, demandeLe: o.demandeLe, payeLe: o.payeLe } : p; });
   S.taxes = S.taxes || [];
   const id = old ? old.id : uid();
@@ -2358,6 +2384,12 @@ function enregistrerTaxe(bienId, an, total, teom) {
   if (dep) dep.montant = +total; else S.depenses.push({ id: uid(), taxeId: id, date: iso(new Date(an, 9, 15)), bienId, categorie: "Taxe foncière", libelle: "Taxe foncière " + an, montant: +total, recuperable: false });
 }
 const taxeDe = (bienId, an) => (S.taxes || []).find(t => t.bienId === bienId && +t.annee === +an);
+function partsTeomBien(bienId, an, teom) {
+  const bi = bien(bienId); if (!estImm(bi)) return partsTeom(bienId, an, teom);
+  const L = lotsDe(bienId), parts = []; let sci = 0, vide = 0;
+  L.forEach(l => { const q = quotePart(l), tl = r2(teom * q), r = partsTeom(l.id, an, tl); r.parts.forEach(p => parts.push({ ...p, lotId: l.id, teomLot: tl })); sci += r.partSci; vide += r.vide; });
+  return { parts, nbJ: daysBetween(new Date(an, 0, 1), new Date(an, 11, 31)) + 1, vide, partSci: r2(L.length ? sci : teom) };
+}
 function partsTeom(bienId, an, teom) {
   const d0 = new Date(an, 0, 1), d1 = new Date(an, 11, 31), nbJ = daysBetween(d0, d1) + 1;
   const parts = S.baux.filter(b => b.bienId === bienId).map(b => {
@@ -2373,11 +2405,12 @@ function taxeFonciere(bienId, an) {
   if (!bienId) {
     if (!S.biens.length) { toast("Ajoute d'abord un bien."); return; }
     modal(`Taxes foncières ${an}`, `<p class="full note">Choisis le bien. Il te faut l'avis de taxe foncière (papier ou espace impots.gouv).</p>
-      <div class="full tasks">${S.biens.map(bi => { const t = taxeDe(bi.id, an); return `<div class="task ${t ? "" : "info"}"><div><div class="t">${esc(bi.nom)}</div><div class="d">${t ? `Saisie : ${eur(t.total)} dont ${eur(t.teom)} d'ordures ménagères` : "Pas encore saisie"}</div></div><div class="acts"><button type="button" class="small ${t ? "" : "primary"}" onclick="taxeFonciere('${bi.id}',${an})">${t ? "Voir" : "Saisir"}</button></div></div>`; }).join("")}</div>`, () => true, { ok: "Fermer", lecture: true });
+      <div class="full tasks">${S.biens.filter(bi => !immeubleDe(bi)).map(bi => { const t = taxeDe(bi.id, an); return `<div class="task ${t ? "" : "info"}"><div><div class="t">${esc(bi.nom)}</div><div class="d">${t ? `Saisie : ${eur(t.total)} dont ${eur(t.teom)} d'ordures ménagères` : "Pas encore saisie"}</div></div><div class="acts"><button type="button" class="small ${t ? "" : "primary"}" onclick="taxeFonciere('${bi.id}',${an})">${t ? "Voir" : "Saisir"}</button></div></div>`; }).join("")}</div>`, () => true, { ok: "Fermer", lecture: true });
     return;
   }
+  if (immeubleDe(bien(bienId))) { const im = immeubleDe(bien(bienId)); toast(`La taxe foncière se saisit une fois pour ${im.nom}`); bienId = im.id; }
   const bi = bien(bienId), t0 = taxeDe(bienId, an) || {};
-  modal(`Taxe foncière ${an} — ${esc(bi.nom)}`, `
+  modal(`Taxe foncière ${an} — ${esc(bi.nom)}`, `${bi.immeuble ? `<p class="full note">🏢 Le total de l'avis pour tout l'immeuble. Les ordures ménagères sont réparties entre les ${plur(lotsDe(bi.id).length, "lot")} selon ${cleRepartition(bi)}, puis entre les locataires selon leurs jours dans le logement.${(S.taxes || []).some(t => lotsDe(bi.id).some(l => l.id === t.bienId) && +t.annee === +an) ? " <b>Les taxes saisies lot par lot pour " + an + " seront remplacées.</b>" : ""}</p>` : ""}
     <p class="full note">La SCI paie la taxe foncière. Mais la <b>taxe d'ordures ménagères</b> (une ligne de l'avis, souvent "TEOM") se récupère auprès des locataires, au prorata des jours passés dans le logement. L'appli fait le calcul.</p>
     ${fld("Total de l'avis (€)", "total", t0.total, "number", "", "required")}${fld("Dont ordures ménagères (€)", "teom", t0.teom, "number", "", "required")}
     <div class="full" id="teomCalc"></div>`,
@@ -2386,16 +2419,16 @@ function taxeFonciere(bienId, an) {
       setTimeout(() => toast("Enregistré · les parts apparaissent sur la carte de chaque locataire"), 50);
     },
     { del: taxeDe(bienId, an) ? () => { const t = taxeDe(bienId, an); S.taxes = S.taxes.filter(x => x !== t); S.depenses = S.depenses.filter(x => x.taxeId !== t.id); } : null, delMsg: "Supprimer cette taxe foncière ?",
-      after: f => { const c = () => { const v = +f.teom.value; const r = partsTeom(bienId, an, v || 0);
+      after: f => { const c = () => { const v = +f.teom.value; const r = partsTeomBien(bienId, an, v || 0);
         document.getElementById("teomCalc").innerHTML = v > 0 ? `<ul class="todo">${r.parts.map(p => `<li>${avatar(p.nom)}<span class="tx">${esc(p.nom)}<small>${fds(p.du)} → ${fds(p.au)} · ${p.jours} jours</small></span><b class="money">${eur(p.montant)}</b></li>`).join("")}${r.vide ? `<li><span class="avatar vide">🏛</span><span class="tx">La SCI<small>Logement vide · ${r.vide} jours</small></span><b class="money">${eur(r.partSci)}</b></li>` : ""}</ul>` : `<p class="note">Saisis le montant des ordures ménagères pour voir qui doit combien.</p>`; };
         f.addEventListener("input", c); c(); } });
 }
 function docTeom(taxeId, bailId) {
-  const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId), b = bail(bailId), bi = bien(t.bienId);
+  const t = S.taxes.find(x => x.id === taxeId), p = t.parts.find(x => x.bailId === bailId), b = bail(bailId), bi = bien(p.lotId || t.bienId);
   const html = `<div class="two-col">${enTeteBailleur()}${enTeteLocataire(b)}</div>${faitA()}<p><b>Objet : Taxe d'enlèvement des ordures ménagères ${t.annee}</b></p>
-  <p>Madame, Monsieur,</p><p>La taxe d'enlèvement des ordures ménagères fait partie des charges récupérables auprès du locataire (décret n° 87-713 du 26 août 1987). Pour le logement situé ${esc(adresseBien(bi))}, elle s'élève à ${eur(t.teom)} pour l'année ${t.annee}.</p>
+  <p>Madame, Monsieur,</p><p>La taxe d'enlèvement des ordures ménagères fait partie des charges récupérables auprès du locataire (décret n° 87-713 du 26 août 1987). Pour le logement situé ${esc(adresseBien(bi))}, elle s'élève à ${eur(p.teomLot ?? t.teom)} pour l'année ${t.annee}.</p>
   <p>Vous avez occupé le logement du ${fd(p.du)} au ${fd(p.au)}, soit ${p.jours} jours sur ${daysBetween(new Date(t.annee, 0, 1), new Date(t.annee, 11, 31)) + 1}. Votre part est donc de :</p>
-  <table><tbody><tr><td>Taxe d'ordures ménagères ${t.annee}</td><td class="right">${eur(t.teom)}</td></tr><tr><td>Calcul</td><td class="right">${eur(t.teom)} × ${p.jours} / ${daysBetween(new Date(t.annee, 0, 1), new Date(t.annee, 11, 31)) + 1} jours</td></tr><tr><td><b>À régler</b></td><td class="right"><b>${eur(p.montant)}</b></td></tr></tbody></table>
+  <table><tbody><tr><td>Taxe d'ordures ménagères ${t.annee}</td><td class="right">${eur(p.teomLot ?? t.teom)}</td></tr><tr><td>Calcul</td><td class="right">${eur(p.teomLot ?? t.teom)} × ${p.jours} / ${daysBetween(new Date(t.annee, 0, 1), new Date(t.annee, 11, 31)) + 1} jours</td></tr><tr><td><b>À régler</b></td><td class="right"><b>${eur(p.montant)}</b></td></tr></tbody></table>
   <p>Merci de nous régler cette somme${S.sci.iban ? " par virement sur le compte " + esc(S.sci.iban) : ""}. L'avis de taxe foncière est à votre disposition sur simple demande.</p><p>Veuillez agréer, Madame, Monsieur, nos salutations distinguées.</p>${signature()}`;
   showDoc(html, { titre: "Ordures ménagères " + t.annee, fichier: `TEOM-${t.annee}-${slug(b.nom)}`, to: b.email, bailId: b.id,
     email: { objet: `Taxe d'ordures ménagères ${t.annee}`, corps: `Bonjour,\n\nVous trouverez ci-joint le calcul de votre part de la taxe d'ordures ménagères ${t.annee} : ${eur(p.montant)} (${p.jours} jours dans le logement).\n\nMerci et bonne journée,\n${S.sci.gerant || ""}` },
@@ -2646,7 +2679,7 @@ function graphiqueLoyers() {
       <div class="bars-plot">${data.map(d => `<div class="colb" tabindex="0" data-tip="${fm(d.m)} : ${eur(d.recu)} / ${eur(d.du)}"><div class="bar-zone"><i class="b-du" style="height:${d.du / haut * 100}%"></i><i class="b-recu" style="height:${d.recu / haut * 100}%"></i></div><span>${new Date(+d.m.slice(0, 4), +d.m.slice(5) - 1, 1).toLocaleDateString("fr-FR", { month: "narrow" })}</span></div>`).join("")}</div>
     </div></section>`;
 }
-const rendement = bi => { const b = bailActifDuBien(bi.id); if (!b || !(+bi.prixAchat > 0)) return null; const l = loyerAt(b, CUR); return { brut: l.hc * 12 / +bi.prixAchat * 100, annuel: l.hc * 12 }; };
+const rendement = bi => { const b = bailActifDuBien(bi.id), px = prixAchatDe(bi); if (!b || !(px > 0)) return null; const l = loyerAt(b, CUR); return { brut: l.hc * 12 / px * 100, annuel: l.hc * 12 }; };
 
 /* ================= 🕓 Historique d'un locataire ================= */
 function historique(b) {
@@ -3015,7 +3048,7 @@ function carteLocataire(b) {
 }
 function pageAccueil(T) {
   const actifs = S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY).sort((a, b) => a.nom.localeCompare(b.nom));
-  const vides = S.biens.filter(bi => !bailActifDuBien(bi.id) && !S.baux.some(b => b.bienId === bi.id && P(b.dateEntree) > TODAY));
+  const vides = logements().filter(bi => !bailActifDuBien(bi.id) && !S.baux.some(b => b.bienId === bi.id && P(b.dateEntree) > TODAY));
   const anciens = S.baux.filter(b => b.dateSortie && P(b.dateSortie) < TODAY).sort((a, b) => b.dateSortie.localeCompare(a.dateSortie));
   const mois = S.baux.map(b => echeance(b, CUR)).filter(Boolean), recus = mois.filter(e => e.statut === "paye").length;
   const items = aFaireCourt(T), vis = items.slice(0, 3);
@@ -3340,10 +3373,14 @@ function pageDocsBien(arg) {
 }
 function pageBien(id) {
   const bi = bien(id); if (!bi) return `<div class="empty">Bien introuvable. <a href="#biens">Retour</a></div>`;
+  if (bi.immeuble) return pageImmeuble(bi);
   const actuel = bailActifDuBien(bi.id), anciens = S.baux.filter(b => b.bienId === bi.id && b !== actuel), l = actuel ? loyerAt(actuel, CUR) : null, r = rendement(bi);
-  const tf = (S.taxes || []).filter(t => t.bienId === bi.id).sort((a, b) => b.annee - a.annee)[0];
+  const imT = immeubleDe(bi), tfI = imT && (S.taxes || []).filter(t => t.bienId === imT.id).sort((a, b) => b.annee - a.annee)[0];
+  const tf = (S.taxes || []).filter(t => t.bienId === bi.id).sort((a, b) => b.annee - a.annee)[0] || (tfI ? { annee: tfI.annee + " · part du lot", total: r2(tfI.total * quotePart(bi)) } : null);
   return `<div><a class="back" href="#biens">← Biens</a>
     <div class="head"><div><h1>${esc(bi.nom)}</h1><p>${esc(adresseBien(bi))}</p></div><div class="row"><button onclick="editBien('${bi.id}')">Modifier</button>${LECTURE ? "" : menuPlus([["🗑 Supprimer ce bien", `supprimerBien('${bi.id}')`]])}</div></div></div>
+    ${immeubleDe(bi) ? `<a class="aide-lien" href="#bien-${immeubleDe(bi).id}">🏢 <span><b>Fait partie de ${esc(immeubleDe(bi).nom)}</b><small>Acte, assurance, taxe foncière et travaux communs sont sur la fiche de l'immeuble · part de ce lot : ${Math.round(quotePart(bi) * 100)} %</small></span>${ic("chevR", "chev")}</a>` : ""}
+    ${!LECTURE && !S.baux.some(x => x.bienId === bi.id) && /immeuble|commun|copro|général|general/i.test(bi.nom) ? `<div class="card compl-cta"><span class="tx"><b>🏢 C'est l'immeuble, pas un logement à louer ?</b><small>Transforme cette fiche en fiche immeuble : elle regroupe tes lots, garde l'acte, l'assurance, la taxe foncière et les travaux communs, et répartit le prix d'achat et les ordures ménagères entre les lots.</small></span><button class="small primary" onclick="transformerImmeuble('${bi.id}')">Transformer</button></div>` : ""}
     ${carteACompleter(bi)}
     <div class="kpis">
       <div class="kpi"><span>Occupant</span><b>${actuel ? `<a href="#bail-${actuel.id}">${esc(nomCourt(actuel.nom))}</a>` : "Vide"}</b><small>${actuel ? "depuis le " + fds(actuel.dateEntree) : `<button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button>`}</small></div>
@@ -3520,16 +3557,66 @@ function rangerPropositions(liste) {
 function pageBiens() {
   return `<div class="head"><div><h1>Biens</h1><p>${S.biens.length ? "Touche un logement pour tout voir : locataire, documents, ce qui manque." : "Tes logements, avec leurs papiers et leurs locataires."}</p></div><div class="row"><button class="primary" onclick="editBien()">+ Ajouter</button>${SB && estProprio() && !LECTURE ? `<button onclick="importerTableur()">📊 Depuis un tableur</button>` : ""}</div></div>
   ${(() => { const L = S.biens.length ? biensACompleterPapiers() : []; return L.length ? `<div class="card compl-cta"><span class="tx"><b>🤖 ${L.length > 1 ? `${L.length} fiches peuvent` : "1 fiche peut"} se remplir avec tes papiers</b><small>L'appli lit tes DPE, baux, attestations et avis de taxe déjà rangés, et te propose surface, DPE, e-mails… Tu valides avant.</small></span><button class="small primary" onclick="completerAvecPapiers()">Compléter</button></div>` : ""; })()}
-  ${S.biens.length ? `<ul class="lr-list biens-l">${S.biens.map(bi => {
+  ${S.biens.length ? `<ul class="lr-list biens-l">${ordreBiens().map(bi => {
+    if (bi.immeuble) { const L = lotsDe(bi.id), loues = L.filter(x => bailActifDuBien(x.id)).length, m = LECTURE ? 0 : aCompleterImmeuble(bi).L.length;
+      return `<li class="lr imm"><div class="lr-main" onclick="go('bien-${bi.id}')" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">🏢</span><span class="tx"><b>${esc(bi.nom)}</b><small>Immeuble · ${plur(L.length, "lot")} · ${loues} loué${loues > 1 ? "s" : ""}${m ? ` · ${m} info${m > 1 ? "s" : ""} à compléter` : ""}</small></span>${ic("chevR", "chev")}</div></li>`; }
     const b = bailActifDuBien(bi.id), l = b ? loyerAt(b, CUR) : null, e = b && echeance(b, CUR), nDocs = S.fichiers.filter(f => f.bienId === bi.id).length;
     const manque = LECTURE ? 0 : aCompleterBien(bi).L.length, alerte = bi.dpe === "G" || bi.dpe === "F" ? `DPE ${bi.dpe} : attention` : manque ? `${manque} info${manque > 1 ? "s" : ""} à compléter` : "";
-    return `<li class="lr"><div class="lr-main" onclick="go('bien-${bi.id}')" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏢"}</span>
+    return `<li class="lr${immeubleDe(bi) ? " lot" : ""}"><div class="lr-main" onclick="go('bien-${bi.id}')" role="link" tabindex="0"><span class="ico-cat" aria-hidden="true">${/maison/i.test(bi.type || "") ? "🏡" : /parking/i.test(bi.type || "") ? "🚗" : "🏠"}</span>
       <span class="tx"><b>${esc(bi.nom)}</b><small>${b ? `${esc(nomCourt(b.nom))} · ${eur(l.hc + l.ch)}/mois` : "Vide · à louer"}${nDocs ? ` · ${nDocs} doc${nDocs > 1 ? "s" : ""}` : ""}${alerte ? ` · ${alerte}` : ""}</small></span>
       <span class="lr-r">${b ? (e ? pillStatut(e) : `<span class="pill ok">Loué</span>`) : `<span class="pill warn">Vide</span>`}</span>${ic("chevR", "chev")}</div>
       ${b ? "" : `<div class="lr-acts"><button class="small primary" onclick="editBail(null,'${bi.id}')">+ Mettre un locataire</button></div>`}</li>`;
   }).join("")}</ul>` : `<section class="card bienvenue"><h2>🏢 Crée tes logements</h2><p class="note">Choisis la façon la plus simple pour toi. Tu pourras tout corriger ensuite.</p>${choixCreerBiens()}</section>`}`;
 }
 
+/* Ordre d'affichage : chaque immeuble suivi de ses lots, puis les logements seuls */
+function ordreBiens() {
+  const I = S.biens.filter(b => b.immeuble), vus = new Set(), out = [];
+  I.forEach(im => { out.push(im); vus.add(im.id); lotsDe(im.id).forEach(l => { out.push(l); vus.add(l.id); }); });
+  S.biens.forEach(b => { if (!vus.has(b.id)) out.push(b); });
+  return out;
+}
+/* ================= Fiche immeuble ================= */
+function pageImmeuble(im) {
+  const L = lotsDe(im.id), tf = (S.taxes || []).filter(t => t.bienId === im.id).sort((a, b) => b.annee - a.annee)[0];
+  const loyers = L.reduce((s, l) => { const b = bailActifDuBien(l.id); if (!b) return s; const x = loyerAt(b, CUR); return s + x.hc + x.ch; }, 0);
+  const deps = S.depenses.filter(d => d.bienId === im.id && String(d.date || "").startsWith(String(TODAY.getFullYear())));
+  return `<div><a class="back" href="#biens">← Biens</a>
+    <div class="head"><div><h1>🏢 ${esc(im.nom)}</h1><p>${esc(adresseBien(im)) || "Immeuble"}</p></div><div class="row"><button onclick="editBien('${im.id}')">Modifier</button>${LECTURE ? "" : menuPlus([["🏠 Choisir les lots", `choisirLots('${im.id}')`], ["↩️ Ce n'est pas un immeuble", `defaireImmeuble('${im.id}')`], ["🗑 Supprimer", `supprimerBien('${im.id}')`]])}</div></div></div>
+    ${carteACompleter(im)}
+    <div class="kpis">
+      <div class="kpi"><span>Lots</span><b>${L.length}</b><small>${L.filter(l => bailActifDuBien(l.id)).length} loué${L.filter(l => bailActifDuBien(l.id)).length > 1 ? "s" : ""}</small></div>
+      <div class="kpi"><span>Loyers par mois</span><b>${eur(loyers)}</b><small>tous les lots</small></div>
+      <div class="kpi"><span>Prix d'achat</span><b>${+im.prixAchat > 0 ? eur(+im.prixAchat) : "—"}</b><small>${+im.prixAchat > 0 ? "réparti selon " + cleRepartition(im) : `<button class="small ghost" onclick="editBien('${im.id}')">Ajouter</button>`}</small></div>
+      <div class="kpi"><span>Taxe foncière${cq("teom")}</span><b>${tf ? eur(tf.total) : "—"}</b><small>${tf ? `${tf.annee} · ${eur(tf.teom)} d'ordures ménagères réparties` : `<button class="small ghost" onclick="taxeFonciere('${im.id}')">Renseigner</button>`}</small></div>
+    </div>
+    <div class="stack">
+    <section class="card"><div class="sec-head"><h2>🏠 Les lots</h2>${LECTURE ? "" : `<button class="small" onclick="choisirLots('${im.id}')">Choisir</button>`}</div>
+      ${L.length ? `<ul class="todo">${L.map(l => { const b = bailActifDuBien(l.id); return `<li><span class="tx"><a href="#bien-${l.id}">${esc(l.nom)}</a><small>${b ? esc(nomCourt(b.nom)) : "Vide"} · part ${Math.round(quotePart(l) * 100)} %${prixAchatDe(l) ? " · " + eur(prixAchatDe(l)) : ""}</small></span>${ic("chevR", "chev")}</li>`; }).join("")}</ul>
+      <p class="note small">Répartition selon ${cleRepartition(im)}. Pour une autre clé, indique les tantièmes de chaque lot (fiche du lot › Modifier › Plus d'infos).</p>` : `<p class="note">Aucun lot pour l'instant.</p>`}</section>
+    <section class="card"><h2>💶 Dépenses communes ${TODAY.getFullYear()}</h2>${deps.length ? `<ul class="todo">${deps.map(d => `<li><span class="tx">${esc(d.libelle || d.categorie)}<small>${fds(d.date)} · ${esc(d.categorie)}</small></span><b class="money">${eur(d.montant)}</b></li>`).join("")}</ul>` : `<p class="note">Assurance, taxe foncière, travaux des parties communes : ajoute-les ici une seule fois.</p>`}
+      ${LECTURE ? "" : `<div class="row"><button class="small" onclick="editDepense(null,{bienId:'${im.id}'})">+ Dépense commune</button></div>`}</section>
+    ${listeDocuments(im.id)}
+    </div>`;
+}
+/* Choisir les lots d'un immeuble */
+function choisirLots(id) {
+  const im = bien(id); if (!im) return;
+  const C = S.biens.filter(b => !b.immeuble && b.id !== id && (!b.immeubleId || b.immeubleId === id));
+  if (!C.length) { toast("Ajoute d'abord les logements (Biens › + Ajouter), puis choisis-les ici."); return; }
+  modal(`🏠 Les lots de ${esc(im.nom)}`, `<p class="full note">Coche les logements qui font partie de cet immeuble. L'acte, l'assurance, la taxe foncière, les travaux communs et le prix d'achat seront partagés entre eux.</p>
+    <ul class="todo full compl">${C.map(b => `<li><label class="chk"><input type="checkbox" name="l_${b.id}" ${b.immeubleId === id ? "checked" : ""}><span class="tx"><b>${esc(b.nom)}</b><small>${esc(adresseBien(b))}</small></span></label></li>`).join("")}</ul>`,
+    d => { let n = 0; C.forEach(b => { if (d["l_" + b.id]) { b.immeubleId = id; n++; } else if (b.immeubleId === id) delete b.immeubleId; }); toast(`✓ ${plur(n, "lot")} dans ${im.nom}`); });
+}
+/* Une fiche créée comme un logement ("Immeuble / parties communes") devient la fiche de l'immeuble */
+function transformerImmeuble(id) {
+  const bi = bien(id); if (!bi) return;
+  if (S.baux.some(b => b.bienId === id)) { toast("Cette fiche a un locataire : ce n'est pas un immeuble."); return; }
+  bi.immeuble = true; delete bi.immeubleId; bi.type = TYPE_IMM; save(); render(); toast("🏢 C'est maintenant une fiche immeuble"); setTimeout(() => choisirLots(id), 200);
+}
+function defaireImmeuble(id) {
+  confirmer("Cette fiche redevient un logement simple, et ses lots ne sont plus regroupés. Continuer ?", () => { const bi = bien(id); delete bi.immeuble; bi.type = "Appartement"; lotsDe(id).forEach(l => delete l.immeubleId); S.biens.filter(b => b.immeubleId === id).forEach(l => delete l.immeubleId); save(); render(); });
+}
 function pageBail(id) {
   const b = bail(id); if (!b) return `<div class="empty">Locataire introuvable. <a href="#locataires">Retour</a></div>`;
   const bi = bien(b.bienId), l = loyerAt(b, CUR), ech = echeancesBail(b, addM(CUR, 1)).reverse(), du = dureeBail(b);
@@ -4057,7 +4144,7 @@ function donneesConnecteur() {
       resume: { mois: fm(CUR), loyers_attendus: r2(mois.reduce((s, x) => s + x.e.du, 0)), loyers_recus: r2(mois.reduce((s, x) => s + Math.min(x.e.paye, x.e.du), 0)), logements: S.biens.length, locataires_actuels: actifs.length,
         en_retard: actifs.map(b => ({ locataire: b.nom, doit: detteBail(b) })).filter(x => x.doit > 0), quittances_a_envoyer: toutesEcheances().filter(qAFaire).length, taches_urgentes: T.filter(t => t.priorite === "urgent").length },
       locataires: actifs.map(b => { const bi = bien(b.bienId) || {}, rv = revInfo(b); return { id: b.id, nom: b.nom, colocataires: b.colocataires || "", logement: bi.nom || "", adresse: adresseBien(bi), entree: b.dateEntree, type_bail: b.typeBail, loyer_hc: +b.loyerHC || 0, charges: +b.charges || 0, jour_paiement: +b.jourPaiement || 0, depot: +b.depot || 0, doit: detteBail(b), email: b.email || "", telephone: b.tel || "", fin_assurance: b.assuranceFin || "", prochaine_revision: rv && rv.anniv ? iso(rv.anniv) : "", depart_prevu: b.dateSortie || "" }; }),
-      logements: S.biens.map(bi => { const b = actifs.find(x => x.bienId === bi.id); return { id: bi.id, nom: bi.nom, adresse: adresseBien(bi), type: bi.type || "", meuble: bi.meuble || "", surface: bi.surface || "", dpe: bi.dpe || "", dpe_valide_jusqua: bi.dpeValidite || "", locataire: b ? b.nom : "vacant", loyer_total: b ? r2((+b.loyerHC || 0) + (+b.charges || 0)) : 0 }; }),
+      logements: S.biens.map(bi => { const b = actifs.find(x => x.bienId === bi.id); if (bi.immeuble) return { id: bi.id, nom: bi.nom, adresse: adresseBien(bi), type: "IMMEUBLE : fiche qui regroupe des lots (acte, assurance, taxe foncière, travaux communs) — ce n'est PAS un logement à louer", lots: lotsDe(bi.id).map(l => l.nom), prix_achat_global: +bi.prixAchat || 0 }; return { id: bi.id, nom: bi.nom, adresse: adresseBien(bi), type: bi.type || "", meuble: bi.meuble || "", ...(immeubleDe(bi) ? { lot_de_l_immeuble: immeubleDe(bi).nom } : {}), surface: bi.surface || "", dpe: bi.dpe || "", dpe_valide_jusqua: bi.dpeValidite || "", locataire: b ? b.nom : "vacant", loyer_total: b ? r2((+b.loyerHC || 0) + (+b.charges || 0)) : 0 }; }),
       impayes, taches: T.slice(0, 60), echeances: ev, tresorerie: tr,
       compta: { annee: y, loyers_encaisses: r2(Object.values(rec).reduce((s, r) => s + (r.loyers || 0), 0)), charges_encaissees: r2(Object.values(rec).reduce((s, r) => s + (r.charges || 0), 0)), depenses_total: r2(deps.reduce((s, d) => s + +d.montant, 0)), depenses_par_categorie: parCat,
         par_logement: S.biens.map(bi => ({ logement: bi.nom, loyers: r2((rec[bi.id] || {}).loyers || 0), depenses: r2(deps.filter(d => d.bienId === bi.id).reduce((s, d) => s + +d.montant, 0)) })) },
@@ -4531,7 +4618,7 @@ function ventilerEcheances() {
 }
 /* ================= Rentabilité nette et cash-flow d'un logement ================= */
 function rentaNette(bi) {
-  const b = bailActifDuBien(bi.id); if (!b || !(+bi.prixAchat > 0)) return null;
+  const b = bailActifDuBien(bi.id); if (!b || !(prixAchatDe(bi) > 0)) return null;
   const l = loyerAt(b, CUR), loyers = r2(l.hc * 12), depuis = iso(addDays(TODAY, -365));
   const deps = S.depenses.filter(d => d.bienId === bi.id && (d.date || "") >= depuis && !HORS_RESULTAT.has(d.categorie) && !d.recuperable);
   const somme = f => r2(deps.filter(f).reduce((s, d) => s + +d.montant, 0));
@@ -4542,9 +4629,9 @@ function rentaNette(bi) {
   const interets = prets.length ? r2(prets.reduce((s, p) => s + tableauPret(p).filter(dans12).reduce((t, x) => t + (+x.interets || 0) + (+x.assurance || 0), 0), 0)) : somme(d => /Intérêts d'emprunt|Assurance emprunteur/.test(d.categorie));
   const autres = somme(d => !/Taxe foncière|Assurance propriétaire|Assurance loyers|Intérêts d'emprunt|Assurance emprunteur/.test(d.categorie));
   const mensualites = r2(prets.reduce((s, p) => s + mensualitePret(p), 0));
-  const net = (loyers - autres - tf - assur - interets) / +bi.prixAchat * 100;
+  const net = (loyers - autres - tf - assur - interets) / prixAchatDe(bi) * 100;
   const cash = r2((loyers - autres - tf - assur) / 12 - mensualites);
-  return { net, cash, loyers, autres, tf, assur, interets, mensualites, prix: +bi.prixAchat, avecPret: prets.length > 0 };
+  return { net, cash, loyers, autres, tf, assur, interets, mensualites, prix: prixAchatDe(bi), avecPret: prets.length > 0 };
 }
 function blocRentaNette(bi) {
   const r = rentaNette(bi); if (!r) return "";
@@ -4874,7 +4961,8 @@ function editBien(id) {
     <input type="hidden" name="dpeGes" value="${esc(b.dpeGes || "")}"><input type="hidden" name="dpeDate" value="${esc(b.dpeDate || "")}">
     <div class="full" id="dpeTrouves" aria-live="polite"></div>
     ${fld("Nom court, pour le reconnaître (ex : Appart Agon 1)", "nom", b.nom, "text", "full", nouveau ? 'placeholder="Laisse vide : l\'appli en propose un"' : "required")}
-    ${sel("Type", "type", b.type || "Appartement", ["Appartement", "Maison", "Studio", "Local", "Parking / garage"].map(x => [x, x]))}
+    ${sel("Type", "type", b.immeuble ? TYPE_IMM : b.type || "Appartement", ["Appartement", "Maison", "Studio", "Local", "Parking / garage", TYPE_IMM].map(x => [x, x]))}
+    ${(() => { const I = S.biens.filter(x => x.immeuble && x.id !== id); return I.length && !b.immeuble ? sel("Fait partie de l'immeuble", "immeubleId", b.immeubleId || "", [["", "Non, logement seul"], ...I.map(x => [x.id, x.nom])], "full") : ""; })()}
     ${sel("Loué", "meuble", b.meuble || "vide", [["vide", "Vide (non meublé)"], ["meuble", "Meublé"]])}
     ${fld("Surface habitable (m²)", "surface", b.surface, "number")}${fld("Nombre de pièces", "pieces", b.pieces, "number")}
     <details class="full plus-infos" ${id ? "open" : ""}><summary><b>➕ Plus d'infos</b><small>Facultatif : DPE, assurance, prix d'achat, chauffage… Tu pourras le faire plus tard.</small></summary><div class="pi-grid">
@@ -4882,6 +4970,8 @@ function editBien(id) {
     ${fld("Numéro du DPE (13 caractères, en haut du DPE)", "dpeNumero", b.dpeNumero, "text", "full", 'maxlength="13" autocapitalize="characters" spellcheck="false" placeholder="ex : 2350E1960061Z"')}
     ${fld("Année de construction", "annee", b.annee, "number")}${fld("Loyer indicatif HC (€)", "loyerRef", b.loyerRef, "number")}
     ${fld("Échéance assurance PNO", "pnoEcheance", b.pnoEcheance, "date")}${fld("Prix d'achat, frais compris (€)", "prixAchat", b.prixAchat, "number")}
+    ${fld("Diagnostic électricité valable jusqu'au", "diagElecFin", b.diagElecFin, "date")}${fld("Diagnostic gaz valable jusqu'au", "diagGazFin", b.diagGazFin, "date")}
+    ${b.immeuble ? "" : fld("Tantièmes dans l'immeuble (facultatif, sert à répartir taxe et prix)", "tantiemes", b.tantiemes, "number", "full")}
     ${sel("Chauffage", "chauffage", b.chauffage || "", [["", "—"], ...ENERGIES])}${sel("Eau chaude", "eauChaude", b.eauChaude || "", [["", "—"], ...ENERGIES])}
     ${sel("Immeuble", "regimeImm", b.regimeImm || (b.type === "Maison" ? "mono" : ""), [["", "—"], ["copro", "En copropriété"], ["mono", "Monopropriété (un seul propriétaire)"]], "full")}
     ${area("Équipements et annexes (cave, parking, cuisine équipée…) — repris dans le bail", "equipements", b.equipements)}
@@ -4889,13 +4979,17 @@ function editBien(id) {
     d => {
       d.dpeNumero = String(d.dpeNumero || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
       if (d.dpeNumero && d.dpeNumero.length !== 13) { toast("Le numéro du DPE fait 13 caractères (lettres et chiffres)."); const pl = document.querySelector("#mform .plus-infos"); if (pl) pl.open = true; return false; }
-      d.nom = String(d.nom || "").trim();
+      d.nom = String(d.nom || "").trim(); d.immeuble = d.type === TYPE_IMM; if (d.immeuble) d.immeubleId = ""; else if (d.immeubleId === undefined) delete d.immeubleId;
       if (!d.nom) { if (!String(d.adresse || "").trim() && !String(d.ville || "").trim()) { toast("Donne au moins l'adresse ou un nom au logement."); return false; } d.nom = nomAuto(d.type, d.ville, d.adresse); }
-      const avantDpe = id ? b.dpe : "";
-      if (id) { Object.assign(b, d); setTimeout(() => revisionDebloquee(id, avantDpe), 300); }
+      const avantDpe = id ? b.dpe : "", avantMeuble = id ? (b.meuble || "vide") : "";
+      if (id) { Object.assign(b, d); setTimeout(() => revisionDebloquee(id, avantDpe), 300);
+        // meublé / vide : le bail du locataire en place (et à venir) suit le logement, une seule saisie
+        if (avantMeuble !== (d.meuble || "vide")) { const L = S.baux.filter(x => x.bienId === id && (isActive(x) || P(x.dateEntree) > TODAY) && x.typeBail === (d.meuble === "meuble" ? "vide" : "meuble"));
+          L.forEach(x => { x.typeBail = d.meuble === "meuble" ? "meuble" : "vide"; });
+          if (L.length) setTimeout(() => toast(`Le bail de ${L.map(x => prenomBrut(x.nom)).join(", ")} passe aussi en ${d.meuble === "meuble" ? "meublé" : "vide"}`), 400); } }
       else { const nid = uid(), doc = BIEN_DOC; S.biens.push({ id: nid, ...d }); BIEN_DOC = null;
         if (doc && SB) setTimeout(() => envoyerDocument(nid, { cat: doc.cat, nom: "", bailId: "", discret: true }, doc.file).then(x => x && toast("📁 Le document est rangé dans le logement")), 600);
-        setTimeout(() => { go("bien-" + nid); setTimeout(() => apresNouveauBien(nid), 150); }, 30); }
+        setTimeout(() => { go("bien-" + nid); setTimeout(() => d.immeuble ? choisirLots(nid) : apresNouveauBien(nid), 150); }, 30); }
       apresModifDrive();
     },
     Object.assign({ after: f => { brancherAutoAdresse();
@@ -4966,22 +5060,32 @@ function choixCreerBiens() {
 }
 /* Ce qui manque sur la fiche d'un logement, avec le geste qui le remplit (souvent tout seul) */
 function aCompleterBien(bi) {
-  const ia = SB && estProprio(), L = [], tf = (S.taxes || []).some(t => t.bienId === bi.id);
+  const ia = SB && estProprio(), L = [], im = immeubleDe(bi), tf = (S.taxes || []).some(t => t.bienId === bi.id || (im && t.bienId === im.id));
   const c = (ok, ico, t, s, btn, f) => { if (!ok) L.push({ ico, t, s, btn, f }); };
   c(bi.adresse && bi.cp && bi.ville, "📍", "L'adresse complète", "Elle sert au bail, au DPE et aux risques.", "Compléter", `editBien('${bi.id}')`);
   c(bi.dpe && bi.surface, "⚡", !bi.dpe ? "Le DPE" : "La surface", "Obligatoire dans le bail. L'appli le retrouve toute seule dans la base de l'État.", "🔎 Retrouver", `trouverDpe('${bi.id}')`);
   c(tf, "🏛", "La taxe foncière", ia ? "Donne l'avis (photo ou PDF) : l'IA lit le total et les ordures ménagères à récupérer." : "Pour récupérer les ordures ménagères sur le locataire.", ia ? "📷 Donner l'avis" : "Renseigner", ia ? `lirePapierBien('${bi.id}')` : `taxeFonciere('${bi.id}')`);
-  c(bi.risquesVerifies, "🌊", "Les risques (inondation, radon…)", "À joindre à chaque nouveau bail. Vérifié en 1 minute, gratuit.", "Vérifier", `etatRisques('${bi.id}')`);
-  c(bi.pnoEcheance, "🛡", "L'assurance du logement (PNO)", "Sa date d'échéance, pour être prévenu à temps.", "Noter", `editBien('${bi.id}')`);
-  c(bi.prixAchat, "💶", "Le prix d'achat", "Pour voir ce que le logement te rapporte vraiment.", "Ajouter", `editBien('${bi.id}')`);
+  c(bi.risquesVerifies || (im && im.risquesVerifies), "🌊", "Les risques (inondation, radon…)", "À joindre à chaque nouveau bail. Vérifié en 1 minute, gratuit.", "Vérifier", `etatRisques('${bi.id}')`);
+  c(bi.pnoEcheance || (im && im.pnoEcheance), "🛡", im ? "L'assurance de l'immeuble (PNO)" : "L'assurance du logement (PNO)", "Sa date d'échéance, pour être prévenu à temps.", "Noter", `editBien('${im ? im.id : bi.id}')`);
+  c(prixAchatDe(bi), "💶", im ? "Le prix d'achat de l'immeuble" : "Le prix d'achat", "Pour voir ce que le logement te rapporte vraiment.", "Ajouter", `editBien('${im ? im.id : bi.id}')`);
   const b = bailActifDuBien(bi.id); let tot = 6;
   if (b) { tot += 2; const pn = prenom(b.nom);
     c(b.email, "✉️", `L'e-mail de ${pn}`, "Pour lui envoyer quittances et documents.", "Ajouter", `editBail('${b.id}')`);
     c(b.assuranceFin, "🛡", `L'assurance habitation de ${pn}`, "Obligatoire chaque année : sa date de fin, pour la redemander à temps.", "Noter", `editBail('${b.id}')`); }
   return { L, pct: Math.round((tot - L.length) / tot * 100) };
 }
+function aCompleterImmeuble(im) {
+  const L = [], c = (ok, ico, t, s, btn, f) => { if (!ok) L.push({ ico, t, s, btn, f }); };
+  c(im.adresse && im.cp && im.ville, "📍", "L'adresse complète", "Elle sert aux courriers et aux risques.", "Compléter", `editBien('${im.id}')`);
+  c(lotsDe(im.id).length, "🏠", "Les lots de l'immeuble", "Choisis les logements qui en font partie.", "Choisir", `choisirLots('${im.id}')`);
+  c((S.taxes || []).some(t => t.bienId === im.id), "🏛", "La taxe foncière (une seule pour l'immeuble)", "Les ordures ménagères sont réparties entre les lots, puis entre les locataires.", "Renseigner", `taxeFonciere('${im.id}')`);
+  c(im.pnoEcheance, "🛡", "L'assurance de l'immeuble (PNO)", "Sa date d'échéance, pour être prévenu 4 mois avant.", "Noter", `editBien('${im.id}')`);
+  c(+im.prixAchat > 0, "💶", "Le prix d'achat global", `Réparti entre les lots selon ${cleRepartition(im)}.`, "Ajouter", `editBien('${im.id}')`);
+  c(im.risquesVerifies, "🌊", "Les risques (inondation, radon…)", "Une seule fois pour l'immeuble.", "Vérifier", `etatRisques('${im.id}')`);
+  return { L, pct: Math.round((6 - L.length) / 6 * 100) };
+}
 function carteACompleter(bi) {
-  if (LECTURE) return ""; const { L, pct } = aCompleterBien(bi); if (!L.length) return "";
+  if (LECTURE) return ""; const { L, pct } = bi.immeuble ? aCompleterImmeuble(bi) : aCompleterBien(bi); if (!L.length) return "";
   const pap = SB && estProprio() ? papiersUtiles(bi).length : 0;
   const li = x => `<li><span class="ico" aria-hidden="true">${x.ico}</span><span class="tx"><b>${x.t}</b><small>${x.s}</small></span><button class="small" onclick="${x.f}">${x.btn}</button></li>`;
   return `<section class="card a-completer"><h2>✨ Fiche remplie à ${pct} %</h2>
@@ -5010,10 +5114,10 @@ async function lirePapierBien(bienId, bailId) {
 }
 
 function editBail(id, bienId, pre) {
-  const b = id ? bail(id) : { bienId: bienId || (S.biens[0] || {}).id, typeBail: "vide", jourPaiement: 5, dateEntree: iso(TODAY), suiviDepuis: CUR, chargesMode: "provision", revisable: true };
+  const b = id ? bail(id) : { bienId: bienId && !estImm(bien(bienId)) ? bienId : (logements()[0] || {}).id, typeBail: "vide", jourPaiement: 5, dateEntree: "", suiviDepuis: CUR, chargesMode: "provision", revisable: true }; // la vraie date d'entrée est demandée (la date du jour créait un prorata et des impayés)
   if (!id && b.bienId) { const bi = bien(b.bienId); if (bi) { b.typeBail = bi.meuble === "meuble" ? "meuble" : "vide"; b.loyerHC = bi.loyerRef || ""; } }
   if (!id && pre) Object.keys(pre).forEach(k => { if (pre[k] !== undefined && pre[k] !== "") b[k] = pre[k]; });
-  if (!S.biens.length) { confirmer("Ajoute d'abord le logement : le locataire y sera rattaché.", () => editBien()); return; }
+  if (!logements().length) { confirmer("Ajoute d'abord le logement : le locataire y sera rattaché.", () => editBien()); return; }
   modal(id ? "Modifier le locataire" : "Nouveau locataire", `
     ${id ? "" : `<div class="full auto-aide"><b>⚡ Le plus rapide : donne le bail</b><p>PDF ou photo : ${SB && !MCP && estProprio() ? "l'IA" : "l'appli"} remplit nom, dates, loyer, charges et dépôt. Les cases remplies passent en jaune : tu vérifies, puis Enregistrer.</p><div class="row"><button type="button" class="small primary" onclick="remplirDepuisBail(this)">${SB && !estProprio() ? "📄" : "🤖"} Remplir depuis le bail</button></div><div class="note" id="bailLu" aria-live="polite"></div></div>`}
     <fieldset><legend>Locataire</legend>
@@ -5021,9 +5125,9 @@ function editBail(id, bienId, pre) {
     ${fld("Téléphone", "tel", b.tel, "tel")}${fld("E-mail", "email", b.email, "email")}
     ${fld("Adresse avant l'entrée (pour le bail)", "adressePrec", b.adressePrec, "text", "full")}</fieldset>
     <fieldset><legend>Bail</legend>
-    ${sel("Bien", "bienId", b.bienId, S.biens.map(x => [x.id, x.nom]))}${sel("Type de bail", "typeBail", b.typeBail, Object.entries(TYPES_BAIL))}
-    ${fld("Date d'entrée", "dateEntree", b.dateEntree, "date", "", "required")}${fld("Date de sortie (si connue)", "dateSortie", b.dateSortie, "date")}
-    ${fld("Suivre les loyers à partir de (mois)", "suiviDepuis", b.suiviDepuis, "month")}${fld("Durée bail mobilité (mois)", "dureeMobilite", b.dureeMobilite || 10, "number")}</fieldset>
+    ${sel("Logement", "bienId", b.bienId, logements().map(x => [x.id, x.nom]))}${sel("Type de bail", "typeBail", b.typeBail, Object.entries(TYPES_BAIL))}
+    ${fld("Date d'entrée (celle du bail)", "dateEntree", b.dateEntree, "date", "", "required")}${fld("Date de sortie (si connue)", "dateSortie", b.dateSortie, "date")}
+    ${fld("Suivre les loyers à partir de (mois)", "suiviDepuis", b.suiviDepuis, "month")}${id ? "" : `<p class="note full">Avant ce mois-là, rien n'est compté comme impayé : mets le mois du prochain loyer que tu attends.</p>`}${fld("Durée bail mobilité (mois)", "dureeMobilite", b.dureeMobilite || 10, "number")}</fieldset>
     <fieldset><legend>Argent</legend>
     ${fld("Loyer hors charges (€)", "loyerHC", b.loyerHC, "number", "", "required")}${fld("Charges (€ / mois)", "charges", b.charges || 0, "number")}
     ${sel("Charges", "chargesMode", b.chargesMode, [["provision", "Provision + régularisation annuelle"], ["forfait", "Forfait (meublé / colocation)"]])}${fld("Payé le … de chaque mois", "jourPaiement", b.jourPaiement, "number", "", 'min="1" max="31" step="1"')}
@@ -5654,11 +5758,12 @@ function papiersUtiles(bi) {
   const b = bailActifDuBien(bi.id), docs = S.fichiers.filter(f => f.bienId === bi.id && !f.luLe && (f.chemin || idDriveFichier(f)));
   const prend = (cat, re, aussi) => { const L = docs.filter(f => f.cat === cat || (aussi && aussi.test(f.nom || ""))); return L.sort((x, y) => (re.test(y.nom || "") - re.test(x.nom || "")) || String(y.date || "").localeCompare(String(x.date || "")))[0]; };
   const T = [];
-  if (!bi.dpe || !(+bi.surface > 0)) { const f = prend("Diagnostics (DPE…)", /dpe|énerg|energ|perf/i, /\bdpe\b/i); if (f) T.push({ quoi: "dpe", f }); }
-  if (b && (!b.email || !b.tel || !(+b.depot > 0) || (!(+bi.surface > 0) && !T.length))) { const nomL = (motsDe(b.nom).find(m => m.length > 2) || "").toLowerCase(); const f = docs.filter(x => x.cat === "Bail" && !/avenant|congé|conge|révision|revision/i.test(x.nom || "")).sort((x, y) => (String(y.nom || "").toLowerCase().includes(nomL) - String(x.nom || "").toLowerCase().includes(nomL)) || String(y.date || "").localeCompare(String(x.date || "")))[0]; if (f) T.push({ quoi: "bail", f, b }); }
+  if (bi.immeuble) { /* seulement la taxe foncière, plus bas */ }
+  else if (!bi.dpe || !(+bi.surface > 0)) { const f = prend("Diagnostics (DPE…)", /dpe|énerg|energ|perf/i, /\bdpe\b/i); if (f) T.push({ quoi: "dpe", f }); }
+  if (!bi.immeuble && b && (!b.email || !b.tel || !(+b.depot > 0) || (!(+bi.surface > 0) && !T.length))) { const nomL = (motsDe(b.nom).find(m => m.length > 2) || "").toLowerCase(); const f = docs.filter(x => x.cat === "Bail" && !/avenant|congé|conge|révision|revision/i.test(x.nom || "")).sort((x, y) => (String(y.nom || "").toLowerCase().includes(nomL) - String(x.nom || "").toLowerCase().includes(nomL)) || String(y.date || "").localeCompare(String(x.date || "")))[0]; if (f) T.push({ quoi: "bail", f, b }); }
   if (b && !b.assuranceFin) { const f = docs.filter(x => (x.cat === "Locataire (pièces, garant…)" || x.cat === "Assurance") && /assur|attest|habitation|mrh|multirisque/i.test(x.nom || "") && !/pno|immeuble|propriétaire|proprietaire/i.test(x.nom || ""))[0]; if (f) T.push({ quoi: "assurance", f, b }); }
   const an = TODAY.getFullYear() - (TODAY.getMonth() < 8 ? 1 : 0);
-  if (!(S.taxes || []).some(t => t.bienId === bi.id && +t.annee >= an - 1)) { const f = prend("Taxe foncière", /taxe|fonci/i, /taxe\s+fonci/i); if (f) T.push({ quoi: "taxe", f }); }
+  if (!immeubleDe(bi) && !(S.taxes || []).some(t => t.bienId === bi.id && +t.annee >= an - 1)) { const f = prend("Taxe foncière", /taxe|fonci/i, /taxe\s+fonci/i); if (f) T.push({ quoi: "taxe", f }); }
   return T;
 }
 let COMPL = null;
@@ -6997,7 +7102,7 @@ function joursDansAnnee(b, yy) { const a = Math.max(+P(b.dateEntree), +new Date(
 function calculRegul(b, yy) {
   let prov = 0; for (let k = 1; k <= 12; k++) { const m = yy + "-" + String(k).padStart(2, "0"), e = echeance(b, m); if (e && e.du > 0) prov += e.ch * Math.min(1, e.paye / e.du); }
   const nbJ = daysBetween(new Date(yy, 0, 1), new Date(yy, 11, 31)) + 1, j = joursDansAnnee(b, yy), part = j / nbJ, lignes = [];
-  (S.taxes || []).filter(t => t.bienId === b.bienId && t.annee === yy).forEach(t => { const pt = t.parts.find(x => x.bailId === b.id); if (pt && pt.montant > 0 && (b.teomMensuel && yy >= +b.teomMensuel.depuis.slice(0, 4) || !pt.payeLe)) lignes.push({ l: `Taxe d'ordures ménagères ${yy}`, v: pt.montant }); });
+  (S.taxes || []).filter(t => (t.bienId === b.bienId || t.bienId === (immeubleDe(bien(b.bienId)) || {}).id) && t.annee === yy).forEach(t => { const pt = t.parts.find(x => x.bailId === b.id); if (pt && pt.montant > 0 && (b.teomMensuel && yy >= +b.teomMensuel.depuis.slice(0, 4) || !pt.payeLe)) lignes.push({ l: `Taxe d'ordures ménagères ${yy}`, v: pt.montant }); });
   S.depenses.filter(d => d.recuperable && d.bienId === b.bienId && (d.date || "").startsWith(String(yy))).forEach(d => lignes.push({ l: `${d.libelle || d.categorie} (${fds(d.date)})${part < 0.999 ? ` × ${j}/${nbJ} j` : ""}`, v: r2(+d.montant * part) }));
   return { prov: r2(prov), lignes, j, nbJ };
 }
@@ -7662,7 +7767,8 @@ function sectionTravaux(bi) {
 function tachesLegales(add, y) {
   S.biens.forEach(bi => {
     const occupe = !!bailActifDuBien(bi.id), ch = sansAccent(bi.chauffage || "").toLowerCase();
-    if (!bi.pnoEcheance && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance propriétaire (PNO)`, d: `${cq("pno")} Obligatoire en copropriété, conseillée partout. Indique sa date d'échéance dans la fiche du bien pour être prévenu.`, acts: [["Indiquer", `editBien('${bi.id}')`]] });
+    if (bi.immeuble) { if (!bi.pnoEcheance && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance de l'immeuble (PNO)`, d: "Note sa date d'échéance : l'appli te préviendra 4 mois avant.", acts: [["Noter", `editBien('${bi.id}')`]] }); return; }
+    if (!bi.pnoEcheance && !(immeubleDe(bi) && immeubleDe(bi).pnoEcheance) && !fait("leg-pno-" + bi.id)) add({ key: "leg-pno-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : assurance propriétaire (PNO)`, d: `${cq("pno")} Obligatoire en copropriété, conseillée partout. Indique sa date d'échéance dans la fiche du bien pour être prévenu.`, acts: [["Indiquer", `editBien('${bi.id}')`]] });
     if (!fait("leg-daaf-" + bi.id)) add({ key: "leg-daaf-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : détecteur de fumée`, d: "Obligatoire dans chaque logement, installé par le propriétaire (le locataire l'entretient). À vérifier à chaque arrivée.", acts: [] });
     if (occupe && /gaz|fioul|bois/.test(ch) && TODAY.getMonth() >= 8 && !fait("leg-chaud-" + bi.id + "-" + y)) add({ key: "leg-chaud-" + bi.id + "-" + y, prio: "info", date: new Date(y, 9, 1), done: true, t: `${esc(bi.nom)} : entretien annuel du chauffage`, d: `Chaudière gaz ou fioul : entretien chaque année${/bois/.test(ch) ? ", et ramonage (2 fois par an pour le bois)" : ""}, à la charge du locataire. Demande-lui l'attestation avant l'hiver.`, acts: [] });
     if (occupe && encadre(bi) && !fait("leg-enc-" + bi.id)) add({ key: "leg-enc-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : encadrement des loyers`, d: `${cq("encadrement")} ${esc(bi.ville)} plafonne les loyers. Vérifie que le loyer ne dépasse pas le loyer de référence majoré, et qu'il est écrit dans le bail.`, acts: [] });
