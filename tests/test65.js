@@ -20,7 +20,8 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
     S.fichiers.push({ id: 'f1', bienId: 'b1', bailId: 'l1', cat: 'Bail', nom: 'Bail Jean signé', date: iso(TODAY), url: 'https://exemple.fr' });
     save(); location.hash = 'reglages'; render(); });
   await p.waitForTimeout(1500);
-  t(await p.isVisible('text=Brancher sur Claude'), 'Réglages : rubrique "🤖 Brancher sur Claude"');
+  await p.evaluate(() => { view.plusRgl = true; render(); }); await p.waitForTimeout(200); // rangée dans "Plus de réglages" depuis le 19/11
+  t(await p.isVisible('text=Brancher sur Claude'), 'Réglages › Plus de réglages : rubrique "🤖 Brancher sur Claude"');
   await p.evaluate(() => brancherClaude()); await p.waitForTimeout(2500);
   const url = await p.inputValue('#mcp_lien');
   t(/^https:\/\/sci-gestion-locative\.com\/mcp\/[A-Za-z0-9_-]{40,}$/.test(url), "lien du connecteur créé, sur le domaine de l'appli");

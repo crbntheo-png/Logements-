@@ -1,4 +1,4 @@
-// Canal "Quoi de neuf" : bandeau sur l'accueil tant qu'il y a du neuf, page #nouveautes groupée par jour, vu = bandeau
+// Canal "Quoi de neuf" : discret depuis le 19/11 (pas de bandeau sur l'accueil ; pastille dans Réglages › Plus de réglages), page #nouveautes groupée par jour, vu = bandeau
 // disparu, entrée dans Réglages, type de notification réglable ; nouvelle annonce → réapparaît ; notification envoyée une seule fois.
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), { execSync } = require('child_process');
@@ -17,22 +17,24 @@ const sql = q => JSON.parse(execSync(`python3 ${__dirname}/sql.py ${JSON.stringi
   const ESP = await p.evaluate(() => ESPACE);
   await p.evaluate(() => { S.biens.push({ id: 'b1', nom: 'T2', adresse: '1 rue', cp: '35000', ville: 'Rennes' }); S.baux.push({ id: 'l1', bienId: 'b1', nom: 'Jean Test', typeBail: 'vide', dateEntree: '2026-01-01', suiviDepuis: '2026-11', loyerHC: '500', charges: '0', jourPaiement: '5', revisions: [] }); save(); go('locataires'); render(); });
   await p.waitForTimeout(3000); await p.evaluate(() => render());
-  let ban = await p.locator('.nv-bandeau').innerText().catch(() => '');
-  t(/nouveautés dans l'appli/.test(ban) && /nouveautés/.test(ban), 'accueil : bandeau "🆕 9 nouveautés dans l\'appli · Attestation…" (' + ban.replace(/\n/g, ' ') + ')');
-  await p.screenshot({ path: __dirname + '/shots73/nv-accueil.png' });
-  await p.click('.nv-bandeau'); await p.waitForTimeout(1500);
+  t(!(await p.locator('.nv-bandeau').count()), 'accueil : pas de bandeau de nouveautés (Théo : "ça va les saouler")');
+  const pastille = async () => { await p.evaluate(() => { go('reglages'); render(); }); await p.waitForTimeout(400); return (await p.locator('details.plus-rgl summary').innerText().catch(() => '')).replace(/\n/g, ' '); };
+  let ban = await pastille();
+  t(/🆕 \d+ nouveautés?/.test(ban), 'Réglages › Plus de réglages : pastille "🆕 N nouveautés" (' + ban + ')');
+  await p.evaluate(() => { go('nouveautes'); render(); }); await p.waitForTimeout(1500);
   const pg = await p.locator('#app').innerText();
   t(/Dernières nouveautés de l'appli/.test(pg) && /18 novembre 2026/.test(pg) && /Signature à distance/.test(pg) && /Mois clôturés/.test(pg), 'page "🆕 Quoi de neuf" groupée par jour');
   await p.screenshot({ path: __dirname + '/shots73/nv-page.png', fullPage: true });
-  await p.evaluate(() => { go('locataires'); render(); }); await p.waitForTimeout(300);
-  t(!(await p.locator('.nv-bandeau').count()), 'déjà vu : plus de bandeau');
+  t(!/🆕 \d+ nouveaut/.test(await pastille()), 'déjà vu : plus de pastille');
   await p.evaluate(() => { go('reglages'); render(); }); await p.waitForTimeout(300);
-  t(/Dernières nouveautés de l'appli/.test(await p.locator('#app').innerText()), 'Réglages › Ton appli : "🆕 Dernières nouveautés de l\'appli"');
+  await p.evaluate(() => { view.plusRgl = true; render(); }); await p.waitForTimeout(200);
+  t(/Dernières nouveautés de l'appli/.test(await p.locator('#app').innerText()), 'Réglages › Plus de réglages : "🆕 Dernières nouveautés de l\'appli"');
   t(await p.evaluate(() => TYPES_NOTIF.some(x => x[0] === 'nouveautes')), 'Notifications : "Nouveautés de l\'appli" réglable');
   // une nouvelle annonce (sans notification réelle : test)
   sql("insert into public.nouveautes (id, icone, titre, texte, annonce_le) values ('test-nv', '🧪', 'Essai de nouveauté', 'Texte simple.', now()) on conflict (id) do update set cree_le = now()");
-  await p.evaluate(async () => { NV.etat = 'inconnu'; await chargerNouveautes(); go('locataires'); render(); }); await p.waitForTimeout(500);
-  ban = await p.locator('.nv-bandeau').innerText().catch(() => ''); t(/Nouveauté dans l'appli/.test(ban) && /Essai de nouveauté/.test(ban), 'nouvelle annonce : le bandeau revient ("Nouveau · Essai…")');
+  await p.evaluate(async () => { NV.etat = 'inconnu'; await chargerNouveautes(); view.plusRgl = false; }); await p.waitForTimeout(300);
+  ban = await pastille(); t(/🆕 1 nouveauté/.test(ban), 'nouvelle annonce : la pastille revient (' + ban + ')');
+  await p.evaluate(() => { go('locataires'); render(); }); await p.waitForTimeout(300); t(!(await p.locator('.nv-bandeau').count()), 'et toujours rien sur l\'accueil');
   // jamais deux notifications pour la même nouveauté
   const n0 = sql("select annonce_le is not null a from public.nouveautes where id = 'test-nv'")[0].a;
   t(n0 === true, 'nouveauté déjà annoncée : la fonction ne renverra pas de notification');
