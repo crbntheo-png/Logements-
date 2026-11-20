@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "f08d685", "date": "2026-11-20T23:16"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "c28d2d3", "date": "2026-11-20T23:41"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1348,7 +1348,7 @@ function sectionSorties(y) {
   if (!SB || !BANQUE.lien) return "";
   const L = sortiesAClasser(y); if (!L.length) return "";
   if (S.sci.sortiesMasquees) return `<p class="note small sorties-masq">🧾 ${L.length} dépense${L.length > 1 ? "s" : ""} de la banque pas rangée${L.length > 1 ? "s" : ""} dans l'appli (masqué : ton comptable s'en occupe). <a href="#" onclick="event.preventDefault();S.sci.sortiesMasquees=false;save();render()">Les afficher</a></p>`;
-  const tot = r2(L.reduce((t, o) => t - o.montant, 0)), optsBien = [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])];
+  const tot = r2(L.reduce((t, o) => t - o.montant, 0)), optsBien = [["", estPerso() ? "Général (pas un logement précis)" : "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])];
   const G = {}; L.forEach(o => { const c = classerSortie(o), k = c.cat || "À classer"; (G[k] = G[k] || { cat: c.cat, L: [] }).L.push({ o, c }); });
   const groupes = Object.entries(G).sort((a, b) => (a[0] === "À classer" ? -1 : b[0] === "À classer" ? 1 : 0) || b[1].L.length - a[1].L.length);
   const ligne = ({ o, c }, k) => `<li><input type="hidden" name="grp_${o.tx_id}" value="${esc(k)}"><label class="chk"><input type="checkbox" name="ok_${o.tx_id}" ${c.cat ? "checked" : ""} aria-label="Ranger cette dépense"></label><div class="tx"><div class="sl-h"><span class="lb">${esc((o.libelle || "").replace(/^(VIR INST|VIR SEPA|VIR|PRLV SEPA|PRLV)\s+/i, ""))}</span><b class="neg">−${eur(-o.montant)}</b></div>
@@ -2373,8 +2373,8 @@ function taches() {
         d: `Logement classé F ou G : la loi interdit toute augmentation, y compris la révision annuelle. Il faut faire des travaux pour pouvoir réviser.`, acts: [] });
     // 5. Attestation d'assurance habitation
     if (actif && b.typeBail !== "mobilite") {
-      const fin = P(b.assuranceFin); const k = "ass-" + b.id + "-" + (b.assuranceFin || "x");
-      if ((!fin || fin <= addDays(TODAY, 30)) && !fait(k) && !depotsAVoir().some(f => f.bailId === b.id))
+      const fin = P(b.assuranceFin); const k = "ass-" + b.id + "-" + (b.assuranceFin || "x"), sansAss = ((bien(b.bienId) || {}).sansBesoin || []).includes("assurance:" + b.id);
+      if (!sansAss && (!fin || fin <= addDays(TODAY, 30)) && !fait(k) && !depotsAVoir().some(f => f.bailId === b.id))
         add({ bailId: b.id, key: k, prio: fin && fin < TODAY || !fin ? "soon" : "info", date: fin || TODAY, done: true,
           t: `Attestation d'${assTxt(b)} : ${esc(b.nom)}`,
           d: (fin ? `Son assurance se termine le ${fd(fin)}. ` : "Tu n'as pas encore son attestation d'assurance. ") + "À lui demander une fois par an.",
@@ -2422,9 +2422,9 @@ function taches() {
         d: futur ? `Prochain locataire : ${esc(futur.nom)} le ${fd(futur.dateEntree)}.` : "Aucun locataire. Publier une annonce, faire les diagnostics à jour, préparer le bail.",
         acts: futur ? [] : [["Écrire l'annonce", `annonce('${bi.id}')`, "primary"], ["Ajouter un locataire", `editBail(null,'${bi.id}')`]] });
     }
-    if (bi.dpe === "G") add({ key: "dpeg-" + bi.id, prio: "urgent", date: TODAY, t: `${esc(bi.nom)} : DPE classé G`, d: "Interdit à la location pour tout nouveau bail ou renouvellement depuis le 1er janvier 2025. Travaux de rénovation à prévoir.", acts: [] });
+    if (bi.dpe === "G" && !fait("dpeg-" + bi.id)) add({ key: "dpeg-" + bi.id, prio: bailActifDuBien(bi.id) ? "soon" : "urgent", date: TODAY, done: true, t: `${esc(bi.nom)} : DPE classé G`, d: bailActifDuBien(bi.id) ? "Le bail en cours continue, mais tu ne pourras ni le renouveler ni relouer sans travaux (interdit depuis le 1er janvier 2025). Le loyer ne peut plus augmenter." : "Interdit à la location pour tout nouveau bail depuis le 1er janvier 2025 : travaux de rénovation à faire avant de relouer.", acts: [["Revérifier le DPE", `trouverDpe('${bi.id}')`, "primary"], ["Voir la fiche", `go('bien-${bi.id}')`]] });
     { const t = tacheDpeElec(bi); if (t) add(t); }
-    if (bi.dpe === "F") add({ key: "dpef-" + bi.id, prio: "info", date: TODAY, t: `${esc(bi.nom)} : DPE classé F`, d: "Sera interdit à la location à partir du 1er janvier 2028. Anticiper les travaux.", acts: [] });
+    if (bi.dpe === "F" && !fait("dpef-" + bi.id)) add({ key: "dpef-" + bi.id, prio: "info", date: TODAY, done: true, t: `${esc(bi.nom)} : DPE classé F`, d: "Sera interdit à la location à partir du 1er janvier 2028, et le loyer ne peut plus augmenter. Anticiper les travaux.", acts: [["Revérifier le DPE", `trouverDpe('${bi.id}')`]] });
     // Diagnostics et assurance : prévenu 4 mois avant la fin, pour avoir le temps de les refaire ou de comparer
     const fin = (champ, quoi, pourquoi) => { const v = bi[champ]; if (!v || !(P(v) <= addDays(TODAY, 120)) || fait(champ + "-" + bi.id + "-" + v)) return;
       add({ key: champ + "-" + bi.id + "-" + v, prio: P(v) <= addDays(TODAY, 30) ? "soon" : "info", date: P(v), done: true, t: `${esc(bi.nom)} : ${quoi} ${P(v) < TODAY ? "expiré depuis le" : "à renouveler avant le"} ${fds(v)}`, d: pourquoi, acts: [["Mettre à jour la date", `editBien('${bi.id}')`]] }); };
@@ -2450,7 +2450,7 @@ function taches() {
     ["cfe", "CFE " + y + " (si la SCI y est soumise)", new Date(y, 11, 15), new Date(y, 10, 15), "Location vide : en général non concernée sauf recettes ≥ 100 000 €. Location meublée : concernée."]
   ];
   if (GMAIL && GMAIL.mode !== "google") add({ key: "gmail-google", prio: "soon", date: TODAY, t: "Rebrancher ton Gmail avec Google", d: "Ton Gmail est branché avec un mot de passe d'application, qui ouvre toute ta boîte mail. La connexion Google ne permet que l'envoi : plus sûr, 1 minute.", acts: [["Rebrancher", "reglage('gmail')", "primary"]] });
-  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (k === "tf" && S.biens.length && S.biens.every(bi => taxeDe(bi.id, y))) return; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: k === "tf" ? [["Saisir", "taxeFonciere()", "primary"]] : k === "2044" ? [["Voir mes montants", `view.comptaOnglet='comptable';view.comptaAnnee=${y - 1};go('compta');setTimeout(()=>{const e=document.getElementById('decl2044');if(e)e.scrollIntoView({block:'start'})},300)`, "primary"]] : [] }); });
+  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (k === "tf" && S.biens.length && S.biens.every(bi => taxeDe(bi.id, y) || (bi.sansBesoin || []).includes("taxe") || (immeubleDe(bi) && (immeubleDe(bi).sansBesoin || []).includes("taxe")))) return; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: k === "tf" ? [["Saisir", "taxeFonciere()", "primary"]] : k === "2044" ? [["Voir mes montants", `view.comptaOnglet='comptable';view.comptaAnnee=${y - 1};go('compta');setTimeout(()=>{const e=document.getElementById('decl2044');if(e)e.scrollIntoView({block:'start'})},300)`, "primary"]] : [] }); });
   // 10b. Part d'ordures ménagères à récupérer auprès des locataires
   (S.taxes || []).forEach(tx => tx.parts.filter(p => teomATraiter(tx, p)).forEach(p => { const b = bail(p.bailId); if (!b) return;
     add({ bailId: b.id, key: "teom-" + tx.id + p.bailId, prio: p.demandeLe ? "info" : "soon", date: TODAY, t: `Ordures ménagères ${tx.annee} : ${esc(b.nom)} doit ${eur(p.montant)}`,
@@ -2869,7 +2869,7 @@ function render0() {
   else html = ({ locataires: pageAccueil, afaire: pageAFaire, biens: pageBiens, docs: pageDocs, compta: pageCompta, reglages: pageReglages })[page](T);
   // "← Retour" : vers la page d'où l'on vient (le fil), sinon le lien prévu par la page
   const prec = PISTE.length > 1 ? PISTE[PISTE.length - 2] : null;
-  if (prec) html = html.replace(/<a class="back" href="[^"]*">← [^<]*<\/a>/, `<a class="back" href="#${esc(prec)}">← ${esc(nomPagePiste(prec))}</a>`);
+  if (prec) html = html.replace(/<a class="back" href="[^"]*">← [^<]*<\/a>/, () => `<a class="back" href="#${esc(prec)}">← ${esc(nomPagePiste(prec))}</a>`);
   const actif = document.activeElement, focusId = actif && actif.id && app.contains(actif) ? actif.id : null, selS = focusId && actif.selectionStart, selE = focusId && actif.selectionEnd;
   // Fluidité : on ne redessine que si quelque chose a changé, et les blocs que la personne a ouverts restent ouverts
   const neuf = banner + html;
@@ -3463,16 +3463,20 @@ async function importerDepuisDrive(liste, ctx) {
 }
 async function envoyerDocument(bienId, d, f) {
   if (f.size > 20 * 1024 * 1024) { toast("Fichier trop lourd (20 Mo maximum)."); return; }
+  const esp = ESPACE;
   toast("Envoi du document…");
   const ext = (f.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, ""), chemin = `${ESPACE}/${bienId}/${uid()}.${ext}`;
   const r = await SB.storage.from("documents").upload(chemin, f, { contentType: f.type || "application/octet-stream" });
   if (r.error) { toast("Envoi impossible : " + r.error.message); return; }
+  if (ESPACE !== esp) { SB.storage.from("documents").remove([chemin]).catch(() => {}); toast("Envoi arrêté : tu as changé d'espace."); return; } // jamais dans un autre espace
   const id = uid(); S.fichiers.push(Object.assign({ id, bienId, cat: d.cat, nom: d.nom || f.name.replace(/\.[^.]+$/, ""), chemin, type: f.type, taille: f.size, date: iso(TODAY) }, qui(d.bailId)));
   save(); render(); if (!d.discret) { apresAjoutDocs(bienId, [id], d.bailId); if (/pdf/.test(f.type || "")) setTimeout(() => completerAvecPapiers(bienId, { discret: true, ids: [id] }), 4000); } return id;
 }
 async function envoyerPlusieurs(bienId, L) {
   const ids = [];
-  for (const [i, x] of L.entries()) { toast(`Envoi ${i + 1} sur ${L.length}…`); const id = await envoyerDocument(bienId, { ...x.d, discret: true }, x.f); if (id) ids.push(id); }
+  const esp = ESPACE;
+  for (const [i, x] of L.entries()) { if (ESPACE !== esp) break; toast(`Envoi ${i + 1} sur ${L.length}…`); const id = await envoyerDocument(bienId, { ...x.d, discret: true }, x.f); if (id) ids.push(id); }
+  if (ESPACE !== esp) return;
   if (ids.length) apresAjoutDocs(bienId, ids, L[0].d.bailId); else toast("Aucun document envoyé.");
 }
 /* Après un ajout : jamais d'impasse — voir, en ajouter d'autres, ou annuler */
@@ -3501,12 +3505,13 @@ function supprimerDocument(id) {
 const DOCS_RETIRES = {};
 function retirerDocuments(ids) {
   const L = S.fichiers.filter(x => String(ids).split(",").includes(x.id)); if (!L.length) return;
-  L.forEach(f => { clearTimeout((DOCS_RETIRES[f.id] || {}).t); DOCS_RETIRES[f.id] = { f, t: setTimeout(() => { if (DOCS_RETIRES[f.id] && f.chemin && SB && !S.fichiers.some(x => x.chemin === f.chemin)) SB.storage.from("documents").remove([f.chemin]).catch(() => {}); delete DOCS_RETIRES[f.id]; }, 12000) }; });
+  L.forEach(f => { clearTimeout((DOCS_RETIRES[f.id] || {}).t); DOCS_RETIRES[f.id] = { f, esp: ESPACE, t: setTimeout(() => { if (DOCS_RETIRES[f.id] && f.chemin && SB && !S.fichiers.some(x => x.chemin === f.chemin)) SB.storage.from("documents").remove([f.chemin]).catch(() => {}); delete DOCS_RETIRES[f.id]; }, 12000) }; });
   S.fichiers = S.fichiers.filter(x => !L.includes(x)); save(); render();
   toastActions(L.length > 1 ? `${L.length} documents supprimés` : `"${L[0].nom}" supprimé`, [["Annuler", `remettreDocuments('${L.map(f => f.id).join(",")}')`]]);
 }
 function remettreDocuments(ids) {
-  const L = String(ids).split(",").map(id => DOCS_RETIRES[id]).filter(Boolean);
+  const tous = String(ids).split(",").map(id => DOCS_RETIRES[id]).filter(Boolean), L = tous.filter(x => x.esp === ESPACE);
+  if (tous.length && !L.length) { toast("Reviens d'abord dans l'espace de ce document pour l'annuler."); return; }
   L.forEach(x => { clearTimeout(x.t); delete DOCS_RETIRES[x.f.id]; if (!S.fichiers.some(f => f.id === x.f.id)) S.fichiers.push(x.f); });
   save(); render(); toast(L.length ? "✓ Remis" : "Trop tard : déjà effacé");
 }
@@ -3637,7 +3642,8 @@ function blocCommune(bi) {
 function blocSuiviBien(bi) {
   const baux = S.baux.filter(b => b.bienId === bi.id), y = TODAY.getFullYear(), m0 = y + "-01";
   let du = 0, paye = 0, retard = 0;
-  baux.forEach(b => { for (let m = m0; m <= CUR; m = addM(m, 1)) { const e = echeance(b, m); if (!e) continue; du += e.du; paye += Math.min(e.du, e.paye); if (e.statut === "retard") retard += e.reste; } });
+  baux.forEach(b => { for (let m = m0; m <= CUR; m = addM(m, 1)) { const e = echeance(b, m); if (!e) continue; du += e.du; paye += Math.min(e.du, e.paye); }
+    retard += echeancesBail(b).filter(e => e.statut === "retard").reduce((t, e) => t + e.reste, 0); }); // en janvier, décembre impayé compte encore
   // occupation sur les 12 derniers mois (jours couverts par un bail)
   const debut = addDays(TODAY, -364); let occ = 0;
   for (let d = new Date(debut); d <= TODAY; d = addDays(d, 7)) if (baux.some(b => isActive(b, d))) occ++;
@@ -4299,7 +4305,7 @@ async function lireRecus() {
       let x = "";
       try { if (/pdf/.test(f.type || "")) x = " " + phraseDe(await texteSeulPdf((await blobFichier(f)).bl)).slice(0, 4000) + " "; } catch (e) {}
       // un relevé de banque reçu (envoyé par e-mail ou pris en photo) : on propose de cocher les loyers avec, pas de le ranger
-      if (ESTRELEVE.test(x) || ESTRELEVE.test(phraseDe([f.nom, f.objet].filter(Boolean).join(" ")))) { LU_RECUS[f.id] = { releve: true }; releves.push(f); continue; }
+      if (ESTRELEVE.test(x) || ESTRELEVE.test(phraseDe([f.nom, f.objet].filter(Boolean).join(" ")))) { LU_RECUS[f.id] = { releve: true }; if (!f.releveLu) releves.push(f); continue; }
       const g = deviner({ id: "", titre: [f.nom, f.objet].filter(Boolean).join(" "), chemin: [] }, x.trim() ? x : "");
       LU_RECUS[f.id] = g;
       if (g.sur && !f.bienId) { Object.assign(f, { bienId: g.bienId, cat: g.cat, bailId: g.bailId || "", rangeSeul: new Date().toISOString() }); ranges.push(f); }
@@ -4314,11 +4320,13 @@ async function lireRecus() {
   return ranges.length;
 }
 const ESTRELEVE = /\b(RELEVE (DE |D )?(VOTRE |VOS )?(COMPTE|OPERATIONS)|EXTRAIT DE COMPTE|ANCIEN SOLDE|NOUVEAU SOLDE|SOLDE (CREDITEUR|DEBITEUR))\b/;
-/* Relevé reçu dans la boîte : lu comme un relevé importé (loyers cochés, dépenses proposées), puis rangé dans les papiers de l'espace */
+/* Relevé reçu dans la boîte : lu comme un relevé importé (loyers cochés, dépenses proposées) ; marqué "lu" seulement si la lecture a marché */
 async function releveRecu(id) {
   const f = S.fichiers.find(x => x.id === id); if (!f) return;
-  try { const { bl, type } = await blobFichier(f); await importerReleveFichier(new File([bl], f.nom || "releve.pdf", { type: type || f.type || "application/pdf" })); }
+  let ok = false;
+  try { const { bl, type } = await blobFichier(f); ok = await importerReleveFichier(new File([bl], f.nom || "releve.pdf", { type: type || f.type || "application/pdf" })); }
   catch (e) { toast("Relevé illisible : " + e.message); return; }
+  if (!ok) return;
   if (LU_RECUS[id]) LU_RECUS[id].fait = true; f.releveLu = iso(TODAY); save();
 }
 function remettreDansBoite(ids) {
@@ -4728,7 +4736,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 function pageCompta() {
   const y = view.comptaAnnee, rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y))).sort((a, b) => b.date.localeCompare(a.date));
   const couv = depensesCouvertes(); // intérêts déjà comptés par les tableaux de prêt
-  const lignes = [...S.biens.map(b => ({ id: b.id, nom: b.nom })), { id: "", nom: "SCI (frais généraux)" }].map(x => {
+  const lignes = [...S.biens.map(b => ({ id: b.id, nom: b.nom })), { id: "", nom: estPerso() ? "Frais généraux" : "SCI (frais généraux)" }].map(x => {
     const r = rec[x.id] || { loyers: 0, charges: 0 }, d = deps.filter(dd => (dd.bienId || "") === x.id && !HORS_RESULTAT.has(dd.categorie) && !couv.has(dd.id)).reduce((s, dd) => s + +dd.montant, 0) + interetsTableaux(y, x.id);
     return { ...x, loyers: r.loyers, charges: r.charges, dep: d, res: r.loyers + r.charges - d };
   });
@@ -4742,9 +4750,9 @@ function pageCompta() {
     resume: () => `<div class="kpis"><div class="kpi"><span>Loyers encaissés</span><b>${eur(tot.loyers)}</b><small>${(() => { const rb = Object.values(rec).reduce((t, r) => t + (r.banque || 0), 0); return rb ? `dont ${eur(rb)} lus dans la banque` : "hors charges"; })()}</small></div><div class="kpi"><span>Charges encaissées${cq("provision")}</span><b>${eur(tot.charges)}</b><small>provisions des locataires</small></div><div class="kpi"><span>Dépenses</span><b>${eur(tot.dep)}</b><small>hors capital d'emprunt</small></div><div class="kpi ${tot.res < 0 ? "bad" : ""}"><span>Résultat${cq("resultat")}</span><b>${eur(tot.res)}</b><small>avant impôts (indicatif)</small></div></div>
   ${annee ? graphiqueLoyers() : ""}
   <section><h2 style="margin-bottom:10px">Par logement</h2><ul class="lr-list">${lignes.filter(l => l.loyers || l.charges || l.dep).map(l => `<li class="lr"><div class="lr-main"><span class="tx"><b>${esc(l.nom)}</b><small>loyers ${eur(l.loyers + l.charges)} · dépenses ${eur(l.dep)}</small></span><span class="lr-r"><b class="${l.res < 0 ? "bad-txt" : ""}">${eur(l.res)}</b><small>résultat</small></span></div></li>`).join("")}<li class="lr-total"><span>Total</span><span class="${tot.res < 0 ? "bad-txt" : ""}">${eur(tot.res)}</span></li></ul></section>
-  <section class="card"><h2>Part de chaque associé</h2>
+${estPerso() ? "" : (`  <section class="card"><h2>Part de chaque associé</h2>
   ${parts ? `<div class="table-wrap" style="border:0"><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)}<div class="sub">${a.parts} parts · ${Math.round(a.parts / parts * 1000) / 10} %</div></td><td class="num"><b>${eur(tot.res * a.parts / parts)}</b></td></tr>`).join("")}</tbody></table></div><p class="note">${S.sci.regime === "IR" ? "SCI à l'impôt sur le revenu : chaque associé déclare sa part du résultat (revenus fonciers). Le calcul fiscal exact (2072) peut différer : amortissements, travaux d'amélioration, etc." : "SCI à l'IS : l'impôt est payé par la SCI. Les associés ne sont imposés que sur les dividendes distribués."}</p>` : `<p class="note">Renseignez les associés et leurs parts dans <a href="#reglages">Réglages</a>.</p>`}
-  </section>`,
+  </section>`)}`,
     banque: () => annee ? `${sectionBanque()}${sectionTreso()}` : `<div class="empty">La banque et la trésorerie montrent l'année en cours. Reviens sur ${TODAY.getFullYear()} avec la flèche ›.</div>`,
     depenses: () => `${sectionSorties(y)}
   <section><h2 style="margin-bottom:10px">Dépenses ${y} <span class="count">${deps.length}</span></h2>
@@ -4942,7 +4950,7 @@ function sectionPrets(y) {
 function editPret(id) {
   const p = id ? S.prets.find(x => x.id === id) : { id: uid(), banque: "", bienId: "", montant: "", taux: "", duree: 240, premiere: iso(TODAY), assurance: 0, differe: 0, differeType: "partiel" };
   modal(id ? "Modifier le prêt" : "Nouveau prêt", `
-    ${fld("Banque", "banque", p.banque, "text", "", "required")}${sel("Pour", "bienId", p.bienId || "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
+    ${fld("Banque", "banque", p.banque, "text", "", "required")}${sel("Pour", "bienId", p.bienId || "", [["", estPerso() ? "Général (pas un logement précis)" : "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
     ${fld("Montant emprunté (€)", "montant", p.montant, "number", "", "required")}${fld("Taux (% par an)", "taux", p.taux, "number", "", 'required step="0.001"')}
     ${fld("Durée (mois)", "duree", p.duree, "number", "", "required")}${fld("1re échéance", "premiere", p.premiere, "date", "", "required")}
     ${fld("Assurance emprunteur (€ par mois)", "assurance", p.assurance, "number")}${fld("Différé (mois)", "differe", p.differe, "number")}
@@ -4976,7 +4984,7 @@ function lireTableauPret(texte) {
 function importerTableauPret(id) {
   const p = id ? S.prets.find(x => x.id === id) : null;
   modal("Tableau d'amortissement de la banque", `<p class="full note">Dans l'espace en ligne de ta banque, télécharge le tableau d'amortissement (CSV ou Excel enregistré en CSV), ou copie-colle ses lignes ici. Il faut au moins les colonnes <b>date</b>, <b>intérêts</b> et <b>capital</b> (ou amortissement) ; <b>assurance</b> et <b>capital restant dû</b> si elles y sont.</p>
-    ${p ? "" : `${fld("Banque", "banque", "", "text", "", "required")}${sel("Pour", "bienId", "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}`}
+    ${p ? "" : `${fld("Banque", "banque", "", "text", "", "required")}${sel("Pour", "bienId", "", [["", estPerso() ? "Général (pas un logement précis)" : "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}`}
     <label class="fl full">Fichier CSV<input type="file" id="pret_csv" accept=".csv,text/csv,text/plain"></label>
     <label class="fl full">Ou colle les lignes<textarea name="texte" id="pret_txt" rows="5" placeholder="Date;Échéance;Intérêts;Capital;Assurance;Capital restant dû"></textarea></label>
     <p class="full note" id="pret_apercu"></p>`,
@@ -5048,7 +5056,7 @@ function avanceAssocie() {
     ${noms.length ? sel("Qui a payé ?", "qui", noms[0], noms.map(n => [n, n]), "full") : fld("Qui a payé ? (ajoute les associés dans Réglages › La SCI)", "qui", "", "text", "full", "required")}
     ${fld("Combien (€)", "montant", "", "number", "", "required")}${fld("Quand ?", "date", iso(TODAY), "date", "", "required")}
     ${fld("Pour quoi ? (ex : facture plombier)", "libelle", "", "text", "full", "required")}
-    ${sel("Catégorie", "categorie", "Travaux d'entretien / réparation", CATS.map(c => [c, c]))}${sel("Logement", "bienId", "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}`,
+    ${sel("Catégorie", "categorie", "Travaux d'entretien / réparation", CATS.map(c => [c, c]))}${sel("Logement", "bienId", "", [["", estPerso() ? "Général (pas un logement précis)" : "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}`,
     d => { d.montant = r2(+d.montant); if (!(d.montant > 0) || !String(d.qui || "").trim()) { toast("Indique qui a payé et combien."); return false; }
       S.depenses.push({ id: uid(), date: d.date, montant: d.montant, categorie: d.categorie, bienId: d.bienId || "", libelle: d.libelle, recuperable: false, avancePar: d.qui.trim() });
       view.avancesOuvertes = true; toast(`✓ Noté : la SCI doit ${eur(d.montant)} à ${d.qui}`); }, { ok: "Enregistrer" });
@@ -5393,7 +5401,8 @@ function editBien(id) {
       if (d.dpeNumero && d.dpeNumero.length !== 13) { toast("Le numéro du DPE fait 13 caractères (lettres et chiffres)."); const pl = document.querySelector("#mform .plus-infos"); if (pl) pl.open = true; return false; }
       d.nom = String(d.nom || "").trim(); d.immeuble = d.type === TYPE_IMM; if (d.immeuble) d.immeubleId = ""; else if (d.immeubleId === undefined) delete d.immeubleId;
       if (!d.nom) { if (!String(d.adresse || "").trim() && !String(d.ville || "").trim()) { toast("Donne au moins l'adresse ou un nom au logement."); return false; } d.nom = nomAuto(d.type, d.ville, d.adresse); }
-      const avantDpe = id ? b.dpe : "", avantMeuble = id ? (b.meuble || "vide") : "";
+      const avantDpe = id ? b.dpe : "", avantMeuble = id ? (b.meuble || "vide") : "", avantAdr = id ? [b.adresse, b.cp, b.ville].join("|") : "";
+      if (id && avantAdr !== [d.adresse, d.cp, d.ville].join("|")) { d.insee = ""; delete COMMUNE[id]; } // nouvelle adresse : zone tendue et loyers à revoir
       if (id) { const vrai = bien(id); if (vrai && vrai !== b) Object.assign(vrai, d); Object.assign(b, d); setTimeout(() => revisionDebloquee(id, avantDpe), 300); // la fiche a pu être rechargée pendant que la fenêtre était ouverte
         // meublé / vide : le bail du locataire en place (et à venir) suit le logement, une seule saisie
         if (avantMeuble !== (d.meuble || "vide")) { const L = S.baux.filter(x => x.bienId === id && (isActive(x) || P(x.dateEntree) > TODAY) && x.typeBail === (d.meuble === "meuble" ? "vide" : "meuble"));
@@ -5640,7 +5649,7 @@ function editDepense(id, pre) {
   const d0 = id ? S.depenses.find(x => x.id === id) : Object.assign({ date: iso(TODAY), categorie: CATS[4] }, pre || {});
   modal(id ? "Modifier la dépense" : "Nouvelle dépense", `${id ? "" : pre && pre.ia ? `<div class="full">${grosMsg("attention", "🤖 L'IA a lu ce document : vérifie avant d'enregistrer", esc(pre.ia))}</div>` : pre && pre.lue !== undefined ? `<p class="full note">${pre.lue ? "📷 Lu sur la facture : vérifie le montant, la date et la catégorie." : "📷 Je n'ai pas pu lire la facture : remplis à la main."}</p>` : `<div class="full row"><button type="button" onclick="closeOverlay();photoFacture()">📷 Remplir avec une photo de la facture</button></div>`}
     ${fld("Date", "date", d0.date, "date", "", "required")}${fld("Montant (€)", "montant", d0.montant, "number", "", "required")}
-    ${sel("Catégorie", "categorie", d0.categorie, CATS.map(c => [c, c]))}${sel("Bien concerné", "bienId", d0.bienId || "", [["", "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
+    ${sel("Catégorie", "categorie", d0.categorie, CATS.map(c => [c, c]))}${sel("Bien concerné", "bienId", d0.bienId || "", [["", estPerso() ? "Général (pas un logement précis)" : "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
     ${fld("Détail (ex : plombier fuite cuisine)", "libelle", d0.libelle, "text", "full")}
     <label class="fl chk full"><input type="checkbox" name="recuperable" ${d0.recuperable ? "checked" : ""}> Charge récupérable sur le locataire (à inclure dans la régularisation)</label>`,
     d => { d.montant = r2(+d.montant); if (!(d.montant > 0)) { toast("Le montant doit être supérieur à 0."); return false; } if (id) Object.assign(d0, d); else S.depenses.push({ id: uid(), ...d }); toast(id ? "Dépense modifiée" : "Dépense ajoutée"); },
@@ -5655,7 +5664,9 @@ function saveSci(f) {
   const d = Object.fromEntries(new FormData(f).entries());
   d.familiale = d.familiale === "1";
   d.autoQuittance = d.autoQuittance !== "0";
-  d.associes = d.associes.split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, p, e]) => ({ nom: n.trim(), parts: +(p || 0), email: (e || "").trim() }));
+  const lignesA = String(d.associes || "").split("\n").map(l => l.split(";")).filter(x => x[0].trim()), malParts = lignesA.filter(([, p]) => !/^\s*\d+\s*$/.test(p || ""));
+  if (malParts.length) { toast(`Parts de ${malParts.map(x => x[0].trim()).join(", ")} : écris un nombre entier (ex. « Paul ; 50 »)`); return false; }
+  d.associes = lignesA.map(([n, p, e]) => ({ nom: n.trim(), parts: +(p || 0), email: (e || "").trim() }));
   d.liens = (d.liens || "").split("\n").map(l => l.split(";").map(x => x.trim())).filter(x => x[0] && /^https?:\/\//i.test(x[1] || "")).map(([nom, url, icone]) => ({ nom, url, icone: icone || "" }));
   d.contacts = (d.contacts || "").split("\n").map(l => l.split(";")).filter(x => x[0].trim()).map(([n, r, e]) => ({ nom: n.trim(), role: (r || "").trim(), email: (e || "").trim() }));
   const nouveauDrive = idDrive(d.drive); delete d.drive; if (nouveauDrive && nouveauDrive !== driveRacine()) { d.driveGenId = ""; d.driveDossiers = [{ id: nouveauDrive, nom: "" }]; DOCS = { etat: "vide", fichiers: [], dossiers: {} }; } d.driveId = nouveauDrive || S.sci.driveId || "";
@@ -5714,7 +5725,7 @@ function showDoc(html, o = {}) {
   ov.innerHTML = `<div class="docwrap"><div class="docbar"><div class="row"><button class="icon-btn fermer" onclick="fermerDoc()" aria-label="Fermer">✕</button><b class="doc-t">${esc(o.titre || "")}</b></div>
   <div class="row">${/class="sign"/.test(html) ? `<button onclick="panneauSignature()" id="dsigner" aria-label="Signer sur l'écran">✍️<span class="lbl">Signer</span></button>` : ""}<button onclick="telechargerPdf()" aria-label="Télécharger le PDF">${ic("download")}<span class="lbl">PDF</span></button>${peutPartager() ? `<button onclick="partagerPdf()" aria-label="Partager le PDF">${ic("share")}<span class="lbl">Partager</span></button>` : ""}${mail ? `<button class="primary" id="dsend">${ic("send")}<span>Envoyer…</span></button>` : ""}</div></div>
   <div class="paper" id="paper">${html}</div>
-  ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.bailId && bail(o.bailId) && bail(o.bailId).tel ? `<button class="small" onclick="envoyerAutrement('sms')">📱 Par SMS</button><button class="small" onclick="envoyerAutrement('wa')">💬 WhatsApp</button>` : ""}${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div>${SB && !MCP && !GMAIL ? `<p class="note">✉️ Pour envoyer d'ici en un geste, depuis ta propre adresse : <a href="#" onclick="closeOverlay();reglage('gmail');return false">branche ton Gmail</a>.</p>` : ""}</div>` : ""}</div>`;
+  ${o.email ? `<div class="emailbox">${mail ? `<label class="fl">À<input id="maildest" type="email" value="${esc(o.to || "")}" placeholder="adresse@exemple.fr"></label>${o.to ? "" : o.bailId ? `<span class="note">Pas d'e-mail enregistré pour ce locataire : tape-le ici, il sera gardé dans sa fiche.</span>` : `<span class="note">À qui l'envoyer ? Tape l'adresse.</span>`}<label class="fl">Objet<input id="mailobjet" value="${esc(o.email.objet)}"></label>` : ""}<b>Message${o.to && !mail ? " pour " + esc(o.to) : ""}</b>${o.email.tons ? `<div class="row tons" role="group" aria-label="Ton du message">${Object.entries({ gentil: "😊 Gentil", ferme: "🙂 Ferme", officiel: "📜 Officiel" }).map(([k, l]) => `<button type="button" class="small ${o.email.corps === o.email.tons[k] ? "primary" : ""}" onclick="choisirTon(this,'${k}')">${l}</button>`).join("")}</div>` : ""}<textarea id="mailtxt">${esc(o.email.corps)}</textarea><div class="row"><button class="small" onclick="copier()">${ic("copy")} Copier le texte</button>${o.bailId && bail(o.bailId) && bail(o.bailId).tel ? `<button class="small" onclick="envoyerAutrement('sms')">📱 Par SMS</button><button class="small" onclick="envoyerAutrement('wa')">💬 WhatsApp</button>` : ""}${o.onSent ? `<button class="small ghost" id="dsent">${ic("check")} ${esc(o.sentLabel || "Marquer comme envoyé")}</button>` : ""}${o.to && !peutEnvoyer() ? `<a class="btn" href="mailto:${encodeURIComponent(o.to)}?subject=${encodeURIComponent(o.email.objet)}&body=${encodeURIComponent(o.email.corps)}">Ouvrir ma messagerie</a><span class="note">Joins le PDF téléchargé au message.</span>` : ""}</div>${SB && !MCP && !GMAIL ? `<p class="note">✉️ Pour envoyer d'ici en un geste, depuis ta propre adresse : <a href="#" onclick="closeOverlay();reglage('gmail');return false">branche ton Gmail</a>.</p>` : ""}</div>` : ""}</div>`;
   ov.hidden = false; ov.scrollTop = 0;
   const deja = o.to && dejaEcrit(o.to); if (deja) ov.querySelector(".docbar").insertAdjacentHTML("afterend", `<div class="deja-ecrit">${grosMsg("attention", `👥 ${esc(deja.qui)} a déjà écrit à ${esc(o.to)} ${ilYa(deja.quand)}`, `« ${esc(deja.objet || "")} ». Vérifie avant d'envoyer, pour ne pas faire de doublon.`)}</div>`);
   if (o.onSent && document.getElementById("dsent")) document.getElementById("dsent").onclick = () => { o.onSent(); save(); closeOverlay(); toast("Enregistré comme envoyé"); };
@@ -7411,7 +7422,7 @@ async function releveDepuisPdf(blob) {
   for (let i = 1; i <= Math.min(doc.numPages, 40); i++) {
     const it = (await (await doc.getPage(i)).getTextContent()).items.filter(y => String(y.str).trim()).map(y => ({ s: String(y.str).trim(), x: y.transform[4], w: y.width || 0, y: y.transform[5] }));
     texte += it.map(y => y.s).join(" ") + " ";
-    if (!annee) { const m = /\b\d{1,2}[\/.]\d{1,2}[\/.](20\d{2})\b/.exec(texte); if (m) annee = +m[1]; }
+    if (!annee) annee = periodeReleve(texte);
     const col = re => { const h = it.find(y => re.test(sansAccent(y.s))); return h ? h.x + h.w / 2 : null; };
     const xDeb = col(/^debit/), xCre = col(/^credit/);
     // regrouper en lignes (même hauteur à 2 points près), de haut en bas puis de gauche à droite
@@ -7424,7 +7435,7 @@ async function releveDepuisPdf(blob) {
         if (IGNORE.test(sansAccent(lib))) { page.push({ y: l.y, coupe: true }); return; }
         const m = monts[monts.length - 1], c = m.x + m.w / 2; let v = Math.abs(nombreFr(m.s.replace(/^[-+]/, "")));
         if (/^-/.test(m.s)) v = -v; else if (xDeb != null && xCre != null) v = Math.abs(c - xDeb) < Math.abs(c - xCre) ? -v : v;
-        const d = dates[0].s.split(/[\/.]/); let y = d[2] ? +d[2] : (annee || TODAY.getFullYear()); if (y < 100) y += 2000;
+        const d = dates[0].s.split(/[\/.]/); let y = d[2] ? +d[2] : anneeLigne(+d[0], +d[1], annee); if (y < 100) y += 2000;
         page.push({ d: iso(new Date(y, +d[1] - 1, +d[0])), parts: [{ y: l.y, t: lib }], v, y: l.y, signe: /^-/.test(m.s) || (xDeb != null && xCre != null) });
       } else if (monts.length || IGNORE.test(sansAccent(lib))) page.push({ y: l.y, coupe: true }); // solde, total : rien ne s'y rattache
       else if (lib && !dates.length) libres.push({ y: l.y, t: lib });
@@ -7441,6 +7452,21 @@ async function releveDepuisPdf(blob) {
       ops.push({ d: o.d, lib, v }); });
   }
   return { ops: ops.filter(o => o.v && !isNaN(o.v)).map(o => opReleve(o.d, o.lib, o.v)), texte: texte.trim() };
+}
+/* Période du relevé (dates complètes trouvées dans le texte) : sert à donner la bonne année aux lignes "jj/mm" */
+function periodeReleve(t) {
+  const L = [...String(t).matchAll(/\b(\d{1,2})[\/.](\d{1,2})[\/.](20\d{2})\b/g)].map(m => new Date(+m[3], +m[2] - 1, +m[1])).filter(d => !isNaN(d) && d <= addDays(TODAY, 40));
+  if (!L.length) return null; L.sort((a, b) => a - b);
+  // la période = les dates les plus nombreuses autour de la plus récente (on écarte une vieille date isolée, ex. ouverture du compte)
+  const fin = L[L.length - 1], deb = L.filter(d => d >= addDays(fin, -400))[0];
+  return { deb, fin };
+}
+function anneeLigne(j, m, per) {
+  if (!per) { const y = TODAY.getFullYear(); return new Date(y, m - 1, j) > addDays(TODAY, 1) ? y - 1 : y; }
+  // l'année qui place la date dans la période du relevé (à un mois près) ; sinon la plus proche de la fin du relevé
+  const cand = [per.deb.getFullYear(), per.fin.getFullYear(), per.fin.getFullYear() - 1].map(y => ({ y, d: new Date(y, m - 1, j) }));
+  const dedans = cand.find(c => c.d >= addDays(per.deb, -31) && c.d <= addDays(per.fin, 31));
+  return (dedans || cand.sort((a, b) => Math.abs(a.d - per.fin) - Math.abs(b.d - per.fin))[0]).y;
 }
 /* Photo ou scan d'un relevé : l'IA recopie les opérations (1 lecture de document) */
 async function releveParIA(blob, type) {
@@ -7471,7 +7497,7 @@ function lancerRevueReleve(ops) {
 }
 async function importerReleveFichier(f) {
   if (!f) return; toast(/^image\//.test(f.type) ? "🤖 L'IA lit ton relevé… (20 secondes environ)" : "Lecture du relevé…");
-  try { lancerRevueReleve(await opsReleveFichier(f)); } catch (e) { modal("🏦 Ce n'est pas le bon document", `<div class="full">${grosMsg("attention", "Je n'ai pas pu lire ce relevé", esc(e.message))}</div><div class="full">${guideReleve(true)}</div>`, () => { const i = document.getElementById("relfile"); if (i) i.click(); else setTimeout(importerReleve, 50); return !i; }, { ok: "📄 Choisir un autre fichier", lecture: true, after: () => { const i = document.createElement("input"); i.type = "file"; i.id = "relfile"; i.hidden = true; i.accept = ".pdf,.csv,.txt,application/pdf,text/csv,text/plain,image/*"; i.onchange = () => { closeOverlay(); importerReleveFichier(i.files[0]); }; document.getElementById("mform").appendChild(i); } }); }
+  try { lancerRevueReleve(await opsReleveFichier(f)); return true; } catch (e) { modal("🏦 Ce n'est pas le bon document", `<div class="full">${grosMsg("attention", "Je n'ai pas pu lire ce relevé", esc(e.message))}</div><div class="full">${guideReleve(true)}</div>`, () => { const i = document.getElementById("relfile"); if (i) i.click(); else setTimeout(importerReleve, 50); return !i; }, { ok: "📄 Choisir un autre fichier", lecture: true, after: () => { const i = document.createElement("input"); i.type = "file"; i.id = "relfile"; i.hidden = true; i.accept = ".pdf,.csv,.txt,application/pdf,text/csv,text/plain,image/*"; i.onchange = () => { closeOverlay(); importerReleveFichier(i.files[0]); }; document.getElementById("mform").appendChild(i); } }); }
 }
 /* Le bon document, montré : on ne se demande ni lequel, ni où le trouver */
 function guideReleve(court) {
@@ -7688,26 +7714,32 @@ function docBailOpen(id) {
   showDoc(html, { titre: "Bail – à relire avant signature", fichier: `Bail-${slug(b.nom)}`, to: b.email, bailId: b.id, email: { objet: "Votre bail de location", corps: `Bonjour,\n\nVous trouverez ci-joint le projet de bail pour le logement ${adresseBien(bi)}. Merci de le relire, nous le signerons ensemble le jour de l'état des lieux.\n\nBonne journée,\n${s.gerant || ""}` } });
 }
 function docBilanOpen(y) {
-  const rec = recettes(y), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)));
-  const rows = [...S.biens, { id: "", nom: "SCI (frais généraux)" }].map(bi => { const r = rec[bi.id] || { loyers: 0, charges: 0 }; const d = deps.filter(x => (x.bienId || "") === bi.id && !HORS_RESULTAT.has(x.categorie)).reduce((s, x) => s + +x.montant, 0); return { nom: bi.nom, ...r, d }; });
+  const rec = recettes(y), couv = depensesCouvertes(), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !couv.has(d.id)), perso = estPerso();
+  const rows = [...S.biens, { id: "", nom: perso ? "Frais généraux" : "SCI (frais généraux)" }].map(bi => { const r = rec[bi.id] || { loyers: 0, charges: 0 }; const d = deps.filter(x => (x.bienId || "") === bi.id && !HORS_RESULTAT.has(x.categorie)).reduce((s, x) => s + +x.montant, 0) + interetsTableaux(y, bi.id); return { nom: bi.nom, ...r, d }; });
   const t = rows.reduce((a, r) => ({ l: a.l + r.loyers, c: a.c + r.charges, d: a.d + r.d }), { l: 0, c: 0, d: 0 });
-  const parCat = {}; deps.forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
+  const parCat = {}; deps.filter(d => !HORS_RESULTAT.has(d.categorie)).forEach(d => parCat[d.categorie] = (parCat[d.categorie] || 0) + +d.montant);
+  const itP = r2((S.prets || []).reduce((s, p) => s + interetsPretAnnee(p, y), 0)); if (itP) parCat["Intérêts d'emprunt (tableaux de prêt)"] = itP;
   const parts = S.sci.associes.reduce((s, a) => s + +a.parts, 0), res = t.l + t.c - t.d;
   showDoc(`${enTeteBailleur()}<h1 style="margin-top:20px">Bilan de gestion ${y}</h1><p class="center">Recettes encaissées et dépenses payées du 1er janvier au 31 décembre ${y}</p>
   <h2>Par bien</h2><table><thead><tr><th>Bien</th><th class="right">Loyers</th><th class="right">Charges reçues</th><th class="right">Dépenses</th><th class="right">Résultat</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.nom)}</td><td class="right">${eur(r.loyers)}</td><td class="right">${eur(r.charges)}</td><td class="right">${eur(r.d)}</td><td class="right">${eur(r.loyers + r.charges - r.d)}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="right"><b>${eur(t.l)}</b></td><td class="right"><b>${eur(t.c)}</b></td><td class="right"><b>${eur(t.d)}</b></td><td class="right"><b>${eur(res)}</b></td></tr></tbody></table>
   <h2>Dépenses par catégorie</h2><table><tbody>${Object.entries(parCat).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="right">${eur(v)}</td></tr>`).join("") || "<tr><td>Aucune dépense</td><td></td></tr>"}</tbody></table>
-  ${parts ? `<h2>Répartition entre associés</h2><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)} (${a.parts} parts)</td><td class="right">${eur(res * a.parts / parts)}</td></tr>`).join("")}</tbody></table>` : ""}
-  <p class="small">Document de gestion indicatif établi à partir des encaissements et des dépenses saisis. Il ne remplace pas la déclaration fiscale (2072 ou liasse IS).</p>`, { titre: "Bilan " + y, fichier: `Bilan-${slug(S.sci.nom || "SCI")}-${y}` });
+  ${parts && !perso ? `<h2>Répartition entre associés</h2><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)} (${a.parts} parts)</td><td class="right">${eur(res * a.parts / parts)}</td></tr>`).join("")}</tbody></table>` : ""}
+  <p class="small">Document de gestion indicatif établi à partir des encaissements et des dépenses saisis. Il ne remplace pas la déclaration fiscale (${perso ? "déclaration de revenus : 2044 ou micro-foncier" : "2072 ou liasse IS"}).</p>`, { titre: "Bilan " + y, fichier: `Bilan-${slug(S.sci.nom || "SCI")}-${y}` });
 }
 
 /* ================= Régularisation des charges, pas à pas ================= */
 function joursDansAnnee(b, yy) { const a = Math.max(+P(b.dateEntree), +new Date(yy, 0, 1)), z = Math.min(+(b.dateSortie ? P(b.dateSortie) : new Date(yy, 11, 31)), +new Date(yy, 11, 31)); return z >= a ? Math.round((z - a) / 864e5) + 1 : 0; }
 function calculRegul(b, yy) {
-  let prov = 0; for (let k = 1; k <= 12; k++) { const m = yy + "-" + String(k).padStart(2, "0"), e = echeance(b, m); if (e && e.du > 0) prov += e.ch * Math.min(1, e.paye / e.du); }
+  let prov = 0, avantSuivi = 0;
+  for (let k = 1; k <= 12; k++) { const m = yy + "-" + String(k).padStart(2, "0"), e = echeance(b, m);
+    if (e && e.du > 0) { prov += e.ch * Math.min(1, e.paye / e.du); continue; }
+    // mois d'avant "Suivre les loyers à partir de" : le locataire était là et payait ses provisions (hors appli) : on les compte, au prorata des jours
+    if (!e && b.suiviDepuis && m < b.suiviDepuis) { const d0 = new Date(yy, k - 1, 1), d1 = new Date(yy, k, 0), en = P(b.dateEntree), so = b.dateSortie ? P(b.dateSortie) : null;
+      const a = en > d0 ? en : d0, z = so && so < d1 ? so : d1; if (a <= z) { prov += loyerAt(b, m).ch * ((daysBetween(a, z) + 1) / dim(m)); avantSuivi++; } } }
   const nbJ = daysBetween(new Date(yy, 0, 1), new Date(yy, 11, 31)) + 1, j = joursDansAnnee(b, yy), part = j / nbJ, lignes = [];
   (S.taxes || []).filter(t => (t.bienId === b.bienId || t.bienId === (immeubleDe(bien(b.bienId)) || {}).id) && t.annee === yy).forEach(t => { const pt = t.parts.find(x => x.bailId === b.id); if (pt && pt.montant > 0 && (b.teomMensuel && yy >= +b.teomMensuel.depuis.slice(0, 4) || !pt.payeLe)) lignes.push({ l: `Taxe d'ordures ménagères ${yy}`, v: pt.montant }); });
   S.depenses.filter(d => d.recuperable && d.bienId === b.bienId && (d.date || "").startsWith(String(yy))).forEach(d => lignes.push({ l: `${d.libelle || d.categorie} (${fds(d.date)})${part < 0.999 ? ` × ${j}/${nbJ} j` : ""}`, v: r2(+d.montant * part) }));
-  return { prov: r2(prov), lignes, j, nbJ };
+  return { prov: r2(prov), lignes, j, nbJ, avantSuivi };
 }
 function regulTous(yy) {
   const L = S.baux.filter(b => (b.chargesMode || "provision") === "provision" && joursDansAnnee(b, yy) > 0);
@@ -7718,7 +7750,7 @@ function regulTous(yy) {
 function regulCharges(bailId, yy) {
   const b = bail(bailId), c = calculRegul(b, yy), mProchain = addM(CUR, 1);
   modal(`Charges ${yy} — ${esc(nomCourt(b.nom))}`, `<p class="full note">${cq("regul")} ${c.j < c.nbJ ? `Il a occupé le logement ${c.j} jours sur ${c.nbJ} : les dépenses du logement sont comptées au prorata.` : "Il a occupé le logement toute l'année."}</p>
-    <div class="full calc"><b>Provisions qu'il a payées en ${yy} :</b> ${eur(c.prov)}</div>
+    <div class="full calc"><b>Provisions qu'il a payées en ${yy} :</b> ${eur(c.prov)}${c.avantSuivi ? `<br><small>dont ${plur(c.avantSuivi, "mois")} d'avant le suivi dans l'appli, comptés comme payés</small>` : ""}</div>
     <label class="fl full">Charges réelles récupérables, une par ligne : quoi ; montant
       <textarea name="lignes" rows="5" placeholder="Eau ; 180&#10;Entretien chaudière ; 95">${esc(c.lignes.map(x => x.l + " ; " + String(x.v).replace(".", ",")).join("\n"))}</textarea></label>
     <p class="full note">Tu peux ajouter ici ce que l'appli ne connaît pas : eau, entretien des parties communes, part de charges de copropriété récupérable (indiquée par le syndic)…</p>
@@ -7737,12 +7769,20 @@ function regulCharges(bailId, yy) {
       S.faits["regul-" + b.id + "-" + yy] = iso(TODAY);
       toast(solde > 0 ? `Il doit ${eur(solde)} de charges ${yy}` : solde < 0 ? `Tu lui dois ${eur(-solde)}` : "Pile juste, rien à payer");
       setTimeout(() => docRegul(b.id, yy), 60);
-      if (d.ajuster) setTimeout(() => avenant(b.id, { motif: "charges", charges: r2(Math.ceil(reel / 12 * 100) / 100), precision: `Provision ajustée sur les charges réelles ${yy} (${eur(reel)} ÷ 12).` }), 80);
+      // l'avenant vient APRÈS le courrier de décompte (sinon il le cachait) : proposé en un geste
+      if (d.ajuster) setTimeout(() => toastActions("Ensuite : l'avenant pour ajuster sa provision", [["Faire l'avenant", `regulAvenant('${b.id}', ${yy})`]]), 900);
     },
     { ok: "Valider le décompte", after: f => { const maj = () => { const reel = r2(lireLignes(f.lignes.value).reduce((s, x) => s + x.v, 0)), solde = r2(reel - c.prov);
-      document.getElementById("rgCalc").innerHTML = `Charges réelles : <b>${eur(reel)}</b> · provisions : ${eur(c.prov)} → ${solde > 0 ? `<b>il te doit ${eur(solde)}</b>` : solde < 0 ? `<b>tu lui rends ${eur(-solde)}</b>` : "<b>pile juste</b>"}`; };
+      const ign = lignesIgnorees(f.lignes.value);
+      document.getElementById("rgCalc").innerHTML = `Charges réelles : <b>${eur(reel)}</b> · provisions : ${eur(c.prov)} → ${solde > 0 ? `<b>il te doit ${eur(solde)}</b>` : solde < 0 ? `<b>tu lui rends ${eur(-solde)}</b>` : "<b>pile juste</b>"}${ign.length ? `<br>⚠️ ${ign.length > 1 ? `${ign.length} lignes pas comptées` : "1 ligne pas comptée"} (« ${esc(ign[0].slice(0, 30))} ») : écris « quoi ; montant »` : ""}`; };
       f.addEventListener("input", maj); maj(); } });
 }
+function regulAvenant(bailId, yy) {
+  const b = bail(bailId), r = b && (b.reguls || []).find(x => x.annee === yy); if (!r) return;
+  avenant(b.id, { motif: "charges", charges: r2(Math.ceil(r.reelles / 12 * 100) / 100), precision: `Provision ajustée sur les charges réelles ${yy} (${eur(r.reelles)} ÷ 12).` });
+}
+/* lignes "quoi ; montant" mal écrites : on les signale au lieu de les ignorer sans rien dire */
+const lignesIgnorees = t => String(t || "").split("\n").filter(l => l.trim() && !lireLignes(l).length);
 const lireLignes = t => String(t || "").split("\n").map(l => { const k = l.lastIndexOf(";"); if (k < 0) return null; const v = +l.slice(k + 1).replace(/\s|€/g, "").replace(",", "."); return isFinite(v) && l.slice(0, k).trim() ? { l: l.slice(0, k).trim(), v: r2(v) } : null; }).filter(Boolean);
 function docRegul(bailId, yy) {
   const b = bail(bailId), r = (b.reguls || []).find(x => x.annee === yy); if (!r) return;
@@ -7773,6 +7813,8 @@ function calcul2044(y) {
   const L = { 211: 0, 221: 0, 222: 20 * F.length, 223: 0, 224: 0, 227: 0, 229: 0, 250: 0 }, aVerifier = [];
   F.forEach(b => { L[211] += (rec[b.id] || {}).loyers || 0; L[250] += interetsTableaux(y, b.id); });
   S.biens.filter(b => b.immeuble && lotsDe(b.id).some(l => idF.has(l.id))).forEach(im => L[250] += interetsTableaux(y, im.id)); // prêt de l'immeuble
+  const itGen = interetsTableaux(y, ""); // prêt laissé sur "Général" : au foncier s'il n'y a pas de meublé, sinon à vérifier (on ne sait pas quel logement il finance)
+  if (itGen) { if (!M.length) L[250] += itGen; else aVerifier.push({ libelle: "Intérêts d'un prêt sans logement choisi (Compta › Emprunts)", categorie: "Intérêts d'emprunt", montant: itGen }); }
   let chargesM = 0, recM = 0;
   M.forEach(b => { recM += ((rec[b.id] || {}).loyers || 0) + ((rec[b.id] || {}).charges || 0); });
   S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie) && !couv.has(d.id) && !d.recuperable).forEach(d => {
@@ -7821,7 +7863,10 @@ function declaration2044(y) {
 function aideDeclaration(y, lignes, tot) {
   if (estPerso()) return "";
   const couv = depensesCouvertes(), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie) && !couv.has(d.id)), g = {};
-  deps.forEach(d => { const k = CAT_2072[d.categorie] || "À vérifier"; g[k] = (g[k] || 0) + +d.montant; });
+  deps.forEach(d => { let m = +d.montant || 0;
+    if (d.recuperable) { const k = "Charges récupérables payées (déjà comptées en recettes)"; g[k] = r2((g[k] || 0) + m); return; }
+    if (d.categorie === "Taxe foncière" && d.taxeId) { const t = (S.taxes || []).find(x => x.id === d.taxeId); if (t && +t.teom) { m = Math.max(0, m - +t.teom); const k = "Ordures ménagères (récupérables sur les locataires)"; g[k] = r2((g[k] || 0) + +t.teom); } }
+    const k = CAT_2072[d.categorie] || "À vérifier"; g[k] = r2((g[k] || 0) + m); });
   const itPrets = r2((S.prets || []).reduce((s, p) => s + interetsPretAnnee(p, y), 0));
   if (itPrets) { const k = CAT_2072["Intérêts d'emprunt"]; g[k] = r2((g[k] || 0) + itPrets); }
   const nbLoc = S.biens.length, forfait = 20 * nbLoc, regime = S.sci.regime === "IS";
@@ -7908,8 +7953,8 @@ function comparerEdl(bailId) {
     ${conso.length ? `<p class="full note">Compteurs : ${conso.map(([k, x, y]) => `${({ elec: "électricité", eauFroide: "eau froide", eauChaude: "eau chaude", gaz: "gaz" })[k]} ${esc(x)} → ${esc(y)}`).join(" · ")}</p>` : ""}
     <p class="full note">Retenues : seulement les dégâts au-delà de l'usure normale, avec un devis ou une facture. Une ligne par retenue : quoi ; montant.</p>
     <label class="fl full">Retenues sur le dépôt<textarea name="ret" rows="4" placeholder="Trou dans le mur du séjour ; 80">${esc(ret.map(x => x.l + " ; " + (x.v ? String(x.v).replace(".", ",") : "")).join("\n"))}</textarea></label><div class="full calc" id="retCalc"></div>`,
-    d => { const b = bail(bailId), l = lireLignes(d.ret), tot = r2(l.reduce((s, x) => s + x.v, 0)); b.retenues = l; b.depotRetenu = tot; b.depotMotif = l.map(x => `${x.l} : ${eur(x.v)}`).join("\n"); toast(tot ? `${eur(tot)} retenus · ${eur(Math.max(0, (+b.depot || 0) - tot))} à rendre` : "Aucune retenue : tout le dépôt est à rendre"); setTimeout(() => docRestitution(b.id), 60); },
-    { ok: "Préparer le décompte", after: f => { const c = () => { const t = r2(lireLignes(f.ret.value).reduce((s, x) => s + x.v, 0)); document.getElementById("retCalc").innerHTML = `Dépôt ${eur(b.depot || 0)} − retenues ${eur(t)} = <b>${eur(Math.max(0, (+b.depot || 0) - t))} à rendre</b>`; }; f.addEventListener("input", c); c(); } });
+    d => { const b = bail(bailId), l = lireLignes(d.ret).filter(x => x.v > 0), tot = r2(l.reduce((s, x) => s + x.v, 0)); b.retenues = l; /* une ligne sans montant n'est pas une retenue */ b.depotRetenu = tot; b.depotMotif = l.map(x => `${x.l} : ${eur(x.v)}`).join("\n"); toast(tot ? `${eur(tot)} retenus · ${eur(Math.max(0, (+b.depot || 0) - tot))} à rendre` : "Aucune retenue : tout le dépôt est à rendre"); setTimeout(() => docRestitution(b.id), 60); },
+    { ok: "Préparer le décompte", after: f => { const c = () => { const t = r2(lireLignes(f.ret.value).reduce((s, x) => s + x.v, 0)), sansMontant = lireLignes(f.ret.value).filter(x => !(x.v > 0)).length + lignesIgnorees(f.ret.value).length; document.getElementById("retCalc").innerHTML = `Dépôt ${eur(b.depot || 0)} − retenues ${eur(t)} = <b>${eur(Math.max(0, (+b.depot || 0) - t))} à rendre</b>${sansMontant ? `<br>⚠️ ${sansMontant > 1 ? `${sansMontant} lignes sans montant ne seront pas retenues` : "1 ligne sans montant ne sera pas retenue"} : écris « quoi ; montant »` : ""}`; }; f.addEventListener("input", c); c(); } });
 }
 /* ================= Congé donné par le bailleur (vente, reprise, motif légitime) =================
    Loi du 6 juillet 1989 : art. 15 (vide : 6 mois avant la fin du bail, notice d'information jointe pour vente ou reprise)
@@ -7977,7 +8022,7 @@ const encadre = bi => bi && VILLES_ENCADREES.test(sansAccent(bi.ville || "").toL
 function annonce(bienId) {
   const bi = bien(bienId), dernier = S.baux.filter(b => b.bienId === bienId).sort((a, b) => b.dateEntree.localeCompare(a.dateEntree))[0], l = dernier ? loyerAt(dernier, CUR) : { hc: +bi.loyerRef || 0, ch: 0 };
   const meuble = bi.meuble === "meuble";
-  modal(`Annonce — ${esc(bi.nom)}`, `${fld("Loyer hors charges (€)", "hc", bi.annonce && bi.annonce.hc || l.hc, "number")}${fld("Charges (€)", "ch", bi.annonce && bi.annonce.ch || l.ch, "number")}
+  modal(`Annonce — ${esc(bi.nom)}`, `${bi.dpe === "G" ? `<div class="full">${grosMsg("stop", "DPE G : location interdite", "Depuis le 1er janvier 2025, un logement classé G ne peut pas être loué à un nouveau locataire. Fais d'abord les travaux, puis refais le DPE.")}</div>` : ""}${fld("Loyer hors charges (€)", "hc", bi.annonce && bi.annonce.hc || l.hc, "number")}${fld("Charges (€)", "ch", bi.annonce && bi.annonce.ch || l.ch, "number")}
     ${sel("Charges", "mode", meuble ? "forfait" : "provision", [["provision", "Provision (régularisée chaque année)"], ["forfait", "Forfait"]])}${fld("Disponible le", "dispo", bi.annonce && bi.annonce.dispo || iso(TODAY), "date")}
     ${fld("Dépenses d'énergie estimées par an (sur le DPE)", "energie", bi.annonce && bi.annonce.energie || "", "text", "full", 'placeholder="Entre 900 € et 1 250 €"')}
     ${area("Quelques mots sur le logement (lumière, quartier, transports…)", "plus", bi.annonce && bi.annonce.plus || "")}`,
@@ -8008,11 +8053,15 @@ function editCandidat(bienId, cid) {
       cid ? { del: () => { const bi = bien(bienId); bi.candidats = bi.candidats.filter(x => x.id !== cid); } } : {}));
 }
 function scoreCandidat(bi, c) { const loyer = (+(bi.annonce || {}).hc || +bi.loyerRef || 0) + (+(bi.annonce || {}).ch || 0), te = loyer && c.revenus ? loyer / c.revenus : null; let s = 0; if (te !== null) s += te <= .25 ? 3 : te <= .33 ? 2 : te <= .4 ? 1 : 0; s += c.garantie === "visale" || c.garantie === "personne" ? 2 : c.garantie === "autre" ? 1 : 0; s += c.situation === "cdi" || c.situation === "retraite" ? 1 : 0; s += (c.pieces || []).length >= 5 ? 1 : 0; return { s, te }; }
-function choisirCandidat(bienId, cid) { const bi = bien(bienId), c = bi.candidats.find(x => x.id === cid); editBail(null, bienId, { nom: c.nom, tel: c.tel, email: c.email, garantNom: c.garantie === "personne" ? c.garantInfo : "", visale: c.garantie === "visale" ? c.garantInfo : "", loyerHC: (bi.annonce || {}).hc || bi.loyerRef, charges: (bi.annonce || {}).ch || 0 }); }
+function choisirCandidat(bienId, cid) { const bi = bien(bienId), c = bi.candidats.find(x => x.id === cid); editBail(null, bienId, { nom: c.nom, tel: c.tel, email: c.email, garantNom: c.garantie === "personne" ? c.garantInfo : "", visale: c.garantie === "visale" ? (c.garantInfo || "à noter") : "", loyerHC: (bi.annonce || {}).hc || bi.loyerRef, charges: (bi.annonce || {}).ch || 0,
+  dateEntree: (bi.annonce || {}).dispo && (bi.annonce || {}).dispo >= iso(TODAY) ? bi.annonce.dispo : "", depot: (+((bi.annonce || {}).hc || bi.loyerRef) || 0) * (bi.meuble === "meuble" ? 2 : 1) || "", candidatId: c.id }); }
 function sectionLocation(bi) {
   const vide = !bailActifDuBien(bi.id) || S.baux.some(b => b.bienId === bi.id && b.dateSortie && P(b.dateSortie) >= TODAY), C = (bi.candidats || []).map(c => ({ c, ...scoreCandidat(bi, c) })).sort((a, b) => b.s - a.s);
+  // le nouveau locataire est choisi (bail créé, entrée à venir) : plus de liste de candidats, pas de 2e bail par erreur
+  const suivant = S.baux.find(b => b.bienId === bi.id && (!b.dateEntree || P(b.dateEntree) > TODAY) && b !== bailActifDuBien(bi.id));
+  if (suivant) return `<section class="card"><h2>📣 Relouer</h2><p class="note">✅ <b>${esc(suivant.nom)}</b> ${suivant.dateEntree ? `entre le ${fd(suivant.dateEntree)}` : "est choisi (date d'entrée à noter)"}.</p><div class="row"><button class="small primary" onclick="go('bail-${suivant.id}')">Voir sa fiche</button></div></section>`;
   if (!vide && !C.length) return "";
-  return `<section class="card"><h2>📣 Relouer</h2><p class="note">${encadre(bi) ? `⚖️ Ville avec encadrement des loyers${cq("encadrement")} : vérifie le plafond sur le site de la préfecture avant de fixer le loyer. ` : ""}Annonce avec les mentions obligatoires, candidats comparés au même endroit.</p>
+  return `<section class="card"><h2>📣 Relouer</h2>${bi.dpe === "G" ? `<p class="note">⛔ <b>DPE G : relouer est interdit depuis 2025</b> tant que les travaux ne sont pas faits.</p>` : ""}<p class="note">${encadre(bi) ? `⚖️ Ville avec encadrement des loyers${cq("encadrement")} : vérifie le plafond sur le site de la préfecture avant de fixer le loyer. ` : ""}Annonce avec les mentions obligatoires, candidats comparés au même endroit.</p>
     <div class="row"><button class="primary" onclick="annonce('${bi.id}')">✍️ ${bi.annonce ? "Revoir l'annonce" : "Écrire l'annonce"}</button><button onclick="editCandidat('${bi.id}')">+ Candidat</button>${SB && !LECTURE ? `<button onclick="lienCandidature('${bi.id}')">🔗 ${bi.lienCandidature ? "Lien de candidature" : "Recevoir les dossiers en ligne"}</button>` : ""}<a class="btn ghost" href="https://www.visale.fr" target="_blank" rel="noopener">Visale ↗</a></div>
     ${(() => { const L = (CANDS || []).filter(c => c.bien_id === bi.id && c.statut !== "importee"); return L.length ? `<h3 style="margin-top:14px">📥 Dossiers reçus en ligne</h3><ul class="todo plat">${L.map(c => { const te = tauxEffort(bi, c.revenus); return `<li>${avatar(c.nom)}<span class="tx"><a href="#" onclick="event.preventDefault();voirCandidature(${c.id})">${esc(c.nom)}</a><small>${te !== null ? `taux d'effort ${Math.round(te * 100)} %` : "revenus ?"} · ${(c.pieces || []).length} pièce${(c.pieces || []).length > 1 ? "s" : ""} · ${ilYa(c.cree_le)}</small></span>${c.statut === "nouvelle" ? `<span class="pill warn">Nouveau</span>` : ""}</li>`; }).join("")}</ul>` : ""; })()}
     ${C.length ? `<ul class="todo plat" style="margin-top:12px">${C.map(({ c, s, te }) => `<li>${avatar(c.nom)}<span class="tx"><a href="#" onclick="event.preventDefault();editCandidat('${bi.id}','${c.id}')">${esc(c.nom)}</a><small>${te !== null ? `taux d'effort ${Math.round(te * 100)} %` : "revenus ?"} · ${({ aucune: "sans garant", personne: "garant", visale: "Visale", autre: "garantie" })[c.garantie]} · ${(c.pieces || []).length}/5 pièces · ${"★".repeat(Math.min(5, s))}${"☆".repeat(Math.max(0, 5 - s))}</small></span><button class="small primary" onclick="choisirCandidat('${bi.id}','${c.id}')">Choisir</button></li>`).join("")}</ul>` : ""}</section>`;
@@ -8477,8 +8526,9 @@ function sectionTravaux(bi) {
 /* ================= Rappels légaux (logement aux normes) ================= */
 /* Un local (commerce, bureau) loué avec un bail d'habitation : on propose, en un geste, le bon type de bail */
 function passerBailPro(id, type) {
-  const b = bail(id); if (!b) return; const avant = b.typeBail;
+  const b = bail(id); if (!b) return; const avant = b.typeBail || "vide";
   b.typeBail = type; delete b.indice; b.irlValeur = idxVal(indiceDe(b), qKey(b.irlTrimestre)) || b.irlValeur || ""; save(); render();
+  if (!estPro(b)) { toast("✓ Remis comme avant"); return; }
   toastActions(type === "commercial" ? "✓ Bail commercial : loyer révisé avec l'ILC" : "✓ Bail professionnel : loyer révisé avec l'ILAT", [["Annuler", `passerBailPro('${id}','${avant}')`]]);
 }
 function tachesLegales(add, y) {

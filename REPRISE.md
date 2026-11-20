@@ -124,6 +124,8 @@ Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`
 | `tests/test107.js` | Mode local : zone tendue et loyer du marché par commune (Rennes, Agon, Lyon 3e), préavis au départ, loyer encadré à la relocation |
 | `tests/test108.js` | Vraie base : Dropbox simulé (bouton seulement avec la clé, copie dans l'appli, catégories, boîte, lien expiré) |
 | `tests/test109.js` | Vraie base + vrai Qonto (clé fausse) : bouton, étapes, refus clair, clé illisible depuis l'appli, affichage une fois branché |
+| `tests/test110.js` | Mode local : corrections de la relecture du code (année du relevé, commune, Pas besoin, Annuler bail pro, lien retour) |
+| `tests/test111.js` | Mode local : corrections du 2e audit (régularisation, bilan, 2044/2072, DPE G, relouer, associés) |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.

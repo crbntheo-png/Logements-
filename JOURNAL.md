@@ -80,6 +80,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 21/11/2026 — deux relecteurs automatiques : relecture du code récent + 2e audit "débutant" ; 20 corrections
+
+- **Relecture du code (diff 092983e..HEAD)** — corrigé : relevé PDF, la bonne année pour chaque ligne "jj/mm" (`periodeReleve`, `anneeLigne` : relevé de décembre édité en janvier, relevé à cheval sur deux ans) ; envoi de plusieurs documents ou "Annuler" une suppression après un changement d'espace (arrêté, jamais dans l'autre espace) ; code commune oublié quand l'adresse du logement change ; relevé reçu dans la boîte : plus de message à chaque ouverture, marqué lu seulement si la lecture a marché (`importerReleveFichier` renvoie true) ; "Pas besoin" respecté par les tâches d'assurance du locataire et de taxe foncière ; retard de l'an dernier compté sur la fiche en janvier ; Annuler d'un bail commercial (plus de "undefined") ; lien retour avec "$&" dans un nom. Serveur Qonto : dates à l'heure de Paris ; un nouveau branchement remplace proprement l'ancien (accès révoqué, anciennes opérations et comptes effacés).
+- **2e audit débutant** (état des lieux, Compta, Réglages, recherche, "+", À faire, régularisation, relouer) — corrigé : régularisation des charges, provisions des mois d'avant le suivi comptées (le locataire était facturé de tout) + lignes mal écrites signalées ; avenant de provision proposé APRÈS le courrier de décompte (il le cachait) ; Bilan PDF = même calcul que la Compta (intérêts des tableaux de prêt, dépenses déjà ventilées) ; 2044 : intérêts d'un prêt "général" ; 2072 : taxe foncière sans les ordures ménagères, charges récupérables à part ; nom propre : plus de "Part de chaque associé" ni "La SCI en général" ; tâches DPE G et F avec boutons et "C'est fait" ; DPE G : relouer interdit dit dans Relouer et l'annonce ; candidat choisi : dépôt, date d'entrée et Visale repris, la liste "Relouer" se ferme (plus de 2e bail par erreur) ; retenue sans montant pas retenue (pas testé : l'exemple n'a pas d'état des lieux de sortie) ; parts d'associés non numériques refusées ; annonce : plus de "Pas d'e-mail pour ce locataire".
+- Laissés (gêne, pas bug) : recherche d'un logement → liste des Biens ; suppression d'une photo d'EDL / d'un rappel sans Annuler ; démarrage "C'est en place" sans Drive ; régularisation proposée sur l'année en cours dans Compta › Plus ; "Famille n'est pas là ?" ; champ PNO loin dans le formulaire.
+- Tests 110 (relecture, 7) et 111 (audit, 12) nouveaux OK.
+
 ### 21/11/2026 — Qonto (clé API de l'utilisateur, gratuit, lecture seule)
 
 - Pourquoi : seule façon gratuite d'avoir la banque automatique pour d'autres que Théo en attendant le contrat Enable Banking ; beaucoup de SCI sont chez Qonto.
