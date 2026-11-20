@@ -119,6 +119,7 @@ Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`
 | `tests/test102.js` | Mode local : relevé de banque en PDF (sans IA), en photo (IA simulée), reçu dans la boîte |
 | `tests/test103.js` | Mode local, 360 px : corrections de l'audit débutant (pastille Biens, "d'octobre", noms entiers, dépôt, déclaration d'occupation) |
 | `tests/test104.js` | Vraie base : documents de bout en bout (ajout multiple, Annuler, ouvrir, modifier/déplacer, supprimer + Annuler, stockage nettoyé, retour) |
+| `tests/test105.js` | Mode local : guide du relevé (le bon document montré, messages RIB/facture) et rangement en un toucher (papiers reçus, Drive, "Ranger les proposés") |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.

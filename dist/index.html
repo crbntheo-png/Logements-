@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "2f7e284", "date": "2026-11-20T19:46"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "c40e665", "date": "2026-11-20T20:38"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -511,6 +511,13 @@ button.suite, button.dpe-chip { text-align: left !important; justify-content: fl
 .bienvenue > p { margin: 0; }
 .a-completer .barre { margin: 6px 0 4px; }
 .a-completer.replie { padding-top: 0; padding-bottom: 0; } .a-completer.replie > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 0; cursor: pointer; list-style: none; } .a-completer.replie > summary::-webkit-details-marker { display: none; } .a-completer.replie > summary h2 { margin: 0; font-size: 1rem; } .a-completer.replie[open] > summary .chev { transform: rotate(90deg); } .a-completer.replie > .todo { margin-bottom: 14px; }
+.ou-ranger { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .ou-ranger button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px 12px; min-height: 64px; text-align: left; white-space: normal; } .ou-ranger button b, .ou-ranger button small { text-align: left; align-self: stretch; } .ou-ranger button small { font-weight: 500; opacity: .8; font-size: .78rem; } @media (max-width: 360px) { .ou-ranger { grid-template-columns: 1fr; } }
+.rel-guide { display: flex; flex-direction: column; gap: 10px; } .rel-quoi { margin: 0; line-height: 1.45; }
+.rel-ex { background: #fff; color: #1d2433; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 12px/1.35 Arial, sans-serif; box-shadow: var(--sh-1); }
+.rel-ex-h { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 11px; } .rel-ex table { width: 100%; border-collapse: collapse; }
+.rel-ex th { text-align: left; font-size: 10.5px; color: #667085; border-bottom: 1px solid #e5e8ee; padding: 3px 4px; } .rel-ex td { padding: 4px; } .rel-ex td:nth-child(n+3), .rel-ex th:nth-child(n+3) { text-align: right; white-space: nowrap; }
+.rel-ex .rel-loyer td { background: #dcfae6; font-weight: 700; } .rel-ex-n { margin: 6px 0 0; font-size: 11px; color: #067647; font-weight: 700; }
+.rel-ok { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .92rem; }
 .gros-fichier { display: flex; justify-content: center; width: 100%; padding: 16px; font-size: 1.02rem; cursor: pointer; }
 .pose-q { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 14px; padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--card, #fff); color: var(--muted); font: inherit; text-align: left; cursor: pointer; } .pose-q span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .q-ex { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; } .q-moi { margin: 4px 0 6px auto; max-width: 85%; width: fit-content; background: var(--surface-2); border-radius: 12px; padding: 8px 12px; font-weight: 600; } .q-rep { background: var(--accent-soft, rgba(0,0,0,.04)); border-radius: 12px; padding: 12px 14px; margin: 8px 0; } .q-rep p { margin: 0 0 8px; line-height: 1.45; }
 .suivi-bien h3 { margin: 14px 0 6px; font-size: .9rem; color: var(--muted); } .sb-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .sb-s { background: var(--bg, rgba(0,0,0,.03)); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; } .sb-s b { font-size: 1.05rem; overflow-wrap: anywhere; } .sb-s span { font-size: .8rem; color: var(--muted); } .sb-s small { font-size: .72rem; color: var(--muted); } .sb-s.bad b { color: var(--bad); } .sb-s.ok b { color: var(--ok, inherit); } .sb-s.warn b { color: var(--accent); } .sb-dates { list-style: none; margin: 0; padding: 0; } .sb-dates li { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; } .sb-dates li:first-child { border-top: 0; } .sb-d { flex: none; color: var(--muted); min-width: 74px; }
@@ -1188,7 +1195,7 @@ function chargerBanqueOuverte() {
 }
 const bqOuverte = () => { if (BQ_OUVERTE === null) chargerBanqueOuverte(); return BQ_OUVERTE === true || !!(BANQUE.directe && (BANQUE.directe.comptes || []).length); };
 /* À la place de "Relier ma banque" quand ça ne peut pas marcher : le relevé, en un geste */
-const blocReleveAuLieu = (titre) => `<div class="bq-bloc"><b>${titre || "🏦 Tes loyers se cochent avec ton relevé"}</b><p class="note">Une fois par mois, donne le relevé de ta banque (le PDF de ton appli bancaire suffit) : l'appli coche les loyers reçus et range les dépenses.</p><div class="row"><button class="small primary" onclick="importerReleve()">📄 Importer mon relevé</button></div><details class="pq"><summary>Pourquoi pas la banque en direct ?</summary><p>Le service qui relie les banques est gratuit seulement pendant l'essai : il ne s'ouvre pas encore à tous les comptes. Ton relevé fait la même chose en 2 minutes par mois.</p></details></div>`;
+const blocReleveAuLieu = (titre) => `<div class="bq-bloc"><b>${titre || "🏦 Tes loyers se cochent avec ton relevé"}</b><p class="note">Une fois par mois, donne le relevé de ta banque : l'appli coche les loyers reçus et range les dépenses.</p><div class="row"><button class="small primary" onclick="importerReleve()">📄 Importer mon relevé</button></div><details class="pq"><summary>Pourquoi pas la banque en direct ?</summary><p>Le service qui relie les banques est gratuit seulement pendant l'essai : il ne s'ouvre pas encore à tous les comptes. Ton relevé fait la même chose en 2 minutes par mois.</p></details></div>`;
 async function chargerBanque(actualiser) {
   if (!SB || !ESPACE) return; const id = ESPACE;
   try {
@@ -1444,14 +1451,9 @@ function sectionBanque() {
   if (!SB || !BANQUE.lien) return `<details class="card rgl install-tuto" open><summary><span class="rgl-ico" aria-hidden="true">🏦</span><span class="tx"><b>Ta banque dans l'appli</b><small>Les loyers se cochent tout seuls · comment faire</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
     ${SB && estProprio() && !bqOuverte() ? `<div class="bq-direct-cta">${blocReleveAuLieu()}</div>` : ""}
     ${SB && estProprio() && bqOuverte() ? `<div class="bq-direct-cta"><p class="note"><b>Le plus simple : relier ta banque.</b> Les loyers se cochent tout seuls, gratuitement, en lecture seule.</p>${explicationBanque(false)}<div class="row"><button class="primary" onclick="relierBanque()">🏦 Relier ma banque</button></div><p class="note small" style="margin-top:10px">Tu préfères ne pas la relier ? Ton relevé une fois par mois marche aussi :</p></div>` : SB && estProprio() ? "" : `<p class="note"><b>Pourquoi :</b> les loyers reçus se cochent tout seuls, les quittances sont prêtes, et la compta se remplit avec tes dépenses. Tu n'as presque plus besoin d'ouvrir l'appli de ta banque.</p>`}
-    <h3>${SB && estProprio() && bqOuverte() ? "Ou bien" : "Comment faire"} : ton relevé, une fois par mois (2 minutes)</h3>
-    <ol class="tuto">
-      <li>Ouvre le <b>site internet</b> de ta banque (souvent plus complet que l'appli du téléphone) et va sur le compte où arrivent les loyers.</li>
-      <li>Cherche un bouton <b>Télécharger</b>, <b>Exporter</b> ou <b>Relevé d'opérations</b> (parfois une petite flèche vers le bas ⬇).</li>
-      <li>Choisis le format <b>CSV</b> (sinon <b>Excel</b>) et la période : <b>le mois dernier</b>. Enregistre le fichier.</li>
-      <li>Reviens ici, touche <b>Importer le relevé</b> et choisis le fichier. L'appli reconnaît les loyers et les dépenses : tu vérifies, tu valides.</li></ol>
-    <p class="note">Pas de bouton d'export dans ta banque ? Sélectionne les lignes du relevé à l'écran, copie-les et colle-les dans la case prévue : ça marche aussi.</p>
-    <div class="row"><button class="primary" onclick="importerReleve()">🏦 Importer le relevé</button></div>
+    <h3>${SB && estProprio() && bqOuverte() ? "Ou bien" : "Une fois par mois, 2 minutes"} : ton relevé</h3>
+    ${guideReleve()}
+    <div class="row"><button class="primary" onclick="importerReleve()">📄 Donner mon relevé</button></div>
     ${SB && estProprio() ? `<div class="penny-cta"><b>Tu utilises Pennylane ?</b> Tout devient automatique : l'appli lit ton compte toute seule, toutes les heures.<button class="small primary" onclick="assistantPennylane()">Brancher Pennylane</button></div>` : ""}</div></details>`;
   const PAR_PAGE = 8, filtre = view.banqueFiltre || "tout";
   const tous = BANQUE.ops.filter(o => filtre === "tout" || (filtre === "entrees" ? o.montant > 0 : o.montant < 0));
@@ -2305,7 +2307,7 @@ function taches() {
     if (p.ok) add({ bailId: b.id, key: "plan-" + b.id + CUR, prio: "info", date: TODAY, done: true, t: `Étalement suivi : ${esc(b.nom)}`, d: `Reste ${eur(p.dette)} à rattraper · ${eur(p.mensualite)} par mois en plus du loyer · fini en ${fm(p.fin)}`, acts: [["Il a versé…", `verserSomme('${b.id}')`]] });
     else add({ bailId: b.id, key: "planko-" + b.id + CUR, prio: "urgent", date: TODAY, t: `Étalement pas suivi : ${esc(b.nom)}`, d: `Avec l'accord, il devrait encore devoir ${eur(p.attendu)}, il doit ${eur(p.dette)} : il manque ${eur(p.manque)}.`, acts: [["Il a versé…", `verserSomme('${b.id}')`, "primary"], ["Relancer", `relance('${b.id}','${(echeancesBail(b).find(e => e.statut === "retard") || {}).m || CUR}')`]] });
   });
-  if (!(SB && BANQUE.lien) && S.baux.length && !fait("rel-" + CUR) && TODAY.getDate() >= 3) add({ key: "rel-" + CUR, prio: "info", date: TODAY, done: true, t: "Importer le relevé bancaire du mois", d: "2 minutes : les loyers reçus se cochent tout seuls et la compta se remplit.", acts: [["Importer", "importerReleve()", "primary"], ["Comment faire ?", "go('compta')"]] });
+  if (!(SB && BANQUE.lien) && S.baux.length && !fait("rel-" + CUR) && TODAY.getDate() >= 3) add({ key: "rel-" + CUR, prio: "info", date: TODAY, done: true, t: `Donner ton relevé de banque ${deM(addM(CUR, -1))}`, d: "Le PDF de ton appli bancaire : les loyers reçus se cochent tout seuls.", acts: [["📄 Donner mon relevé", "importerReleve()", "primary"]] });
   if (SB && BANQUE.lien) { const n = sortiesAClasser(TODAY.getFullYear()).length; if (n) add({ key: "bqdep-" + CUR + "-" + n, prio: "info", date: TODAY, t: `${n} sortie${n > 1 ? "s" : ""} d'argent à mettre en compta`, d: "Prêt, assurance, taxe, eau… déjà classées par l'appli : il reste à vérifier et enregistrer.", acts: [["Classer", "view.comptaOnglet='depenses';go('compta')", "primary"]] }); }
   const enPlan = id => { const p = planEtat(bail(id)); return p && !p.fait; };
   ech.filter(e => e.statut === "retard" && !enPlan(e.b.id)).forEach(e => {
@@ -4205,8 +4207,9 @@ function sectionBoite() {
   if (R.some(f => !LU_RECUS[f.id]) && !LECTURE_RECUS) setTimeout(lireRecus, 300);
   const ligne = f => `<li class="lr"><div class="lr-main"><span class="ico-cat" aria-hidden="true">${/pdf/.test(f.type) ? "📄" : "🖼️"}</span><span class="tx"><b>${esc(f.nom)}</b><small>${f.de ? "de " + esc(f.de) + " · " : ""}${fds(P(f.date))}${f.objet ? " · « " + esc(f.objet.slice(0, 50)) + " »" : ""}</small></span></div>
     ${(() => { const g = LU_RECUS[f.id]; return g && g.releve && !g.fait && !f.releveLu && estProprio() ? `<div class="propose-recu"><span>🏦 C'est un <b>relevé de banque</b></span><button class="small primary" onclick="releveRecu('${f.id}')">Cocher les loyers</button></div>` : g && g.bienId && bien(g.bienId) && estProprio() ? `<div class="propose-recu"><span>💡 C'est sûrement pour <b>${esc(bien(g.bienId).nom)}</b>${g.cat ? " · " + esc(g.cat) : ""}</span><button class="small primary" onclick="rangerPropose('${f.id}')">✓ Oui, ranger</button></div>` : ""; })()}
-    <div class="actions-courtes">${estProprio() ? `<button class="small ${LU_RECUS[f.id] && LU_RECUS[f.id].bienId ? "" : "primary"}" onclick="lireDocIA({ fichier: '${f.id}' })">🤖 Lire et ranger</button>` : ""}<button class="small" onclick="rangerRecu('${f.id}')">🏠 Ranger</button><button class="small ghost" onclick="ouvrirDocument('${f.id}')">Ouvrir</button><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></div></li>`;
-  const aRanger = R.length ? `<section class="card boite a-ranger-recus"><h2>📥 À ranger <span class="count">${R.length}</span></h2><p class="note">Les papiers que tu as envoyés. L'appli les lit et range tout seuls ceux dont elle est sûre.</p><ul class="lr-list">${R.map(ligne).join("")}</ul></section>` : "";
+    <div class="actions-courtes">${(() => { const g = LU_RECUS[f.id], prop = g && g.bienId && bien(g.bienId); return `<button class="small ${prop || (g && g.releve) ? "" : "primary"}" onclick="rangerRecu('${f.id}')">${prop ? "Ailleurs" : "📁 Où le ranger ?"}</button>${estProprio() && !prop && !(g && g.releve) && !iaSansCredit() && /pdf|image/.test(f.type || "") ? `<button class="small" onclick="lireDocIA({ fichier: '${f.id}' })">🤖 Lire</button>` : ""}`; })()}<button class="small ghost" onclick="ouvrirDocument('${f.id}')">Ouvrir</button><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></div></li>`;
+  const nProp = R.filter(f => LU_RECUS[f.id] && LU_RECUS[f.id].bienId && bien(LU_RECUS[f.id].bienId)).length;
+  const aRanger = R.length ? `<section class="card boite a-ranger-recus"><div class="sec-head"><h2>📥 À ranger <span class="count">${R.length}</span></h2>${nProp > 1 && estProprio() ? `<button class="small primary" onclick="rangerTousProposes()">✓ Ranger les ${nProp} proposés</button>` : ""}</div><p class="note">Touche le bon logement : c'est rangé.</p><ul class="lr-list">${R.map(ligne).join("")}</ul></section>` : "";
   if (BOITE.etat !== "ok") return aRanger;
   if (!BOITE.code) return aRanger + (LECTURE ? "" : `<section class="card boite"><h2>📨 Ta boîte à documents</h2><p class="note">Une adresse e-mail rien qu'à toi : <b>transfère-y tes factures, avis de taxe foncière, attestations d'assurance…</b> Ils arrivent ici tout seuls, et l'IA peut les lire et les ranger dans le bon logement.</p><div class="row"><button class="primary" onclick="creerBoite()">Créer mon adresse</button></div></section>`);
   const adr = `${BOITE.code}@${DOMAINE_BOITE}`;
@@ -4259,7 +4262,7 @@ function remettreDansBoite(ids) {
 }
 function rangerPropose(id) {
   const f = S.fichiers.find(x => x.id === id), g = LU_RECUS[id]; if (!f || !g || !g.bienId || !bien(g.bienId)) return;
-  Object.assign(f, { bienId: g.bienId, cat: g.cat || f.cat || "Autre", bailId: g.bailId || "" }); save(); render(); toast(`✓ Rangé dans ${bien(g.bienId).nom}`);
+  rangerIci(id, g.bienId);
 }
 async function creerBoite() {
   const base = slug(S.sci.nom || "espace").toLowerCase().slice(0, 20).replace(/-+$/, "") || "espace";
@@ -4276,12 +4279,29 @@ function expediteursBoite() {
     async d => { const L = String(d.ex || "").split(/[\s,;]+/).map(x => x.trim().toLowerCase()).filter(x => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
       const r = await SB.from("boites").update({ expediteurs: L }).eq("espace_id", ESPACE); if (r.error) { toast("Impossible : " + r.error.message); return; } BOITE.expediteurs = L; render(); toast("✓ Enregistré"); return true; }, { ok: "Enregistrer", lecture: true });
 }
+/* "Où va ce papier ?" : un gros bouton par logement (le plus probable en premier), un toucher et c'est rangé */
 function rangerRecu(id) {
   const f = S.fichiers.find(x => x.id === id); if (!f) return;
   if (!S.biens.length) { toastActions("Ajoute d'abord le logement où le ranger.", [["Ajouter un logement", "editBien()"]]); return; }
-  modal(`🏠 Ranger « ${esc(f.nom)} »`, `${sel("Logement", "bienId", "", S.biens.map(b => [b.id, b.nom]))}${sel("Catégorie", "cat", f.cat || "Autre", CATS_DOC.map(c => [c, c]))}
-    ${sel("Concerne", "bailId", "", [["", "Le logement en général"], ...S.baux.map(b => [b.id, b.nom + (bien(b.bienId) ? " · " + bien(b.bienId).nom : "")])])}${fld("Nom", "nom", f.nom, "text", "full")}`,
-    d => { const b = bail(d.bailId); Object.assign(f, { bienId: b ? b.bienId : d.bienId, cat: d.cat, nom: d.nom || f.nom }, qui(d.bailId)); toast("✓ Rangé dans " + (bien(f.bienId) || {}).nom); }, { ok: "Ranger" });
+  const g = LU_RECUS[id] || deviner({ titre: f.nom, chemin: [] }), cat = g.cat || (f.cat && f.cat !== "Autre" ? f.cat : "") || "Autre";
+  const ordre = [...S.biens].sort((a, b) => (b.id === g.bienId) - (a.id === g.bienId) || (ordreBiens().indexOf(a) - ordreBiens().indexOf(b)));
+  modal(`📁 Où va « ${esc(f.nom)} » ?`, `<div class="full"><button type="button" class="small" onclick="ouvrirDocument('${id}')">👁 Ouvrir pour vérifier</button></div><div class="full ou-ranger">${ordre.map(b => { const occ = bailActifDuBien(b.id); return `<button type="button" class="${b.id === g.bienId ? "primary" : ""}" onclick="rangerIci('${id}','${b.id}')"><b>${b.immeuble ? "🏢" : "🏠"} ${esc(b.nom)}</b><small>${b.id === g.bienId ? "le plus probable" : occ ? esc(nomCourt(occ.nom)) : b.immeuble ? "immeuble" : "vide"}</small></button>`; }).join("")}</div>
+    <p class="full note">Rangé comme <b>${esc(cat)}</b> · modifiable ensuite avec ✏️</p>`, () => true, { ok: "Plus tard", lecture: true });
+}
+function rangerIci(id, bienId, discret) {
+  const f = S.fichiers.find(x => x.id === id), bi = bien(bienId); if (!f || !bi) return;
+  const g = LU_RECUS[id] || deviner({ titre: f.nom, chemin: [] }), cat = g.cat || (f.cat && f.cat !== "Autre" ? f.cat : "") || "Autre";
+  const occ = bailActifDuBien(bienId), pourLoc = /^(Bail|État des lieux|Locataire)/.test(cat);
+  const bailId = g.bailId && bail(g.bailId) && bail(g.bailId).bienId === bienId ? g.bailId : pourLoc && occ ? occ.id : "";
+  Object.assign(f, { bienId, cat, bailId }); delete f.ancienId; delete f.rangeSeul;
+  if (discret) return;
+  closeOverlay(); save(); render();
+  toastActions(`📁 Rangé dans ${bi.nom} · ${cat}`, [["Modifier", `editDocument('${id}')`], ["Annuler", `remettreDansBoite('${id}')`]]);
+}
+function rangerTousProposes() {
+  const L = recusBoite().filter(f => LU_RECUS[f.id] && LU_RECUS[f.id].bienId && bien(LU_RECUS[f.id].bienId)); if (!L.length) return;
+  L.forEach(f => rangerIci(f.id, LU_RECUS[f.id].bienId, true)); save(); render();
+  toastActions(`📁 ${L.length} papiers rangés`, [["Annuler", `remettreDansBoite('${L.map(f => f.id).join(",")}')`]]);
 }
 /* Après lecture par l'IA, un document pas encore rangé va tout seul dans le bon logement et la bonne catégorie */
 const CAT_DOC_IA = { taxe_fonciere: "Taxe foncière", dpe: "Diagnostics (DPE…)", attestation_assurance_locataire: "Locataire (pièces, garant…)", assurance_proprietaire: "Assurance", facture: "Factures et travaux", charges_copropriete: "Copropriété", bail: "Bail" };
@@ -6642,7 +6662,7 @@ function chercherDocs(q, racine) {
 const iconeFichier = f => /pdf/.test(f.type) ? "📕" : /image/.test(f.type) ? "🖼️" : /spreadsheet|excel|csv/.test(f.type) ? "📊" : /zip/.test(f.type) ? "🗜️" : /document|word/.test(f.type) ? "📝" : "📄";
 const tailleTxt = n => !n ? "" : n > 1e6 ? (n / 1e6).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1e3)) + " Ko";
 function ligneDoc(f) {
-  if (!MCP) { const ou = rangeOu(f.id); return `<li class="doc-l" onclick="actionsDoc('${f.id}')" role="button" tabindex="0"><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><b>${esc(f.titre)}</b><small>${ou.length ? "✅ " + esc(ou[0]) + " · " : ""}${esc(f.chemin.join(" › ") || "choisi un par un")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}</small></span><span class="doc-plus" aria-hidden="true">⋯</span></li>`; }
+  if (!MCP) { const ou = rangeOu(f.id), aRanger = view.docVue === "nonranges" && !ou.length && S.biens.length && estProprio() && !LECTURE; return `<li class="doc-l" onclick="${aRanger ? "rangerDocDrive" : "actionsDoc"}('${f.id}')" role="button" tabindex="0"><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><b>${esc(f.titre)}</b><small>${ou.length ? "✅ " + esc(ou[0]) + " · " : ""}${esc(f.chemin.join(" › ") || "choisi un par un")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}</small></span>${aRanger ? `<span class="pill">Ranger</span>` : `<span class="doc-plus" aria-hidden="true">⋯</span>`}</li>`; }
   return `<li><span class="ico" aria-hidden="true">${iconeFichier(f)}</span><span class="tx"><a href="${esc(f.lien)}" target="_blank" rel="noopener">${esc(f.titre)}</a><small>${esc(f.chemin.join(" › ") || "Ton Drive")}${f.modif ? " · " + fds(f.modif.slice(0, 10)) : ""}${f.taille ? " · " + tailleTxt(f.taille) : ""}</small></span><button class="small" onclick="envoyerFichier('${f.id}')">Envoyer</button></li>`;
 }
 function pageDocs() {
@@ -7168,10 +7188,19 @@ function retirerDocDrive(id, ok) {
 }
 function rangerDocDrive(id) {
   const f = DOCS.fichiers.find(x => x.id === id); if (!f) return;
-  const devine = (analyserDrive([f]).ranger || [])[0] || {};
-  modal(`Ranger « ${esc(f.titre)} »`, `${sel("Logement", "bienId", devine.bienId || S.biens[0].id, S.biens.map(b => [b.id, b.nom]))}${sel("Catégorie", "cat", devine.cat || "Autre", CATS_DOC.map(c => [c, c]))}
-    <p class="full note">Il est copié dans l'appli : tes associés pourront l'ouvrir sans accès à ton Drive.</p>`,
-    d => { importerDepuisDrive([{ id: f.id, name: f.titre, mimeType: f.type, size: f.taille, webViewLink: f.lien, partage: f.partage }], { bienId: d.bienId, cat: d.cat, bailId: devine.bienId === d.bienId ? devine.bailId || "" : "" }); }, { ok: "Ranger" });
+  const devine = (analyserDrive([f]).ranger || [])[0] || deviner(f) || {}, cat = devine.cat || "Autre";
+  const ordre = [...S.biens].sort((a, b) => (b.id === devine.bienId) - (a.id === devine.bienId));
+  modal(`📁 Où va « ${esc(f.titre)} » ?`, `<div class="full"><a class="btn small" href="${esc(f.lien)}" target="_blank" rel="noopener">👁 Ouvrir pour vérifier</a></div><div class="full ou-ranger">${ordre.map(b => { const occ = bailActifDuBien(b.id); return `<button type="button" class="${b.id === devine.bienId ? "primary" : ""}" onclick="rangerDocDriveIci('${f.id}','${b.id}')"><b>${b.immeuble ? "🏢" : "🏠"} ${esc(b.nom)}</b><small>${b.id === devine.bienId ? "le plus probable" : occ ? esc(nomCourt(occ.nom)) : b.immeuble ? "immeuble" : "vide"}</small></button>`; }).join("")}</div>
+    <p class="full note">Rangé comme <b>${esc(cat)}</b> · modifiable ensuite avec ✏️</p>`, () => true, { ok: "Plus tard", lecture: true });
+}
+async function rangerDocDriveIci(id, bienId) {
+  const f = DOCS.fichiers.find(x => x.id === id); if (!f) return; closeOverlay();
+  const devine = (analyserDrive([f]).ranger || [])[0] || deviner(f) || {}, cat = devine.cat || "Autre";
+  const occ = bailActifDuBien(bienId), bailId = devine.bienId === bienId && devine.bailId ? devine.bailId : /^(Bail|État des lieux|Locataire)/.test(cat) && occ ? occ.id : "";
+  const avant = new Set(S.fichiers.map(x => x.id));
+  await importerDepuisDrive([{ id: f.id, name: f.titre, mimeType: f.type, size: f.taille, webViewLink: f.lien, partage: f.partage }], { bienId, cat, bailId });
+  const neuf = S.fichiers.filter(x => !avant.has(x.id)).map(x => x.id);
+  if (neuf.length) toastActions(`📁 Rangé dans ${bien(bienId).nom} · ${cat}`, [["Modifier", `editDocument('${neuf[0]}')`], ["Annuler", `retirerDocuments('${neuf.join(",")}')`]]);
 }
 function listeDocs(res, lim) {
   if (!res.length) return DOCS.etat === "pret" ? `<div class="empty">Aucun document trouvé.</div>` : "";
@@ -7355,25 +7384,43 @@ async function releveParIA(blob, type) {
 /* Un fichier de relevé, quel qu'il soit → les opérations */
 async function opsReleveFichier(f) {
   const type = f.type || (/\.pdf$/i.test(f.name || "") ? "application/pdf" : "");
-  if (/pdf/.test(type)) { const r = await releveDepuisPdf(f); if (r.ops.length) return r.ops; if (r.texte.length > 200) throw new Error("Ce PDF ne ressemble pas à un relevé de compte (aucune opération trouvée)."); return releveParIA(f, "application/pdf"); }
+  if (/pdf/.test(type)) { const r = await releveDepuisPdf(f); if (r.ops.length) return r.ops;
+    if (r.texte.length > 200) { const t = phraseDe(r.texte);
+      throw new Error(/RELEVE D IDENTITE BANCAIRE|\bRIB\b/.test(t) && !/ANCIEN SOLDE|NOUVEAU SOLDE/.test(t) ? "C'est un RIB : il faut le relevé de compte, avec la liste des opérations du mois."
+        : /AVIS DE (VIREMENT|PRELEVEMENT|OPERATION)/.test(t) ? "C'est un avis d'une seule opération : il faut le relevé de compte du mois, avec toutes les opérations."
+        : /FACTURE|DEVIS|QUITTANCE|BAIL|ATTESTATION/.test(t) ? "Ce document n'est pas un relevé de banque (c'est plutôt une facture, un bail ou une attestation) : range-le dans Docs, et donne ici le relevé de compte."
+        : "Je ne trouve aucune opération (date, libellé, montant) dans ce PDF : il faut le relevé de compte du mois, avec la liste des opérations."); }
+    return releveParIA(f, "application/pdf"); }
   if (/^image\//.test(type)) return releveParIA(f, type);
   const txt = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ko(new Error("Fichier illisible")); r.readAsText(f, /iso|latin/i.test(f.type) ? "ISO-8859-1" : "UTF-8"); });
   return lireReleve(txt);
 }
 function lancerRevueReleve(ops) {
   RELEVE = rapprocher(ops);
-  if (!RELEVE.length) { toastActions(ops.length ? "Tout ce relevé est déjà dans l'appli." : "Aucune opération trouvée dans ce relevé.", ops.length ? [] : [["Essayer un autre fichier", "importerReleve()"]]); return; }
+  if (!RELEVE.length) { toastActions(ops.length ? "✓ Tout ce relevé est déjà dans l'appli." : "Aucune opération trouvée dans ce relevé.", ops.length ? [] : [["Voir le bon document", "importerReleve()"]]); return; }
   setTimeout(revueReleve, 30);
 }
 async function importerReleveFichier(f) {
   if (!f) return; toast(/^image\//.test(f.type) ? "🤖 L'IA lit ton relevé… (20 secondes environ)" : "Lecture du relevé…");
-  try { lancerRevueReleve(await opsReleveFichier(f)); } catch (e) { modal("🏦 Relevé pas lu", `<div class="full">${grosMsg("attention", "Je n'ai pas pu lire ce relevé", esc(e.message))}</div>`, () => { setTimeout(importerReleve, 50); return true; }, { ok: "Essayer un autre fichier", lecture: true }); }
+  try { lancerRevueReleve(await opsReleveFichier(f)); } catch (e) { modal("🏦 Ce n'est pas le bon document", `<div class="full">${grosMsg("attention", "Je n'ai pas pu lire ce relevé", esc(e.message))}</div><div class="full">${guideReleve(true)}</div>`, () => { const i = document.getElementById("relfile"); if (i) i.click(); else setTimeout(importerReleve, 50); return !i; }, { ok: "📄 Choisir un autre fichier", lecture: true, after: () => { const i = document.createElement("input"); i.type = "file"; i.id = "relfile"; i.hidden = true; i.accept = ".pdf,.csv,.txt,application/pdf,text/csv,text/plain,image/*"; i.onchange = () => { closeOverlay(); importerReleveFichier(i.files[0]); }; document.getElementById("mform").appendChild(i); } }); }
+}
+/* Le bon document, montré : on ne se demande ni lequel, ni où le trouver */
+function guideReleve(court) {
+  const m = addM(CUR, -1), mm = m.slice(5, 7);
+  return `<div class="rel-guide">
+    <p class="rel-quoi">Il faut ton <b>relevé de compte ${esc(deM(m))}</b> : le PDF que ta banque met chaque mois dans ton appli, avec la liste des opérations.</p>
+    <div class="rel-ex" aria-label="Exemple de relevé de compte"><div class="rel-ex-h"><b>RELEVÉ DE COMPTE</b><span>du 01/${mm} au ${dim(m)}/${mm}</span></div>
+      <table><tr><th>Date</th><th>Opération</th><th>Débit</th><th>Crédit</th></tr>
+      <tr class="rel-loyer"><td>05/${mm}</td><td>VIR M. DURAND LOYER</td><td></td><td>650,00</td></tr>
+      <tr><td>12/${mm}</td><td>PRLV EDF</td><td>45,20</td><td></td></tr></table>
+      <p class="rel-ex-n">↑ la ligne du loyer : l'appli la coche toute seule</p></div>
+    <ul class="rel-ok"><li>✅ Le compte où <b>arrivent les loyers</b></li><li>✅ <b>Un mois entier</b> (ou plusieurs)</li><li>✅ En <b>PDF</b> (le plus simple), en CSV, ou une <b>photo nette</b> du relevé papier</li><li>❌ Pas un RIB, ni une capture du solde, ni un avis de virement seul</li></ul>
+    ${court ? "" : `<details class="pli-mini"><summary>Où le trouver dans ma banque ?</summary><ol class="tuto"><li>Ouvre l'appli (ou le site) de ta banque, sur le compte où arrivent les loyers.</li><li>Touche <b>Relevés</b> (selon la banque : « e-Relevés », « e-Documents », « Mes documents »).</li><li>Ouvre le relevé ${esc(deM(m))}, puis <b>Partager › Enregistrer</b> (ou Télécharger).</li><li>Reviens ici et touche <b>📄 Choisir le relevé</b>.</li></ol><p class="note">Encore plus simple : envoie-le par e-mail à ta boîte à documents (Docs), l'appli le reconnaît toute seule.</p></details>`}</div>`;
 }
 function importerReleve() {
-  modal("🏦 Importer le relevé de ta banque", `
+  modal("🏦 Ton relevé de banque", `
     <input type="file" id="relfile" accept=".pdf,.csv,.txt,application/pdf,text/csv,text/plain,image/*" hidden onchange="closeOverlay();importerReleveFichier(this.files[0])">
-    <p class="full note">Le relevé de ta banque, en PDF, en CSV ou en photo : l'appli coche les loyers reçus et range les dépenses.</p>
-    <details class="pli-mini full"><summary>Où le trouver ?</summary><p class="note">Dans l'appli ou sur le site de ta banque : Comptes › Relevés (PDF), ou Télécharger / Exporter les opérations (CSV). Une photo du relevé papier marche aussi (lue par l'IA).</p></details>
+    <div class="full">${guideReleve()}</div>
     <details class="pli-mini full"><summary>Ou colle les lignes du relevé</summary>${area("Lignes copiées depuis ta banque", "txt", "")}<button type="button" class="small" onclick="const t=document.getElementById('f_txt').value;if(t.trim()){closeOverlay();lancerRevueReleve(lireReleve(t))}">Analyser ces lignes</button></details>`,
     () => { document.getElementById("relfile").click(); return false; }, { ok: "📄 Choisir le relevé", lecture: true });
 }

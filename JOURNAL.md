@@ -79,6 +79,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 20/11/2026 (nuit, suite) — relevé : quel document précisément ; ranger en un toucher
+
+- Retour de Théo : "il faut qu'ils sachent quel document précisément importer, qu'ils ne se demandent pas où aller ni comment faire" ; "le rangement doit être encore plus rapide".
+- **Relevé** : `guideReleve()` (fenêtre d'import, Compta › Banque à la place de l'ancien tuto CSV, et message d'erreur) : "Il faut ton relevé de compte d'<mois dernier>", petit relevé d'exemple dessiné (Date / Opération / Débit / Crédit, ligne du loyer en vert), liste ✅ compte des loyers, mois entier, PDF/CSV/photo, ❌ pas un RIB / capture du solde / avis de virement ; "Où le trouver dans ma banque ?" replié (Relevés, e-Relevés, e-Documents, Mes documents ; ou l'envoyer à la boîte). Mauvais document : message précis (RIB, avis d'opération, facture/bail/attestation, aucune opération) + le bon document montré + "📄 Choisir un autre fichier" qui ouvre directement le choix. Tâche du mois : "Donner ton relevé de banque d'octobre 2026", un seul bouton.
+- **Ranger en un toucher** : `rangerRecu` (papiers reçus) et `rangerDocDrive` (Drive) ouvrent "📁 Où va « … » ?" : un gros bouton par logement (le plus probable en premier, en vert ; locataire en dessous), "Ouvrir pour vérifier" ; un toucher = rangé (catégorie devinée, locataire mis pour bail/EDL/pièces), toast "Rangé dans X · catégorie" avec "Modifier" et "Annuler" (`rangerIci`, `rangerDocDriveIci`). "✓ Ranger les N proposés" en haut de "À ranger" (`rangerTousProposes`). "Oui, ranger" passe par le même chemin. Drive "Pas encore rangés" : toucher un fichier = "Où va … ?" directement (pastille "Ranger"). Bouton "🤖 Lire" caché quand l'IA n'est pas disponible.
+- Test105 (nouveau, 18 contrôles) OK.
+
 ### 20/11/2026 (nuit) — documents : on n'est bloqué nulle part ; budget IA du mois dépassé
 
 - Retour de Théo : "mettre des documents doit être hyper fluide, on peut revenir en arrière, l'enlever, l'alimenter, on n'est bloqué à aucun moment". Avant : impossible de renommer ou déplacer un document (il fallait le supprimer et le remettre), suppression définitive sans "Annuler", un seul fichier à la fois, carte "infos manquent" qui poussait les documents en bas.

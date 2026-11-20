@@ -60,7 +60,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
   // 4. une photo de relevé, ici sans IA possible (mode local) : message clair + bouton pour essayer un autre fichier
   const png = await (await b.newPage()).screenshot(); fs.writeFileSync(OUT + '/photo.png', png);
   await p.evaluate(() => importerReleve()); await p.waitForTimeout(200); await p.setInputFiles('#relfile', OUT + '/photo.png'); await p.waitForTimeout(800);
-  ok('photo sans IA possible : explication + "Essayer un autre fichier"', await p.evaluate(() => /PDF ou le CSV/.test(document.getElementById('overlay').innerText) && /Essayer un autre fichier/.test(document.querySelector('#overlay button.primary').textContent)));
+  ok('photo sans IA possible : explication + "Choisir un autre fichier"', await p.evaluate(() => /PDF ou le CSV/.test(document.getElementById('overlay').innerText) && /Choisir un autre fichier/.test(document.querySelector("#overlay button.primary").textContent)));
   await p.evaluate(() => closeOverlay());
   // 5. photo lue par l'IA (simulée)
   await p.evaluate(() => { MCP = null; SB = { auth: {} }; SB_USER = { id: 'u1' }; MEMBRES = { membres: [{ user_id: 'u1', role: 'proprietaire' }] }; ESPACE = 'e1';
