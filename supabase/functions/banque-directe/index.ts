@@ -56,6 +56,16 @@ async function synchro(admin: any, e: string) {
   await admin.from("banque_directe").update(erreur ? { erreur } : { erreur: null, derniere_synchro: new Date().toISOString() }).eq("espace_id", e);
   return { n, erreur };
 }
+/* Mode gratuit d'Enable Banking : seuls les comptes reliés par le titulaire de l'application (Théo) sont transmis.
+   Tant que BANQUE_OUVERTE n'est pas "1" (contrat signé), la banque en direct n'est proposée qu'aux propriétaires
+   dont une banque marche déjà (au moins un compte reçu) : pour les autres, ça ne pourrait pas marcher. */
+async function banqueOuverte(admin: any, uid: string) {
+  if (Deno.env.get("BANQUE_OUVERTE") === "1") return true;
+  const { data: m } = await admin.from("membres").select("espace_id").eq("user_id", uid).eq("role", "proprietaire");
+  const ids = (m || []).map((x: any) => x.espace_id); if (!ids.length) return false;
+  const { data: b } = await admin.from("banque_directe").select("comptes").in("espace_id", ids);
+  return (b || []).some((x: any) => Array.isArray(x.comptes) && x.comptes.length > 0);
+}
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -68,6 +78,7 @@ Deno.serve(async (req) => {
     }
     const jeton = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     const { data: u } = await admin.auth.getUser(jeton); if (!u?.user) return rep({ erreur: "Connexion requise" }, 401);
+    if (c.action === "dispo") return rep({ ok: true, ouverte: await banqueOuverte(admin, u.user.id) });
     if (c.action === "banques") {
       const r = await eb("/aspsps?country=FR&service=AIS"); if (r.s !== 200) return rep({ erreur: "Liste des banques indisponible, réessaie." }, 502);
       return rep({ ok: true, banques: (r.j.aspsps || []).map((a: any) => ({ nom: a.name, logo: a.logo, types: a.psu_types, duree: a.maximum_consent_validity })) });
@@ -91,6 +102,7 @@ Deno.serve(async (req) => {
     const { data: p } = await moi.rpc(c.action === "actualiser" ? "est_membre" : "est_proprietaire", { e });
     if (!p) return rep({ erreur: c.action === "actualiser" ? "Accès refusé" : "Seul le propriétaire de l'espace peut relier ou débrancher la banque." }, 403);
     if (c.action === "connecter") {
+      if (!(await banqueOuverte(admin, u.user.id))) return rep({ erreur: "La banque en direct n'est pas encore ouverte à tous : utilise ton relevé en attendant.", raison: "ferme" }, 403);
       const b = await eb("/aspsps?country=FR&service=AIS"), a = (b.j.aspsps || []).find((x: any) => x.name === c.banque);
       if (!a) return rep({ erreur: "Banque inconnue." }, 400);
       const type = (a.psu_types || []).includes(c.type) ? c.type : (a.psu_types || ["personal"])[0];

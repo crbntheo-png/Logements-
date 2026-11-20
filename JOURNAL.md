@@ -13,7 +13,7 @@ Règle pour chaque session :
 
 - [ ] **Max (SCI NIMAR)** : dans À faire, toucher "Oui, bail commercial" pour l'EURL Velours & Végétal ; fiche "Immeuble / parties communes" › Transformer ; "Compléter avec mes papiers" sur chaque logement.
 - [ ] **Budget IA (Théo)** : 3 $ par mois pour toute l'appli (réglage IA_BUDGET_MOIS absent) ; à monter si l'assistant et les lectures servent à d'autres utilisateurs.
-- [ ] **Banque pour tous (Théo)** : envoyer les demandes de devis Enable Banking (formulaire "Get a quote") et Bridge ; avec un contrat Enable Banking, rien à recoder. En attendant, les autres utilisateurs reçoivent 0 compte.
+- [ ] **Banque pour tous (Théo)** : envoyer les demandes de devis Enable Banking (formulaire "Get a quote") et Bridge ; avec un contrat Enable Banking, il suffit de poser le secret BANQUE_OUVERTE=1 (fonction banque-directe). En attendant, les autres utilisateurs reçoivent 0 compte.
 - [ ] **Banque en direct (Théo)** : application créée le 18/11. Reste : Réglages › Banque › Relier ma banque (connexion sur le site de la banque). Ancienne note : : Enable Banking, mode "restricted production". 1) https://enablebanking.com/sign-in/ (e-mail, lien reçu) ; 2) https://enablebanking.com/cp/applications › "Add a new application" : environnement Production, clé privée générée par défaut, nom "Gestion locative", URL de retour https://sci-gestion-locative.com/ › Register (un fichier .pem se télécharge, son nom = l'identifiant de l'application) ; 3) sur la page de l'application : "Link accounts" et relier le compte de la SCI ; 4) envoyer à Claude le contenu du .pem et l'identifiant. Ensuite (Claude, 1 session) : fonction serveur, choix de la banque dans l'appli, relevés lus dans les mêmes tables que Pennylane (le rapprochement des loyers marche tel quel). Limite : gratuit seulement pour les comptes que Théo relie lui-même ; pour les autres utilisateurs, contrat payant Enable Banking.
 
 - [ ] **Boîte à documents (Théo, 2 min)** : activer Email Routing sur sci-gestion-locative.com et envoyer l'adresse catch-all au Worker "boite-documents" (étapes dans l'Historique du 18/11, "boîte à documents").
@@ -78,6 +78,13 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 20/11/2026 — banque en direct : plus proposée là où elle ne peut pas marcher (Max)
+
+- Max a réessayé (20/11 13 h 49, CIC) : toujours 0 compte, comme prévu (mode gratuit d'Enable Banking = seulement les comptes reliés par Théo). L'appli lui proposait encore "Réessayer" : impasse.
+- Serveur (banque-directe) : `banqueOuverte()` = BANQUE_OUVERTE="1" (à poser le jour du contrat) OU la personne est propriétaire d'un espace dont la banque a déjà donné au moins un compte (aujourd'hui : Théo seul). Action "dispo" ; "connecter" refuse sinon. Aucun réglage secret posé (refusé par la session ; inutile ici).
+- Appli : `BQ_OUVERTE`, `bqOuverte()`, `blocReleveAuLieu()`. Quand ce n'est pas ouvert : Compta › Banque et Réglages › Banque montrent "📄 Importer mon relevé" (avec un "Pourquoi pas la banque en direct ?" replié) au lieu de "Relier ma banque" ; plus de "Réessayer en compte personnel / professionnel" ; plus de tâche "Ta banque n'a donné aucun compte" ; l'essai sans compte peut être retiré ("Retirer l'essai de CIC"). Le jour du contrat : poser BANQUE_OUVERTE=1 dans les secrets Supabase, rien d'autre.
+- Test101 (nouveau, vraie base) OK.
 
 ### 20/11/2026 — clavier du téléphone qui cachait le bas des fenêtres
 

@@ -1,4 +1,4 @@
-// Banque : explication "Pourquoi brancher ta banque, et est-ce sûr ?" dans la fenêtre de connexion, Réglages › Banque et Compta.
+// (L'interface "banque ouverte" est simulée : BQ_OUVERTE = true.) Banque : explication "Pourquoi brancher ta banque, et est-ce sûr ?" dans la fenêtre de connexion, Réglages › Banque et Compta.
 const { chromium, devices } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const DIST = path.join(__dirname, '..', 'dist');
@@ -14,7 +14,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
   await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test banque pourquoi'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
   const ESP = await p.evaluate(() => ESPACE);
-  await p.evaluate(async () => { await chargerMembres(); BANQUE = { etat: 'ok', ops: [], comptes: [], lien: null }; view.comptaOnglet = 'banque'; go('compta'); render(); }); await p.waitForTimeout(500);
+  await p.evaluate(async () => { await chargerMembres(); BQ_OUVERTE = true; BANQUE = { etat: 'ok', ops: [], comptes: [], lien: null }; view.comptaOnglet = 'banque'; go('compta'); render(); }); await p.waitForTimeout(500);
   let txt = await p.locator('#app').innerText();
   t(/Le plus simple : relier ta banque/.test(txt) && /Pourquoi brancher ta banque, et est-ce sûr/.test(txt), 'Compta › Banque : "Relier ma banque" + "🔒 Pourquoi brancher ta banque, et est-ce sûr ?"');
   await p.evaluate(() => relierBanque()); await p.waitForTimeout(800);

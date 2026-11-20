@@ -1,5 +1,6 @@
 // Banque en direct (vraie base, vrai Enable Banking, sans les codes de la banque) : liste des banques, recherche,
-// départ vers la banque (adresse d'accord réelle), retour annulé ou faux code bien expliqués, droits.
+// départ vers la banque : le compte de test n'a pas de banque qui marche, donc le serveur refuse (mode gratuit, 20/11) et l'appli propose le relevé ;
+// retour annulé ou inconnu bien expliqués, droits. L'interface "ouverte" est simulée côté appli (BQ_OUVERTE = true).
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
 const DIST = path.join(__dirname, '..', 'dist');
@@ -13,7 +14,7 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
   await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
   await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test banque directe'); await p.click('#esp_btn'); await p.waitForTimeout(2500);
-  await p.evaluate(() => { location.hash = 'reglages'; render(); }); await p.waitForTimeout(500);
+  await p.evaluate(() => { BQ_OUVERTE = true; location.hash = 'reglages'; render(); }); await p.waitForTimeout(500);
   await p.click('#rgl-banque summary'); await p.waitForTimeout(200);
   t(await p.isVisible('button:has-text("Relier ma banque")'), 'Réglages › Banque : "🏦 Relier ma banque"');
   await p.click('button:has-text("Relier ma banque")'); await p.waitForSelector('.bq-l', { timeout: 30000 });
@@ -26,19 +27,16 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   await p.evaluate(() => { const i = [...document.querySelectorAll('.bq-l')].find(l => l.textContent.trim() === 'Crédit Mutuel'); i.querySelector('input').checked = true; });
   let cible = null; await p.route(/enablebanking|tilisy/, r => { cible = r.request().url(); r.fulfill({ status: 200, body: 'banque' }); });
   await p.click('#overlay button.primary'); await p.waitForTimeout(6000);
-  console.log('adresse de la banque :', (cible || '').slice(0, 90));
-  t(cible && /^https:\/\/[^/]*(enablebanking|tilisy)[^/]*\//.test(cible), 'départ vers l\'accord officiel de la banque (Enable Banking)');
+  t(!cible && /pas encore ouverte/.test(await p.locator('#overlay').innerText().catch(() => '')) && await p.locator('#overlay button[onclick="importerReleve()"]').count() === 1, 'compte sans banque qui marche : le serveur refuse, l\'appli propose le relevé (pas de départ vers la banque)');
   const ligne = await p.evaluate(async () => { await new Promise(r => setTimeout(r, 0)); return null; });
   // retour : annulé par l'utilisateur
   await p.goto('http://localhost:8099/?error=access_denied&error_description=Annul%C3%A9%20par%20l%27utilisateur&state=eb-123'); await p.waitForTimeout(4000);
   t(!/state=/.test(p.url()), 'au retour, l\'adresse est nettoyée (pas de code qui traîne)');
   t(/Banque pas reliée/.test(await p.locator('#overlay').innerText().catch(() => '')) && /Annulé par l'utilisateur/.test(await p.locator('#overlay').innerText()), 'retour annulé : message clair');
-  // retour avec un faux code mais le vrai "state"
-  const etat = await p.evaluate(async () => (await SB.from('banque_directe').select('etat, banque').eq('espace_id', ESPACE).maybeSingle()).data);
-  t(etat && /^eb-/.test(etat.etat) && etat.banque === 'Crédit Mutuel', 'connexion en cours notée (banque, jeton de retour)');
-  await p.goto(`http://localhost:8099/?code=faux-code&state=${etat.etat}`); await p.waitForTimeout(7000);
+  // retour avec un faux code et un jeton de retour inconnu
+  await p.goto(`http://localhost:8099/?code=faux-code&state=eb-inconnu`); await p.waitForTimeout(7000);
   const tx = await p.locator('#overlay').innerText().catch(() => ''); console.log(tx.replace(/\n/g, ' ').slice(0, 200));
-  t(/n'a pas confirmé l'accès|Ça n'a pas marché/.test(tx), 'faux code : refusé par la banque, message clair');
+  t(/inconnu ou déjà utilisé|Ça n'a pas marché/.test(tx), 'retour inconnu : refusé, message clair');
   // droits : sans connexion
   const anon = await p.evaluate(async () => { const r = await fetch(APP_SUPABASE.url + '/functions/v1/banque-directe', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: APP_SUPABASE.cle }, body: JSON.stringify({ action: 'banques' }) }); return r.status; });
   t(anon === 401, 'sans connexion : refusé');
