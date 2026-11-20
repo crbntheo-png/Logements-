@@ -157,6 +157,9 @@ button.small .ic { width: 16px; height: 16px; }
 .nv-liste .tx { display: grid; gap: 2px; min-width: 0; } .nv-liste small { color: var(--muted); line-height: 1.4; } .nv-liste a { font-weight: 600; font-size: .9rem; }
 #app .portails-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 4px; box-shadow: inset 0 0 0 1.5px var(--accent-soft), var(--sh-1); } #app .portails-cta .tx { flex: 1 1 200px; display: grid; gap: 2px; min-width: 0; } #app .portails-cta small { color: var(--muted); } #app .portails-cta .row { width: 100%; }
 .ajout-doc { display: grid; gap: 12px; } .ajout-doc .btn { justify-content: center; }
+.esp-cible { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.esp-libres .esp-libre { padding: 10px 0; border-top: 1px solid var(--line, #e5e5e5); } .esp-libres .esp-libre:first-of-type { border-top: 0; } .esp-libres .esp-libre p { margin: 0 0 8px; } .esp-libres .esp-libre small { color: var(--muted, #777); margin-left: 6px; }
+.comptes-g { margin-top: 10px; }
 html:has(body.ptr-actif), body.ptr-actif { overscroll-behavior-y: contain; }
 @media (max-width: 860px) { body.clavier #bottomnav { display: none; } }
 #ptr { position: fixed; left: 50%; top: calc(var(--head-h) + env(safe-area-inset-top, 0px) + 6px); z-index: 25; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--surface); box-shadow: var(--sh-2); display: grid; place-items: center; opacity: 0; transform: translateY(-50px) scale(.6); transition: opacity .15s; pointer-events: none; color: var(--accent); }
@@ -3727,7 +3730,13 @@ function devinerBien(tout) {
     const phrase = nom.length >= 5 && /\s/.test(nom) && tout.includes(" " + nom + " ");
     return { bi, phrase, n: (phrase ? 10 : 0) + nu * 2 + tx, fort: phrase || (nu > 0 && tx > 0) || tx >= 2 };
   }).filter(x => x.n > 0).sort((a, b) => b.n - a.n);
-  if (!sc.length || (sc.length > 1 && sc[0].n === sc[1].n)) return { bienId: null, fort: false };
+  if (sc.length > 1 && sc[0].n === sc[1].n) {
+    /* Égalité entre les lots d'un même immeuble (même adresse) : le papier va dans la fiche de l'immeuble */
+    const ex = sc.filter(x => x.n === sc[0].n), grp = new Set(ex.map(x => x.bi.immeuble ? x.bi.id : x.bi.immeubleId || ("seul-" + x.bi.id))), g = [...grp][0];
+    if (grp.size === 1 && bien(g) && bien(g).immeuble) return { bienId: g, fort: ex.some(x => x.fort) };
+    return { bienId: null, fort: false };
+  }
+  if (!sc.length) return { bienId: null, fort: false };
   return { bienId: sc[0].bi.id, fort: sc[0].fort && (sc.length === 1 || sc[0].n - sc[1].n >= 2 || sc[0].phrase) };
 }
 function deviner(f, texte) {
@@ -6627,7 +6636,7 @@ function sectionDossiersLogements() {
   return `<details class="card rgl" ${view.dossiersOuverts ? "open" : ""} ontoggle="view.dossiersOuverts=this.open"><summary><span class="rgl-ico" aria-hidden="true">📁</span><span class="tx"><b>Dossiers et logements</b><small>${nbLies ? `${nbLies} dossier${nbLies > 1 ? "s" : ""} relié${nbLies > 1 ? "s" : ""} à un logement` : "Dis quel dossier correspond à quel logement"}</small></span>${ic("chevR", "chev")}</summary><div class="rgl-c">
     <p class="note">Si un dossier contient les documents d'un seul logement, relie-les : tout ce qui est dedans (et dans ses sous-dossiers) sera rangé dans ce logement, quel que soit le nom des fichiers.</p>
     <ul class="lr-list">${vis.map(d => `<li class="lr"><div class="lr-main" style="cursor:default"><span class="tx" style="padding-left:${Math.min(3, (d.ancetres || []).length) * 12}px"><b>📁 ${esc(d.titre)}</b><small>${esc(d.chemin.slice(0, -1).join(" › ") || "dossier choisi")} · ${nbDans(d.id)} fichier${nbDans(d.id) > 1 ? "s" : ""}</small></span></div>
-      <div class="lr-acts sans-av"><label class="fl" style="flex:1">Ce dossier =<select onchange="relierDossier('${d.id}', this.value)"><option value="">pas un logement précis</option>${S.biens.map(bi => `<option value="${bi.id}" ${L[d.id] === bi.id ? "selected" : ""}>${esc(bi.nom)}</option>`).join("")}</select></label></div></li>`).join("")}</ul>
+      <div class="lr-acts sans-av"><label class="fl" style="flex:1">Ce dossier =<select onchange="this.value.startsWith('esp:') ? choisirEspaceDossier('${d.id}', this.value.slice(4)) : relierDossier('${d.id}', this.value)"><option value="">pas un logement précis</option>${S.biens.map(bi => `<option value="${bi.id}" ${L[d.id] === bi.id ? "selected" : ""}>${esc(bi.nom)}</option>`).join("")}${ESPACES.length > 1 && racinesPartagees().some(r => r.id === d.id || (d.ancetres || []).includes(r.id)) ? `<optgroup label="Pas cet espace : l'envoyer dans">${ESPACES.filter(e => e.id !== ESPACE).map(e => `<option value="esp:${e.id}">📦 ${esc(e.nom)}</option>`).join("")}</optgroup>` : ""}</select></label></div></li>`).join("")}</ul>
     ${!view.dossiersTout && vis.length < ds.length ? `<button class="ghost small lr-plus" onclick="view.dossiersTout=true;render()">Voir tous les sous-dossiers (${ds.length})</button>` : ""}</div></details>`;
 }
 /* ================= Rangement automatique (seulement ce dont l'appli est sûre) ================= */
@@ -6691,7 +6700,7 @@ function resumeDrive() {
 function sectionDriveReglages() {
   const ok = DRIVEG.etat === "oui", n = choisisDrive().length, R = racinesPartagees();
   if (R.length) return `<p class="note">✅ L'appli lit ${R.length > 1 ? "ces dossiers" : "ce dossier"}, <b>sous-dossiers compris</b>, en lecture seule. Rien d'autre de ton Drive.</p>
-    <ul class="todo plat">${R.map(r => `<li><span class="ico" aria-hidden="true">📁</span><span class="tx">${esc(r.nom || "Dossier")}</span></li>`).join("")}</ul>
+    <ul class="todo plat">${R.map(r => `<li><span class="ico" aria-hidden="true">📁</span><span class="tx">${esc(r.nom || "Dossier")}</span></li>`).join("")}</ul>${comptesGoogle()}
     <div class="row" style="margin-top:10px"><button class="small primary" onclick="go('docs')">Voir mes documents</button><button class="small" onclick="go('docs');setTimeout(ajouterDossierPartage,300)">+ Partager un autre dossier</button></div>
     <details class="pq"><summary>Choisir aussi des fichiers un par un (facultatif)</summary><p class="note">Seulement pour un fichier rangé hors de ces dossiers.</p><div class="row">${ok ? `<button class="small ghost" onclick="debrancherDrive()">Débrancher les fichiers un par un</button>` : `<button class="small ghost" onclick="connecterDrive('choix')">Choisir des fichiers un par un</button>`}</div></details>`;
   return `${ok ? `<p class="note">✅ Connecté${DRIVEG.adresse ? ` avec <b>${esc(DRIVEG.adresse)}</b>` : ""}. </p>${DRIVEG.mode === "complet" ? `<p class="drive-avant">Accès en lecture à <b>tout</b> ton Drive (essai). Plus utile avec le partage de dossiers (Docs › + Ajouter un dossier) : touche <b>Débrancher</b> pour le retirer.</p>` : ""}${blocConnecte()}${DRIVEG.large ? `<p class="drive-avant">⚠️ Ton Drive est branché avec un accès large (lecture de tout le Drive). Touche <b>Débrancher</b> puis <b>Connecter</b> pour ne donner accès qu'à ce que tu choisis.</p>` : ""}` : DRIVEG.perdu ? `<p class="note">⚠️ La connexion à ton Drive s'est arrêtée (accès retiré ou expiré). Reconnecte-la.</p>` : ""}
@@ -6757,7 +6766,7 @@ async function fnPartage(action, extra, brut) {
 function chargerPartage() {
   if (!SB || MCP) return Promise.resolve();
   return fnPartage("config").then(c => {
-    const avant = PARTAGE.etat; PARTAGE = Object.assign(PARTAGE, { etat: c.pret ? "pret" : "absent", adresse: c.adresse || "" });
+    const avant = PARTAGE.etat; PARTAGE = Object.assign(PARTAGE, { etat: c.pret ? "pret" : "absent", adresse: c.adresse || "", adresses: c.adresses || [], client_id: c.client_id || "" });
     if (avant === "inconnu" && PARTAGE.etat === "pret") setTimeout(() => attendreRolePuisLire(), 1500);
     if (pageCourante() === "docs") render();
   }, () => { PARTAGE.etat = "absent"; });
@@ -6772,8 +6781,10 @@ async function indexerAppli(silencieux) {
   if (PARTAGE.etat === "pret" && DOCS === D) {
     if (D.etat !== "erreur") D.etat = "chargement";
     try {
-      const p = await fnPartage("lister"), ids = new Set(D.fichiers.map(f => f.id));
-      PARTAGE.racines = p.racines || []; PARTAGE.lu = true;
+      const p = await fnPartage("lister", { espace: ESPACE }), ids = new Set(D.fichiers.map(f => f.id));
+      if (DOCS !== D) return D;
+      await attribuerLibres(p);
+      PARTAGE.racines = (p.racines || []).filter(r => !r.espace || r.espace === ESPACE); PARTAGE.lu = true;
       Object.assign(D.dossiers, p.dossiers || {}); (p.fichiers || []).forEach(f => { if (!ids.has(f.id)) D.fichiers.push(f); });
       const caches = new Set(S.sci.driveMasques || []); D.fichiers = D.fichiers.filter(f => !caches.has(f.id)); D.incomplet = !!p.incomplet;
     } catch (e) { D.errPartage = e.message; }
@@ -6783,7 +6794,78 @@ async function indexerAppli(silencieux) {
   D.n = D.fichiers.length; render();
   return D;
 }
-const racinesPartagees = () => (PARTAGE.racines || []).filter(r => r.dossier);
+const racinesPartagees = () => (PARTAGE.racines || []).filter(r => r.dossier && !r.libre);
+/* ===== Plusieurs espaces : chaque dossier partagé appartient à un espace =====
+   Un seul espace : tout va dedans. Sinon, un dossier déjà utilisé ici (document rangé, dossier relié à un logement) reste ici ;
+   les autres attendent qu'on dise "pour quel espace ?" : rien n'est lu ni rangé avant. */
+const ESP_ATTRIB = {};
+async function attribuer(ids, espace) {
+  ids = ids.filter(Boolean); if (!ids.length) return true;
+  const r = await SB.from("partage_dossiers").upsert(ids.map(dossier_id => ({ dossier_id, espace_id: espace })));
+  if (r.error) { toast("Impossible de ranger ce dossier : " + r.error.message); return false; }
+  ids.forEach(id => { ESP_ATTRIB[id] = espace; }); return true;
+}
+async function attribuerLibres(p) {
+  const libres = (p.racines || []).filter(r => !r.espace); PARTAGE.libres = [];
+  if (!libres.length) return;
+  const autres = ESPACES.filter(e => e.id !== ESPACE).length, utilises = new Set([...S.fichiers.map(x => x.driveId || (x.url || "").match(/[-\w]{25,}/)?.[0]).filter(Boolean), ...Object.keys(S.sci.driveLogements || {})]);
+  const dansIci = r => utilises.has(r.id) || (p.fichiers || []).some(f => (f.racine === r.id || f.id === r.id) && utilises.has(f.id)) || Object.entries(p.dossiers || {}).some(([id, d]) => (d.ancetres || []).includes(r.id) && utilises.has(id));
+  const ici = libres.filter(r => !autres || PARTAGE.nouveaux && PARTAGE.nouveaux.has(r.id) || dansIci(r));
+  if (ici.length && await attribuer(ici.map(r => r.id), ESPACE)) ici.forEach(r => { r.espace = ESPACE; });
+  const reste = new Set(libres.filter(r => !r.espace).map(r => r.id));
+  if (!reste.size) return;
+  /* pas encore attribués : on les montre à part, sans les lire ni les ranger */
+  (p.racines || []).forEach(r => { if (reste.has(r.id)) r.libre = true; });
+  PARTAGE.libres = (p.racines || []).filter(r => r.libre).map(r => ({ id: r.id, nom: r.nom, dossier: r.dossier, n: (p.fichiers || []).filter(f => f.racine === r.id).length }));
+  p.fichiers = (p.fichiers || []).filter(f => !reste.has(f.racine || f.id));
+  Object.keys(p.dossiers || {}).forEach(id => { const d = p.dossiers[id]; if (reste.has(id) || (d.ancetres || []).some(a => reste.has(a))) delete p.dossiers[id]; });
+}
+const nomEspace = id => (ESPACES.find(e => e.id === id) || {}).nom || "un autre espace";
+async function choisirEspaceDossier(id, espace) {
+  if (!estProprio()) { toast(msgProprio("ranger les dossiers de l'espace")); return; }
+  if (!await attribuer([id], espace)) return;
+  const nom = ((PARTAGE.libres || []).find(r => r.id === id) || (DOCS.dossiers || {})[id] || {});
+  PARTAGE.libres = (PARTAGE.libres || []).filter(r => r.id !== id);
+  if (espace === ESPACE) toast(`📁 "${nom.nom || nom.titre || "Dossier"}" est dans cet espace : lecture en cours…`);
+  else toastActions(`📁 "${nom.nom || nom.titre || "Dossier"}" va dans ${nomEspace(espace)}. Il n'apparaît plus ici.`, [["Annuler", `choisirEspaceDossier('${id}','${ESPACE}')`], [`Ouvrir ${esc(nomEspace(espace)).replace(/'/g, "&#39;")}`, `ouvrirEspace('${espace}')`]]);
+  if (S.sci.driveLogements && S.sci.driveLogements[id] && espace !== ESPACE) { const L = Object.assign({}, S.sci.driveLogements); delete L[id]; S.sci.driveLogements = L; save(); }
+  if (espace !== ESPACE) { const dedans = new Set((DOCS.fichiers || []).filter(f => f.id === id || f.racine === id || (f.ancetres || []).includes(id)).map(f => f.id));
+    const deja = S.fichiers.filter(x => dedans.has(x.driveId || ((x.url || "").match(/[-\w]{25,}/) || [""])[0]));
+    if (deja.length) setTimeout(() => toastActions(`${deja.length} document${deja.length > 1 ? "s" : ""} de ce dossier ${deja.length > 1 ? "étaient rangés" : "était rangé"} ici.`, [["Les retirer d'ici", `retirerDocuments('${deja.map(x => x.id).join(",")}')`]]), 3500); }
+  DOCS = { etat: "vide", fichiers: [], dossiers: {} }; await lectureDriveFond("dossier"); render();
+}
+/* Carte en haut de Documents : "📁 Immeuble Lyon : pour quel espace ?" — un bouton par espace */
+function carteDossiersLibres() {
+  const L = (PARTAGE.libres || []).filter(r => ESP_ATTRIB[r.id] === undefined);
+  if (!L.length || !estProprio() || LECTURE) return "";
+  const esp = [ESPACES.find(e => e.id === ESPACE), ...ESPACES.filter(e => e.id !== ESPACE)].filter(Boolean);
+  return `<section class="card esp-libres"><h2 class="sec">${L.length > 1 ? `${L.length} dossiers` : "Un dossier"} partagé${L.length > 1 ? "s" : ""} : pour quel espace ?</h2>
+    ${L.map(r => `<div class="esp-libre"><p><b>${r.dossier ? "📁" : "📄"} ${esc(r.nom || "Dossier")}</b>${r.dossier ? ` <small>${r.n} fichier${r.n > 1 ? "s" : ""}</small>` : ""}</p>
+      <div class="row">${esp.map((e, i) => `<button class="small ${i ? "" : "primary"}" onclick="choisirEspaceDossier('${r.id}','${e.id}')">${i ? "" : "Ici : "}${esc(e.nom)}</button>`).join("")}</div></div>`).join("")}
+    <details class="pq"><summary>Pourquoi ?</summary><p class="note">Tu as plusieurs espaces : chaque dossier va dans un seul, pour que les papiers d'une SCI ne se rangent jamais dans une autre. Un dossier qui mélange plusieurs SCI : choisis "Ici", puis envoie ses sous-dossiers ailleurs dans "Dossiers et logements".</p></details></section>`;
+}
+/* Un autre compte Google (celui de la SCI…) : connexion Google juste pour prouver que l'adresse est à toi, rien d'autre n'est gardé */
+async function ajouterCompteGoogle() {
+  if (!SB) return;
+  closeOverlay();
+  try { if (!PARTAGE.client_id) await chargerPartage(); await chargerGIS(); } catch (e) { toast("Google ne répond pas. Réessaie."); return; }
+  if (!PARTAGE.client_id) { toast("La connexion Google n'est pas installée."); return; }
+  const cl = google.accounts.oauth2.initCodeClient({ client_id: PARTAGE.client_id, scope: "openid email", ux_mode: "popup", select_account: true,
+    callback: async r => {
+      if (!r || !r.code) { toast("Annulé."); return; }
+      try { const j = await fnPartage("adresse", { code: r.code }); await chargerPartage();
+        toastActions(`✅ ${j.adresse} ajouté. Partage maintenant ton dossier depuis ce compte.`, [["Comment faire", "ajouterDossierPartage()"]]);
+      } catch (e) { toast(e.message); }
+    },
+    error_callback: e => toast(e && e.type === "popup_closed" ? "Annulé." : "Google n'a pas pu s'ouvrir. Autorise les fenêtres pour ce site, puis réessaie.") });
+  cl.requestCode();
+}
+async function retirerCompteGoogle(a) {
+  const r = await SB.from("google_adresses").delete().eq("adresse", a);
+  if (r.error) { toast(r.error.message); return; }
+  await chargerPartage(); DOCS = { etat: "vide", fichiers: [], dossiers: {} }; render(); toast(`${a} retiré. Ses dossiers partagés ne sont plus lus.`);
+}
+const comptesGoogle = () => `<div class="comptes-g"><p class="note">Comptes Google reconnus : ${(PARTAGE.adresses || []).map(a => `<b>${esc(a)}</b>`).join(", ") || "…"}</p><button type="button" class="small" onclick="ajouterCompteGoogle()">+ Un autre compte Google</button></div>`;
 /* Fichier du Drive : par le serveur s'il vient d'un dossier partagé, sinon avec la connexion Google */
 async function blobDrive(x) {
   if (x.partage) return fnPartage("fichier", { id: x.id }, true);
@@ -6807,19 +6889,21 @@ function ajouterDossierPartage() {
       <li>Reviens ici et touche <b>C'est fait</b>.</li>
     </ol>
     <p><a class="btn" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener">Ouvrir mon Drive ↗</a></p>
-    <p class="note">Partage depuis ton compte Google, le même que pour te connecter à l'appli. Pour arrêter : dans ton Drive, <b>Partager</b> › retire l'adresse de l'appli.</p></div>`,
+    ${comptesGoogle()}
+    <p class="note">Pour arrêter : dans ton Drive, <b>Partager</b> › retire l'adresse de l'appli.</p></div>`,
     () => { closeOverlay(); verifierPartage(); return false; }, { ok: "C'est fait", lecture: true });
 }
 async function verifierPartage() {
-  const avant = new Set(racinesPartagees().map(r => r.id));
+  const avant = new Set([...racinesPartagees().map(r => r.id), ...(PARTAGE.racines || []).map(r => r.id)]);
+  PARTAGE.nouveaux = { has: id => !avant.has(id) }; /* ce qu'on vient de partager depuis cet espace va dans cet espace */
   toast("Je regarde ce que tu as partagé…");
   DOCS = { etat: "vide", fichiers: [], dossiers: {} }; view.docDossier = ""; go("docs");
-  const D = await indexerAppli();
+  const D = await indexerAppli(); PARTAGE.nouveaux = null;
   if (D.errPartage) { toast("Le Drive ne répond pas : " + D.errPartage); return; }
   const nouveaux = racinesPartagees().filter(r => !avant.has(r.id));
   if (nouveaux.length) { toast(`✅ ${nouveaux.map(r => `"${r.nom}"`).join(", ")} : ${nouveaux.reduce((n, r) => n + D.fichiers.filter(f => f.racine === r.id).length, 0)} fichiers lus. Lance l'analyse IA juste en dessous.`); setTimeout(() => { const el = document.querySelector(".ia-card"); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); }, 600); }
   else if (racinesPartagees().length) toast("Rien de nouveau. Si tu viens de partager, attends quelques secondes et touche Actualiser.");
-  else toastActions("Je ne vois encore aucun dossier partagé avec l'appli.", [["Revoir comment faire", "ajouterDossierPartage()"]]);
+  else toastActions("Je ne vois encore aucun dossier partagé avec l'appli.", [["Revoir comment faire", "ajouterDossierPartage()"], ["Il est sur un autre compte Google", "ajouterCompteGoogle()"]]);
   rangerAuto("dossier");
 }
 function retirerPartage(id) {
@@ -7196,7 +7280,7 @@ function pageDocsDrive() {
     <div class="row">${estProprio() && !LECTURE ? `<button class="small primary" onclick="go('ajouter-doc')">+ Ajouter un document</button>` : ""}${racinesPartagees().length || DRIVEG.etat === "oui" ? `<button class="small" onclick="indexerDrive()">↻ Actualiser</button>` : ""}</div></div>
   ${recherche("Chercher : bail, taxe, nom d'un locataire…")}
   ${q ? `<div id="docres">${listeDocs(chercherDocsDans(q, ""), lim)}</div>` : `
-  ${sectionPropositionsDrive()}
+  ${carteDossiersLibres()}${sectionPropositionsDrive()}
   <section><h2 class="sec">Par logement</h2><div class="doc-tuiles">
     ${parBien.map(({ bi, n }) => `<a class="doc-tuile" href="#docs-${bi.id}~-1"><span class="t-ico" aria-hidden="true">🏠</span><b>${esc(bi.nom)}</b><small>${n} document${n > 1 ? "s" : ""}</small>${(() => { if (LECTURE) return ""; const m = aCompleterBien(bi).L.length; return m ? `<small class="t-manque">⚠️ ${m} info${m > 1 ? "s" : ""} à compléter</small>` : `<small class="t-ok">✓ fiche complète</small>`; })()}</a>`).join("")}
     ${nonRanges.length && !charge ? `<button type="button" class="doc-tuile a-ranger" onclick="view.docVue='nonranges';view.docQ='';render();scrollTo(0,0)"><span class="t-ico" aria-hidden="true">📥</span><b>Pas encore rangés</b><small>${nonRanges.length} document${nonRanges.length > 1 ? "s" : ""}</small></button>` : ""}
@@ -8317,6 +8401,7 @@ function pagePartageRecu() {
 }
 function pageAjouterDoc() {
   return `<a class="back" href="#docs">← Documents</a><div class="head"><div><h1>📸 Facture ou document</h1><p>Prends-le en photo ou choisis le fichier : l'appli le range toute seule.</p></div></div>
+  ${SB && ESPACES.length > 1 ? `<p class="esp-cible">Va dans <b>${esc((ESPACES.find(e => e.id === ESPACE) || {}).nom || "cet espace")}</b> <button type="button" class="small ghost" onclick="choisirEspace()">Changer d'espace</button></p>` : ""}
   <section class="card ajout-doc"><label class="btn primary big">📸 Prendre en photo<input type="file" accept="image/*" capture="environment" hidden onchange="ajouterDocRapide(this)"></label>
     <label class="btn big">📄 Choisir un fichier (PDF, photo)<input type="file" accept="image/*,application/pdf" multiple hidden onchange="ajouterDocRapide(this)"></label>
     ${dropboxDispo() ? `<button type="button" class="btn big btn-dropbox" onclick="dropboxVersBoite()">📦 Depuis Dropbox</button>` : ""}

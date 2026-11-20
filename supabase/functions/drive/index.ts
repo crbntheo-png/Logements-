@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       // Retirer l'accès chez Google retire toute l'autorisation de l'appli (Gmail compris) : seulement si Gmail n'est pas branché avec Google
       const { data: gm } = await admin.from("gmail_comptes").select("mode").eq("user_id", moi).maybeSingle();
       const { data: cpt } = await admin.from("drive_comptes").select("mode").eq("user_id", moi).maybeSingle();
-      if (rt && (cpt?.mode === "complet" || gm?.mode !== "google")) // projet Drive à part : le retirer ne touche pas à Gmail await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(rt), { method: "POST" }).catch(() => {});
+      if (rt && (cpt?.mode === "complet" || gm?.mode !== "google")) /* projet Drive à part : le retirer ne touche pas à Gmail */ await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(rt), { method: "POST" }).catch(() => {});
       await admin.rpc("drive_oublier", { u: moi });
       return rep({ ok: true });
     }

@@ -43,6 +43,22 @@ async function racinesDe(adresses: Set<string>) {
   return L.filter(f => [f.sharingUser?.emailAddress, ...(f.owners || []).map((o: any) => o.emailAddress)].some(a => a && adresses.has(String(a).toLowerCase())));
 }
 
+// == filtrerEspace ==
+// Plusieurs espaces : chaque dossier appartient à un espace (le dossier attribué le plus proche décide).
+// On ne rend que ce qui est à cet espace ou pas encore attribué ; sans espace demandé (ancienne appli), tout.
+function filtrerEspace(racines: any[], dossiers: Record<string, any>, fichiers: any[], A: Record<string, string> | null, espace: string) {
+  let R = racines.map(r => ({ id: r.id, nom: r.name, dossier: r.mimeType === DOSSIER, espace: null as string | null }));
+  if (!A || !espace) return { R, D: dossiers, F: fichiers };
+  const espaceDe = (chaine: string[]) => { for (let i = chaine.length - 1; i >= 0; i--) if (A[chaine[i]]) return A[chaine[i]]; return null; };
+  const ici = (e: string | null) => !e || e === espace;
+  R = R.map(r => ({ ...r, espace: A[r.id] || null }));
+  const D: Record<string, any> = {}; Object.entries(dossiers).forEach(([id, d]) => { if (ici(espaceDe([...(d.ancetres || []), id]))) D[id] = d; });
+  const F = fichiers.filter(f => ici(espaceDe([...(f.ancetres || []), ...(f.racine ? [] : [f.id])])));
+  R = R.filter(r => r.espace === null || r.espace === espace || Object.values(D).some((d: any) => (d.ancetres || []).includes(r.id)));
+  return { R, D, F };
+}
+// == fin ==
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
@@ -52,13 +68,28 @@ Deno.serve(async (req) => {
     if (!u?.user) return rep({ erreur: "Connexion requise" }, 401);
     const c = await req.json().catch(() => ({}));
     const cfg = sa();
-    if (c.action === "config") return rep({ pret: !!cfg, adresse: cfg?.client_email || "" });
-    if (!cfg) return rep({ erreur: "Le partage de dossiers n'est pas encore installé sur le serveur." }, 400);
 
-    // Les adresses Google de la personne : connexion, identités Google, Drive et Gmail branchés
+    // Un autre compte Google de la personne (celui de la SCI…) : la connexion Google prouve que l'adresse est à elle
+    if (c.action === "adresse") {
+      const ID = Deno.env.get("GOOGLE_CLIENT_ID") || "", SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") || "";
+      if (!ID || !SECRET) return rep({ erreur: "La connexion Google n'est pas installée sur le serveur." }, 400);
+      const r = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: ID, client_secret: SECRET, code: String(c.code || ""), grant_type: "authorization_code", redirect_uri: "postmessage" }) });
+      const j = await r.json().catch(() => ({}));
+      if (!j.access_token) return rep({ erreur: "Google a refusé la connexion (" + (j.error_description || j.error || r.status) + ")" }, 400);
+      const p = await (await fetch("https://www.googleapis.com/oauth2/v3/userinfo", { headers: { Authorization: "Bearer " + j.access_token } })).json().catch(() => ({}));
+      await fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(j.access_token), { method: "POST" }).catch(() => {}); // on ne garde rien : seule l'adresse compte
+      if (!p.email || p.email_verified === false) return rep({ erreur: "Google n'a pas donné l'adresse du compte." }, 400);
+      const adresse = String(p.email).toLowerCase();
+      await admin.from("google_adresses").upsert({ user_id: u.user.id, adresse });
+      return rep({ ok: true, adresse });
+    }
+
+    // Les adresses Google de la personne : connexion, identités Google, Drive et Gmail branchés, autres comptes ajoutés
     const adresses = new Set<string>([u.user.email, ...(u.user.identities || []).map((i: any) => i.identity_data?.email)].filter(Boolean).map((x: string) => x.toLowerCase()));
-    const [{ data: dr }, { data: gm }] = await Promise.all([admin.from("drive_comptes").select("adresse").eq("user_id", u.user.id).maybeSingle(), admin.from("gmail_comptes").select("adresse").eq("user_id", u.user.id).maybeSingle()]);
-    [dr?.adresse, gm?.adresse].filter(Boolean).forEach(a => adresses.add(String(a).toLowerCase()));
+    const [{ data: dr }, { data: gm }, { data: autres }] = await Promise.all([admin.from("drive_comptes").select("adresse").eq("user_id", u.user.id).maybeSingle(), admin.from("gmail_comptes").select("adresse").eq("user_id", u.user.id).maybeSingle(), admin.from("google_adresses").select("adresse").eq("user_id", u.user.id)]);
+    [dr?.adresse, gm?.adresse, ...(autres || []).map((x: any) => x.adresse)].filter(Boolean).forEach(a => adresses.add(String(a).toLowerCase()));
+    if (c.action === "config") return rep({ pret: !!cfg, adresse: cfg?.client_email || "", client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "", adresses: [...adresses] });
+    if (!cfg) return rep({ erreur: "Le partage de dossiers n'est pas encore installé sur le serveur." }, 400);
 
     if (c.action === "lister") {
       const racines = await racinesDe(adresses);
@@ -82,7 +113,11 @@ Deno.serve(async (req) => {
           });
         }));
       }
-      return rep({ ok: true, adresse: cfg.client_email, racines: racines.map(r => ({ id: r.id, nom: r.name, dossier: r.mimeType === DOSSIER })), dossiers, fichiers, incomplet: file.length > 0 });
+      // Plusieurs espaces : chaque dossier appartient à un espace (le dossier attribué le plus proche décide) ; on ne rend que ceux de cet espace et ceux pas encore attribués
+      let A: Record<string, string> | null = null;
+      if (c.espace) { const { data: cl } = await admin.from("partage_dossiers").select("dossier_id, espace_id").eq("user_id", u.user.id); A = {}; (cl || []).forEach((x: any) => { A![x.dossier_id] = x.espace_id; }); }
+      const { R, D, F } = filtrerEspace(racines, dossiers, fichiers, A, c.espace);
+      return rep({ ok: true, adresse: cfg.client_email, racines: R, dossiers: D, fichiers: F, incomplet: file.length > 0 });
     }
 
     if (c.action === "fichier") {
