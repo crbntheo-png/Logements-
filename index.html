@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Gestion SCI</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -485,7 +485,7 @@ button.suite, button.dpe-chip { text-align: left !important; justify-content: fl
 .bienvenue h2 { margin: 0; }
 .bienvenue > p { margin: 0; }
 .a-completer .barre { margin: 6px 0 4px; }
-.pose-q { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 14px; padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--card, #fff); color: var(--muted); font: inherit; text-align: left; cursor: pointer; } .pose-q span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .q-ex { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; } .q-rep { background: var(--accent-soft, rgba(0,0,0,.04)); border-radius: 12px; padding: 12px 14px; margin: 8px 0; } .q-rep p { margin: 0 0 8px; line-height: 1.45; }
+.pose-q { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 14px; padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--card, #fff); color: var(--muted); font: inherit; text-align: left; cursor: pointer; } .pose-q span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .q-ex { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; } .q-moi { margin: 4px 0 6px auto; max-width: 85%; width: fit-content; background: var(--surface-2); border-radius: 12px; padding: 8px 12px; font-weight: 600; } .q-rep { background: var(--accent-soft, rgba(0,0,0,.04)); border-radius: 12px; padding: 12px 14px; margin: 8px 0; } .q-rep p { margin: 0 0 8px; line-height: 1.45; }
 .suivi-bien h3 { margin: 14px 0 6px; font-size: .9rem; color: var(--muted); } .sb-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .sb-s { background: var(--bg, rgba(0,0,0,.03)); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 0; } .sb-s b { font-size: 1.05rem; overflow-wrap: anywhere; } .sb-s span { font-size: .8rem; color: var(--muted); } .sb-s small { font-size: .72rem; color: var(--muted); } .sb-s.bad b { color: var(--bad); } .sb-s.ok b { color: var(--ok, inherit); } .sb-s.warn b { color: var(--accent); } .sb-dates { list-style: none; margin: 0; padding: 0; } .sb-dates li { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: .9rem; } .sb-dates li:first-child { border-top: 0; } .sb-d { flex: none; color: var(--muted); min-width: 74px; }
 .a-completer .acts-c { display: flex; flex-direction: column; align-items: stretch; gap: 4px; flex: none; } .a-completer .pas-besoin { font-size: .8rem; padding: 4px 8px; min-height: 0; color: var(--muted); }
 .a-completer ul.todo li .tx small { display: block; }
@@ -634,7 +634,8 @@ form.f .full { grid-column: 1 / -1; }
 @media (max-width: 560px) {
   form.f { grid-template-columns: minmax(0, 1fr); }
   .overlay { align-items: flex-end; padding: 0; }
-  .modal { width: 100%; border-radius: 24px 24px 0 0; max-height: 94dvh; padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+  .modal { width: 100%; border-radius: 24px 24px 0 0; max-height: calc(100% - 3dvh); padding-bottom: calc(22px + env(safe-area-inset-bottom, 0px)); }
+  .overlay.clavier .modal { padding-bottom: 22px; }
   .modal .mh::before { content: ""; position: absolute; top: 8px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 4px; background: var(--surface-3); }
 }
 label.fl { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; font-weight: 700; color: var(--ink-2); }
@@ -5037,6 +5038,18 @@ document.addEventListener("click", e => {
   FOND.avert = 0;
   if (o.querySelector('.docwrap [onclick="fermerDoc()"]') && typeof fermerDoc === "function") fermerDoc(); else closeOverlay();
 });
+/* Clavier ouvert (téléphone) : la fenêtre se pose AU-DESSUS du clavier (rien de caché dessous) et le champ touché reste visible.
+   Android : la balise viewport "interactive-widget=resizes-content" rétrécit déjà la page ; iPhone : on suit la partie visible de l'écran. */
+(function () {
+  const vv = window.visualViewport; if (!vv) return;
+  const ajuster = () => { const o = document.getElementById("overlay"); if (!o) return;
+    const cache = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    if (o.hidden || cache < 80) { o.style.top = o.style.height = o.style.bottom = ""; o.classList.remove("clavier"); return; }
+    o.style.top = vv.offsetTop + "px"; o.style.height = vv.height + "px"; o.style.bottom = "auto"; o.classList.add("clavier"); };
+  vv.addEventListener("resize", ajuster); vv.addEventListener("scroll", ajuster);
+  document.addEventListener("focusin", ev => { const el = ev.target; if (!el.closest || !el.closest("#overlay") || !/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    setTimeout(() => { ajuster(); el.scrollIntoView({ block: "nearest" }); }, 320); });
+})();
 function closeOverlay() { fermerSigPad(); const o = document.getElementById("overlay"); o.hidden = true; o.innerHTML = ""; if (pendingRender) { pendingRender = false; } render(); }
 document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (document.getElementById("sigpad")) { fermerSigPad(); return; } if (!document.getElementById("overlay").hidden) closeOverlay(); });
 function confirmer(msg, yes) {
@@ -6676,21 +6689,23 @@ function contexteQuestion() {
 function poserQuestion(q) {
   if (!peutQuestion()) { toast("L'assistant est réservé au propriétaire de l'espace, dans l'appli en ligne."); return; }
   const reste = IA.credits && !IA.credits.illimite && IA.credits.q_restantes != null ? IA.credits.q_restantes : null;
-  modal("💬 Pose ta question", `<div class="full"><label class="fl full">Ta question<textarea name="q" rows="3" maxlength="600" placeholder="Ex. : qui est en retard ce mois-ci ?">${esc(q || "")}</textarea></label>
-    <div class="q-ex">${EXEMPLES_Q.map(x => `<button type="button" class="chip" onclick="const t=document.querySelector('#mform [name=q]');t.value=this.textContent;t.focus()">${esc(x)}</button>`).join("")}</div>
-    <div id="q_rep" aria-live="polite"></div>
+  modal("💬 Pose ta question", `<div class="full"><div id="q_rep" aria-live="polite"></div>
+    <div class="q-ex">${EXEMPLES_Q.map(x => `<button type="button" class="chip" onclick="demanderReponse(this.textContent)">${esc(x)}</button>`).join("")}</div>
+    <label class="fl full">Ou écris ta question<textarea name="q" rows="2" maxlength="600" placeholder="Ex. : qui est en retard ce mois-ci ?" enterkeyhint="send" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();demanderReponse(this.value)}">${esc(q || "")}</textarea></label>
     <details class="pli-mini"><summary>Pourquoi ?</summary><p class="note">L'assistant lit tes logements, tes locataires et tes loyers dans l'appli (jamais tes documents) et répond avec les règles de la location. Il peut se tromper : vérifie avant d'agir.${reste != null ? ` Il te reste ${plur(reste, "question")} ce mois-ci.` : ""}</p></details></div>`,
-    d => { demanderReponse(d.q); return false; }, { ok: "Demander", lecture: true, after: f => { setTimeout(() => f.q.focus(), 50); if (q) demanderReponse(q); } });
+    d => { demanderReponse(d.q); return false; }, { ok: "Demander", lecture: true, after: () => { if (q) demanderReponse(q); } });
 }
 async function demanderReponse(q) {
   const zone = document.getElementById("q_rep"), btn = document.querySelector("#mform > .full.row button.primary"); if (!zone || !String(q || "").trim()) return;
-  zone.innerHTML = `<p class="note"><span class="spin" aria-hidden="true"></span> Je regarde tes données…</p>`; if (btn) btn.disabled = true;
+  const t0 = document.querySelector("#mform [name=q]"); if (t0) t0.blur(); // le clavier se range : la réponse se lit en entier
+  zone.innerHTML = `<p class="q-moi">${esc(q)}</p><p class="note"><span class="spin" aria-hidden="true"></span> Je regarde tes données…</p>`; if (btn) btn.disabled = true;
   try {
     const r = await fnIA({ action: "question", espace: ESPACE, question: q, contexte: contexteQuestion() });
-    zone.innerHTML = `<div class="q-rep"><p>${esc(r.reponse)}</p>${(r.boutons || []).length ? `<div class="row">${r.boutons.map((b, i) => `<button type="button" class="small ${i ? "" : "primary"}" onclick="closeOverlay();go('${esc(b.page)}')">${esc(b.texte)}</button>`).join("")}</div>` : ""}</div>`;
+    zone.innerHTML = `<p class="q-moi">${esc(q)}</p><div class="q-rep"><p>${esc(r.reponse)}</p>${(r.boutons || []).length ? `<div class="row">${r.boutons.map((b, i) => `<button type="button" class="small ${i ? "" : "primary"}" onclick="closeOverlay();go('${esc(b.page)}')">${esc(b.texte)}</button>`).join("")}</div>` : ""}</div>`;
     const t = document.querySelector("#mform [name=q]"); if (t) { t.value = ""; t.placeholder = "Une autre question ?"; }
-  } catch (e) { zone.innerHTML = `<p class="note">⚠️ ${esc(e.message)}</p>`; }
+  } catch (e) { zone.innerHTML = `<p class="q-moi">${esc(q)}</p><p class="note">⚠️ ${esc(e.message)}</p>`; }
   finally { if (btn) btn.disabled = false; }
+  zone.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 async function fnIA(corps) {
   const s = (await SB.auth.getSession()).data.session;

@@ -79,6 +79,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 20/11/2026 — clavier du téléphone qui cachait le bas des fenêtres
+
+- Retour de Théo (Android, capture) : dans "Pose ta question", le clavier cachait les exemples et le bouton. Cause générale : sur téléphone, les fenêtres sont posées en bas de l'écran et le clavier passait par-dessus (toutes les fenêtres avec une case à remplir).
+- Corrigé pour toutes les fenêtres : balise viewport `interactive-widget=resizes-content` (Android : la page rétrécit, la fenêtre remonte au-dessus du clavier) ; iPhone : la fenêtre suit la partie visible de l'écran (`visualViewport`, classe `.overlay.clavier`) ; le champ touché est remis en vue ; le bouton du bas (déjà collant) reste visible.
+- "Pose ta question" : plus de clavier à l'ouverture ; réponse en haut (la question en bulle, la réponse dessous), puis les exemples (un toucher pose la question tout de suite), puis "Ou écris ta question" (Entrée envoie, le clavier se range pour lire la réponse).
+- Test100 (nouveau : Android et iPhone simulés, clavier de 336 px) OK. Pas vérifié sur un vrai téléphone.
+
 ### 20/11/2026 (nuit, suite) — assistant "Pose ta question" (feuille de route n° 8)
 
 - Appli : bouton "💬 Pose ta question" en haut de l'accueil et de la page "Ce que l'appli fait pour toi" (propriétaire seulement, appli en ligne). Fenêtre : la question + 4 exemples ; réponse en 1 à 4 phrases + 0 à 3 boutons qui ouvrent la bonne page (fiche du locataire, du logement, À faire, Loyers…) ; "Pourquoi ?" replié (ce qui est lu, peut se tromper, questions restantes).
