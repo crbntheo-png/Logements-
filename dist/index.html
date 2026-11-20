@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "c40e665", "date": "2026-11-20T20:38"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "281f245", "date": "2026-11-20T21:18"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -512,6 +512,9 @@ button.suite, button.dpe-chip { text-align: left !important; justify-content: fl
 .a-completer .barre { margin: 6px 0 4px; }
 .a-completer.replie { padding-top: 0; padding-bottom: 0; } .a-completer.replie > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 0; cursor: pointer; list-style: none; } .a-completer.replie > summary::-webkit-details-marker { display: none; } .a-completer.replie > summary h2 { margin: 0; font-size: 1rem; } .a-completer.replie[open] > summary .chev { transform: rotate(90deg); } .a-completer.replie > .todo { margin-bottom: 14px; }
 .ou-ranger { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .ou-ranger button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 14px 12px; min-height: 64px; text-align: left; white-space: normal; } .ou-ranger button b, .ou-ranger button small { text-align: left; align-self: stretch; } .ou-ranger button small { font-weight: 500; opacity: .8; font-size: .78rem; } @media (max-width: 360px) { .ou-ranger { grid-template-columns: 1fr; } }
+.decl-2044 h3 { margin: 16px 0 6px; font-size: .92rem; } .decl { width: 100%; border-collapse: collapse; } .decl td { padding: 8px 4px; border-top: 1px solid var(--line); vertical-align: top; } .decl tr:first-child td { border-top: 0; } .decl .sub { font-size: .8rem; color: var(--muted); }
+.case { display: inline-block; min-width: 38px; padding: 1px 6px; margin-right: 4px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: .82rem; text-align: center; }
+.decl-conseil { padding: 12px 14px; border-radius: 12px; background: var(--ok-soft); margin: 8px 0; line-height: 1.45; }
 .rel-guide { display: flex; flex-direction: column; gap: 10px; } .rel-quoi { margin: 0; line-height: 1.45; }
 .rel-ex { background: #fff; color: #1d2433; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 12px/1.35 Arial, sans-serif; box-shadow: var(--sh-1); }
 .rel-ex-h { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 11px; } .rel-ex table { width: 100%; border-collapse: collapse; }
@@ -2420,14 +2423,17 @@ function taches() {
     }
   });
   // 10. Calendrier de la SCI
-  const fisc = [
+  const fisc = estPerso() ? [
+    ["2044", `Déclarer tes loyers ${y - 1} (impôt sur le revenu)`, new Date(y, 4, 28), new Date(y, 3, 10), "L'appli a calculé les montants à recopier et te dit le régime le plus avantageux (micro-foncier ou réel). Date limite selon ton département, fin mai en général."],
+    ["tf", "Taxe foncière " + y, new Date(y, 9, 15), new Date(y, 8, 1), "Saisis-la pour chaque logement : l'appli calcule ce que chaque locataire doit pour les ordures ménagères."]
+  ] : [
     ["ag", "Assemblée générale : approuver les comptes " + (y - 1), new Date(y, 5, 30), new Date(y, 4, 1), "Obligatoire chaque année dans les 6 mois après la clôture. Rédiger le procès-verbal et le garder dans le registre."],
     ["2072", S.sci.regime === "IS" ? "Déclaration de résultats IS (2065) " + (y - 1) : "Déclaration 2072-S de la SCI pour " + (y - 1), new Date(y, 4, 20), new Date(y, 3, 10), S.sci.regime === "IS" ? "Liasse fiscale à déposer en ligne (souvent via l'expert-comptable)." : "À déposer en ligne sur impots.gouv (espace professionnel). Chaque associé reporte ensuite sa part sur sa 2044 / déclaration de revenus."],
     ["tf", "Taxe foncière " + y, new Date(y, 9, 15), new Date(y, 8, 1), "À payer par la SCI. Saisis-la pour chaque bien : l'appli calcule ce que chaque locataire doit pour les ordures ménagères."],
     ["cfe", "CFE " + y + " (si la SCI y est soumise)", new Date(y, 11, 15), new Date(y, 10, 15), "Location vide : en général non concernée sauf recettes ≥ 100 000 €. Location meublée : concernée."]
   ];
   if (GMAIL && GMAIL.mode !== "google") add({ key: "gmail-google", prio: "soon", date: TODAY, t: "Rebrancher ton Gmail avec Google", d: "Ton Gmail est branché avec un mot de passe d'application, qui ouvre toute ta boîte mail. La connexion Google ne permet que l'envoi : plus sûr, 1 minute.", acts: [["Rebrancher", "reglage('gmail')", "primary"]] });
-  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (k === "tf" && S.biens.length && S.biens.every(bi => taxeDe(bi.id, y))) return; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: k === "tf" ? [["Saisir", "taxeFonciere()", "primary"]] : [] }); });
+  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (k === "tf" && S.biens.length && S.biens.every(bi => taxeDe(bi.id, y))) return; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: k === "tf" ? [["Saisir", "taxeFonciere()", "primary"]] : k === "2044" ? [["Voir mes montants", `view.comptaOnglet='comptable';view.comptaAnnee=${y - 1};go('compta');setTimeout(()=>{const e=document.getElementById('decl2044');if(e)e.scrollIntoView({block:'start'})},300)`, "primary"]] : [] }); });
   // 10b. Part d'ordures ménagères à récupérer auprès des locataires
   (S.taxes || []).forEach(tx => tx.parts.filter(p => teomATraiter(tx, p)).forEach(p => { const b = bail(p.bailId); if (!b) return;
     add({ bailId: b.id, key: "teom-" + tx.id + p.bailId, prio: p.demandeLe ? "info" : "soon", date: TODAY, t: `Ordures ménagères ${tx.annee} : ${esc(b.nom)} doit ${eur(p.montant)}`,
@@ -4421,12 +4427,11 @@ function pageTous() {
 
 /* ================= Prochaines sorties : chacun dit ce qui l'intéresse ================= */
 const BIENTOT = [
-  ["assistant", "🤖", "Assistant IA « Pose ta question »", "« Combien me doit Jean ? », « Puis-je augmenter le loyer ? » : une réponse avec tes chiffres et la loi. Limité en crédits, comme les autres fonctions IA."],
   ["signature-distance", "✍️", "Signature électronique à distance", "Le locataire signe le bail ou l'avenant depuis chez lui, avec valeur légale. Service payant à l'acte."],
   ["prelevement", "💳", "Prélèvement automatique des loyers", "Le locataire signe un mandat une fois, le loyer est prélevé tout seul chaque mois (environ 2 € par loyer)."],
   ["recommande", "📮", "Lettre recommandée en ligne", "Mise en demeure ou congé envoyés en recommandé électronique, sans aller à la poste. Payant à l'envoi."],
   ["app-store", "📱", "L'appli dans l'App Store et le Play Store", "Une vraie appli à télécharger, en plus de celle qu'on installe depuis le navigateur."],
-  ["declaration", "🏛", "Déclaration 2072 et 2044 préremplies", "Les montants de ta déclaration calculés et présentés case par case, prêts à recopier sur impots.gouv."],
+  ["lmnp-reel", "🏛", "Meublé au régime réel (LMNP, liasse 2031)", "Amortissement du logement et des meubles calculé, liasse préremplie pour le comptable."],
 ];
 let ENVIES = null;
 async function chargerEnvies() {
@@ -4687,7 +4692,7 @@ function pageCompta() {
   </section>
   ${Object.keys(parCat).length ? `<section class="card"><h2>Par catégorie</h2><div class="table-wrap" style="border:0"><table><tbody>${Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${eur(v)}</td></tr>`).join("")}</tbody></table></div></section>` : ""}`,
     comptable: () => `<p class="note c-note">Pour préparer ta déclaration ou la donner à ton comptable. Rien d'obligatoire au quotidien.</p>
-  ${aideDeclaration(y, lignes, tot)}
+  ${aideDeclaration(y, lignes, tot)}${declaration2044(y)}
   ${sectionClassement(y)}${sectionEntrees(y)}${sectionCloture()}
   ${sectionPrets(y)}${sectionAvances()}`
   };
@@ -7689,6 +7694,66 @@ function docRegul(bailId, yy) {
 
 /* ================= Aide à la déclaration (2072 pour une SCI à l'IR) ================= */
 const CAT_2072 = { "Taxe foncière": "Impôts (taxe foncière hors ordures ménagères)", "Charges de copropriété": "Charges non récupérées", "Assurance propriétaire (PNO)": "Primes d'assurance", "Assurance loyers impayés": "Primes d'assurance", "Travaux d'entretien / réparation": "Travaux d'entretien, réparation, amélioration", "Travaux d'amélioration": "Travaux d'entretien, réparation, amélioration", "Intérêts d'emprunt": "Intérêts d'emprunt et assurance emprunteur", "Assurance emprunteur": "Intérêts d'emprunt et assurance emprunteur", "Frais bancaires": "Frais de gestion", "Honoraires (comptable, notaire, avocat…)": "Frais de gestion", "Diagnostics": "Frais de gestion", "Frais de gestion / annonces": "Frais de gestion", "Eau / électricité / gaz": "Charges non récupérées", "Autre": "À vérifier" };
+/* ================= Déclaration de revenus en nom propre : 2044 (location vide) et micro-BIC (meublé) =================
+   Revenus de l'année y, déclarés en mai y+1. Location vide → revenus fonciers (micro-foncier ou régime réel, formulaire 2044) ;
+   meublé → BIC (LMNP), régime micro (2042-C-PRO). Rien n'est envoyé : des montants à recopier, avec la règle en mots simples. */
+const MEUBLE_TYPES = new Set(["meuble", "etudiant", "mobilite"]);
+const estMeubleEn = (bi, y) => { const L = S.baux.filter(b => b.bienId === bi.id && String(b.dateEntree || "") <= y + "-12-31" && (!b.dateSortie || b.dateSortie >= y + "-01-01")); return L.length ? L.some(b => MEUBLE_TYPES.has(b.typeBail)) : bi.meuble === "meuble"; };
+const L2044 = { 221: "Frais d'administration et de gestion", 223: "Primes d'assurance", 224: "Travaux de réparation, d'entretien et d'amélioration", 227: "Taxe foncière (sans les ordures ménagères)", 229: "Charges de copropriété non récupérables", 250: "Intérêts d'emprunt et assurance emprunteur" };
+const CAT_2044 = { "Frais de gestion / annonces": 221, "Honoraires (comptable, notaire, avocat…)": 221, "Diagnostics": 221, "Assurance propriétaire (PNO)": 223, "Assurance loyers impayés": 223, "Travaux d'entretien / réparation": 224, "Travaux d'amélioration": 224, "Taxe foncière": 227, "Charges de copropriété": 229, "Intérêts d'emprunt": 250, "Assurance emprunteur": 250 };
+function calcul2044(y) {
+  const rec = recettes(y), couv = depensesCouvertes(), lots = S.biens.filter(b => !b.immeuble);
+  const F = lots.filter(b => !estMeubleEn(b, y)), M = lots.filter(b => estMeubleEn(b, y)), idF = new Set(F.map(b => b.id)), idM = new Set(M.map(b => b.id));
+  // une dépense d'un immeuble va avec ses lots (vides en général) ; une dépense "générale" va au foncier s'il n'y a pas de meublé
+  const versF = d => { if (idF.has(d.bienId)) return true; const bi = bien(d.bienId); if (bi && bi.immeuble) return lotsDe(bi.id).some(l => idF.has(l.id)); return !d.bienId && !M.length; };
+  const L = { 211: 0, 221: 0, 222: 20 * F.length, 223: 0, 224: 0, 227: 0, 229: 0, 250: 0 }, aVerifier = [];
+  F.forEach(b => { L[211] += (rec[b.id] || {}).loyers || 0; L[250] += interetsTableaux(y, b.id); });
+  S.biens.filter(b => b.immeuble && lotsDe(b.id).some(l => idF.has(l.id))).forEach(im => L[250] += interetsTableaux(y, im.id)); // prêt de l'immeuble
+  let chargesM = 0, recM = 0;
+  M.forEach(b => { recM += ((rec[b.id] || {}).loyers || 0) + ((rec[b.id] || {}).charges || 0); });
+  S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie) && !couv.has(d.id) && !d.recuperable).forEach(d => {
+    if (idM.has(d.bienId)) { chargesM += +d.montant || 0; return; }
+    if (!versF(d)) { aVerifier.push(d); return; }
+    const k = CAT_2044[d.categorie]; if (!k) { aVerifier.push(d); return; }
+    let m = +d.montant || 0;
+    if (k === 227 && d.taxeId) { const t = (S.taxes || []).find(x => x.id === d.taxeId); if (t && +t.teom) m = Math.max(0, m - +t.teom); }
+    L[k] += m;
+  });
+  Object.keys(L).forEach(k => L[k] = r2(L[k]));
+  const L215 = L[211], L240 = r2(L[221] + L[222] + L[223] + L[224] + L[227] + L[229]), L250 = L[250], L261 = r2(L215 - L240 - L250);
+  // déficit : la part due aux intérêts ne s'impute que sur les revenus fonciers des 10 ans suivants (4BB) ; le reste, sur le revenu global jusqu'à 10 700 € (4BC)
+  let c4BA = 0, c4BB = 0, c4BC = 0;
+  if (L261 >= 0) c4BA = L261;
+  else { const horsInterets = Math.min(L240, Math.max(0, L240 - Math.max(0, L215 - L250))), globalMax = 10700;
+    c4BC = r2(Math.min(globalMax, horsInterets)); c4BB = r2(-L261 - c4BC); }
+  const microOk = L215 > 0 && L215 <= 15000, baseMicro = r2(L215 * 0.7), baseReel = Math.max(0, L261);
+  const conseil = !L215 ? null : !microOk ? "reel" : baseReel - c4BC < baseMicro ? "reel" : "micro";
+  const microBIC = r2(recM * 0.5);
+  return { y, F, M, L, L215, L240, L250, L261, c4BA, c4BB, c4BC, microOk, baseMicro, baseReel, conseil, recM: r2(recM), chargesM: r2(chargesM), microBIC, aVerifier };
+}
+function declaration2044(y) {
+  if (!estPerso()) return "";
+  const D = calcul2044(y), an = y + 1, case_ = (c, t, v, aide) => `<tr><td><span class="case">${c}</span> ${t}${aide ? `<div class="sub">${aide}</div>` : ""}</td><td class="num"><b>${eur(v)}</b></td></tr>`;
+  if (!D.F.length && !D.M.length) return "";
+  const vide = D.F.length && D.L215 > 0, reel = D.conseil === "reel";
+  const bloc2042 = !vide ? "" : reel
+    ? `<table class="decl"><tbody>${D.c4BA ? case_("4BA", "Revenus fonciers imposables", D.c4BA) : ""}${D.c4BC ? case_("4BC", "Déficit qui baisse ton revenu global", D.c4BC, "Jusqu'à 10 700 € par an") : ""}${D.c4BB ? case_("4BB", "Déficit reporté sur tes revenus fonciers des 10 prochaines années", D.c4BB) : ""}</tbody></table>`
+    : `<table class="decl"><tbody>${case_("4BE", "Loyers bruts encaissés (micro-foncier)", D.L215, "L'abattement de 30 % est fait tout seul par les impôts")}</tbody></table>`;
+  const t2044 = `<table class="decl"><tbody>${case_("211", "Loyers bruts encaissés (sans les charges)", D.L[211])}
+    ${[221, 222, 223, 224, 227, 229].filter(k => D.L[k]).map(k => case_(k, k === 222 ? `Frais de gestion forfaitaires (20 € × ${D.F.length} logement${D.F.length > 1 ? "s" : ""})` : L2044[k], D.L[k])).join("")}
+    ${case_("240", "Total des frais et charges", D.L240)}${D.L250 ? case_("250", L2044[250], D.L250) : ""}${case_("261", D.L261 >= 0 ? "Revenu foncier" : "Déficit foncier", D.L261)}</tbody></table>`;
+  const texte = [vide ? (reel ? `Régime réel (2044) : ligne 211 = ${D.L[211]} ; 240 = ${D.L240} ; 250 = ${D.L250} ; 261 = ${D.L261}. Déclaration 2042 : ${D.c4BA ? "4BA = " + D.c4BA + " ; " : ""}${D.c4BC ? "4BC = " + D.c4BC + " ; " : ""}${D.c4BB ? "4BB = " + D.c4BB : ""}` : `Micro-foncier : case 4BE = ${D.L215}`) : "", D.M.length && D.recM ? `Meublé (2042-C-PRO) : case 5ND = ${D.recM}` : ""].filter(Boolean).join("\n");
+  return `<section class="card decl-2044" id="decl2044"><h2>🏛 Ta déclaration de revenus ${y}${cq("decl2044")}</h2>
+    <p class="note">À recopier en <b>mai ${an}</b> sur impots.gouv (Déclarer mes revenus), d'après ce qui est dans l'appli. Vérifie avant d'envoyer.</p>
+    ${vide ? `<div class="decl-conseil ${reel ? "reel" : "micro"}">👉 ${reel ? `<b>Le régime réel</b> est le plus avantageux : ${D.L261 >= 0 ? `tu es imposé sur ${eur(D.baseReel)} au lieu de ${eur(D.baseMicro)}` : `tu as un déficit de ${eur(-D.L261)} qui baisse tes impôts`}${D.microOk ? "" : " (et le micro-foncier n'est possible que jusqu'à 15 000 € de loyers)"}.` : `<b>Le micro-foncier</b> est le plus simple et le plus avantageux : tu es imposé sur ${eur(D.baseMicro)} (70 % des loyers) au lieu de ${eur(D.baseReel)} au réel.`}</div>
+    <h3>Sur ta déclaration de revenus (2042)</h3>${bloc2042}
+    ${reel ? `<h3>Sur le formulaire 2044 (location vide)</h3>${t2044}` : `<details class="pli-mini"><summary>Voir le calcul au réel (formulaire 2044)</summary>${t2044}</details>`}` : ""}
+    ${D.M.length ? `<h3>Location meublée (LMNP)</h3>${D.recM ? `<table class="decl"><tbody>${case_("5ND", "Loyers meublés encaissés, charges comprises (2042-C-PRO, micro-BIC)", D.recM, "L'abattement de 50 % est fait tout seul : tu es imposé sur " + eur(D.microBIC))}</tbody></table>
+      ${D.chargesM > D.recM * 0.5 ? `<p class="note">⚠️ Tes charges (${eur(D.chargesM)}) dépassent 50 % des loyers : le régime réel (avec amortissement du logement) serait sans doute plus avantageux. Il se fait en général avec un comptable (liasse 2031).</p>` : `<p class="note">Le régime réel (avec amortissement du logement) peut être encore plus avantageux : demande à un comptable si tes loyers meublés sont importants.</p>`}` : `<p class="note">Aucun loyer meublé encaissé en ${y}.</p>`}` : ""}
+    ${D.aVerifier.length ? `<details class="pli-mini"><summary>⚠️ ${plur(D.aVerifier.length, "dépense")} à vérifier (pas comptée)</summary><ul class="note">${D.aVerifier.map(d => `<li>${esc(d.libelle || d.categorie)} · ${eur(+d.montant)} · ${esc(d.categorie || "")}</li>`).join("")}</ul><p class="note">Frais bancaires, énergie, dépenses sans logement… : déductibles seulement dans certains cas. Change sa catégorie ou son logement dans Dépenses si besoin.</p></details>` : ""}
+    <div class="row"><button class="small" onclick="navigator.clipboard.writeText(${esc(JSON.stringify(texte))}).then(() => toast('✓ Montants copiés'), () => toast('Copie impossible ici'))">📋 Copier les montants</button><a class="btn small" href="https://www.impots.gouv.fr/accueil" target="_blank" rel="noopener">Ouvrir impots.gouv ↗</a></div>
+    <details class="pli-mini"><summary>Pourquoi ces chiffres ?</summary><p class="note">Loyers <b>encaissés</b> pendant l'année, sans les charges. Micro-foncier : possible jusqu'à 15 000 € de loyers, abattement de 30 %. Régime réel : on déduit les vrais frais (assurance, travaux, taxe foncière sans les ordures ménagères, copropriété non récupérable, intérêts d'emprunt) + 20 € par logement ; le choisir t'engage pour 3 ans. Le remboursement du capital de l'emprunt et le prix d'achat ne se déduisent jamais. Un déficit (hors intérêts) baisse ton revenu global jusqu'à 10 700 € par an. Meublé (micro-BIC) : abattement de 50 %.</p></details></section>`;
+}
 function aideDeclaration(y, lignes, tot) {
   if (estPerso()) return "";
   const couv = depensesCouvertes(), deps = S.depenses.filter(d => (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie) && !couv.has(d.id)), g = {};
@@ -8713,6 +8778,7 @@ function toast(msg) {
 const LEXIQUE = {
   gmbi: ["Déclaration d'occupation (GMBI)", "Chaque année, avant le 1er juillet, le propriétaire indique aux impôts les changements d'occupants de ses logements survenus entre le 2 janvier de l'année d'avant et le 1er janvier (arrivée, départ, logement vide). Ça se fait sur impots.gouv, service \"Gérer mes biens immobiliers\" (espace professionnel pour une SCI). Sans changement, rien à faire. Oubli ou erreur : amende de 150 € par logement (article 1770 terdecies du CGI)."],
   ilc: ["Indice des loyers commerciaux (ILC) / des activités tertiaires (ILAT)", "Pour un local commercial (ILC) ou un bureau, un cabinet (ILAT), le loyer suit cet indice de l'INSEE au lieu de l'IRL, si le bail le prévoit (clause d'indexation). L'appli fait le calcul à la date anniversaire."],
+  decl2044: ["Déclaration des revenus fonciers", "Chaque année en mai, tu déclares les loyers de l'année d'avant. Location vide : micro-foncier (simple, 30 % d'abattement, jusqu'à 15 000 € de loyers) ou régime réel avec le formulaire 2044 (tu déduis tes vrais frais). Meublé : micro-BIC (50 % d'abattement). L'appli calcule les montants et te dit le plus avantageux."],
   irl: ["Indice de référence des loyers (IRL)", "Un chiffre publié par l'INSEE chaque trimestre. Une fois par an, à la date anniversaire du bail, le loyer peut suivre son évolution. Exemple : l'indice monte de 2 %, le loyer peut monter de 2 %. L'appli fait le calcul."],
   provision: ["Provision sur charges", "Une avance que le locataire paie chaque mois pour les charges (eau, ordures ménagères, entretien…). Une fois par an, on compare avec les vraies dépenses : il paie le manque ou on lui rend le trop-perçu."],
   forfait: ["Forfait de charges", "Un montant fixe de charges, sans comparaison en fin d'année. Possible surtout en meublé et en colocation."],

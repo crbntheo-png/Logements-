@@ -79,6 +79,15 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 21/11/2026 — déclaration de revenus en nom propre (2044, micro-foncier, meublé micro-BIC)
+
+- Comparaison avec Rentila, Qalimo, BailFacile, Smovin (sources web, comparatifs souvent sponsorisés) : manques principaux = banque pour tous (devis), signature électronique certifiée, déclaration 2044 / LMNP, appli dans les stores. Théo a choisi la 2044.
+- `calcul2044(y)` : logements vides (bail vide/commercial/pro ou logement vide) → revenus fonciers ; meublés (bail meublé/étudiant/mobilité, ou logement meublé sans bail) → micro-BIC. Ligne 211 = loyers encaissés sans les charges (`recettes`) ; 221 (gestion, honoraires, diagnostics), 222 (20 € × logement vide), 223 (PNO, GLI), 224 (travaux), 227 (taxe foncière − TEOM de la taxe liée), 229 (copro non récupérable) ; 250 (intérêts + assurance emprunteur + tableaux de prêt, y compris prêt de l'immeuble) ; dépenses récupérables, capital et achat exclus ; frais bancaires, énergie, catégorie Autre et dépenses sans logement (s'il y a du meublé) → "à vérifier". 261 ; 4BA ; déficit : 4BC (hors intérêts, ≤ 10 700 €) et 4BB (intérêts non couverts + excédent). Micro-foncier (4BE) si loyers ≤ 15 000 €, conseil = le moins imposé (réel − 4BC vs 70 %). Meublé : 5ND = loyers charges comprises, base 50 %, alerte si charges > 50 % (réel avec comptable).
+- Écran `declaration2044(y)` dans Compta › Comptable (nom propre seulement) : "👉 le plus avantageux", cases 2042, lignes 2044 (dépliées si réel), meublé, dépenses à vérifier, "Copier les montants", lien impots.gouv, "Pourquoi ces chiffres ?". Lexique "decl2044". À faire (nom propre) : "Déclarer tes loyers <année>" du 10/04 au 28/05 + "Voir mes montants" ; plus d'AG / 2072 / CFE pour un particulier.
+- "Prochaines sorties" : assistant retiré (déjà sorti), déclaration remplacée par "Meublé au régime réel (LMNP, liasse 2031)".
+- Test106 (nouveau, 6 cas calculés à la main + écran + rappel au 2 mai) OK.
+- Pas vérifié par un professionnel : numéros de lignes et règles de mémoire (2044 : 211, 221-229, 240, 250, 261 ; 2042 : 4BA, 4BB, 4BC, 4BE ; 2042-C-PRO : 5ND). À faire relire avant mai 2027.
+
 ### 20/11/2026 (nuit, suite) — relevé : quel document précisément ; ranger en un toucher
 
 - Retour de Théo : "il faut qu'ils sachent quel document précisément importer, qu'ils ne se demandent pas où aller ni comment faire" ; "le rangement doit être encore plus rapide".

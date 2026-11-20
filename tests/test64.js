@@ -33,16 +33,16 @@ t(/Rien d'urgent/.test(await p.locator('.tous-c', { hasText: 'Biens perso' }).in
   t(await p.evaluate(n => S.sci.nom === n && location.hash === '', autre), 'bouton Ouvrir : bascule sur l\'espace, à l\'accueil');
   // Prochaines sorties
   await p.evaluate(() => { location.hash = 'bientot'; }); await p.waitForTimeout(2000);
-  t(/Prochaines sorties/.test(await p.locator('#app').innerText()) && (await p.locator('.bientot-c').count()) >= 6, 'page "🚀 Prochaines sorties"');
-  const avant = await p.evaluate(() => ENVIES.nb.assistant || 0);
-  await p.locator('.bientot-c', { hasText: 'Assistant IA' }).locator('button').click(); await p.waitForTimeout(1500);
-  const apres = await p.evaluate(() => ({ n: ENVIES.nb.assistant, moi: ENVIES.miennes.has('assistant') }));
+  t(/Prochaines sorties/.test(await p.locator('#app').innerText()) && (await p.locator('.bientot-c').count()) >= 5, 'page "🚀 Prochaines sorties"');
+  const avant = await p.evaluate(() => ENVIES.nb['signature-distance'] || 0);
+  await p.locator('.bientot-c', { hasText: 'Signature électronique' }).locator('button').click(); await p.waitForTimeout(1500);
+  const apres = await p.evaluate(() => ({ n: ENVIES.nb['signature-distance'], moi: ENVIES.miennes.has('signature-distance') }));
   t(apres.moi && apres.n === avant + 1, '"Ça m\'intéresse" : compté (' + apres.n + ')');
   await p.screenshot({ path: __dirname + '/shots58/bientot.png' });
   await p.evaluate(() => { ENVIES = null; render(); }); await p.waitForTimeout(2000);
-  t(await p.evaluate(() => ENVIES.miennes.has('assistant')), 'gardé après rechargement');
-  await p.locator('.bientot-c', { hasText: 'Assistant IA' }).locator('button').click(); await p.waitForTimeout(1500);
-  t(await p.evaluate(a => !ENVIES.miennes.has('assistant') && (ENVIES.nb.assistant || 0) === a, avant), 'retouché : retiré');
+  t(await p.evaluate(() => ENVIES.miennes.has('signature-distance')), 'gardé après rechargement');
+  await p.locator('.bientot-c', { hasText: 'Signature électronique' }).locator('button').click(); await p.waitForTimeout(1500);
+  t(await p.evaluate(a => !ENVIES.miennes.has('signature-distance') && (ENVIES.nb['signature-distance'] || 0) === a, avant), 'retouché : retiré');
   t(!errs.length, 'aucune erreur JS ' + errs.join(' | '));
   await p.evaluate(async ids => { for (const id of ids) await SB.from('espaces').delete().eq('id', id); }, [e1, e2]);
   console.log(`\n${ok} OK, ${ko} KO`); await b.close(); srv.close(); process.exit(ko ? 1 : 0);

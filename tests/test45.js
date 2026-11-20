@@ -42,8 +42,8 @@ let ok = 0, ko = 0; const t = (c, m) => { c ? ok++ : ko++; console.log((c ? 'OK 
   t(await p.locator('#docres .doc-l').count() === 1, 'la liste se met à jour');
   // ranger un fichier dans un logement
   await p.click('.doc-l:has-text("Bail Studio")'); await p.waitForTimeout(300); await p.click('#overlay >> text=Ranger dans un logement'); await p.waitForTimeout(300);
-  t(await p.evaluate(() => document.querySelector('#overlay select[name=bienId]').value) === 'b1', 'logement deviné d’après le nom');
-  await p.click('#overlay button.primary'); await p.waitForTimeout(2500);
+  t(await p.evaluate(() => { const x = document.querySelector('#overlay .ou-ranger button'); return x && x.classList.contains('primary') && x.getAttribute('onclick').includes("'b1'"); }), 'logement deviné d’après le nom (en premier, en vert)');
+  await p.click('#overlay .ou-ranger button.primary'); await p.waitForTimeout(2500);
   t(await p.evaluate(() => S.fichiers.some(f => f.driveId === 'f1' && f.bienId === 'b1')), 'fichier rangé dans le logement');
   await p.evaluate(() => render()); await p.waitForTimeout(200);
   t(await p.isVisible('.doc-l:has-text("Bail Studio") small:has-text("Studio Rennes ·")'), 'la ligne montre où il est rangé');
