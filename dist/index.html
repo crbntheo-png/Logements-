@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "02fa7ed", "date": "2026-11-20T22:37"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "26fd1e1", "date": "2026-11-20T23:04"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -8218,7 +8218,9 @@ function chargerDropbox() {
 }
 async function choisirDropbox() {
   const D = await chargerDropbox();
-  return new Promise(ok => D.choose({ linkType: "direct", multiselect: true, folderselect: false, extensions: [".pdf", "images", ".doc", ".docx", ".xls", ".xlsx", ".txt"], success: ok, cancel: () => ok([]) }));
+  // navigateur que Dropbox ne prend pas en charge : pas d'impasse, l'autre chemin en un geste
+  if (D.isBrowserSupported && !D.isBrowserSupported()) { toastActions("Ce navigateur ne peut pas ouvrir Dropbox. Dans l'appli Dropbox : Partager › Enregistrer, puis choisis le fichier ici.", [["📄 Choisir un fichier", "go('ajouter-doc')"]]); return []; }
+  return new Promise(ok => D.choose({ linkType: "direct", multiselect: true, folderselect: false, sizeLimit: 20 * 1024 * 1024, extensions: [".pdf", "images", ".doc", ".docx", ".xls", ".xlsx", ".txt"], success: ok, cancel: () => ok([]) }));
 }
 /* Les fichiers choisis deviennent de vrais fichiers (copiés dans l'appli) */
 async function fichiersDropbox(liste) {

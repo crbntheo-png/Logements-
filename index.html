@@ -8193,7 +8193,9 @@ function chargerDropbox() {
 }
 async function choisirDropbox() {
   const D = await chargerDropbox();
-  return new Promise(ok => D.choose({ linkType: "direct", multiselect: true, folderselect: false, extensions: [".pdf", "images", ".doc", ".docx", ".xls", ".xlsx", ".txt"], success: ok, cancel: () => ok([]) }));
+  // navigateur que Dropbox ne prend pas en charge : pas d'impasse, l'autre chemin en un geste
+  if (D.isBrowserSupported && !D.isBrowserSupported()) { toastActions("Ce navigateur ne peut pas ouvrir Dropbox. Dans l'appli Dropbox : Partager › Enregistrer, puis choisis le fichier ici.", [["📄 Choisir un fichier", "go('ajouter-doc')"]]); return []; }
+  return new Promise(ok => D.choose({ linkType: "direct", multiselect: true, folderselect: false, sizeLimit: 20 * 1024 * 1024, extensions: [".pdf", "images", ".doc", ".docx", ".xls", ".xlsx", ".txt"], success: ok, cancel: () => ok([]) }));
 }
 /* Les fichiers choisis deviennent de vrais fichiers (copiés dans l'appli) */
 async function fichiersDropbox(liste) {
