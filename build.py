@@ -64,7 +64,7 @@ def main():
     vid = hashlib.sha256((html + source_build).encode("utf-8")).hexdigest()[:7]
     vdate = ancienne.get("date") if ancienne.get("id") == vid else datetime.datetime.now().strftime("%Y-%m-%dT%H:%M")
     VERSION = {"id": vid, "date": vdate}
-    config = {"url": env["SUPABASE_URL"], "cle": env["SUPABASE_PUBLISHABLE_KEY"], "vapid": env.get("VAPID_PUBLIC", "")}
+    config = {"url": env["SUPABASE_URL"], "cle": env["SUPABASE_PUBLISHABLE_KEY"], "vapid": env.get("VAPID_PUBLIC", ""), "dropbox": env.get("DROPBOX_APP_KEY", "")}  # clé d'appli Dropbox : publique (comme l'identifiant Google), vide = bouton caché
     tete = f"""<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f1b2d">
 <meta name="apple-mobile-web-app-capable" content="yes">

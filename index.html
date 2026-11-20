@@ -3361,6 +3361,7 @@ function ajouterDocument(bienId, bailId, cat) {
   const drv = estProprio() && DRIVEG.etat === "oui";
   modal("Ajouter un document", `${drv ? `<div class="full"><button type="button" class="primary btn-drive" onclick="choisirFichierDrive({bienId:'${bienId}',bailId:document.querySelector('#overlay [name=bailId]').value,cat:document.querySelector('#overlay [name=cat]').value})">📁 Choisir dans mon Google Drive</button></div>`
       : estProprio() && SB ? `<p class="full note">Tes documents sont dans Google Drive ? <a href="#" onclick="event.preventDefault();closeOverlay();connecterDrive()">Connecte ton Drive</a> pour les choisir directement.</p>` : ""}
+    ${dropboxDispo() ? `<div class="full"><button type="button" class="btn-dropbox" onclick="dropboxVersLogement({bienId:'${bienId}',bailId:document.querySelector('#overlay [name=bailId]').value,cat:document.querySelector('#overlay [name=cat]').dataset.choisi ? document.querySelector('#overlay [name=cat]').value : ''})">📦 Choisir dans Dropbox</button></div>` : ""}
     <label class="fl full">${drv ? "Ou depuis ton téléphone (photo, PDF, scan…)" : "Fichier (PDF, photo, scan…)"}<input type="file" name="fichier" multiple accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx,.txt"></label>
     ${sel("Catégorie", "cat", cat || "Autre", CATS_DOC.map(c => [c, c]))}<p class="note full" id="cat_devinee" hidden></p>${sel("Concerne", "bailId", bailId || "", concerne(bienId))}
     ${fld("Nom affiché (facultatif)", "nom", "", "text", "full")}`,
@@ -8181,6 +8182,46 @@ function padSignatureLocataire(id) {
    les dépose dans la boîte à documents ("À ranger"), où l'IA peut les lire et les ranger. Même chose pour la photo
    prise depuis le raccourci de l'icône. */
 let RECU = { etat: "" };
+/* ================= Dropbox (sélecteur officiel "Chooser", gratuit) =================
+   La personne choisit ses fichiers dans la fenêtre de Dropbox ; l'appli ne reçoit qu'un lien de téléchargement
+   temporaire pour CES fichiers (aucun accès au reste du Dropbox), et les copie dans son espace. Clé d'appli publique dans .env. */
+const dropboxDispo = () => !!(window.APP_SUPABASE && window.APP_SUPABASE.dropbox) && !!SB && !LECTURE;
+function chargerDropbox() {
+  if (window.Dropbox && window.Dropbox.choose) return Promise.resolve(window.Dropbox);
+  return new Promise((ok, ko) => { const s = document.createElement("script"); s.src = "https://www.dropbox.com/static/api/2/dropins.js"; s.id = "dropboxjs"; s.dataset.appKey = window.APP_SUPABASE.dropbox;
+    s.onload = () => window.Dropbox ? ok(window.Dropbox) : ko(new Error("Dropbox ne répond pas")); s.onerror = () => ko(new Error("Dropbox ne répond pas, réessaie.")); document.head.appendChild(s); });
+}
+async function choisirDropbox() {
+  const D = await chargerDropbox();
+  return new Promise(ok => D.choose({ linkType: "direct", multiselect: true, folderselect: false, extensions: [".pdf", "images", ".doc", ".docx", ".xls", ".xlsx", ".txt"], success: ok, cancel: () => ok([]) }));
+}
+/* Les fichiers choisis deviennent de vrais fichiers (copiés dans l'appli) */
+async function fichiersDropbox(liste) {
+  const out = [], rates = [];
+  for (const x of liste) { try { if (+x.bytes > 20 * 1024 * 1024) throw new Error("trop lourd"); const r = await fetch(x.link); if (!r.ok) throw new Error("HTTP " + r.status); const bl = await r.blob();
+    const ext = (x.name.split(".").pop() || "").toLowerCase(), type = bl.type && bl.type !== "application/octet-stream" ? bl.type : ext === "pdf" ? "application/pdf" : /^(jpe?g|png|heic|webp)$/.test(ext) ? "image/" + (ext === "jpg" ? "jpeg" : ext) : "application/octet-stream";
+    out.push(new File([bl], x.name, { type })); } catch (e) { rates.push(x.name); } }
+  return { out, rates };
+}
+/* Depuis la fiche d'un logement : choisis, puis catégorie et locataire comme pour Google Drive */
+async function dropboxVersLogement(ctx) {
+  closeOverlay(); let liste; try { liste = await choisirDropbox(); } catch (e) { toast(e.message); return; } if (!liste.length) return;
+  modal(`${liste.length} fichier${liste.length > 1 ? "s" : ""} de Dropbox`, `<ul class="todo full pick-drive">${liste.map(x => `<li><span class="tx">${/\.pdf$/i.test(x.name) ? "📄" : /\.(jpe?g|png|heic|webp)$/i.test(x.name) ? "🖼️" : "📎"} ${esc(x.name)}</span></li>`).join("")}</ul>
+    ${sel("Catégorie", "cat", ctx.cat || (deviner({ titre: liste[0].name, chemin: [] }).cat) || "Autre", CATS_DOC.map(c => [c, c]))}${sel("Concerne", "bailId", ctx.bailId || "", concerne(ctx.bienId))}
+    <p class="full note">Ils sont copiés dans l'appli : tes associés pourront les ouvrir sans accès à ton Dropbox.</p>`,
+    (d, form) => { (async () => { toast(`Copie de ${plur(liste.length, "fichier")}…`); const { out, rates } = await fichiersDropbox(liste);
+      if (out.length) await envoyerPlusieurs(ctx.bienId, out.map(f => ({ f, d: { ...d, nom: "", cat: liste.length > 1 && !form.elements.cat.dataset.choisi ? (deviner({ titre: f.name, chemin: [] }).cat || d.cat) : d.cat } })));
+      if (rates.length) setTimeout(() => toast(`⚠️ Pas copié : ${rates.join(", ")} (trop lourd ou lien expiré)`), 3500); })(); return true; },
+    { ok: "Ajouter", lecture: true, after: form => form.elements.cat.addEventListener("change", () => form.elements.cat.dataset.choisi = "1") });
+}
+/* Depuis Docs › Ajouter un document : dans la boîte, lus et rangés tout seuls */
+async function dropboxVersBoite() {
+  let liste; try { liste = await choisirDropbox(); } catch (e) { toast(e.message); return; } if (!liste.length) return;
+  toast(`Copie de ${plur(liste.length, "fichier")} depuis Dropbox…`);
+  const { out, rates } = await fichiersDropbox(liste);
+  try { const n = out.length ? await deposerDansBoite(out, "Dropbox") : 0; toast(`📥 ${n} document${n > 1 ? "s" : ""} reçu${n > 1 ? "s" : ""} : je ${n > 1 ? "les" : "le"} lis…${rates.length ? ` (${rates.length} pas copié${rates.length > 1 ? "s" : ""})` : ""}`); view.docVue = ""; location.hash = "docs"; }
+  catch (e) { toast("Envoi impossible : " + (e.message || e)); }
+}
 async function deposerDansBoite(fichiers, de) {
   let n = 0;
   for (const f of fichiers) {
@@ -8211,6 +8252,7 @@ function pageAjouterDoc() {
   return `<a class="back" href="#docs">← Documents</a><div class="head"><div><h1>📸 Facture ou document</h1><p>Prends-le en photo ou choisis le fichier : l'appli le range toute seule.</p></div></div>
   <section class="card ajout-doc"><label class="btn primary big">📸 Prendre en photo<input type="file" accept="image/*" capture="environment" hidden onchange="ajouterDocRapide(this)"></label>
     <label class="btn big">📄 Choisir un fichier (PDF, photo)<input type="file" accept="image/*,application/pdf" multiple hidden onchange="ajouterDocRapide(this)"></label>
+    ${dropboxDispo() ? `<button type="button" class="btn big btn-dropbox" onclick="dropboxVersBoite()">📦 Depuis Dropbox</button>` : ""}
     <p class="note">Astuce : depuis Gmail ou WhatsApp, touche <b>Partager › Gestion locative</b> sur une pièce jointe, ça marche aussi (appli installée sur le téléphone).</p></section>`;
 }
 async function ajouterDocRapide(inp) {
@@ -8723,7 +8765,7 @@ function pageLegal() {
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
   ${b("🔗 Espace locataire", `<p>Si tu crées un lien pour un locataire, il voit seulement ce qui le concerne : son logement, ce qu'il doit, ses quittances des 12 derniers mois, son bail et ses états des lieux, et les problèmes qu'il a signalés. Rien sur les autres locataires, la compta ou la banque. Le lien est secret (le serveur n'en garde qu'une empreinte) ; tu peux le désactiver à tout moment depuis sa fiche. Les photos qu'il envoie sont rangées dans les documents de ton espace.</p>`)}
-  ${b("📨 Boîte à documents, agenda, Claude", `<p>Si tu crées ta boîte à documents, les e-mails envoyés à ton adresse passent par Cloudflare (qui héberge le domaine) ; seules leurs pièces jointes PDF et photos sont gardées, dans les documents de ton espace. Les e-mails venant d'une adresse que tu n'as pas autorisée sont refusés. Le lien de ton agenda est secret : il ne montre que les dates (loyers attendus, échéances), et tu peux le désactiver à tout moment.</p><p><b>Connecteur Claude</b> : si tu le crées, l'assistant que tu utilises (Claude, ou un autre compatible) lit, quand tu lui poses une question, les chiffres de ton espace : loyers, retards, locataires et leurs coordonnées, échéances, trésorerie, compta et la liste de tes documents (pas leur contenu). Il ne modifie rien, sauf si tu l'autorises à ranger : il peut alors créer des logements et des locataires, ajouter des documents (en lien), des dépenses et des rappels, mais jamais supprimer ni envoyer de message ; ce qu'il fait s'affiche sur ton accueil. Le lien est secret ; désactive-le à tout moment dans Réglages › Brancher sur Claude.</p>`)}
+  ${b("📨 Boîte à documents, agenda, Claude", `<p>Si tu crées ta boîte à documents, les e-mails envoyés à ton adresse passent par Cloudflare (qui héberge le domaine) ; seules leurs pièces jointes PDF et photos sont gardées, dans les documents de ton espace. Les e-mails venant d'une adresse que tu n'as pas autorisée sont refusés. Le lien de ton agenda est secret : il ne montre que les dates (loyers attendus, échéances), et tu peux le désactiver à tout moment.</p><p><b>Dropbox</b> : quand tu choisis des fichiers dans la fenêtre de Dropbox, l'appli reçoit seulement un lien de téléchargement temporaire vers <b>ces</b> fichiers, les copie dans les documents de ton espace, et n'a aucun accès au reste de ton Dropbox.</p><p><b>Connecteur Claude</b> : si tu le crées, l'assistant que tu utilises (Claude, ou un autre compatible) lit, quand tu lui poses une question, les chiffres de ton espace : loyers, retards, locataires et leurs coordonnées, échéances, trésorerie, compta et la liste de tes documents (pas leur contenu). Il ne modifie rien, sauf si tu l'autorises à ranger : il peut alors créer des logements et des locataires, ajouter des documents (en lien), des dépenses et des rappels, mais jamais supprimer ni envoyer de message ; ce qu'il fait s'affiche sur ton accueil. Le lien est secret ; désactive-le à tout moment dans Réglages › Brancher sur Claude.</p>`)}
   ${b("🔐 Tes données Google", `<p>Si tu branches ton Gmail ou ton Drive, l'appli utilise les données Google seulement pour ce que tu lui demandes : envoyer les e-mails que tu as validés (droit "envoyer" seulement) et lire seulement les dossiers et fichiers Drive que tu choisis dans le sélecteur de Google. Si tu partages un dossier avec l'adresse de l'appli (comme avec un associé, en "Lecteur"), elle lit ce dossier et ses sous-dossiers en lecture seule, et rien d'autre ; tu arrêtes en retirant le partage dans ton Drive. Elles ne servent à rien d'autre, ne sont ni vendues ni transmises, et ne servent pas à de la publicité ni à entraîner une intelligence artificielle. Si tu lances l'analyse par l'IA, les <b>noms</b> de tes dossiers et de quelques fichiers (pas leur contenu), ainsi que les noms de tes logements et locataires, sont envoyés à Anthropic (Claude) pour proposer un rangement. Si tu demandes à l'IA de <b>lire un document</b> (bail, avis de taxe foncière, facture, DPE, attestation d'assurance, tableur à importer), le contenu de <b>ce document seulement</b> est envoyé à Anthropic, au moment où tu le demandes, pour remplir l'appli. Anthropic ne s'en sert pas pour entraîner son IA. L'utilisation des informations reçues des API Google respecte le <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">règlement sur les données utilisateur des services d'API Google</a>, y compris les exigences d'utilisation limitée.</p>`)}
   ${b("🇬🇧 Google user data — summary for Google reviewers", `<div lang="en"><p><b>Scopes.</b> Sign-in (openid, email, profile) and <code>gmail.send</code> only: the app sends, from the user's own Gmail, the documents the user has previewed and confirmed (rent receipts, letters to tenants). It never reads, lists, modifies or deletes the user's emails. Drive uses only the non-sensitive <code>drive.file</code> scope through the Google Picker: the app can open only the files the user explicitly picks.</p>
     <p><b>Data access and use.</b> Only the user's email address and the permission to send the messages they confirm. Google user data is used only to provide these user-facing features.</p>

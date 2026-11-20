@@ -122,6 +122,7 @@ Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`
 | `tests/test105.js` | Mode local : guide du relevé (le bon document montré, messages RIB/facture) et rangement en un toucher (papiers reçus, Drive, "Ranger les proposés") |
 | `tests/test106.js` | Mode local : déclaration en nom propre (2044 réel / micro-foncier, déficits 4BC/4BB, meublé 5ND), écran et rappel de mai |
 | `tests/test107.js` | Mode local : zone tendue et loyer du marché par commune (Rennes, Agon, Lyon 3e), préavis au départ, loyer encadré à la relocation |
+| `tests/test108.js` | Vraie base : Dropbox simulé (bouton seulement avec la clé, copie dans l'appli, catégories, boîte, lien expiré) |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.

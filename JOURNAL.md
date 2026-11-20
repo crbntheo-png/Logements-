@@ -13,6 +13,7 @@ Règle pour chaque session :
 
 - [ ] **Max (SCI NIMAR)** : dans À faire, toucher "Oui, bail commercial" pour l'EURL Velours & Végétal ; fiche "Immeuble / parties communes" › Transformer ; "Compléter avec mes papiers" sur chaque logement.
 - [ ] **Budget IA (Théo)** : 3 $ par mois pour toute l'appli (réglage IA_BUDGET_MOIS absent) ; à monter si l'assistant et les lectures servent à d'autres utilisateurs.
+- [ ] **Dropbox (Théo, 2 min)** : créer l'appli Dropbox et envoyer l'App key (étapes dans l'Historique du 21/11, "Dropbox").
 - [ ] **Banque pour tous (Théo)** : envoyer les demandes de devis Enable Banking (formulaire "Get a quote") et Bridge ; avec un contrat Enable Banking, il suffit de poser le secret BANQUE_OUVERTE=1 (fonction banque-directe). En attendant, les autres utilisateurs reçoivent 0 compte.
 - [ ] **Banque en direct (Théo)** : application créée le 18/11. Reste : Réglages › Banque › Relier ma banque (connexion sur le site de la banque). Ancienne note : : Enable Banking, mode "restricted production". 1) https://enablebanking.com/sign-in/ (e-mail, lien reçu) ; 2) https://enablebanking.com/cp/applications › "Add a new application" : environnement Production, clé privée générée par défaut, nom "Gestion locative", URL de retour https://sci-gestion-locative.com/ › Register (un fichier .pem se télécharge, son nom = l'identifiant de l'application) ; 3) sur la page de l'application : "Link accounts" et relier le compte de la SCI ; 4) envoyer à Claude le contenu du .pem et l'identifiant. Ensuite (Claude, 1 session) : fonction serveur, choix de la banque dans l'appli, relevés lus dans les mêmes tables que Pennylane (le rapprochement des loyers marche tel quel). Limite : gratuit seulement pour les comptes que Théo relie lui-même ; pour les autres utilisateurs, contrat payant Enable Banking.
 
@@ -78,6 +79,13 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 21/11/2026 — Dropbox (sélecteur officiel, gratuit)
+
+- "📦 Choisir dans Dropbox" dans Ajouter un document (fiche logement : catégorie devinée par fichier, locataire, copiés dans l'appli, "Voir / En ajouter / Annuler") et "📦 Depuis Dropbox" dans Docs › Ajouter un document (vers la boîte : lus et rangés tout seuls). Sélecteur "Chooser" de Dropbox (dropins.js, liens directs temporaires vers les seuls fichiers choisis) ; fichiers trop lourds (> 20 Mo) ou liens expirés signalés. Fonctions : `dropboxDispo`, `chargerDropbox`, `choisirDropbox`, `fichiersDropbox`, `dropboxVersLogement`, `dropboxVersBoite`.
+- Clé : `DROPBOX_APP_KEY` dans .env (publique, comme l'identifiant Google), mise par build.py dans `APP_SUPABASE.dropbox`. Vide = boutons cachés (état actuel).
+- Mentions légales : paragraphe Dropbox. Test108 (nouveau, vraie base, Dropbox simulé, 9 contrôles) OK.
+- **À faire (Théo, 2 min)** : https://www.dropbox.com/developers/apps › Create app › "Scoped access" › "App folder" › nom "Gestion locative" › Create ; onglet Settings : "Chooser / Saver / Embedder domains" : ajouter `sci-gestion-locative.com` et `gestion-locative-sci.pages.dev` ; copier l'"App key" (PAS l'App secret) et l'envoyer à Claude. Ensuite (Claude) : DROPBOX_APP_KEY dans .env, build, deploy, essai réel.
 
 ### 21/11/2026 — connecteurs gratuits : zone tendue officielle et loyers du marché par commune
 
