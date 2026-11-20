@@ -80,6 +80,13 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 21/11/2026 — Qonto (clé API de l'utilisateur, gratuit, lecture seule)
+
+- Pourquoi : seule façon gratuite d'avoir la banque automatique pour d'autres que Théo en attendant le contrat Enable Banking ; beaucoup de SCI sont chez Qonto.
+- Serveur (fonction banque-directe, v6) : action `qonto_brancher` {espace, login, cle} (propriétaire seulement) : vérifie la clé avec GET /v2/organization (en-tête `Authorization: login:clé`, doc docs.qonto.com), garde la clé chiffrée dans le coffre (`supabase/qonto.sql` : qonto_cle_poser / lire / retirer, service_role seulement, appliqué), crée la ligne banque_directe {banque "Qonto", type_compte "qonto", session_id "qonto"} et lit les opérations (GET /v2/transactions, completed, 120 jours, 100 par page, bank_account_id sinon iban ; side debit = négatif ; libellé = label · référence · note). Opérations et comptes rangés avec la source "enablebanking" (l'appli les traite comme la banque en direct : référence pour pointer les loyers). Relu toutes les 6 heures par la tâche planifiée existante ("toutes") et à l'ouverture. Débrancher efface la clé. Une ligne Qonto ne rend PAS "ouverte" la banque Enable Banking (`banqueOuverte` et `bqOuverte` l'ignorent). Uniquement des GET vers Qonto.
+- Appli : `blocQonto()` "🟣 Ta banque est Qonto ? · Brancher Qonto" (Compta › Banque quand rien n'est branché, Réglages › Banque), `brancherQonto()` (3 étapes : Paramètres › Intégrations et partenariats › Clé API ; identifiant + clé secrète ; "Est-ce sûr ?" replié ; erreur affichée dans la fenêtre) ; une fois branché : bloc "🟣 Qonto" (pas de date d'accord), "Rebrancher Qonto" si la clé est refusée. Mentions légales : paragraphe Qonto.
+- Test109 (nouveau, vraie base + vrai serveur Qonto avec une clé fausse, 11 contrôles) OK. **Pas vérifié** : avec un vrai compte Qonto (lecture des comptes et des opérations).
+
 ### 21/11/2026 — Dropbox (sélecteur officiel, gratuit)
 
 - "📦 Choisir dans Dropbox" dans Ajouter un document (fiche logement : catégorie devinée par fichier, locataire, copiés dans l'appli, "Voir / En ajouter / Annuler") et "📦 Depuis Dropbox" dans Docs › Ajouter un document (vers la boîte : lus et rangés tout seuls). Sélecteur "Chooser" de Dropbox (dropins.js, liens directs temporaires vers les seuls fichiers choisis) ; fichiers trop lourds (> 20 Mo) ou liens expirés signalés. Fonctions : `dropboxDispo`, `chargerDropbox`, `choisirDropbox`, `fichiersDropbox`, `dropboxVersLogement`, `dropboxVersBoite`.

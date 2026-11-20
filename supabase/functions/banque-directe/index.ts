@@ -1,4 +1,5 @@
 // Banque en direct par Enable Banking (DSP2, lecture seule). Actions : banques, connecter, valider, actualiser, debrancher ; "toutes" (tâche planifiée).
+// Qonto : clé API de l'utilisateur ("identifiant:clé secrète", gardée chiffrée dans le coffre), action qonto_brancher ; lecture seule (GET uniquement).
 // Clés : ENABLEBANKING_APP_ID, ENABLEBANKING_KEY (clé privée de l'application). Les opérations vont dans les tables de la banque (comme Pennylane).
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cle-cron", "Access-Control-Allow-Methods": "POST, OPTIONS" };
@@ -22,8 +23,43 @@ async function eb(chemin: string, init: RequestInit = {}) {
 // identifiants numériques stables (les tables de la banque attendent des nombres)
 const num = async (t: string) => { const h = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t))); let n = 0n; for (let i = 0; i < 7; i++) n = (n << 8n) | BigInt(h[i]); return (n & 0x1fffffffffffffn).toString(); };
 const jour = (d: Date) => d.toISOString().slice(0, 10);
+/* ---------- Qonto (API "Business", lecture seule : seulement des GET) ---------- */
+const QONTO = "https://thirdparty.qonto.com/v2";
+async function qonto(cle: string, chemin: string) {
+  const r = await fetch(QONTO + chemin, { headers: { Authorization: cle, Accept: "application/json" } });
+  const j = await r.json().catch(() => ({})); return { s: r.status, j };
+}
+const comptesQonto = (j: any) => ((j.organization || {}).bank_accounts || []).filter((a: any) => !a.status || a.status === "active").map((a: any) => ({ uid: a.id || a.slug, iban: a.iban || "", nom: [a.name || "Compte Qonto", a.iban ? "…" + String(a.iban).slice(-4) : ""].filter(Boolean).join(" "), solde: a.balance != null ? +a.balance : null }));
+async function synchroQonto(admin: any, e: string, bd: any) {
+  const { data: cle } = await admin.rpc("qonto_cle_lire", { e }); if (!cle) return { n: 0, erreur: "La clé Qonto est introuvable : rebranche Qonto (Réglages › Banque)." };
+  const o = await qonto(cle, "/organization");
+  if (o.s === 401 || o.s === 403) { const erreur = "Qonto refuse la clé (elle a peut-être été changée) : rebranche Qonto avec la nouvelle."; await admin.from("banque_directe").update({ erreur }).eq("espace_id", e); return { n: 0, erreur }; }
+  if (o.s !== 200) return { n: 0, erreur: null }; // Qonto indisponible : on réessaie plus tard
+  const comptes = comptesQonto(o.j); let n = 0;
+  const depuis = new Date(Date.now() - 120 * 864e5).toISOString();
+  for (const c of comptes) {
+    const cid = await num("qonto-compte-" + c.uid);
+    await admin.from("banque_comptes").upsert({ espace_id: e, compte_id: cid, nom: c.nom, solde: c.solde, maj_le: new Date().toISOString(), source: "enablebanking" });
+    for (let page = 1; page <= 20; page++) {
+      const q = new URLSearchParams({ settled_at_from: depuis, per_page: "100", page: String(page) }); q.append("status[]", "completed");
+      if (/^[0-9a-f-]{20,}$/i.test(c.uid)) q.set("bank_account_id", c.uid); else q.set("iban", c.iban);
+      const t = await qonto(cle, "/transactions?" + q.toString()); if (t.s !== 200) break;
+      const lignes = [];
+      for (const x of t.j.transactions || []) {
+        const m = Math.abs(+x.amount || 0) * (x.side === "debit" ? -1 : 1), date = String(x.settled_at || x.emitted_at || "").slice(0, 10); if (!m || !date) continue;
+        const libelle = [x.label, x.reference, x.note].filter(Boolean).join(" · ").slice(0, 300) || "Opération";
+        lignes.push({ espace_id: e, tx_id: await num("qonto-" + (x.id || x.transaction_id)), date, montant: Math.round(m * 100) / 100, libelle, compte: cid, source: "enablebanking" });
+      }
+      if (lignes.length) { const r = await admin.from("banque").upsert(lignes); if (!r.error) n += lignes.length; }
+      if (!(t.j.meta || {}).next_page) break;
+    }
+  }
+  await admin.from("banque_directe").update({ erreur: null, derniere_synchro: new Date().toISOString(), comptes: comptes.map(c => ({ uid: c.uid, nom: c.nom })) }).eq("espace_id", e);
+  return { n, erreur: null };
+}
 async function synchro(admin: any, e: string) {
   const { data: bd } = await admin.from("banque_directe").select("*").eq("espace_id", e).maybeSingle();
+  if (bd && bd.type_compte === "qonto") return synchroQonto(admin, e, bd);
   if (!bd || !bd.session_id) return { n: 0, erreur: "pas connectée" };
   let n = 0, erreur: string | null = null;
   const depuis = jour(new Date(Date.now() - 120 * 864e5));
@@ -63,7 +99,7 @@ async function banqueOuverte(admin: any, uid: string) {
   if (Deno.env.get("BANQUE_OUVERTE") === "1") return true;
   const { data: m } = await admin.from("membres").select("espace_id").eq("user_id", uid).eq("role", "proprietaire");
   const ids = (m || []).map((x: any) => x.espace_id); if (!ids.length) return false;
-  const { data: b } = await admin.from("banque_directe").select("comptes").in("espace_id", ids);
+  const { data: b } = await admin.from("banque_directe").select("comptes").in("espace_id", ids).neq("type_compte", "qonto");
   return (b || []).some((x: any) => Array.isArray(x.comptes) && x.comptes.length > 0);
 }
 Deno.serve(async (req) => {
@@ -101,6 +137,18 @@ Deno.serve(async (req) => {
     const e = String(c.espace || "");
     const { data: p } = await moi.rpc(c.action === "actualiser" ? "est_membre" : "est_proprietaire", { e });
     if (!p) return rep({ erreur: c.action === "actualiser" ? "Accès refusé" : "Seul le propriétaire de l'espace peut relier ou débrancher la banque." }, 403);
+    if (c.action === "qonto_brancher") {
+      const login = String(c.login || "").trim(), secret = String(c.cle || "").trim().replace(/^.*:/, ""), cle = login + ":" + secret;
+      if (!/^[\w.-]{3,}$/.test(login) || secret.length < 10) return rep({ erreur: "Colle l'identifiant et la clé secrète affichés par Qonto (Paramètres › Intégrations et partenariats › Clé API)." }, 400);
+      const o = await qonto(cle, "/organization");
+      if (o.s === 401 || o.s === 403) return rep({ erreur: "Qonto refuse cet identifiant ou cette clé : recopie-les depuis Qonto (sans espace)." }, 400);
+      if (o.s !== 200) return rep({ erreur: "Qonto ne répond pas pour le moment, réessaie dans un instant." }, 502);
+      const comptes = comptesQonto(o.j); if (!comptes.length) return rep({ erreur: "Qonto n'a donné aucun compte actif pour cette organisation." }, 400);
+      await admin.rpc("qonto_cle_poser", { e, cle });
+      await admin.from("banque_directe").upsert({ espace_id: e, banque: "Qonto", type_compte: "qonto", session_id: "qonto", etat: null, valide_jusqua: null, erreur: null, comptes: comptes.map(x => ({ uid: x.uid, nom: x.nom })), maj_le: new Date().toISOString() }, { onConflict: "espace_id", ignoreDuplicates: false });
+      const r = await synchro(admin, e);
+      return rep({ ok: true, organisation: (o.j.organization || {}).legal_name || "", comptes: comptes.length, operations: r.n, erreur: r.erreur });
+    }
     if (c.action === "connecter") {
       if (!(await banqueOuverte(admin, u.user.id))) return rep({ erreur: "La banque en direct n'est pas encore ouverte à tous : utilise ton relevé en attendant.", raison: "ferme" }, 403);
       const b = await eb("/aspsps?country=FR&service=AIS"), a = (b.j.aspsps || []).find((x: any) => x.name === c.banque);
@@ -117,8 +165,9 @@ Deno.serve(async (req) => {
       if (l.derniere_synchro && Date.now() - new Date(l.derniere_synchro).getTime() < 6 * 3600e3 && !c.force) return rep({ ok: true, n: 0, recent: true });
       return rep({ ok: true, ...(await synchro(admin, e)) }); }
     if (c.action === "debrancher") {
-      const { data: bd } = await admin.from("banque_directe").select("session_id").eq("espace_id", e).maybeSingle();
-      if (bd?.session_id) await eb(`/sessions/${bd.session_id}`, { method: "DELETE" }).catch(() => {});
+      const { data: bd } = await admin.from("banque_directe").select("session_id, type_compte").eq("espace_id", e).maybeSingle();
+      if (bd?.type_compte === "qonto") await admin.rpc("qonto_cle_retirer", { e });
+      else if (bd?.session_id) await eb(`/sessions/${bd.session_id}`, { method: "DELETE" }).catch(() => {});
       await admin.from("banque_directe").delete().eq("espace_id", e);
       await admin.from("banque").delete().eq("espace_id", e).eq("source", "enablebanking"); await admin.from("banque_comptes").delete().eq("espace_id", e).eq("source", "enablebanking");
       return rep({ ok: true });
