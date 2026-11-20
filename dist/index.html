@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "281f245", "date": "2026-11-20T21:18"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M"}; window.APP_VERSION = {"id": "72e6165", "date": "2026-11-20T22:23"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -515,6 +515,7 @@ button.suite, button.dpe-chip { text-align: left !important; justify-content: fl
 .decl-2044 h3 { margin: 16px 0 6px; font-size: .92rem; } .decl { width: 100%; border-collapse: collapse; } .decl td { padding: 8px 4px; border-top: 1px solid var(--line); vertical-align: top; } .decl tr:first-child td { border-top: 0; } .decl .sub { font-size: .8rem; color: var(--muted); }
 .case { display: inline-block; min-width: 38px; padding: 1px 6px; margin-right: 4px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: .82rem; text-align: center; }
 .decl-conseil { padding: 12px 14px; border-radius: 12px; background: var(--ok-soft); margin: 8px 0; line-height: 1.45; }
+.commune .cm-l { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-top: 1px solid var(--line); } .commune .cm-l:first-of-type { border-top: 0; } .commune .cm-l span { color: var(--ink-2); font-size: .92rem; line-height: 1.45; }
 .rel-guide { display: flex; flex-direction: column; gap: 10px; } .rel-quoi { margin: 0; line-height: 1.45; }
 .rel-ex { background: #fff; color: #1d2433; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 12px/1.35 Arial, sans-serif; box-shadow: var(--sh-1); }
 .rel-ex-h { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 11px; } .rel-ex table { width: 100%; border-collapse: collapse; }
@@ -3555,6 +3556,7 @@ function pageBien(id) {
       <div class="kpi"><span>Taxe foncière${cq("teom")}</span><b>${tf ? eur(tf.total) : "—"}</b><small>${tf ? tf.annee : `<button class="small ghost" onclick="taxeFonciere('${bi.id}')">Renseigner</button>`}</small></div>
     </div>
     ${blocSuiviBien(bi)}
+    ${blocCommune(bi)}
     ${blocRentaNette(bi)}
     <div class="stack">
     <section class="card"><h2>🏠 Le logement</h2><div class="bien"><dl>
@@ -3572,6 +3574,47 @@ function pageBien(id) {
     ${sectionTravaux(bi)}
     ${listeDocuments(bi.id)}
     </div>`;
+}
+/* ================= Données publiques sur la commune (gratuites, sans compte) =================
+   Zone tendue : liste officielle du simulateur de service-public.fr (agglomérations > 50 000 habitants).
+   Loyer du marché : "Carte des loyers" 2025 du ministère (loyers d'annonce charges comprises, €/m², par commune).
+   Les deux fichiers sont dans donnees/ et ne sont chargés que quand une fiche en a besoin. */
+const DONNEES = {};
+const donnee = nom => DONNEES[nom] || (DONNEES[nom] = fetch(`donnees/${nom}.json`).then(r => r.ok ? r.json() : null).catch(() => null));
+const COMMUNE = {}; // par logement : { etat, insee, zt, loyer: [app12, app3, maison, app, fiable] }
+const communeDeArr = c => /^751\d\d$/.test(c) ? "75056" : /^6938\d$/.test(c) ? "69123" : /^132\d\d$/.test(c) ? "13055" : c; // arrondissements de Paris, Lyon, Marseille
+async function inseeDe(bi) {
+  if (bi.insee) return bi.insee;
+  if (/^\d[\dAB]\d{3}_/.test(bi.banId || "")) return bi.banId.slice(0, 5);
+  if (!bi.cp && !bi.ville) return null;
+  const a = (await chercherAdresses(adresseBien(bi), 1).catch(() => []))[0];
+  if (a && a.insee && a.score >= 0.5) { bi.insee = a.insee; if (!LECTURE && PEUT_MODIFIER()) saveAuto(); return a.insee; }
+  return null;
+}
+function chargerCommune(bi) {
+  if (COMMUNE[bi.id]) return COMMUNE[bi.id];
+  COMMUNE[bi.id] = { etat: "chargement" };
+  (async () => { const insee = await inseeDe(bi); if (!insee) { COMMUNE[bi.id] = { etat: "inconnue" }; render(); return; }
+    const [zt, lo] = await Promise.all([donnee("zones-tendues"), donnee("loyers-2025")]);
+    COMMUNE[bi.id] = { etat: "ok", insee, zt: zt ? zt.codes.includes(communeDeArr(insee)) : null, loyer: lo ? lo.c[insee] || lo.c[communeDeArr(insee)] || null : null }; render(); })();
+  return COMMUNE[bi.id];
+}
+const zoneTendue = bi => { const c = bi && COMMUNE[bi.id]; return c && c.etat === "ok" ? c.zt : null; };
+/* Préavis du locataire : 1 mois en meublé ou en zone tendue, 3 mois en location vide ailleurs (null si on ne sait pas encore) */
+function preavisLocataire(b) {
+  if (!b || estPro(b)) return null; if (MEUBLE_TYPES.has(b.typeBail)) return { mois: 1, pourquoi: "location meublée" };
+  const zt = zoneTendue(bien(b.bienId)); return zt === null ? null : zt ? { mois: 1, pourquoi: "zone tendue" } : { mois: 3, pourquoi: "location vide hors zone tendue" };
+}
+function blocCommune(bi) {
+  if (bi.immeuble || /local|commerc|bureau|parking|garage|box/i.test(sansAccent(`${bi.type || ""} ${bi.nom || ""}`))) return "";
+  const c = chargerCommune(bi); if (c.etat !== "ok") return "";
+  const b = bailActifDuBien(bi.id), ville = esc(bi.ville || "ta commune");
+  const i = /maison/i.test(bi.type || "") ? 2 : +bi.pieces >= 3 ? 1 : +bi.pieces > 0 ? 0 : 3, m2 = c.loyer && c.loyer[i], libT = ["appartement 1-2 pièces", "appartement 3 pièces et plus", "maison", "appartement"][i];
+  const l = b ? loyerAt(b, CUR) : null, tot = l ? l.hc + l.ch : 0, surf = +bi.surface || 0, marche = m2 && surf ? Math.round(m2 * surf / 10) * 10 : 0, ecart = marche && tot ? Math.round((tot - marche) / marche * 100) : null;
+  return `<section class="card commune"><h2>📍 À ${ville}</h2>
+    ${c.zt === null ? "" : `<div class="cm-l"><b>${c.zt ? "Zone tendue" : "Pas en zone tendue"}</b><span>${c.zt ? "Le locataire peut partir avec <b>1 mois</b> de préavis, et à la relocation le loyer ne peut pas dépasser l'ancien (sauf travaux importants)." : "En location vide, le locataire donne <b>3 mois</b> de préavis (1 mois en meublé)."}</span></div>`}
+    ${m2 ? `<div class="cm-l"><b>Loyers des annonces : ${String(m2).replace(".", ",")} €/m²</b><span>charges comprises, ${libT}${surf ? ` : environ <b>${eur(marche).replace(",00", "")}</b> pour ${esc(surf)} m²` : " · ajoute la surface pour comparer"}.${ecart !== null ? ` Ton loyer (${eur(tot).replace(",00", "")}) est ${Math.abs(ecart) <= 10 ? "<b>dans la moyenne</b>" : ecart > 0 ? `<b>${ecart} % au-dessus</b>` : `<b>${-ecart} % en dessous</b>`}.` : ""}</span></div>` : ""}
+    <details class="pli-mini"><summary>D'où viennent ces chiffres ?</summary><p class="note">Zone tendue : liste officielle du simulateur de service-public.fr (agglomérations de plus de 50 000 habitants). Loyers : « Carte des loyers » 2025 du ministère du Logement, à partir des annonces${c.loyer && !c.loyer[4] ? " (estimation faite sur un groupe de communes voisines)" : ""}. Un ordre de grandeur, pas un plafond légal${/^(751|6938|69266|59350|33063|34172)/.test(c.insee) ? " : dans ta ville, l'encadrement des loyers fixe aussi un plafond, à vérifier sur le site de la ville" : ""}.</p></details></section>`;
 }
 /* Tableau de bord du logement : l'année en un coup d'œil (loyers reçus / attendus, occupation, retard) et les 3 prochaines dates */
 function blocSuiviBien(bi) {
@@ -5188,7 +5231,7 @@ async function chercherAdresses(q, n = 5) {
   const r = await fetch("https://data.geopf.fr/geocodage/search?" + new URLSearchParams({ q, autocomplete: "1", limit: String(n), index: "address" }));
   if (!r.ok) throw new Error("Le service d'adresses ne répond pas");
   const j = await r.json();
-  return (j.features || []).map(f => ({ label: f.properties.label, rue: f.properties.name, cp: f.properties.postcode, ville: f.properties.city, banId: f.properties.id, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], score: f.properties.score }));
+  return (j.features || []).map(f => ({ label: f.properties.label, rue: f.properties.name, cp: f.properties.postcode, ville: f.properties.city, banId: f.properties.id, insee: f.properties.citycode, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], score: f.properties.score }));
 }
 /* Adresse qui se complète en tapant (formulaire du logement) */
 function brancherAutoAdresse() {
@@ -5502,7 +5545,9 @@ function editBail(id, bienId, pre) {
     <div class="full ch-indice" ${estPro(b) || (b.indice && b.indice !== "IRL") ? "" : "hidden"}>${sel("Indice de révision", "indice", indiceDe(b), [["ILC", "ILC — commerce, artisan"], ["ILAT", "ILAT — bureau, profession libérale"], ["IRL", "IRL — comme un logement"]], "full")}</div>
     ${sel("Trimestre de l'indice de référence (dernier publié à la signature)", "irlTrimestre", qKey(b.irlTrimestre) ? qLabel(qKey(b.irlTrimestre)) : qLabel(idxEnVigueur(indiceDe(b), P(b.dateEntree) || TODAY)), irlCles().slice().reverse().map(k => [qLabel(k), qLabel(k)]), "full")}
     <label class="fl chk full"><input type="checkbox" name="revisable" ${b.revisable !== false ? "checked" : ""}> Le bail prévoit une révision annuelle du loyer</label>
-    <p class="note full" id="depotWarn"></p></fieldset>
+    <p class="note full" id="depotWarn"></p>${(() => { if (id || !b.bienId) return ""; const bi = bien(b.bienId); if (!bi) return ""; chargerCommune(bi); if (zoneTendue(bi) !== true) return "";
+      const av = S.baux.filter(x => x.bienId === bi.id && x.dateSortie && P(x.dateSortie) <= addDays(TODAY, 120) && P(x.dateSortie) >= addMonthsDate(TODAY, -18)) /* la règle vaut si l'ancien locataire est parti il y a moins de 18 mois */.sort((x, y) => String(y.dateSortie).localeCompare(String(x.dateSortie)))[0]; if (!av) return "";
+      return `<p class="note full zt-reloc">📍 Zone tendue : le loyer hors charges ne peut pas dépasser celui de ${esc(nomCourt(av.nom))} (<b>${eur(loyerAt(av, mk(P(av.dateSortie))).hc)}</b>, + la révision de l'indice si elle n'avait pas été faite dans l'année), sauf gros travaux ou loyer très en dessous du quartier.</p>`; })()}</fieldset>
     <fieldset><legend>Garanties</legend>
     ${fld("Garant (nom)", "garantNom", b.garantNom)}${fld("Garant (téléphone / e-mail)", "garantContact", b.garantContact)}
     ${fld("N° de visa Visale (si garantie Visale)", "visale", b.visale)}<p class="note" style="align-self:end"><a href="https://www.visale.fr" target="_blank" rel="noopener">Vérifier un visa sur visale.fr ↗</a></p>
@@ -5524,10 +5569,12 @@ function editBail(id, bienId, pre) {
 }
 
 function finBail(id) {
-  const b = bail(id);
-  modal("Départ du locataire", `<p class="full note">Le locataire a donné son préavis (1 mois en meublé ou en zone tendue, 3 mois sinon en location vide) ? Indiquez la date de sortie. Le dernier loyer sera calculé au prorata.</p>
-    ${fld("Date de sortie (remise des clés)", "dateSortie", b.dateSortie || "", "date", "", "required")}${fld("Préavis reçu le", "preavisRecu", b.preavisRecu, "date")}`,
-    d => { Object.assign(bail(id), d); recalculerTaxesDe(bail(id)); toast("Départ noté : le parcours de départ est sur sa fiche"); });
+  const b = bail(id), bi = bien(b.bienId); if (bi) chargerCommune(bi);
+  const pv = preavisLocataire(b);
+  modal("Départ du locataire", `<p class="full note">${pv ? `Préavis du locataire : <b>${pv.mois} mois</b> (${esc(pv.pourquoi)}).` : "Préavis : 1 mois en meublé ou en zone tendue, 3 mois sinon en location vide."} Le dernier loyer est calculé au prorata.</p>
+    ${fld("Préavis reçu le", "preavisRecu", b.preavisRecu, "date")}${fld("Date de sortie (remise des clés)", "dateSortie", b.dateSortie || "", "date", "", "required")}`,
+    d => { Object.assign(bail(id), d); recalculerTaxesDe(bail(id)); toast("Départ noté : le parcours de départ est sur sa fiche"); },
+    { after: f => f.preavisRecu.addEventListener("change", () => { const p2 = preavisLocataire(bail(id)); if (p2 && f.preavisRecu.value && !f.dateSortie.value) { f.dateSortie.value = iso(addMonthsDate(P(f.preavisRecu.value), p2.mois)); f.dateSortie.classList.add("auto"); } }) });
 }
 /* La part d'ordures ménagères dépend des jours passés dans le logement : on la recalcule quand une date d'entrée ou de sortie change */
 function recalculerTaxesDe(b) {
@@ -7807,7 +7854,7 @@ function etapesArrivee(b) {
 function etapesDepart(b) {
   const L = edlsDuBail(b.id), s2 = L.find(x => x.type === "sortie"), ech = b.dateSortie ? echeance(b, mk(P(b.dateSortie))) : null;
   return [
-    { k: "dep-preavis", ok: !!b.preavisRecu || faitBail(b, "dep-preavis"), t: "Préavis reçu", d: `${cq("preavis")} 3 mois en vide, 1 mois en meublé ou en zone tendue (ou pour certains motifs : mutation, perte d'emploi, santé…).`, btn: ["Indiquer", `finBail('${b.id}')`] },
+    { k: "dep-preavis", ok: !!b.preavisRecu || faitBail(b, "dep-preavis"), t: "Préavis reçu", d: `${cq("preavis")} ${(p => p ? `Ici : ${p.mois} mois (${p.pourquoi}). ` : "")(preavisLocataire(b))}3 mois en vide, 1 mois en meublé ou en zone tendue (ou pour certains motifs : mutation, perte d'emploi, santé…).`, btn: ["Indiquer", `finBail('${b.id}')`] },
     { k: "dep-annonce", ok: S.baux.some(x => x.bienId === b.bienId && x !== b && P(x.dateEntree) >= P(b.dateSortie || iso(TODAY))) || faitBail(b, "dep-annonce"), t: "Annonce pour relouer", d: "Prête en un clic, avec les mentions obligatoires.", btn: ["Préparer l'annonce", `annonce('${b.bienId}')`] },
     { k: "dep-edl", ok: !!s2, t: "État des lieux de sortie", d: "Comparé pièce par pièce à celui d'entrée. Relève les compteurs, récupère toutes les clés.", btn: s2 ? ["Ouvrir", `go('edl-${s2 ? s2.id : ""}')`] : ["Commencer", `nouvelEdl('${b.id}','sortie')`] },
     { k: "dep-compare", ok: !!b.retenues || faitBail(b, "dep-compare"), t: "Comparer entrée et sortie, calculer les retenues", d: "Seulement les dégâts au-delà de l'usure normale, avec devis ou factures.", btn: ["Comparer", `comparerEdl('${b.id}')`] },

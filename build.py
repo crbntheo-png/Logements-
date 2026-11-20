@@ -88,7 +88,8 @@ def main():
     open(os.path.join(DIST, "index.html"), "w", encoding="utf-8").write(html)
     shutil.copy(os.path.join(ICI, "vendor", "supabase.js"), os.path.join(DIST, "supabase.js"))
     shutil.copy(os.path.join(ICI, "presentation.html"), os.path.join(DIST, "presentation.html"))
-    shutil.copy(os.path.join(ICI, "robots.txt"), os.path.join(DIST, "robots.txt"))  # page d'accueil publique (exigée par Google)
+    shutil.copy(os.path.join(ICI, "robots.txt"), os.path.join(DIST, "robots.txt"))
+    shutil.copytree(os.path.join(ICI, "donnees"), os.path.join(DIST, "donnees"))  # données publiques (loyers par commune, zones tendues), chargées à la demande  # page d'accueil publique (exigée par Google)
     for f in os.listdir(ICI):  # fichiers de vérification Google Search Console (googleXXXX.html)
         if re.match(r"^google[0-9a-f]+\.html$", f):
             # Cloudflare Pages redirige "x.html" vers "x" (308), ce que Google refuse : on sert le contenu tel quel par une réécriture

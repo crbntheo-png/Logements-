@@ -79,6 +79,15 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 21/11/2026 — connecteurs gratuits : zone tendue officielle et loyers du marché par commune
+
+- Demande de Théo : "des vrais connecteurs gratuits, pas compliqués, utiles". Choisis : données publiques sans compte ni clé.
+- `donnees/zones-tendues.json` (11 Ko) : communes des agglomérations de plus de 50 000 habitants en zone tendue (liste "PlusDe50000" du simulateur Zones tendues de service-public.fr, gitlab pidila/sp-simulateurs-data, relevée le 21/11/2026). La 2e liste du simulateur ("DesequilibreOffreEtDemande", communes touristiques ajoutées en 2023, dont Agon-Coutainville) n'est PAS reprise : pas sûr qu'elle donne le préavis d'1 mois. À faire confirmer.
+- `donnees/loyers-2025.json` (1 Mo, chargé à la demande) : "Carte des loyers" 2025 du ministère (data.gouv), loyer d'annonce charges comprises €/m² par commune : app 1-2 p., app 3+ p., maison, appartement, + estimation à la commune ou à la maille. Copiés dans dist/ par build.py.
+- Appli : code commune du logement (`inseeDe` : bi.insee, sinon début de l'identifiant d'adresse BAN, sinon recherche d'adresse ; gardé avec saveAuto) ; arrondissements de Paris/Lyon/Marseille ramenés à la commune pour la zone tendue. Fiche logement : carte "📍 À <ville>" (`blocCommune`) : zone tendue ou non (préavis 1 ou 3 mois, loyer encadré à la relocation), loyer des annonces €/m² et pour la surface, écart avec le loyer actuel (dans la moyenne ±10 %, au-dessus, en dessous), source + mention de l'encadrement à Paris, Lyon, Villeurbanne, Lille, Bordeaux, Montpellier. Pas pour un local, un parking ou un immeuble.
+- Départ (`finBail`) : "Préavis du locataire : 1 mois (zone tendue)" / 3 mois / 1 mois meublé (`preavisLocataire`), date de sortie proposée = préavis reçu + durée ; parcours de départ précisé. Nouveau locataire en zone tendue, ancien parti il y a moins de 18 mois : rappel que le loyer hors charges ne peut pas dépasser l'ancien.
+- Test107 (nouveau, 11 contrôles : Rennes, Agon, Lyon 3e) OK.
+
 ### 21/11/2026 — déclaration de revenus en nom propre (2044, micro-foncier, meublé micro-BIC)
 
 - Comparaison avec Rentila, Qalimo, BailFacile, Smovin (sources web, comparatifs souvent sponsorisés) : manques principaux = banque pour tous (devis), signature électronique certifiée, déclaration 2044 / LMNP, appli dans les stores. Théo a choisi la 2044.
