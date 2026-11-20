@@ -30,6 +30,7 @@ let KO = 0; const ok = (n, v) => { console.log((v ? '  ✓ ' : '  ✗ ') + n); i
   fs.mkdirSync(__dirname + '/shots97', { recursive: true }); await p.screenshot({ path: __dirname + '/shots97/docs-logement.png' });
   ok('onglet Docs toujours allumé', /Docs/.test(await nav()));
   ok('retour = "← Documents"', /^← Documents \| #docs$/.test(await back()));
+  await p.evaluate(() => { const d = document.querySelector('#app details.a-completer'); if (d) d.open = true; });
   const carte = p.locator('#app .a-completer');
   ok('ce qui manque est listé sur la page', await carte.count() === 1 && /manque/.test(await carte.locator('h2').textContent()));
   const nb = n => p.locator('#app .a-completer li').count();

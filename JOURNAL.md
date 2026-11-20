@@ -79,6 +79,25 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 20/11/2026 (nuit) — documents : on n'est bloqué nulle part ; budget IA du mois dépassé
+
+- Retour de Théo : "mettre des documents doit être hyper fluide, on peut revenir en arrière, l'enlever, l'alimenter, on n'est bloqué à aucun moment". Avant : impossible de renommer ou déplacer un document (il fallait le supprimer et le remettre), suppression définitive sans "Annuler", un seul fichier à la fois, carte "infos manquent" qui poussait les documents en bas.
+- Nouveau :
+  - `editDocument(id)` (✏️ sur chaque document) : Ouvrir, Lire avec l'IA, Nom, Logement (le déplacer), Concerne (mis à jour selon le logement), Catégorie, Supprimer.
+  - Suppression : `retirerDocuments(ids)` avec "Annuler" 10 s (`remettreDocuments`) ; le fichier n'est effacé du stockage qu'après 12 s (et seulement si aucun autre document ne l'utilise).
+  - Ajout : plusieurs fichiers d'un coup (catégorie devinée pour chacun si elle n'a pas été choisie) ; après l'ajout, "Voir", "En ajouter", "Annuler" (`apresAjoutDocs`) ; idem pour un lien.
+  - Page des documents d'un logement : "+ Ajouter" en haut, carte "N infos manquent" repliée en une ligne (`carteACompleter(bi, titre, replie)`), documents visibles tout de suite.
+  - Plus d'impasse "Ajoute d'abord un logement" (bouton "Ajouter un logement").
+- Test104 (nouveau, vraie base : ajout 1 et 2 fichiers, Annuler, ouvrir, renommer + déplacer + catégorie, enregistré en ligne, supprimer + Annuler, effacé du stockage après le délai, retour arrière) OK.
+- **Budget IA global dépassé** (3,18 $ sur 3 $ en novembre) : l'IA est en pause pour tous les utilisateurs sauf IA_SANS_LIMITE jusqu'au 1er décembre. Les tests IA (62, 85) échouent pour cette raison. À Théo de décider : poser IA_BUDGET_MOIS plus haut dans les secrets Supabase (refusé à Claude).
+
+### 20/11/2026 (soir) — relevé PDF ou photo lu tout seul ; relevé reçu dans la boîte ; audit "débutant" corrigé
+
+- **Relevé de banque, la vraie voie pour tous (la banque en direct est fermée aux autres)** : "Importer mon relevé" accepte le PDF de la banque (lu SANS IA : `releveDepuisPdf`, lignes reconstituées par position, signe d'après la colonne Débit/Crédit, libellés sur plusieurs lignes recollés, soldes et totaux ignorés, année du relevé), le CSV, les lignes collées, ou une photo / un scan (lu par l'IA : action "releve" de la fonction ia, 1 lecture de document, schéma date/libellé/montant). Fenêtre : un seul bouton "📄 Choisir le relevé", le reste replié. Un relevé déjà importé ne crée pas de doublon.
+- **Relevé reçu dans la boîte à documents** (e-mail ou photo) : reconnu (`ESTRELEVE` : relevé de compte, ancien/nouveau solde…), pas rangé dans un logement ; toast "🏦 Ton relevé de banque est arrivé · Cocher les loyers" et ligne "C'est un relevé de banque · Cocher les loyers" dans la boîte (`releveRecu`).
+- **Audit "débutant" (relecteur automatique, iPhone et 360 px, mode local)** — corrigé : pastille de la liste Biens = le plus vieux loyer en retard (affichait "Payé" alors qu'un ancien mois était dû) ; "de octobre / de avril / de août" → `deM()` (29 textes et courriers) ; aperçu de document lisible à 360 px (tableaux) ; noms entiers sur 2 lignes dans les listes ; "Voir l'autre" ; dépôt non rempli = "pas noté" ; déclaration d'occupation avec "C'est fait" sur l'accueil. Laissé tel quel (voulu) : "Suivre les loyers à partir de" = le mois prochain après le 5 (évite un faux impayé). Pages sans compte (#tous, #integrations) : seulement en mode local, pas corrigé.
+- Tests : test102 (relevé PDF, photo IA simulée, boîte, 19 contrôles) et test103 (audit, 8 contrôles) nouveaux.
+
 ### 20/11/2026 — banque en direct : plus proposée là où elle ne peut pas marcher (Max)
 
 - Max a réessayé (20/11 13 h 49, CIC) : toujours 0 compte, comme prévu (mode gratuit d'Enable Banking = seulement les comptes reliés par Théo). L'appli lui proposait encore "Réessayer" : impasse.

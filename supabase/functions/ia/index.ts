@@ -104,6 +104,15 @@ Recopie ce qui est écrit, sans rien inventer : "" ou 0 quand l'information manq
 - Ignore les lignes de totaux, les loyers mois par mois, les dépenses et la comptabilité.
 - remarques : 1 à 2 phrases sur ce qui est ambigu ou ignoré, sinon "".`;
 async function lireUnTableur(admin: any, u: any, c: any) { return lireDocument(admin, u, { ...c, brut: true }, S_TAB, CONSIGNE_TAB, "Logements déjà dans l'appli : " + (Array.isArray(c.biens) && c.biens.length ? c.biens.map((x: any) => court(x, 80)).join(" ; ") : "aucun") + ".\nCrée les logements et les locataires actuels à partir de ce tableur.", "tableur"); }
+// Relevé de compte en photo ou scanné (sans texte) : la liste des opérations, recopiée telle quelle
+const S_REL = {
+  type: "object", additionalProperties: false, required: ["operations"],
+  properties: { operations: { type: "array", items: { type: "object", additionalProperties: false, required: ["date", "libelle", "montant"], properties: { date: { type: "string" }, libelle: { type: "string" }, montant: { type: "number" } } } } },
+};
+const CONSIGNE_REL = `Tu lis un relevé de compte bancaire français (photo ou scan) pour en recopier les opérations, sans rien inventer.
+- operations : chaque ligne d'opération, dans l'ordre. date au format AAAA-MM-JJ (date d'opération ; si l'année n'est pas écrite sur la ligne, prends celle du relevé). libelle : le texte complet de l'opération, lignes de détail comprises (nom de l'émetteur d'un virement, référence). montant : positif pour un crédit (argent reçu), négatif pour un débit (argent sorti).
+- Ignore les soldes (ancien solde, nouveau solde), les totaux, les en-têtes et les mentions légales.`;
+async function lireUnReleve(admin: any, u: any, c: any) { return lireDocument(admin, u, c, S_REL, CONSIGNE_REL, "Recopie les opérations de ce relevé.", "releve"); }
 async function lireUnBail(admin: any, u: any, c: any) { return lireDocument(admin, u, c, S_BAIL, CONSIGNE_BAIL, "Remplis la fiche à partir de ce bail.", "bail"); }
 async function lireUnDoc(admin: any, u: any, c: any) { return lireDocument(admin, u, c, S_DOC, CONSIGNE_DOC, "Lis ce document" + (c.nom ? ` (fichier « ${court(c.nom, 200)} »)` : "") + " et dis où le ranger.", "doc"); }
 async function lireDocument(admin: any, u: any, c: any, schema: any, consigne: string, demande: string, cle: string) {
@@ -198,6 +207,7 @@ Deno.serve(async (req) => {
     if (c.action === "doc") return await lireUnDoc(admin, u.user, c);
     if (c.action === "tableur") return await lireUnTableur(admin, u.user, c);
     if (c.action === "question") return await repondreQuestion(admin, u.user, c);
+    if (c.action === "releve") return await lireUnReleve(admin, u.user, c);
     const illimite = sansLimite(u.user.email);
     const { data: ok } = await admin.rpc("ia_reserver", { u: u.user.id, max_jour: illimite ? 100000 : NB_JOUR(), max_mois: illimite ? 100000 : NB_MOIS(), budget: illimite ? 1e15 : BUDGET() });
     if (ok !== "ok") return rep({ erreur: ok === "jour" ? `Tu as utilisé tes ${NB_JOUR()} analyses d'aujourd'hui. Reviens demain.` : ok === "mois" ? `Tu as utilisé tes ${NB_MOIS()} analyses de ce mois-ci. Elles reviennent le 1er du mois.` : "L'IA est en pause pour tout le monde jusqu'au 1er du mois (budget de l'appli atteint).", raison: ok, credits: await credits(admin, u.user) }, 429);

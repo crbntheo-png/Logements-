@@ -116,6 +116,9 @@ Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`
 | `tests/test99.js` | Vraie base + VRAIE IA (1 question, ~0,03 $) : assistant "Pose ta question" (réponse juste, boutons valides, quota à part). Ne pas relancer sans raison |
 | `tests/test100.js` | Mode local : clavier ouvert (Android et iPhone simulés) : fenêtres au-dessus du clavier, bouton visible ; fenêtre "Pose ta question" (IA simulée) |
 | `tests/test101.js` | Vraie base : banque en direct pas ouverte pour un compte sans banque qui marche (serveur "dispo" et refus, relevé à la place partout) |
+| `tests/test102.js` | Mode local : relevé de banque en PDF (sans IA), en photo (IA simulée), reçu dans la boîte |
+| `tests/test103.js` | Mode local, 360 px : corrections de l'audit débutant (pastille Biens, "d'octobre", noms entiers, dépôt, déclaration d'occupation) |
+| `tests/test104.js` | Vraie base : documents de bout en bout (ajout multiple, Annuler, ouvrir, modifier/déplacer, supprimer + Annuler, stockage nettoyé, retour) |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.
