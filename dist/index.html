@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "95aba18", "date": "2026-11-21T00:19"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "f811364", "date": "2026-11-21T01:09"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -276,6 +276,8 @@ details.rgl { scroll-margin-top: 76px; }
 .lr-main .tx small { color: var(--muted); font-size: .84rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .lr-r { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .lr-r small { color: var(--muted); font-size: .8rem; }
+.lr-main .tx small { overflow-wrap: anywhere; }
+@media (max-width: 360px) { .lr-r { flex-shrink: 1; max-width: 42%; } .lr-r .pill { white-space: normal; text-align: center; line-height: 1.15; } .lr-main .ico-cat { width: 32px; height: 32px; } }
 .lr-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-left: 56px; }
 .lr-acts.sans-av { padding-left: 0; }
 .lr-total { display: flex; justify-content: space-between; padding: 12px 14px; background: var(--surface-2); font-weight: 750; }
@@ -2830,6 +2832,7 @@ function render0() {
   if (MODE === "locataire") { document.body.classList.add("sans-nav", "mode-locataire"); app.innerHTML = pageLocataire(); return; }
   if (MODE === "candidat") { document.body.classList.add("sans-nav", "mode-locataire"); app.innerHTML = pageCandidat(); return; }
   document.body.classList.toggle("sans-nav", MODE === "connexion" || MODE === "nouvel-espace" || MODE === "chargement");
+  if (MODE === "chargement" || MODE === "connexion" || MODE === "nouvel-espace") { const bs = document.getElementById("brandSub"); if (bs) bs.innerHTML = MODE === "chargement" ? "Chargement…" : ""; }
   if (MODE === "chargement") { app.innerHTML = `<div class="loader" role="status"><span class="spin" aria-hidden="true"></span>Chargement de tes données…</div>`; return; }
   if (MODE === "connexion") { app.innerHTML = location.hash === "#legal" ? pageLegal().replace('href="#reglages">← Réglages', 'href="#">← Connexion') : pageConnexion() + `<p class="note center" style="margin-top:18px"><a href="/presentation">Découvrir l'appli</a> · <a href="#legal">Mentions légales et confidentialité</a></p>`; if (document.getElementById("gbtn")) setTimeout(boutonGoogle, 0); return; }
   if (MODE === "nouvel-espace") { app.innerHTML = pageNouvelEspace(); return; }
@@ -3059,7 +3062,7 @@ function ouvrirDemandeIntegration(pre) {
 /* Pour l'administrateur : le classement des intégrations demandées */
 let INTEG = null;
 function pageIntegrations() {
-  if (!INTEG) { INTEG = { etat: "chargement" }; SB.rpc("demandes_integrations").then(r => { INTEG = r.error ? { etat: "refus", err: r.error.message } : { etat: "pret", L: r.data || [] }; render(); }); }
+  if (!INTEG) { INTEG = SB ? { etat: "chargement" } : { etat: "refus", err: "Connecte-toi pour voir cette page." }; if (SB) SB.rpc("demandes_integrations").then(r => { INTEG = r.error ? { etat: "refus", err: r.error.message } : { etat: "pret", L: r.data || [] }; render(); }, () => { INTEG = { etat: "refus", err: "Pas de connexion." }; render(); }); }
   const L = INTEG.L || [];
   return `<a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>🔌 Intégrations demandées</h1><p>Ce que les utilisateurs aimeraient brancher, le plus demandé en premier. Visible par toi seul.</p></div><div class="row"><button class="small" onclick="INTEG=null;render()">↻ Actualiser</button></div></div>
     ${INTEG.etat === "chargement" ? `<p class="note">Chargement…</p>` : INTEG.etat === "refus" ? `<div class="empty">${esc(INTEG.err)}</div>` : !L.length ? `<div class="empty">Aucune demande pour l'instant.</div>`

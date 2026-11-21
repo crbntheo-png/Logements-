@@ -81,6 +81,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 21/11/2026 (soir) — contrôle visuel de toutes les pages (iPhone, Android, petit écran, clair et sombre)
+
+- Nouveau `tests/test113.js` : ouvre 22 pages et les fenêtres principales sur iPhone 390, Android 412 et petit écran 320, clair et sombre ; repère page plus large que l'écran, élément qui dépasse, texte coupé, bouton trop petit pour le doigt, erreurs JS. Résultat final : tout est propre.
+- Corrigé : page "Intégrations" qui plantait sans connexion (mode "sur cet appareil") ; liste des Biens sur petit écran (320 px) : la pastille "En retard · 16 j" écrasait le texte (58 px), elle passe sur deux lignes ; écran de chargement qui affichait "Synchronisé" en haut (maintenant "Chargement…", rien sur l'écran de connexion).
+- Vérifié sans problème : aucun champ de saisie sous 16 px (pas de zoom automatique sur iPhone), encoche iPhone prise en compte, clavier Android (`interactive-widget`).
+- Tests 5, 110, 111, 112, 113 OK. En ligne.
+- Pas vérifié : sur un vrai téléphone ; les petits sauts de mise en page pendant le chargement avec un vrai compte (pas mesurés).
+
 ### 21/11/2026 — plusieurs espaces et Drive partagé : chaque dossier dans un seul espace ; autre compte Google ; immeubles
 
 - **Problème trouvé** : avec la méthode principale (dossier Drive partagé avec l'appli), le serveur rendait **tous** les dossiers partagés de la personne dans **chaque** espace. Avec une SCI avec Paul et une autre avec Marc, les papiers de l'une pouvaient être proposés, voire rangés tout seuls, dans l'autre.
