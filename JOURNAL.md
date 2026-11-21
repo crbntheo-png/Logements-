@@ -81,6 +81,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 21/11/2026 (nuit) — meublé au régime réel (LMNP) : micro ou réel, amortissements, dossier pour le comptable
+
+- Choix d'après le comparatif (Rentila, Qalimo, BailFacile, Smovin) : le LMNP au réel était le gros manque gratuit (annoncé dans "Prochaines sorties", retiré de la liste).
+- `amortLMNP`, `anneeLMNP`, `calculLMNP` : logement = prix frais compris × (1 − part du terrain, 15 % par défaut) ÷ 30 ans ; meubles ÷ 7 ans ; dépenses "Travaux d'amélioration" ÷ 10 ans (plus déduites d'un coup) ; années pleines depuis "loué meublé depuis" (1er bail meublé, ou réglage). Une seule activité pour tous les meublés. Rejoue les années (15 max) : l'amortissement ne crée jamais de perte, le surplus est reporté sans limite (39 C) ; perte venant des charges reportée 10 ans sur les bénéfices meublés. Comparaison avec le micro-BIC (50 %, plafond 77 700 €).
+- Écran dans Compta › Comptable (nom propre), partie meublé : duel "Micro-BIC / Réel" (montants imposés), verdict + économie estimée (tranche 30 % + 17,2 %), "⚙️ Prix et meubles" (`reglerLMNP` : prix, terrain, meubles, année de début), "📄 Dossier pour le comptable" (`dossierLMNP` : par logement, charges par catégorie, résultat, reports), "Le calcul au réel" et "Pourquoi ?" repliés (réintégration des amortissements dans la plus-value depuis 2025, cases 5NA/5NY à confirmer).
+- Test **114** (12/12, chiffres calculés à la main : 150 000 € à 15 % de terrain → 4 250 €/an ; 7 000 € de meubles → 1 000 €/an ; plafond ; perte reportée ; réglages ; dossier). Tests 5, 106, 113 OK. En ligne, nouveauté ajoutée sans notification (pas d'annonce avant le 26/11).
+- **Pas vérifié** : relecture par un expert-comptable (durées par défaut, années pleines sans prorata, pas de décomposition par composants, cases 5NA/5NY).
+
 ### 21/11/2026 (soir) — contrôle visuel de toutes les pages (iPhone, Android, petit écran, clair et sombre)
 
 - Nouveau `tests/test113.js` : ouvre 22 pages et les fenêtres principales sur iPhone 390, Android 412 et petit écran 320, clair et sombre ; repère page plus large que l'écran, élément qui dépasse, texte coupé, bouton trop petit pour le doigt, erreurs JS. Résultat final : tout est propre.

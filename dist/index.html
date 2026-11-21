@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "f811364", "date": "2026-11-21T01:09"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "BDIk3uC--lRSuf7urrMBFCU6QL82V3PRivWUH7PmTKHOJ8C7JF1okB0Zis6aRoQUgQ-bERV4FyQtGD-hvKXdW1M", "dropbox": "e8lwqyzccstn6ma"}; window.APP_VERSION = {"id": "4af51ee", "date": "2026-11-21T01:19"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,6 +182,13 @@ button.small .ic { width: 16px; height: 16px; }
 .nv-liste .tx { display: grid; gap: 2px; min-width: 0; } .nv-liste small { color: var(--muted); line-height: 1.4; } .nv-liste a { font-weight: 600; font-size: .9rem; }
 #app .portails-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 4px; box-shadow: inset 0 0 0 1.5px var(--accent-soft), var(--sh-1); } #app .portails-cta .tx { flex: 1 1 200px; display: grid; gap: 2px; min-width: 0; } #app .portails-cta small { color: var(--muted); } #app .portails-cta .row { width: 100%; }
 .ajout-doc { display: grid; gap: 12px; } .ajout-doc .btn { justify-content: center; }
+.lmnp { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin: 10px 0; }
+.lmnp.reel { border-color: var(--accent); }
+.lmnp-duel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.lmnp-duel > div { background: var(--bg, #f4f5f7); border-radius: 10px; padding: 10px; display: grid; gap: 2px; text-align: center; }
+.lmnp-duel span { font-size: .8rem; color: var(--muted); } .lmnp-duel b { font-size: 1.15rem; font-variant-numeric: tabular-nums; } .lmnp-duel small { color: var(--muted); font-size: .75rem; }
+.lmnp.reel .lmnp-duel > div:last-child { outline: 2px solid var(--accent); }
+.lmnp-verdict { margin: 6px 0 10px; }
 .esp-cible { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
 .esp-libres .esp-libre { padding: 10px 0; border-top: 1px solid var(--line, #e5e5e5); } .esp-libres .esp-libre:first-of-type { border-top: 0; } .esp-libres .esp-libre p { margin: 0 0 8px; } .esp-libres .esp-libre small { color: var(--muted, #777); margin-left: 6px; }
 .comptes-g { margin-top: 10px; }
@@ -4511,7 +4518,6 @@ const BIENTOT = [
   ["prelevement", "💳", "Prélèvement automatique des loyers", "Le locataire signe un mandat une fois, le loyer est prélevé tout seul chaque mois (environ 2 € par loyer)."],
   ["recommande", "📮", "Lettre recommandée en ligne", "Mise en demeure ou congé envoyés en recommandé électronique, sans aller à la poste. Payant à l'envoi."],
   ["app-store", "📱", "L'appli dans l'App Store et le Play Store", "Une vraie appli à télécharger, en plus de celle qu'on installe depuis le navigateur."],
-  ["lmnp-reel", "🏛", "Meublé au régime réel (LMNP, liasse 2031)", "Amortissement du logement et des meubles calculé, liasse préremplie pour le comptable."],
 ];
 let ENVIES = null;
 async function chargerEnvies() {
@@ -7924,6 +7930,87 @@ function calcul2044(y) {
   const microBIC = r2(recM * 0.5);
   return { y, F, M, L, L215, L240, L250, L261, c4BA, c4BB, c4BC, microOk, baseMicro, baseReel, conseil, recM: r2(recM), chargesM: r2(chargesM), microBIC, aVerifier };
 }
+/* ================= Meublé au régime réel (LMNP) : amortissements, comparaison avec le micro-BIC, dossier pour le comptable =================
+   Le logement s'use : on déduit chaque année une part de son prix (pas le terrain), des meubles et des gros travaux.
+   L'amortissement ne peut pas créer de perte : ce qui dépasse est gardé pour les années suivantes, sans limite de durée.
+   Une perte venant des charges (sans amortissement) se reporte sur les bénéfices meublés des 10 années suivantes. */
+const LMNP_DUREES = { bati: 30, meubles: 7, travaux: 10 };
+const lmnpDe = bi => Object.assign({ terrain: 15, meubles: 0 }, bi.lmnp || {});
+const debutMeubleDe = bi => { const L = S.baux.filter(b => b.bienId === bi.id && MEUBLE_TYPES.has(b.typeBail) && b.dateEntree).map(b => +b.dateEntree.slice(0, 4)); return +(bi.lmnp && bi.lmnp.debut) || (L.length ? Math.min(...L) : 0); };
+/* amortissements de l'année y pour un logement (au prorata la 1re année) */
+function amortLMNP(bi, y) {
+  const c = lmnpDe(bi), deb = debutMeubleDe(bi), px = prixAchatDe(bi); if (!deb || y < deb) return { bati: 0, meubles: 0, travaux: 0, total: 0 };
+  const bati = px > 0 && y < deb + LMNP_DUREES.bati ? r2(px * (1 - (+c.terrain || 0) / 100) / LMNP_DUREES.bati) : 0;
+  const meubles = +c.meubles > 0 && y < deb + LMNP_DUREES.meubles ? r2(+c.meubles / LMNP_DUREES.meubles) : 0;
+  const travaux = r2(S.depenses.filter(d => d.bienId === bi.id && d.categorie === "Travaux d'amélioration" && d.date && +d.date.slice(0, 4) >= deb).reduce((s, d) => { const a = +d.date.slice(0, 4); return s + (y >= a && y < a + LMNP_DUREES.travaux ? (+d.montant || 0) / LMNP_DUREES.travaux : 0); }, 0));
+  return { bati, meubles, travaux, total: r2(bati + meubles + travaux) };
+}
+/* une année, tous les meublés ensemble (une seule activité LMNP par foyer) */
+function anneeLMNP(y) {
+  const rec = recettes(y), couv = depensesCouvertes(), M = S.biens.filter(b => !b.immeuble && estMeubleEn(b, y)), id = new Set(M.map(b => b.id)), parBien = {};
+  let recettesM = 0, charges = 0, interets = 0, amort = 0;
+  M.forEach(b => { const r = r2(((rec[b.id] || {}).loyers || 0) + ((rec[b.id] || {}).charges || 0)), it = interetsTableaux(y, b.id), a = amortLMNP(b, y); parBien[b.id] = { r, ch: 0, it, a }; recettesM += r; interets += it; amort += a.total; });
+  S.depenses.filter(d => id.has(d.bienId) && (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie) && !couv.has(d.id) && d.categorie !== "Travaux d'amélioration").forEach(d => { const m = +d.montant || 0; charges += m; parBien[d.bienId].ch += m; });
+  return { y, M, parBien, recettes: r2(recettesM), charges: r2(charges), interets: r2(interets), amort: r2(amort) };
+}
+function calculLMNP(y) {
+  /* on rejoue les années depuis le début du meublé pour connaître les reports */
+  const debs = S.biens.filter(b => !b.immeuble).map(debutMeubleDe).filter(Boolean), y0 = debs.length ? Math.max(Math.min(...debs), y - 15) : y;
+  let reportAmort = 0, deficits = []; let A = null;
+  for (let a = y0; a <= y; a++) {
+    A = anneeLMNP(a);
+    const avant = r2(A.recettes - A.charges - A.interets); /* résultat avant amortissement */
+    let deficitAn = 0, imput = 0, amortDeduit = 0, resultat;
+    deficits = deficits.filter(d => d.an >= a - 10);
+    if (avant < 0) { deficitAn = -avant; reportAmort = r2(reportAmort + A.amort); resultat = 0; }
+    else { const dispo = r2(A.amort + reportAmort); amortDeduit = Math.min(dispo, avant); reportAmort = r2(dispo - amortDeduit); resultat = r2(avant - amortDeduit);
+      for (const d of deficits) { const u = Math.min(d.m, resultat); d.m = r2(d.m - u); resultat = r2(resultat - u); imput = r2(imput + u); } deficits = deficits.filter(d => d.m > 0); }
+    if (deficitAn) deficits.push({ an: a, m: r2(deficitAn) });
+    if (a === y) Object.assign(A, { avant, amortDeduit: r2(amortDeduit), reportAmort, resultat: r2(resultat), deficitAn: r2(deficitAn), imput, deficitsRestants: r2(deficits.reduce((s, d) => s + d.m, 0)) });
+  }
+  A.micro = r2(A.recettes * 0.5); A.microOk = A.recettes <= 77700;
+  A.gainBase = r2(A.micro - A.resultat); A.manque = A.M.filter(b => !(prixAchatDe(b) > 0)).map(b => b.nom);
+  return A;
+}
+function reglerLMNP(id) {
+  const bi = bien(id), c = lmnpDe(bi);
+  modal(`Meublé au réel : ${esc(bi.nom)}`, `${fld("Prix d'achat, frais compris (€)", "prixAchat", bi.prixAchat || "", "number")}
+    ${fld("Part du terrain (%)", "terrain", c.terrain, "number", "", 'min="0" max="60" step="1"')}
+    ${fld("Meubles achetés (€)", "meubles", c.meubles || "", "number")}
+    ${fld("Loué meublé depuis (année)", "debut", c.debut || debutMeubleDe(bi) || "", "number", "", 'min="1990" max="2100"')}
+    <details class="pq full"><summary>Pourquoi ?</summary><p class="note">Le terrain ne s'use pas : il n'est pas amorti (souvent 10 à 20 % du prix, plus en ville chère). Le logement est amorti sur ${LMNP_DUREES.bati} ans, les meubles sur ${LMNP_DUREES.meubles} ans, les travaux d'amélioration (catégorie de dépense) sur ${LMNP_DUREES.travaux} ans.</p></details>`,
+    d => { if (+d.prixAchat > 0) bi.prixAchat = +d.prixAchat; bi.lmnp = { terrain: Math.min(60, Math.max(0, +d.terrain || 0)), meubles: Math.max(0, +d.meubles || 0), ...(+d.debut ? { debut: +d.debut } : {}) }; toast("✓ Enregistré"); });
+}
+function blocLMNP(y) {
+  const A = calculLMNP(y); if (!A.recettes) return "";
+  const mieux = A.resultat < A.micro, eco = r2(A.gainBase * 0.472);
+  return `<div class="lmnp ${mieux ? "reel" : "micro"}">
+    <div class="lmnp-duel"><div><span>Micro-BIC</span><b>${eur(A.micro)}</b><small>imposés</small></div><div><span>Réel</span><b>${eur(A.resultat)}</b><small>imposés</small></div></div>
+    ${A.manque.length ? `<p class="note">⚠️ Prix d'achat manquant pour ${esc(A.manque.join(", "))} : l'amortissement du logement n'est pas compté.</p>` : ""}
+    <p class="lmnp-verdict">${mieux ? `👉 <b>Le réel te ferait payer moins</b> : ${eur(A.gainBase)} de moins imposés, soit environ <b>${eur(eco)}</b> d'impôts en moins par an (tranche à 30 % + 17,2 % de prélèvements sociaux).` : `👉 <b>Le micro-BIC reste le plus simple et le moins cher</b> pour ${y}.`}${A.microOk ? "" : " Au-delà de 77 700 € de loyers meublés, le réel est obligatoire."}</p>
+    <div class="row">${A.M.map(b => `<button type="button" class="small" onclick="reglerLMNP('${b.id}')">⚙️ Prix et meubles${A.M.length > 1 ? ` · ${esc(b.nom)}` : ""}</button>`).join("")}<button type="button" class="small${mieux ? " primary" : ""}" onclick="dossierLMNP(${y})">📄 Dossier pour le comptable</button></div>
+    <details class="pli-mini"><summary>Le calcul au réel</summary><table class="decl"><tbody>
+      <tr><td>Loyers meublés encaissés (charges comprises)</td><td class="num">${eur(A.recettes)}</td></tr>
+      <tr><td>Charges payées (assurance, taxe foncière, copro, entretien…)</td><td class="num">− ${eur(A.charges)}</td></tr>
+      <tr><td>Intérêts d'emprunt</td><td class="num">− ${eur(A.interets)}</td></tr>
+      <tr><td>Amortissements de l'année${A.reportAmort || A.amortDeduit > A.amort ? " (et reportés)" : ""}</td><td class="num">− ${eur(A.amortDeduit)}</td></tr>
+      ${A.imput ? `<tr><td>Pertes des années passées</td><td class="num">− ${eur(A.imput)}</td></tr>` : ""}
+      <tr><td><b>${A.deficitAn ? "Perte (reportable 10 ans)" : "Résultat imposable"}</b></td><td class="num"><b>${eur(A.deficitAn ? -A.deficitAn : A.resultat)}</b></td></tr>
+      ${A.reportAmort ? `<tr><td>Amortissement gardé pour les années suivantes</td><td class="num">${eur(A.reportAmort)}</td></tr>` : ""}</tbody></table>
+      <p class="note">Au réel : la liasse 2031 et 2033 se fait avec un comptable (environ 300 à 600 € par an, déductibles). Le résultat va sur la 2042-C-PRO, locations meublées non professionnelles (case 5NA, ou 5NY si perte : à confirmer avec lui).</p></details>
+    <details class="pli-mini"><summary>Pourquoi ?</summary><p class="note">Au micro-BIC, les impôts retirent 50 % des loyers, quoi que tu dépenses. Au réel, tu déduis tes vraies charges et surtout l'usure du logement et des meubles (l'amortissement) : souvent, il ne reste presque rien d'imposable pendant des années. L'amortissement ne crée jamais de perte : le surplus est gardé pour plus tard. Depuis 2025, les amortissements déduits sont ajoutés à la plus-value si tu revends. Calcul simplifié (années pleines, logement sur ${LMNP_DUREES.bati} ans) : à faire valider.</p></details></div>`;
+}
+function dossierLMNP(y) {
+  const A = calculLMNP(y), lignes = A.M.map(b => { const p = A.parBien[b.id], c = lmnpDe(b); return `<tr><td>${esc(b.nom)}<div class="sub">${esc(adresseBien(b))} · meublé depuis ${debutMeubleDe(b) || "?"}</div></td><td class="num">${eur(p.r)}</td><td class="num">${eur(r2(p.ch))}</td><td class="num">${eur(p.it)}</td><td class="num">${eur(prixAchatDe(b))}<div class="sub">terrain ${c.terrain} %</div></td><td class="num">${eur(p.a.bati)}</td><td class="num">${eur(p.a.meubles)}</td><td class="num">${eur(p.a.travaux)}</td></tr>`; }).join("");
+  const deps = S.depenses.filter(d => A.parBien[d.bienId] && (d.date || "").startsWith(String(y)) && !HORS_RESULTAT.has(d.categorie)), g = {};
+  deps.forEach(d => { g[d.categorie] = r2((g[d.categorie] || 0) + (+d.montant || 0)); });
+  const html = `<h1>Location meublée (LMNP) ${y} : éléments pour la liasse 2031</h1><p>${esc(S.sci.nom || "")} · préparé par l'appli Gestion locative le ${fds(iso(TODAY))}. Montants d'après les loyers encaissés et les dépenses saisies : à contrôler.</p>
+    <h2>Par logement</h2><table><thead><tr><th>Logement</th><th class="right">Recettes</th><th class="right">Charges</th><th class="right">Intérêts</th><th class="right">Prix (frais compris)</th><th class="right">Amort. logement (${LMNP_DUREES.bati} ans)</th><th class="right">Amort. meubles (${LMNP_DUREES.meubles} ans)</th><th class="right">Amort. travaux (${LMNP_DUREES.travaux} ans)</th></tr></thead><tbody>${lignes}</tbody></table>
+    <h2>Charges par catégorie</h2><table><tbody>${Object.entries(g).sort().map(([k, v]) => `<tr><td>${esc(k)}</td><td class="right">${eur(v)}</td></tr>`).join("") || `<tr><td>Aucune dépense saisie</td><td></td></tr>`}</tbody></table>
+    <h2>Résultat</h2><table><tbody><tr><td>Résultat avant amortissement</td><td class="right">${eur(A.avant)}</td></tr><tr><td>Amortissements déduits</td><td class="right">${eur(A.amortDeduit)}</td></tr>${A.imput ? `<tr><td>Déficits antérieurs imputés</td><td class="right">${eur(A.imput)}</td></tr>` : ""}<tr><td><b>Résultat fiscal estimé</b></td><td class="right"><b>${eur(A.deficitAn ? -A.deficitAn : A.resultat)}</b></td></tr><tr><td>Amortissements reportés (art. 39 C)</td><td class="right">${eur(A.reportAmort)}</td></tr><tr><td>Déficits restant à reporter</td><td class="right">${eur(A.deficitsRestants)}</td></tr><tr><td>Pour comparer : base micro-BIC (50 %)</td><td class="right">${eur(A.micro)}</td></tr></tbody></table>
+    <p class="note">Amortissement simplifié par années pleines (pas de prorata au jour, pas de décomposition par composants) : le comptable ajuste. Le fichier des écritures (FEC) est dans Compta › Comptable.</p>`;
+  showDoc(html, { titre: `Dossier LMNP ${y}`, fichier: `Dossier-LMNP-${y}` });
+}
 function declaration2044(y) {
   if (!estPerso()) return "";
   const D = calcul2044(y), an = y + 1, case_ = (c, t, v, aide) => `<tr><td><span class="case">${c}</span> ${t}${aide ? `<div class="sub">${aide}</div>` : ""}</td><td class="num"><b>${eur(v)}</b></td></tr>`;
@@ -7942,7 +8029,7 @@ function declaration2044(y) {
     <h3>Sur ta déclaration de revenus (2042)</h3>${bloc2042}
     ${reel ? `<h3>Sur le formulaire 2044 (location vide)</h3>${t2044}` : `<details class="pli-mini"><summary>Voir le calcul au réel (formulaire 2044)</summary>${t2044}</details>`}` : ""}
     ${D.M.length ? `<h3>Location meublée (LMNP)</h3>${D.recM ? `<table class="decl"><tbody>${case_("5ND", "Loyers meublés encaissés, charges comprises (2042-C-PRO, micro-BIC)", D.recM, "L'abattement de 50 % est fait tout seul : tu es imposé sur " + eur(D.microBIC))}</tbody></table>
-      ${D.chargesM > D.recM * 0.5 ? `<p class="note">⚠️ Tes charges (${eur(D.chargesM)}) dépassent 50 % des loyers : le régime réel (avec amortissement du logement) serait sans doute plus avantageux. Il se fait en général avec un comptable (liasse 2031).</p>` : `<p class="note">Le régime réel (avec amortissement du logement) peut être encore plus avantageux : demande à un comptable si tes loyers meublés sont importants.</p>`}` : `<p class="note">Aucun loyer meublé encaissé en ${y}.</p>`}` : ""}
+      ${blocLMNP(y)}` : `<p class="note">Aucun loyer meublé encaissé en ${y}.</p>`}` : ""}
     ${D.aVerifier.length ? `<details class="pli-mini"><summary>⚠️ ${plur(D.aVerifier.length, "dépense")} à vérifier (pas comptée)</summary><ul class="note">${D.aVerifier.map(d => `<li>${esc(d.libelle || d.categorie)} · ${eur(+d.montant)} · ${esc(d.categorie || "")}</li>`).join("")}</ul><p class="note">Frais bancaires, énergie, dépenses sans logement… : déductibles seulement dans certains cas. Change sa catégorie ou son logement dans Dépenses si besoin.</p></details>` : ""}
     <div class="row"><button class="small" onclick="navigator.clipboard.writeText(${esc(JSON.stringify(texte))}).then(() => toast('✓ Montants copiés'), () => toast('Copie impossible ici'))">📋 Copier les montants</button><a class="btn small" href="https://www.impots.gouv.fr/accueil" target="_blank" rel="noopener">Ouvrir impots.gouv ↗</a></div>
     <details class="pli-mini"><summary>Pourquoi ces chiffres ?</summary><p class="note">Loyers <b>encaissés</b> pendant l'année, sans les charges. Micro-foncier : possible jusqu'à 15 000 € de loyers, abattement de 30 %. Régime réel : on déduit les vrais frais (assurance, travaux, taxe foncière sans les ordures ménagères, copropriété non récupérable, intérêts d'emprunt) + 20 € par logement ; le choisir t'engage pour 3 ans. Le remboursement du capital de l'emprunt et le prix d'achat ne se déduisent jamais. Un déficit (hors intérêts) baisse ton revenu global jusqu'à 10 700 € par an. Meublé (micro-BIC) : abattement de 50 %.</p></details></section>`;
