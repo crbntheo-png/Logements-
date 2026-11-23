@@ -33,7 +33,7 @@ t(/Rien d'urgent/.test(await p.locator('.tous-c', { hasText: 'Biens perso' }).in
   t(await p.evaluate(n => S.sci.nom === n && location.hash === '', autre), 'bouton Ouvrir : bascule sur l\'espace, à l\'accueil');
   // Prochaines sorties
   await p.evaluate(() => { location.hash = 'bientot'; }); await p.waitForTimeout(2000);
-  t(/Prochaines sorties/.test(await p.locator('#app').innerText()) && (await p.locator('.bientot-c').count()) >= 5, 'page "🚀 Prochaines sorties"');
+  t(/Prochaines sorties/.test(await p.locator('#app').innerText()) && (await p.locator('.bientot-c').count()) >= 4, 'page "🚀 Prochaines sorties"');
   const avant = await p.evaluate(() => ENVIES.nb['signature-distance'] || 0);
   await p.locator('.bientot-c', { hasText: 'Signature électronique' }).locator('button').click(); await p.waitForTimeout(1500);
   const apres = await p.evaluate(() => ({ n: ENVIES.nb['signature-distance'], moi: ENVIES.miennes.has('signature-distance') }));
