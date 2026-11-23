@@ -4328,7 +4328,7 @@ async function lireRecus() {
       const g = deviner({ id: "", titre: [f.nom, f.objet].filter(Boolean).join(" "), chemin: [] }, x.trim() ? x : "");
       LU_RECUS[f.id] = g;
       // la facture d'un paiement vu à la banque ? on propose de la relier (même montant, date proche)
-      if (brut && /FACTURE|TICKET|RECU|AVIS D ECHEANCE|APPEL DE FONDS/.test(x)) { const r = lireFacture(brut), it = paiementPourFacture(r.montant, r.date); if (it) { g.fact = it.k; factures.push([f, it]); } }
+      try { if (brut && /\b(FACTURE|TICKET|RECU|AVIS D ECHEANCE|APPEL DE FONDS)\b/.test(x)) { const r = lireFacture(brut), it = paiementPourFacture(r.montant, r.date); if (it) { g.fact = it.k; factures.push([f, it]); } } } catch (e) { console.error(e); }
       if (g.sur && !f.bienId) { Object.assign(f, { bienId: g.bienId, cat: g.cat, bailId: g.bailId || "", rangeSeul: new Date().toISOString() }); ranges.push(f); }
     }
   } finally { LECTURE_RECUS = false; }

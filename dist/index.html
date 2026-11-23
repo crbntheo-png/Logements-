@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "", "dropbox": ""}; window.APP_VERSION = {"id": "913bedb", "date": "2026-11-23T19:47"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "", "dropbox": ""}; window.APP_VERSION = {"id": "a8e46a9", "date": "2026-11-23T20:08"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4353,7 +4353,7 @@ async function lireRecus() {
       const g = deviner({ id: "", titre: [f.nom, f.objet].filter(Boolean).join(" "), chemin: [] }, x.trim() ? x : "");
       LU_RECUS[f.id] = g;
       // la facture d'un paiement vu à la banque ? on propose de la relier (même montant, date proche)
-      if (brut && /FACTURE|TICKET|RECU|AVIS D ECHEANCE|APPEL DE FONDS/.test(x)) { const r = lireFacture(brut), it = paiementPourFacture(r.montant, r.date); if (it) { g.fact = it.k; factures.push([f, it]); } }
+      try { if (brut && /\b(FACTURE|TICKET|RECU|AVIS D ECHEANCE|APPEL DE FONDS)\b/.test(x)) { const r = lireFacture(brut), it = paiementPourFacture(r.montant, r.date); if (it) { g.fact = it.k; factures.push([f, it]); } } } catch (e) { console.error(e); }
       if (g.sur && !f.bienId) { Object.assign(f, { bienId: g.bienId, cat: g.cat, bailId: g.bailId || "", rangeSeul: new Date().toISOString() }); ranges.push(f); }
     }
   } finally { LECTURE_RECUS = false; }
