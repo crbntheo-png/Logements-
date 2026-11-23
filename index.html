@@ -717,6 +717,15 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 .classement .cl-pct { margin-left: auto; white-space: nowrap; flex: none; font-size: 1.3rem; color: var(--accent); } .classement .tx { min-width: 0; }
 .cl-barre { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 12px 0 4px; } .cl-barre i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
 .classement .row { margin-top: 10px; } .classement.fini .cl-pct { color: var(--ok, var(--accent)); }
+.fact-q { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 14px 10px; border-radius: 14px; background: var(--surface-2); }
+.fact-q .fact-m { font-size: 1.8rem; font-variant-numeric: tabular-nums; } .fact-q .fact-l { font-weight: 600; overflow-wrap: anywhere; } .fact-q small { color: var(--muted); }
+.fact-btns { display: grid; gap: 10px; } .fact-btns .btn { justify-content: center; width: 100%; }
+.fact-guide summary { cursor: pointer; font-weight: 600; padding: 6px 0; } .fact-guide .row { margin-top: 6px; } .fact-bas { justify-content: center; }
+.fact-bloc { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.fact-bloc span { min-width: 0; overflow-wrap: anywhere; } .fact-bloc.manque { background: var(--warn-soft, rgba(220,140,0,.12)); } .fact-bloc.ok { background: var(--accent-soft); }
+.fact-notes .fn-t { display: block; margin-bottom: 4px; } .fact-note { margin: 0 0 8px; font-size: .92rem; overflow-wrap: anywhere; } .fact-note small { color: var(--muted); }
+.fn-ajout { display: flex; gap: 8px; } .fn-ajout input { flex: 1; min-width: 0; }
+.lr-r .fact-b { font-size: .72rem; white-space: nowrap; } .lr-r .fact-b.manque { color: var(--warn, #b26a00); }
 .sorties-expl { background: var(--bg); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; margin: 4px 0 12px; } .sorties-expl p { margin: 0; font-size: .9rem; line-height: 1.45; } .sorties-expl .small { color: var(--muted); font-size: .8rem; }
 .sortie-g { border: 1px solid var(--line); border-radius: 14px; margin-bottom: 8px; background: var(--surface); } .sortie-g > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; } .sortie-g > summary::-webkit-details-marker { display: none; } .sortie-g > summary .tx { flex: 1; display: grid; min-width: 0; } .sortie-g > summary small { color: var(--muted); } .sortie-g[open] > summary .chev { transform: rotate(90deg); } .sortie-g > .sortie-l, .sortie-g > .row, .sortie-g > .note { padding: 0 12px; } .sortie-g > .row { padding-bottom: 12px; } .sortie-g.a-classer { border-color: var(--warn); } .sorties-bas { margin-top: 10px; } .sorties-masq { margin: 4px 2px 12px; }
 .cloture .clo-h { display: flex; gap: 12px; align-items: flex-start; } .cloture .clo-h h2 { margin: 0 0 2px; } .cloture .clo-h p { margin: 0; color: var(--muted); }
@@ -1219,6 +1228,7 @@ async function chargerBanque(actualiser) {
     if (directe && actualiser && !BANQUE.relue && (!directe.derniere_synchro || Date.now() - new Date(directe.derniere_synchro) > 6 * 3600e3)) { BANQUE.relue = true; fnBanque({ action: "actualiser", espace: id }).then(j => { if (j.n) chargerBanque(false); }, () => {}); }
     const n = rapprocherBanque(); if (n) toast(`🏦 ${n} virement${n > 1 ? "s" : ""} de locataire reconnu${n > 1 ? "s" : ""} et enregistré${n > 1 ? "s" : ""}`);
     if (RECUS.length) setTimeout(() => apresLoyersRecus(), n ? 2500 : 0);
+    try { demanderFacturesNouvelles(); } catch (e) {}
   } catch (e) { BANQUE.etat = "erreur"; }
   if (MODE === "partage") render();
 }
@@ -2287,6 +2297,8 @@ function taches() {
     if (BANQUE.lien.erreur || j <= 15) add({ key: "bq-renouv-" + (fin ? iso(fin) : "err"), prio: BANQUE.lien.erreur || j <= 3 ? "urgent" : "soon", date: TODAY, t: BANQUE.lien.erreur ? "🏦 Ta banque ne répond plus : reconnecte-la" : `🏦 Renouvelle l'accès à ta banque (fin ${j > 0 ? "dans " + j + " jour" + (j > 1 ? "s" : "") : "aujourd'hui"})`, d: BANQUE.lien.erreur ? esc(BANQUE.lien.erreur) : "Les banques demandent ton accord tous les 6 mois. 1 minute : tu te reconnectes sur le site de ta banque.", acts: [["Reconnecter", "relierBanque()", "primary"]] });
   }
   if (SB && BANQUE.directe && !(BANQUE.directe.comptes || []).length && !BANQUE.directe.erreur && estProprio() && bqOuverte()) add({ key: "bq-zero", prio: "soon", date: TODAY, t: `Ta banque (${esc(BANQUE.directe.banque || "")}) n'a donné aucun compte`, d: "Les loyers ne peuvent pas se cocher tout seuls. Souvent : choisir l'espace \"particuliers\" au lieu de \"professionnel\".", acts: [["Régler", "reglage('banque')", "primary"]] });
+  if (SB && estProprio() && !LECTURE) [y, ...(TODAY.getMonth() < 5 ? [y - 1] : [])].forEach(an => { const n = listeFactures(an).manque.length;
+    if (n) add({ key: "fact-" + an + "-" + CUR, prio: "soon", date: TODAY, t: `📎 ${n} facture${n > 1 ? "s" : ""} à retrouver${an < y ? " pour " + an : ""}`, d: an < y ? "Ton comptable en a besoin pour boucler l'année. Une photo suffit." : "Ton comptable en aura besoin. Une photo suffit : l'appli la relie au paiement.", acts: [["📎 Ajouter", `assistantFactures(${an})`, "primary"]] }); });
   if (SB && BANQUE.directe && BANQUE.pennylane && estProprio()) { let c = null; try { c = comparaisonBanques(); } catch (e) {} if (c && c.ecarts) add({ key: "bq-ecarts-" + c.ecarts + "-" + c.periode, prio: "soon", date: TODAY, done: true, t: `🔎 ${c.ecarts} décalage${c.ecarts > 1 ? "s" : ""} entre ta banque et Pennylane`, d: `Sur la période ${c.periode} : ${c.seulBanque.length} seulement à la banque, ${c.seulPennylane.length} seulement dans Pennylane.`, acts: [["Voir", "voirComparaison()", "primary"]] }); }
   doublonsPaiements().forEach(x => { const b = bail(x.A.b) || {}; const mA = x.A.mois.map(fm).join(", "), mB = x.B.mois.map(fm).join(", ");
     add({ bailId: x.A.b, key: "dbl-" + x.cle, prio: "urgent", date: TODAY, t: `⚠️ Paiement peut-être compté deux fois : ${esc(nomCourt(b.nom || ""))} ${eur(x.A.tot)}`, d: `Le même virement semble enregistré pour ${mA} et pour ${mB}. Garde le bon mois : l'autre ira dans l'historique (restaurable).`,
@@ -2688,7 +2700,7 @@ const ACTIONS = [
   ["🧾", "Ajouter une dépense", "editDepense()"], ["👤", "Nouveau locataire", "editBail()"], ["🏠", "Nouveau bien", "editBien()"], ["⏰", "Nouveau rappel", "editRappel()"],
   ["🗑️", "Saisir une taxe foncière", "taxeFonciere()"], ["📊", "Export pour le comptable", `exportCSV(${TODAY.getFullYear()})`], ["📄", "Bilan de l'année", `docBilanOpen(${TODAY.getFullYear()})`],
   ["📅", "Tous les loyers du mois", "go('loyers')"], ["⚙️", "Réglages de la SCI", "go('reglages')"], ["📁", "Documents du Drive", "go('docs')"],
-  ["📷", "Photo d'une facture", "photoFacture()"], ["📊", "Importer mes logements depuis Excel", "importTableur()"], ["🧾", "Régulariser les charges", `regulTous(${TODAY.getFullYear() - 1})`], ["🧮", "Fichier FEC pour le comptable", `exportFEC(${TODAY.getFullYear()})`],
+  ["📷", "Photo d'une facture", "photoFacture()"], ["📎", "Retrouver mes factures", `assistantFactures(${TODAY.getFullYear()})`], ["📦", "Pack pour le comptable (factures + FEC)", `packComptable(${TODAY.getFullYear()})`], ["📊", "Importer mes logements depuis Excel", "importTableur()"], ["🧾", "Régulariser les charges", `regulTous(${TODAY.getFullYear() - 1})`], ["🧮", "Fichier FEC pour le comptable", `exportFEC(${TODAY.getFullYear()})`],
   ["📆", "Mes dates dans mon agenda", "abonnerAgenda()"], ["📈", "Chercher le dernier indice IRL", "majIrlInsee(true)"], ["📖", "Petit lexique (c'est quoi ?)", "go('aide')"], ["🔔", "Notifications", "reglage('notif')"], ["⚖️", "Mentions légales et confidentialité", "go('legal')"]
 ];
 function majRecherche() {
@@ -2727,7 +2739,7 @@ function ajoutRapide(quoi) {
   const h = (location.hash || "").slice(1), bid = h.startsWith("bail-") ? h.slice(5) : null, bi = h.startsWith("bien-") ? h.slice(5) : null;
   const items = bid && bail(bid) ? [["💶", "Il a versé une somme", `verserSomme('${bid}')`], ["📄", "Un document", `ajouterDocument('${bail(bid).bienId}','${bid}')`], ["✍️", "Un avenant au bail", `avenant('${bid}')`], ["📋", "Un état des lieux", `nouvelEdl('${bid}','${edlsDuBail(bid).some(e => e.type === "entree") || bail(bid).edlEntree || (S.fichiers || []).some(f => f.bailId === bid && f.cat === "État des lieux") ? "sortie" : "entree"}')`], ["⏰", "Un rappel", "editRappel()"], ["🧾", "Une dépense", "editDepense()"]]
     : bi && bien(bi) ? [["🛠", "Des travaux", `editTravaux('${bi}')`], ["📄", "Un document", `ajouterDocument('${bi}')`], ["🙋", "Un candidat", `editCandidat('${bi}')`], ["✍️", "L'annonce", `annonce('${bi}')`], ["👤", "Un locataire", `editBail(null,'${bi}')`], ["🧾", "Une dépense", "editDepense()"]]
-    : h === "compta" ? [["📷", "Photo d'une facture", "photoFacture()"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["🗑️", "Une taxe foncière", "taxeFonciere()"]]
+    : h === "compta" ? [["📷", "Photo d'une facture", "photoFacture()"], ["📎", "Retrouver mes factures", `assistantFactures(${view.comptaAnnee || TODAY.getFullYear()})`], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["🗑️", "Une taxe foncière", "taxeFonciere()"]]
     : [["💶", "Un loyer est arrivé", "ajoutRapide('loyer')"], ["📷", "Photo d'une facture", "photoFacture()"], ["🧾", "Une dépense", "editDepense()"], ["🏦", "Le relevé bancaire", "importerReleve()"], ["👤", "Un locataire", "editBail()"], ["🏠", "Un bien", "editBien()"], ["📊", "Mes logements depuis Excel", "importTableur()"], ["⏰", "Un rappel", "editRappel()"]];
   modal("Ajouter", `<div class="full grille-add">${items.map(([i, t, f]) => `<button type="button" onclick="${f}"><span>${i}</span>${t}</button>`).join("")}</div>`, () => true, { ok: "Fermer", lecture: true });
 }
@@ -4076,7 +4088,7 @@ const REGLES_BANQUE = [
   [/ECH PRET INT\b/, "Échéance de prêt (capital + intérêts, à ventiler)"], [/ECH PRET CAP/, "Échéance de prêt (capital + intérêts, à ventiler)"], [/COMMIS(SION)? PRET|FRAIS DE DOSSIER/, "Frais bancaires"],
   [/ASSURANCE (DU )?PROPRIETAIRE|\bPNO\b/, "Assurance propriétaire (PNO)"], [/LOYERS? IMPAYES|\bGLI\b/, "Assurance loyers impayés"], [/ASSURANCE EMPRUNTEUR|CNP|CARDIF/, "Assurance emprunteur"],
   [/DGFIP.*\bTF\b|IMPOT TF|TAXE FONCIERE/, "Taxe foncière"], [/SAUR|VEOLIA|EAU DE|EDF|ENGIE|TOTALENERGIES|GRDF/, "Eau / électricité / gaz"],
-  [/FACT SGT|COTIS|FRAIS BANC|COMMISSION|AGIOS/, "Frais bancaires"], [/CONCIERGERIE|AIRBNB|ABRITEL|LEBONCOIN|SELOGER/, "Frais de gestion / annonces"],
+  [/FACT SGT|COTIS|FRAIS BANC|COMMISSION|AGIOS|TENUE DE COMPTE|FRAIS TENUE|FRAIS CARTE|FRAIS (DE |SUR )?(VIR|PRLV|REJET|INCIDENT)|INTERETS DEBITEURS/, "Frais bancaires"], [/CONCIERGERIE|AIRBNB|ABRITEL|LEBONCOIN|SELOGER/, "Frais de gestion / annonces"],
   [/COMPTA|EXPERT.?COMPTABLE|BRETALLIANCE|AVOCAT|HUISSIER|COMMISSAIRE DE JUSTICE/, "Honoraires (comptable, notaire, avocat…)"], [/SYNDIC|COPRO/, "Charges de copropriété"],
   [/NOTAIRE|CORNILLE|IMMO COM|AGENCE IMMO|SEQUESTRE/, "Achat du bien / frais d'acquisition"],
   [/LEROY|BRICO|CASTORAMA|WELDOM|POINT P|PLOMB|ELECTRI|MENUISERIE|ARTISAN|YESSS/, "Travaux d'entretien / réparation"], [/DIAGNOST/, "Diagnostics"]
@@ -4272,7 +4284,7 @@ function sectionBoite() {
   const R = recusBoite(), moi = (SB_USER && SB_USER.email) || "ton adresse";
   if (R.some(f => !LU_RECUS[f.id]) && !LECTURE_RECUS) setTimeout(lireRecus, 300);
   const ligne = f => `<li class="lr"><div class="lr-main"><span class="ico-cat" aria-hidden="true">${/pdf/.test(f.type) ? "📄" : "🖼️"}</span><span class="tx"><b>${esc(f.nom)}</b><small>${f.de ? "de " + esc(f.de) + " · " : ""}${fds(P(f.date))}${f.objet ? " · « " + esc(f.objet.slice(0, 50)) + " »" : ""}</small></span></div>
-    ${(() => { const g = LU_RECUS[f.id]; return g && g.releve && !g.fait && !f.releveLu && estProprio() ? `<div class="propose-recu"><span>🏦 C'est un <b>relevé de banque</b></span><button class="small primary" onclick="releveRecu('${f.id}')">Cocher les loyers</button></div>` : g && g.bienId && bien(g.bienId) && estProprio() ? `<div class="propose-recu"><span>💡 C'est sûrement pour <b>${esc(bien(g.bienId).nom)}</b>${g.cat ? " · " + esc(g.cat) : ""}</span><button class="small primary" onclick="rangerPropose('${f.id}')">✓ Oui, ranger</button></div>` : ""; })()}
+    ${(() => { const g = LU_RECUS[f.id], fi = g && g.fact && itemFacture(g.fact); if (fi && estProprio()) return `<div class="propose-recu"><span>🧾 La facture de <b>${eur(fi.montant)}</b> · ${esc(libFacture(fi))}</span><button class="small primary" onclick="relierRecuFacture('${f.id}')">Relier au paiement</button></div>`; return g && g.releve && !g.fait && !f.releveLu && estProprio() ? `<div class="propose-recu"><span>🏦 C'est un <b>relevé de banque</b></span><button class="small primary" onclick="releveRecu('${f.id}')">Cocher les loyers</button></div>` : g && g.bienId && bien(g.bienId) && estProprio() ? `<div class="propose-recu"><span>💡 C'est sûrement pour <b>${esc(bien(g.bienId).nom)}</b>${g.cat ? " · " + esc(g.cat) : ""}</span><button class="small primary" onclick="rangerPropose('${f.id}')">✓ Oui, ranger</button></div>` : ""; })()}
     <div class="actions-courtes">${(() => { const g = LU_RECUS[f.id], prop = g && g.bienId && bien(g.bienId); return `<button class="small ${prop || (g && g.releve) ? "" : "primary"}" onclick="rangerRecu('${f.id}')">${prop ? "Ailleurs" : "📁 Où le ranger ?"}</button>${estProprio() && !prop && !(g && g.releve) && !iaSansCredit() && /pdf|image/.test(f.type || "") ? `<button class="small" onclick="lireDocIA({ fichier: '${f.id}' })">🤖 Lire</button>` : ""}`; })()}<button class="small ghost" onclick="ouvrirDocument('${f.id}')">Ouvrir</button><button class="small ghost" onclick="supprimerDocument('${f.id}')" aria-label="Supprimer">✕</button></div></li>`;
   const nProp = R.filter(f => LU_RECUS[f.id] && LU_RECUS[f.id].bienId && bien(LU_RECUS[f.id].bienId)).length;
   const aRanger = R.length ? `<section class="card boite a-ranger-recus"><div class="sec-head"><h2>📥 À ranger <span class="count">${R.length}</span></h2>${nProp > 1 && estProprio() ? `<button class="small primary" onclick="rangerTousProposes()">✓ Ranger les ${nProp} proposés</button>` : ""}</div><p class="note">Touche le bon logement : c'est rangé.</p><ul class="lr-list">${R.map(ligne).join("")}</ul></section>` : "";
@@ -4293,15 +4305,17 @@ let LECTURE_RECUS = false;
 async function lireRecus() {
   if (LECTURE_RECUS || LECTURE || !SB || MCP || !estProprio() || !S.biens.length) return 0;
   const R = recusBoite().filter(f => !LU_RECUS[f.id]).slice(0, 10); if (!R.length) return 0;
-  LECTURE_RECUS = true; const ranges = [], releves = [];
+  LECTURE_RECUS = true; const ranges = [], releves = [], factures = [];
   try {
     for (const f of R) {
       let x = "";
-      try { if (/pdf/.test(f.type || "")) x = " " + phraseDe(await texteSeulPdf((await blobFichier(f)).bl)).slice(0, 4000) + " "; } catch (e) {}
+      let brut = ""; try { if (/pdf/.test(f.type || "")) { brut = await texteSeulPdf((await blobFichier(f)).bl); x = " " + phraseDe(brut).slice(0, 4000) + " "; } } catch (e) {}
       // un relevé de banque reçu (envoyé par e-mail ou pris en photo) : on propose de cocher les loyers avec, pas de le ranger
       if (ESTRELEVE.test(x) || ESTRELEVE.test(phraseDe([f.nom, f.objet].filter(Boolean).join(" ")))) { LU_RECUS[f.id] = { releve: true }; if (!f.releveLu) releves.push(f); continue; }
       const g = deviner({ id: "", titre: [f.nom, f.objet].filter(Boolean).join(" "), chemin: [] }, x.trim() ? x : "");
       LU_RECUS[f.id] = g;
+      // la facture d'un paiement vu à la banque ? on propose de la relier (même montant, date proche)
+      if (brut && /FACTURE|TICKET|RECU|AVIS D ECHEANCE|APPEL DE FONDS/.test(x)) { const r = lireFacture(brut), it = paiementPourFacture(r.montant, r.date); if (it) { g.fact = it.k; factures.push([f, it]); } }
       if (g.sur && !f.bienId) { Object.assign(f, { bienId: g.bienId, cat: g.cat, bailId: g.bailId || "", rangeSeul: new Date().toISOString() }); ranges.push(f); }
     }
   } finally { LECTURE_RECUS = false; }
@@ -4311,6 +4325,7 @@ async function lireRecus() {
     const ids = ranges.filter(f => /pdf/.test(f.type || "")).map(f => f.id); if (ids.length) setTimeout(() => completerAvecPapiers(null, { discret: true, ids }), 2500); }
   else if (pageCourante() === "docs") render();
   if (releves.length) { render(); setTimeout(() => toastActions("🏦 Ton relevé de banque est arrivé", [["Cocher les loyers", `releveRecu('${releves[0].id}')`]]), ranges.length ? 4000 : 0); }
+  if (factures.length) { const [f, it] = factures[0]; setTimeout(() => toastActions(`🧾 La facture de ${eur(it.montant)} · ${libFacture(it)} est arrivée`, [["Relier au paiement", `relierRecuFacture('${f.id}')`]]), ranges.length || releves.length ? 8000 : 500); }
   return ranges.length;
 }
 const ESTRELEVE = /\b(RELEVE (DE |D )?(VOTRE |VOS )?(COMPTE|OPERATIONS)|EXTRAIT DE COMPTE|ANCIEN SOLDE|NOUVEAU SOLDE|SOLDE (CREDITEUR|DEBITEUR))\b/;
@@ -4539,7 +4554,7 @@ function donneesConnecteur() {
       impayes, taches: T.slice(0, 60), echeances: ev, tresorerie: tr,
       compta: { annee: y, loyers_encaisses: r2(Object.values(rec).reduce((s, r) => s + (r.loyers || 0), 0)), charges_encaissees: r2(Object.values(rec).reduce((s, r) => s + (r.charges || 0), 0)), depenses_total: r2(deps.reduce((s, d) => s + +d.montant, 0)), depenses_par_categorie: parCat,
         par_logement: S.biens.map(bi => ({ logement: bi.nom, loyers: r2((rec[bi.id] || {}).loyers || 0), depenses: r2(deps.filter(d => d.bienId === bi.id).reduce((s, d) => s + +d.montant, 0)) })) },
-      documents: (S.fichiers || []).slice(-400).map(f => ({ id: f.id, a_ranger: !f.bienId, nom: f.nom, categorie: f.cat || "", logement: (bien(f.bienId) || {}).nom || "à ranger", locataire: f.bailId && bail(f.bailId) ? bail(f.bailId).nom : "", date: f.date || "" })) };
+      documents: (S.fichiers || []).slice(-400).map(f => ({ id: f.id, a_ranger: !f.bienId && !f.depenseId, nom: f.nom, categorie: f.cat || "", logement: (bien(f.bienId) || {}).nom || "à ranger", locataire: f.bailId && bail(f.bailId) ? bail(f.bailId).nom : "", date: f.date || "" })) };
   } finally { MEMO = null; }
 }
 function planifierConnecteur() { if (!SB || !ESPACE || LECTURE || !S.sci.connecteurJeton) return; clearTimeout(CONNECTEUR_T); CONNECTEUR_T = setTimeout(publierConnecteur, 2500); }
@@ -4747,19 +4762,19 @@ ${estPerso() ? "" : (`  <section class="card"><h2>Part de chaque associé</h2>
   ${parts ? `<div class="table-wrap" style="border:0"><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)}<div class="sub">${a.parts} parts · ${Math.round(a.parts / parts * 1000) / 10} %</div></td><td class="num"><b>${eur(tot.res * a.parts / parts)}</b></td></tr>`).join("")}</tbody></table></div><p class="note">${S.sci.regime === "IR" ? "SCI à l'impôt sur le revenu : chaque associé déclare sa part du résultat (revenus fonciers). Le calcul fiscal exact (2072) peut différer : amortissements, travaux d'amélioration, etc." : "SCI à l'IS : l'impôt est payé par la SCI. Les associés ne sont imposés que sur les dividendes distribués."}</p>` : `<p class="note">Renseignez les associés et leurs parts dans <a href="#reglages">Réglages</a>.</p>`}
   </section>`)}`,
     banque: () => annee ? `${sectionBanque()}${sectionTreso()}` : `<div class="empty">La banque et la trésorerie montrent l'année en cours. Reviens sur ${TODAY.getFullYear()} avec la flèche ›.</div>`,
-    depenses: () => `${sectionSorties(y)}
+    depenses: () => `${carteFactures(y)}${sectionSorties(y)}
   <section><h2 style="margin-bottom:10px">Dépenses ${y} <span class="count">${deps.length}</span></h2>
-  ${deps.length ? `<ul class="lr-list">${(view.depTout ? deps : deps.slice(0, 12)).map(d => `<li class="lr"><div class="lr-main" onclick="editDepense('${d.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">${ICO_DEP(d.categorie)}</span><span class="tx"><b>${esc(libelleLisible(d.libelle) || d.categorie)}</b><small>${fds(d.date)} · ${esc(d.categorie)} · ${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}${d.avancePar ? ` · payé par ${esc(d.avancePar)}${d.rembourseLe ? " (remboursé)" : ""}` : ""}${d.pretId ? " · ventilé" : ""}</small></span><span class="lr-r"><b>${eur(d.montant)}</b></span></div></li>`).join("")}</ul>${deps.length > 12 && !view.depTout ? `<button class="ghost small lr-plus" onclick="view.depTout=true;render()">Voir les ${deps.length - 12} autres dépenses</button>` : ""}` : `<div class="empty">Aucune dépense en ${y}.</div>`}
+  ${deps.length ? `<ul class="lr-list">${(view.depTout ? deps : deps.slice(0, 12)).map(d => `<li class="lr"><div class="lr-main" onclick="editDepense('${d.id}')" role="button" tabindex="0"><span class="ico-cat" aria-hidden="true">${ICO_DEP(d.categorie)}</span><span class="tx"><b>${esc(libelleLisible(d.libelle) || d.categorie)}</b><small>${fds(d.date)} · ${esc(d.categorie)} · ${esc(d.bienId ? bienLabel(bien(d.bienId)) : "SCI")}${d.avancePar ? ` · payé par ${esc(d.avancePar)}${d.rembourseLe ? " (remboursé)" : ""}` : ""}${d.pretId ? " · ventilé" : ""}</small></span><span class="lr-r"><b>${eur(d.montant)}</b>${badgeFacture(d)}</span></div></li>`).join("")}</ul>${deps.length > 12 && !view.depTout ? `<button class="ghost small lr-plus" onclick="view.depTout=true;render()">Voir les ${deps.length - 12} autres dépenses</button>` : ""}` : `<div class="empty">Aucune dépense en ${y}.</div>`}
   </section>
   ${Object.keys(parCat).length ? `<section class="card"><h2>Par catégorie</h2><div class="table-wrap" style="border:0"><table><tbody>${Object.entries(parCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="num">${eur(v)}</td></tr>`).join("")}</tbody></table></div></section>` : ""}`,
     comptable: () => `<p class="note c-note">Pour préparer ta déclaration ou la donner à ton comptable. Rien d'obligatoire au quotidien.</p>
   ${aideDeclaration(y, lignes, tot)}${declaration2044(y)}
-  ${sectionClassement(y)}${sectionEntrees(y)}${sectionCloture()}
+  ${sectionClassement(y)}${carteFactures(y)}${sectionEntrees(y)}${sectionCloture()}
   ${sectionPrets(y)}${sectionAvances()}`
   };
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
-  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`], ["🏦 Ajouter un prêt", "editPret()"], estPerso() ? null : ["👤 Un associé a payé de sa poche", "avanceAssocie()"]], "Plus")}</div>
+  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["📦 Pack pour le comptable (factures + FEC)", `packComptable(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`], ["🏦 Ajouter un prêt", "editPret()"], estPerso() ? null : ["👤 Un associé a payé de sa poche", "avanceAssocie()"]], "Plus")}</div>
   ${barre}
   <div class="c-corps">${corps[onglet] ? corps[onglet]() : corps.resume()}</div>`;
 }
@@ -5186,7 +5201,7 @@ function area(label, name, value, cls = "full") { return `<label class="fl ${cls
 function modal(title, body, onSubmit, opts = {}) {
   const o = document.getElementById("overlay");
   o.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="mh"><h2>${title}</h2><button class="ghost" onclick="closeOverlay()" aria-label="Fermer">✕</button></div>
-  <form class="f" id="mform">${body}<div class="full row" style="justify-content:space-between"><div class="row">${opts.del ? `<button type="button" class="danger" id="mdel">Supprimer</button>` : ""}</div><div class="row">${opts.lecture ? "" : `<button type="button" onclick="closeOverlay()">Annuler</button>`}<button class="primary">${opts.ok || "Enregistrer"}</button></div></div></form></div>`;
+  <form class="f" id="mform">${body}<div class="full row" style="justify-content:space-between"><div class="row">${opts.del ? `<button type="button" class="danger" id="mdel">Supprimer</button>` : ""}</div><div class="row">${opts.lecture ? "" : `<button type="button" onclick="closeOverlay()">Annuler</button>`}<button class="${opts.okCls || "primary"}">${opts.ok || "Enregistrer"}</button></div></div></form></div>`;
   o.hidden = false;
   const f = document.getElementById("mform");
   f.addEventListener("submit", ev => { ev.preventDefault(); const d = Object.fromEntries(new FormData(f).entries()); f.querySelectorAll("input[type=checkbox]").forEach(c => d[c.name] = c.checked); if ((opts.lecture ? onSubmit(d, f) : avecAnnuler(() => onSubmit(d, f))) !== false) { closeOverlay(); save(); render(); } });
@@ -5644,9 +5659,312 @@ function editDepense(id, pre) {
     ${fld("Date", "date", d0.date, "date", "", "required")}${fld("Montant (€)", "montant", d0.montant, "number", "", "required")}
     ${sel("Catégorie", "categorie", d0.categorie, CATS.map(c => [c, c]))}${sel("Bien concerné", "bienId", d0.bienId || "", [["", estPerso() ? "Général (pas un logement précis)" : "La SCI en général"], ...S.biens.map(b => [b.id, b.nom])])}
     ${fld("Détail (ex : plombier fuite cuisine)", "libelle", d0.libelle, "text", "full")}
-    <label class="fl chk full"><input type="checkbox" name="recuperable" ${d0.recuperable ? "checked" : ""}> Charge récupérable sur le locataire (à inclure dans la régularisation)</label>`,
-    d => { d.montant = r2(+d.montant); if (!(d.montant > 0)) { toast("Le montant doit être supérieur à 0."); return false; } if (id) Object.assign(d0, d); else S.depenses.push({ id: uid(), ...d }); toast(id ? "Dépense modifiée" : "Dépense ajoutée"); },
+    <label class="fl chk full"><input type="checkbox" name="recuperable" ${d0.recuperable ? "checked" : ""}> Charge récupérable sur le locataire (à inclure dans la régularisation)</label>
+    ${id ? blocFactureDep(d0) + blocNotesDep(d0) : pre && (pre.fichier || pre.factureId) ? `<p class="full note">📎 La facture sera jointe à cette dépense.</p>` : SB ? `<label class="fl full">📎 La facture (photo ou PDF, facultatif)<input type="file" name="factureFichier" accept="image/*,application/pdf"></label>` : ""}`,
+    d => { d.montant = r2(+d.montant); if (!(d.montant > 0)) { toast("Le montant doit être supérieur à 0."); return false; }
+      const fic = d.factureFichier && d.factureFichier.size ? d.factureFichier : pre && pre.fichier; delete d.factureFichier;
+      if (id) Object.assign(d0, d); else { const nd = { id: uid(), ...d }; S.depenses.push(nd);
+        if (pre && pre.factureId) { const f = S.fichiers.find(x => x.id === pre.factureId); if (f) setTimeout(() => lierFacture(nd, f), 0); }
+        else if (fic) setTimeout(() => attacherFacture(nd, fic).then(() => { render(); toast("📎 Facture jointe"); }, e => toastActions("Facture pas jointe : " + (e.message || e), [["Réessayer", `assistantFactures(${String(nd.date).slice(0, 4)},'d${nd.id}')`]])), 0); }
+      toast(id ? "Dépense modifiée" : "Dépense ajoutée"); },
     id ? { del: () => { S.depenses = S.depenses.filter(x => x.id !== id); } } : {});
+}
+/* ================= Factures : chaque paiement a sa facture (comme Pennylane) =================
+   Une dépense garde sa facture (d.factureId → S.fichiers), ou la raison de son absence (d.sansFacture), et ses commentaires (d.notes).
+   Les sorties de la banque pas encore rangées sont demandées aussi : joindre la facture les range en même temps.
+   Pas demandé pour les prêts (le tableau d'amortissement suffit) ni les frais bancaires (le relevé suffit). */
+const SANS_FACTURE_CAT = new Set(["Intérêts d'emprunt", "Assurance emprunteur", "Remboursement capital emprunt", "Échéance de prêt (capital + intérêts, à ventiler)", "Frais bancaires"]);
+const RAISONS_SANS = ["Le relevé de banque suffit (abonnement, prélèvement)", "Je l'ai perdue", "Il n'y a pas de facture (particulier, amende…)"];
+const factureDe = d => {
+  if (!d) return null; const F = S.fichiers || [];
+  if (d.factureId) { const f = F.find(x => x.id === d.factureId); if (f) return f; }
+  if (d.taxeId) { const an = String(d.date || "").slice(0, 4); return F.find(f => f.cat === "Taxe foncière" && f.bienId && f.bienId === d.bienId && String((f.nom || "") + " " + (f.date || "")).includes(an)) || null; }
+  return null;
+};
+const demandeFacture = d => !SANS_FACTURE_CAT.has(d.categorie);
+const factureManque = d => demandeFacture(d) && !factureDe(d) && !d.sansFacture;
+const catDuLibelle = (lib, c) => c || (CAT_FACTURE.find(([re]) => re.test(lib || "")) || [])[1] || "";
+const itemDep = d => ({ k: "d" + d.id, dep: d, montant: +d.montant, date: d.date, libelle: d.libelle, cat: d.categorie, bienId: d.bienId || "" });
+function listeFactures(y) {
+  const an = String(y), deps = S.depenses.filter(d => String(d.date || "").startsWith(an) && demandeFacture(d));
+  const ops = SB && BANQUE.lien && !S.sci.sortiesMasquees ? sortiesAClasser(y).map(o => { const c = classerSortie(o); return { o, c: { ...c, cat: catDuLibelle(o.libelle, c.cat) } }; }).filter(x => !SANS_FACTURE_CAT.has(x.c.cat)) : [];
+  const manque = [...deps.filter(factureManque).map(itemDep),
+    ...ops.map(({ o, c }) => ({ k: "o" + o.tx_id, op: o, montant: r2(-o.montant), date: o.date, libelle: o.libelle, cat: c.cat || "", bienId: c.bienId || "" }))]
+    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const total = deps.length + ops.length, ok = total - manque.length;
+  return { total, ok, manque, pct: total ? Math.floor(ok / total * 100) : 100 };
+}
+function itemFacture(k) {
+  if (!k) return null;
+  if (k[0] === "d") { const d = S.depenses.find(x => "d" + x.id === k); return d ? itemDep(d) : null; }
+  const o = BANQUE.ops.find(x => "o" + x.tx_id === k); if (!o) return null;
+  const ex = S.depenses.find(d => String(d.banqueTx) === String(o.tx_id)); if (ex) return itemDep(ex);
+  const c = classerSortie(o); return { k, op: o, montant: r2(-o.montant), date: o.date, libelle: o.libelle, cat: catDuLibelle(o.libelle, c.cat), bienId: c.bienId || "" };
+}
+// une sortie de la banque devient une dépense au moment où on lui donne sa facture (ou sa raison)
+function depenseDeItem(it) {
+  if (it.dep) return it.dep;
+  const o = it.op, ex = S.depenses.find(d => String(d.banqueTx) === String(o.tx_id)); if (ex) return ex;
+  const d = { id: "bq" + o.tx_id, date: o.date, montant: r2(-o.montant), categorie: it.cat || "Autre", bienId: it.bienId || "", libelle: (o.libelle || "").slice(0, 80), recuperable: false, banqueTx: o.tx_id };
+  S.depenses.push(d); if (!it.cat) setTimeout(() => toastActions(`Rangée dans les dépenses en "Autre"`, [["Changer", `editDepense('${d.id}')`]]), 2600);
+  return d;
+}
+const libFacture = it => libelleLisible(it.libelle) || it.cat || "Dépense";
+const CAT_DOC_DEP = c => c === "Taxe foncière" ? "Taxe foncière" : /assurance/i.test(c || "") ? "Assurance" : c === "Charges de copropriété" ? "Copropriété" : c === "Diagnostics" ? "Diagnostics (DPE…)" : /achat/i.test(c || "") ? "Acte d'achat / prêt" : "Factures et travaux";
+const nomFacture = d => `Facture ${fds(d.date)} · ${libelleLisible(d.libelle) || d.categorie} · ${eur(d.montant)}`;
+function lierFacture(d, f) {
+  if (!S.depenses.includes(d)) S.depenses.push(d);
+  S.depenses.forEach(x => { if (x !== d && x.factureId === f.id) delete x.factureId; });
+  d.factureId = f.id; delete d.sansFacture; f.depenseId = d.id;
+  if (!f.bienId) { f.bienId = d.bienId || ""; delete f.boite; }
+  if (!f.cat || f.cat === "Autre") f.cat = CAT_DOC_DEP(d.categorie);
+  save(); copierFactureDrive(f, d);
+}
+async function attacherFacture(d, file) {
+  if (!SB || !ESPACE) throw new Error("Connecte-toi d'abord.");
+  if (file.size > 20 * 1024 * 1024) throw new Error("Fichier trop lourd (20 Mo maximum).");
+  const esp = ESPACE; let blob = file, type = file.type || "application/octet-stream";
+  if (/^image\//.test(type) && !/hei[cf]/.test(type)) { try { blob = await (await fetch(await photoReduite(file))).blob(); type = blob.type || "image/jpeg"; } catch (e) {} }
+  const ext = /pdf/.test(type) ? "pdf" : /png/.test(type) ? "png" : /hei[cf]/.test(type) ? "heic" : /^image\//.test(type) ? "jpg" : ((file.name || "").split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const chemin = `${ESPACE}/${d.bienId || "factures"}/${uid()}.${ext}`;
+  const up = await SB.storage.from("documents").upload(chemin, blob, { contentType: type });
+  if (up.error) throw new Error(up.error.message);
+  if (ESPACE !== esp) { SB.storage.from("documents").remove([chemin]).catch(() => {}); throw new Error("Envoi arrêté : tu as changé d'espace."); }
+  const f = { id: uid(), bienId: d.bienId || "", cat: CAT_DOC_DEP(d.categorie), nom: nomFacture(d), chemin, type, taille: blob.size, date: d.date || iso(TODAY) };
+  S.fichiers.push(f); lierFacture(d, f);
+  if (/pdf/.test(type)) verifierMontantFacture(blob, d);
+  return f;
+}
+// la facture dit un autre montant que le paiement ? on prévient (lecture du PDF dans le téléphone, gratuite)
+async function verifierMontantFacture(blob, d) {
+  try { const r = lireFacture(await texteSeulPdf(blob)); if (r.montant > 0 && Math.abs(r.montant - d.montant) > Math.max(1, d.montant * 0.02))
+    setTimeout(() => toastActions(`⚠️ La facture indique ${eur(r.montant)}, le paiement ${eur(d.montant)} : vérifie`, [["Voir", `editDepense('${d.id}')`]]), 2500); } catch (e) {}
+}
+/* Copie dans le Drive (dossier "Factures" › année), si le Drive est branché : un bonus, jamais bloquant */
+async function copierFactureDrive(f, d) {
+  if (MCP || !SB || !estProprio() || DRIVEG.etat !== "oui" || S.sci.facturesDrive === false || f.driveCopie || !f.chemin) return;
+  try {
+    const an = String(d.date || iso(TODAY)).slice(0, 4), jt = await jetonDrive(), H = { Authorization: "Bearer " + jt };
+    const dossier = async (nom, parent) => { const r = await fetch("https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id", { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ name: nom, mimeType: "application/vnd.google-apps.folder", ...(parent ? { parents: [parent] } : {}) }) }); if (!r.ok) throw new Error("dossier " + r.status); return (await r.json()).id; };
+    const D = S.sci.driveFactures = Object.assign({}, S.sci.driveFactures);
+    if (!D.racine) D.racine = await dossier("Factures (Gestion locative)", driveRacine() || "");
+    if (!D[an]) D[an] = await dossier(an, D.racine);
+    const r0 = await SB.storage.from("documents").download(f.chemin); if (r0.error) throw r0.error;
+    const ext = /pdf/.test(f.type || "") ? "pdf" : /png/.test(f.type || "") ? "png" : "jpg", nom = `${d.date} ${(libelleLisible(d.libelle) || d.categorie).replace(/[\\/:*?"<>|]/g, " ")} ${String(r2(d.montant)).replace(".", ",")} €.${ext}`;
+    const fd = new FormData(); fd.append("metadata", new Blob([JSON.stringify({ name: nom, parents: [D[an]] })], { type: "application/json" })); fd.append("file", r0.data);
+    const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id", { method: "POST", headers: H, body: fd });
+    if (!r.ok) throw new Error("envoi " + r.status);
+    f.driveCopie = (await r.json()).id; saveAuto();
+  } catch (e) { /* la facture est dans l'appli : la copie Drive est un bonus */ }
+}
+/* L'assistant : une question à la fois, du plus récent au plus ancien */
+let FACT = { y: 0, vus: [], seul: false };
+function assistantFactures(y, k) {
+  if (!SB) { toast("Les factures se rangent dans l'appli en ligne : connecte-toi."); return; }
+  if (LECTURE) { toast("Tu es en lecture seule dans cet espace."); return; }
+  y = +y || view.comptaAnnee || TODAY.getFullYear();
+  if (FACT.y !== y || (!k && FACT.seul)) FACT = { y, vus: [], seul: false };
+  if (k) FACT.seul = true;
+  const E = listeFactures(y), L = E.manque.filter(x => !FACT.vus.includes(x.k)), it = k ? itemFacture(k) : L[0];
+  if (!it) return finFactures(y, E);
+  const libres = facturesLibres(it), bi = it.bienId && bien(it.bienId);
+  const champ = (cap, txt, cls) => `<label class="btn big ${cls}">${txt}<input type="file" accept="${cap ? "image/*" : "image/*,application/pdf"}" ${cap ? 'capture="environment"' : ""} hidden onchange="joindreFacture('${it.k}', this)"></label>`;
+  modal(FACT.seul ? "📎 La facture" : `📎 Facture ${E.manque.length - L.length + 1} sur ${E.manque.length}`, `<div class="full fact-q">
+      <b class="fact-m">−${eur(it.montant)}</b><span class="fact-l">${esc(libFacture(it))}</span>
+      <small>${it.date ? fds(it.date) : ""}${it.cat ? " · " + esc(it.cat) : ""}${bi ? " · " + esc(bi.nom) : ""}${it.op ? " · banque" : ""}</small></div>
+    <div class="full fact-btns">${champ(true, "📸 Prendre en photo", "primary")}${champ(false, "📄 Choisir le fichier", "")}
+      ${libres.length ? `<button type="button" class="btn big" onclick="choisirFactureApp('${it.k}')">📁 Elle est déjà dans l'appli</button>` : ""}</div>
+    <details class="full fact-guide"><summary>❓ Comment l'obtenir ?</summary>${guideFacture(it)}</details>
+    <div class="full row fact-bas"><button type="button" class="small ghost" onclick="pasDeFacture('${it.k}')">🚫 Pas de facture</button></div>`,
+    () => { if (!FACT.seul) { FACT.vus.push(it.k); setTimeout(() => assistantFactures(y), 60); } return true; },
+    { ok: FACT.seul ? "Plus tard" : L.length > 1 ? "Plus tard ›" : "Plus tard", lecture: true, okCls: "ghost" });
+}
+function suiteFactures(msg, d) {
+  const y = FACT.y || +String(d.date || "").slice(0, 4) || TODAY.getFullYear();
+  if (!FACT.seul && listeFactures(y).manque.some(x => !FACT.vus.includes(x.k))) { toast(msg); setTimeout(() => assistantFactures(y), 500); return; }
+  const n = listeFactures(y).manque.length;
+  toastActions(msg, [["Voir", `editDepense('${d.id}')`], ...(n ? [[`Suivante (${n})`, `assistantFactures(${y})`]] : [])]);
+}
+async function joindreFacture(k, inp) {
+  const file = inp.files && inp.files[0], it = itemFacture(k); if (!file || !it) return;
+  closeOverlay(); toast("📎 Envoi de la facture…");
+  try { const d = depenseDeItem(it); await attacherFacture(d, file); render(); suiteFactures(`📎 Facture ajoutée : ${eur(d.montant)} ${libFacture(it)}`, d); }
+  catch (e) { toastActions("Envoi impossible : " + (e.message || e), [["Réessayer", `assistantFactures(${FACT.y || TODAY.getFullYear()},'${k}')`]]); }
+}
+// les papiers déjà dans l'appli qui peuvent être cette facture : pas encore reliés, même logement, date proche d'abord
+function facturesLibres(it) {
+  const pris = new Set(S.depenses.map(d => d.factureId).filter(Boolean)), t = P(it.date) || TODAY;
+  return (S.fichiers || []).filter(f => !pris.has(f.id) && (recusBoite().includes(f) || ["Factures et travaux", "Assurance", "Copropriété", "Taxe foncière", "Diagnostics (DPE…)"].includes(f.cat))
+    && (!it.bienId || !f.bienId || f.bienId === it.bienId) && Math.abs(daysBetween(P(f.date) || t, t)) <= 120)
+    .sort((a, b) => Math.abs(daysBetween(P(a.date) || t, t)) - Math.abs(daysBetween(P(b.date) || t, t))).slice(0, 8);
+}
+function choisirFactureApp(k) {
+  const it = itemFacture(k); if (!it) return; const L = facturesLibres(it);
+  modal("📁 Laquelle est la facture ?", `<p class="full note">−${eur(it.montant)} · ${esc(libFacture(it))}${it.date ? " · " + fds(it.date) : ""}</p>
+    <ul class="full todo plat">${L.map(f => `<li><span class="ico" aria-hidden="true">${/pdf/.test(f.type || "") ? "📄" : "🖼️"}</span><span class="tx"><b>${esc(f.nom)}</b><small>${f.date ? fds(P(f.date)) : ""}${f.bienId && bien(f.bienId) ? " · " + esc(bien(f.bienId).nom) : f.boite ? " · à ranger" : ""}</small></span><span class="row"><button type="button" class="small ghost" onclick="ouvrirDocument('${f.id}')">Voir</button><button type="button" class="small primary" onclick="lierFactureExistante('${k}','${f.id}')">C'est elle</button></span></li>`).join("")}</ul>`,
+    () => { setTimeout(() => assistantFactures(FACT.y, FACT.seul ? k : ""), 60); return true; }, { ok: "Retour", lecture: true });
+}
+function lierFactureExistante(k, fid) {
+  const it = itemFacture(k), f = S.fichiers.find(x => x.id === fid); if (!it || !f) return;
+  closeOverlay(); const d = depenseDeItem(it); lierFacture(d, f); render(); suiteFactures(`📎 Facture reliée : ${eur(d.montant)} ${libFacture(it)}`, d);
+}
+function pasDeFacture(k) {
+  const it = itemFacture(k); if (!it) return;
+  modal("🚫 Pas de facture", `<p class="full note">−${eur(it.montant)} · ${esc(libFacture(it))}</p><fieldset class="full"><legend>Pourquoi ?</legend>${RAISONS_SANS.map((r, i) => `<label class="fl chk"><input type="radio" name="r" value="${i}" ${i ? "" : "checked"}> ${esc(r)}</label>`).join("")}</fieldset>
+    <details class="full pq"><summary>Pourquoi on demande ?</summary><p class="note small">Ton comptable verra la raison. Une facture perdue se redemande presque toujours au commerçant : "Comment l'obtenir ?" t'aide. Tu pourras l'ajouter plus tard.</p></details>`,
+    v => { const d = depenseDeItem(it); d.sansFacture = RAISONS_SANS[+v.r] || RAISONS_SANS[0]; setTimeout(() => suiteFactures("✓ Noté : pas de facture", d), 60); }, { ok: "Valider" });
+}
+function finFactures(y, E) {
+  const n = E.manque.length;
+  modal(n ? "📎 Fini pour l'instant" : `✅ Toutes les factures de ${y} sont là`, `<div class="full">${grosMsg(n ? "attention" : "ok", n ? `${n} facture${n > 1 ? "s" : ""} laissée${n > 1 ? "s" : ""} pour plus tard` : "Bravo, rien ne manque", `${E.ok} paiement${E.ok > 1 ? "s" : ""} sur ${E.total} ${E.ok > 1 ? "ont" : "a"} sa facture.`)}</div>
+    <div class="full row">${n ? `<button type="button" class="primary" onclick="FACT={y:${y},vus:[],seul:false};closeOverlay();assistantFactures(${y})">Reprendre les ${n}</button>` : ""}<button type="button" class="${n ? "" : "primary"}" onclick="closeOverlay();packComptable(${y})">📦 Pack pour le comptable</button></div>`,
+    () => true, { ok: "Fermer", lecture: true });
+  FACT = { y, vus: [], seul: false };
+}
+/* "Comment l'obtenir ?" : où trouver la facture selon le commerçant, sinon un message tout prêt pour la demander */
+const GUIDES_FACT = [
+  [/AMAZON|AMZN/, "Sur Amazon : <b>Vos commandes</b> › la commande › <b>Facture</b>.", "https://www.amazon.fr/gp/css/order-history"],
+  [/LEROY ?MERLIN/, "Leroy Merlin : ton compte › <b>Mes achats</b> (achats en magasin faits avec ta carte). Sinon, à l'accueil du magasin avec le ticket.", "https://www.leroymerlin.fr"],
+  [/CASTORAMA/, "Castorama : ton compte › <b>Mes commandes</b>. Achat en magasin : à l'accueil avec le ticket.", "https://www.castorama.fr"],
+  [/BRICO|POINT P|CEDEO|MANOMANO|IKEA|BOULANGER|DARTY|CONFORAMA|LAPEYRE|WELDOM|GEDIMAT|BIG ?MAT|TOLLENS|ZOLPAN|BUT /, "Ton compte sur le site du magasin › <b>commandes</b> ou <b>achats</b>. Achat en magasin : demande la facture à l'accueil avec le ticket de caisse (ou ton relevé de carte).", ""],
+  [/\bEDF\b/, "EDF : espace client › <b>Factures</b> (en PDF).", "https://www.edf.fr"],
+  [/ENGIE/, "Engie : espace client › <b>Factures</b>.", "https://particuliers.engie.fr"],
+  [/TOTAL ?ENERGIES|TOTAL DIRECT/, "TotalEnergies : espace client › <b>Factures</b>.", "https://www.totalenergies.fr"],
+  [/VEOLIA|SUEZ|SAUR|EAU /, "Fournisseur d'eau : espace client › <b>Factures</b> (le nom est sur le prélèvement).", ""],
+  [/ORANGE|SOSH/, "Orange : espace client › <b>Factures</b>.", "https://www.orange.fr"],
+  [/\bFREE\b/, "Free : espace abonné › <b>Factures</b>.", "https://www.free.fr"],
+  [/\bSFR\b|RED BY/, "SFR : espace client › <b>Factures</b>.", "https://www.sfr.fr"],
+  [/BOUYGUES/, "Bouygues Telecom : espace client › <b>Factures</b>.", "https://www.bouyguestelecom.fr"],
+  [/DGFIP|IMPOT|FINANCES PUBLIQUES|TRESOR PUBLIC|TAXE FONC/, "impots.gouv.fr : <b>espace professionnel</b> de la SCI (en nom propre : espace particulier) › <b>Documents</b> › l'avis de taxe foncière ou de CFE.", "https://www.impots.gouv.fr"],
+  [/SYNDIC|FONCIA|NEXITY|CITYA|SERGIC|ORALIA|LOISELET|IMMO DE FRANCE|SQUARE HABITAT|COPRO/, "Extranet de la copropriété › <b>Documents</b> › l'<b>appel de fonds</b> du trimestre. Sinon, demande-le au gestionnaire (message ci-dessous).", ""],
+  [/AXA|MAIF|MACIF|ALLIANZ|GROUPAMA|MATMUT|\bGMF\b|GENERALI|\bMMA\b|MAAF|HISCOX|LEOCARE|LUKO|ACHEEL|PACIFICA|SWISS ?LIFE|ABEILLE|APRIL|ASSUR/, "Espace client de l'assurance › <b>Mes contrats</b> › l'<b>avis d'échéance</b> (c'est la facture d'une assurance).", ""],
+  [/LEBONCOIN|SELOGER|\bPAP\b|BIEN ?ICI|LOGIC/, "Ton compte sur le site d'annonces › <b>Factures</b>.", ""],
+  [/GOOGLE|APPLE|MICROSOFT|OVH|IONOS|CANVA|ADOBE|DROPBOX|NOTION/, "Ton compte › <b>Facturation</b> › <b>Factures</b>.", ""],
+  [/PAYPAL/, "PayPal donne un reçu (Activité › la transaction), mais la vraie facture vient du vendeur : demande-la lui.", ""],
+  [/NOTAIR|ETUDE /, "Demande à l'étude le <b>décompte</b> ou la facture d'honoraires (message ci-dessous).", ""],
+  [/DIAG/, "Demande la facture au diagnostiqueur (message ci-dessous).", ""]
+];
+function guideFacture(it) {
+  const lib = " " + phraseDe(it.libelle || "") + " ", g = GUIDES_FACT.find(([re]) => re.test(lib));
+  return `<p class="note">${g ? g[1] : "C'est sûrement un artisan ou un commerçant : demande-lui la facture, il doit t'en donner une."}${g && g[2] ? ` <a href="${g[2]}" target="_blank" rel="noopener">Ouvrir le site ›</a>` : ""}</p>
+    ${estPerso() ? "" : `<p class="note small">💡 Elle doit être au nom de ${esc(S.sci.nom || "la SCI")}, sinon ton comptable peut la refuser.</p>`}
+    <div class="row"><button type="button" class="small" onclick="demanderFacture('${it.k}')">✉️ Demander la facture</button></div>`;
+}
+function demanderFacture(k) {
+  const it = itemFacture(k); if (!it) return;
+  const lib = phraseDe(it.libelle || ""), c = (S.sci.contacts || []).find(x => x.email && phraseDe(x.nom).split(" ").some(m => m.length > 3 && (" " + lib + " ").includes(" " + m + " ")));
+  const t = `Bonjour,\n\nPourriez-vous m'envoyer la facture de mon paiement de ${eur(it.montant)}${it.date ? " du " + fds(it.date) : ""}${libFacture(it) ? " (" + libFacture(it) + ")" : ""} ?\n${estPerso() ? "" : `Merci de l'établir au nom de ${S.sci.nom || "la SCI"}${S.sci.siege ? ", " + S.sci.siege : ""}.\n`}\nMerci beaucoup,\n${S.sci.gerant || ""}`.trim();
+  modal("✉️ Demander la facture", `${fld("À (e-mail, facultatif)", "a", c ? c.email : "", "email", "full")}<label class="fl full">Message<textarea id="msgFact" rows="9">${esc(t)}</textarea></label>
+    <div class="full row"><button type="button" class="small" onclick="copierTexte(document.getElementById('msgFact').value)">📋 Copier</button><button type="button" class="small primary" onclick="envoyerDemandeFacture('mail')">✉️ E-mail</button><button type="button" class="small" onclick="envoyerDemandeFacture('partage')">💬 SMS, WhatsApp…</button></div>
+    <p class="full note small">Rien ne part tout seul : ton appli de messagerie s'ouvre avec le texte, c'est toi qui envoies.</p>`, () => true, { ok: "Fermer", lecture: true });
+}
+function envoyerDemandeFacture(par) {
+  const t = (document.getElementById("msgFact") || {}).value || "", f = document.getElementById("mform"), a = f && f.elements.a ? f.elements.a.value.trim() : "", objet = "Demande de facture";
+  if (par === "partage" && navigator.share) { navigator.share({ title: objet, text: t }).catch(() => {}); return; }
+  location.href = `mailto:${encodeURIComponent(a)}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(t)}`;
+}
+/* Une facture qui arrive (photo, boîte, lecture par l'IA) : c'est peut-être celle d'un paiement déjà vu à la banque → on la relie au lieu de créer un doublon */
+function paiementPourFacture(montant, date) {
+  if (!(montant > 0)) return null; const t = P(date), ans = t ? [t.getFullYear(), t.getFullYear() - 1, t.getFullYear() + 1] : [TODAY.getFullYear(), TODAY.getFullYear() - 1];
+  const C = ans.flatMap(y => listeFactures(y).manque).filter(it => Math.abs(it.montant - montant) < 0.011 && (!t || Math.abs(daysBetween(P(it.date) || t, t)) <= 75));
+  return C.sort((a, b) => t ? Math.abs(daysBetween(P(a.date), t)) - Math.abs(daysBetween(P(b.date), t)) : 0)[0] || null;
+}
+function proposerPaiementFacture(o) {
+  const it = paiementPourFacture(o.montant, o.date); if (!it) return false;
+  FACT_PROP = o;
+  modal("🧾 C'est la facture de ce paiement ?", `<div class="full fact-q"><b class="fact-m">−${eur(it.montant)}</b><span class="fact-l">${esc(libFacture(it))}</span><small>${it.date ? fds(it.date) : ""}${it.op ? " · vu à la banque" : ""}</small></div>
+    <div class="full row"><button type="button" class="small ghost" onclick="closeOverlay();editDepense(null, FACT_PROP.pre)">Non, c'est une autre dépense</button></div>`,
+    () => { relierFactureProposee(it.k); return true; }, { ok: "Oui, relier", lecture: true });
+  return true;
+}
+let FACT_PROP = null;
+async function relierFactureProposee(k) {
+  const o = FACT_PROP, it = itemFacture(k); if (!o || !it) return;
+  try { if (it.op && !it.cat && o.pre && CATS.includes(o.pre.categorie)) it.cat = o.pre.categorie; if (it.op && !it.bienId && o.pre && o.pre.bienId) it.bienId = o.pre.bienId;
+    const d = depenseDeItem(it);
+    if (o.fichierId) { const f = S.fichiers.find(x => x.id === o.fichierId); if (f) lierFacture(d, f); }
+    else if (o.fichier) { toast("📎 Envoi de la facture…"); await attacherFacture(d, o.fichier); }
+    render(); FACT.seul = true; suiteFactures(`📎 Facture reliée au paiement de ${eur(d.montant)}`, d);
+  } catch (e) { toast("Envoi impossible : " + (e.message || e)); }
+}
+function relierRecuFacture(fid) {
+  const g = LU_RECUS[fid], it = g && itemFacture(g.fact), f = S.fichiers.find(x => x.id === fid); if (!it || !f) return;
+  const d = depenseDeItem(it); lierFacture(d, f); delete g.fact; render(); FACT.seul = true; suiteFactures(`📎 Facture reliée au paiement de ${eur(d.montant)}`, d);
+}
+/* Dans la fiche d'une dépense : sa facture et ses commentaires */
+function blocFactureDep(d) {
+  const f = factureDe(d), y = +String(d.date || "").slice(0, 4) || TODAY.getFullYear();
+  if (f) return `<div class="full fact-bloc ok"><span>📎 <b>${esc(f.nom)}</b></span><span class="row"><button type="button" class="small" onclick="ouvrirDocument('${f.id}')">Voir</button>${LECTURE || !d.factureId ? "" : `<button type="button" class="small ghost" onclick="retirerFacture('${d.id}')">Détacher</button>`}</span></div>`;
+  if (!demandeFacture(d)) return `<p class="full note small">📎 Pas de facture à demander : pour cette catégorie, le relevé ou le tableau du prêt suffit.</p>`;
+  if (d.sansFacture) return `<div class="full fact-bloc"><span>🚫 Pas de facture : ${esc(d.sansFacture)}</span>${LECTURE ? "" : `<button type="button" class="small" onclick="closeOverlay();assistantFactures(${y},'d${d.id}')">📎 L'ajouter</button>`}</div>`;
+  return `<div class="full fact-bloc manque"><span>❓ <b>Pas encore de facture</b></span>${LECTURE ? "" : `<button type="button" class="small primary" onclick="closeOverlay();assistantFactures(${y},'d${d.id}')">📎 Ajouter la facture</button>`}</div>`;
+}
+function retirerFacture(id) {
+  const d = S.depenses.find(x => x.id === id); if (!d) return;
+  avecAnnuler(() => { delete d.factureId; save(); closeOverlay(); toast("Facture détachée (elle reste dans les documents)"); });
+}
+const quiSuisJe = () => { const e = (SB_USER && SB_USER.email) || ""; const m = MEMBRES && SB_USER && MEMBRES.membres.find(x => x.user_id === SB_USER.id); return (m && m.role === "proprietaire" && S.sci.gerant) || (e ? e.split("@")[0] : "Moi"); };
+const notesHtml = d => (d.notes || []).map(n => `<p class="fact-note"><b>${esc(n.qui)}</b> <small>${fds(P(n.le))}</small><br>${esc(n.txt)}</p>`).join("") || `<p class="note small">Aucun commentaire.</p>`;
+function blocNotesDep(d) {
+  return `<div class="full fact-notes"><b class="fn-t">💬 Commentaires</b><div id="notes_l">${notesHtml(d)}</div>
+    ${LECTURE ? "" : `<div class="fn-ajout"><input id="note_txt" placeholder="Ex : travaux à amortir ? facture demandée le…" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterNote('${d.id}')}"><button type="button" class="small" onclick="ajouterNote('${d.id}')">Ajouter</button></div>`}</div>`;
+}
+function ajouterNote(id) {
+  const d = S.depenses.find(x => x.id === id), el = document.getElementById("note_txt"); if (!d || !el) return; const txt = el.value.trim(); if (!txt) return;
+  d.notes = [...(d.notes || []), { qui: quiSuisJe(), le: iso(TODAY), txt: txt.slice(0, 500) }]; save();
+  el.value = ""; const l = document.getElementById("notes_l"); if (l) l.innerHTML = notesHtml(d); toast("💬 Commentaire ajouté");
+}
+const badgeFacture = d => factureDe(d) ? `<small class="fact-b ok">📎 facture</small>` : factureManque(d) ? `<small class="fact-b manque">❓ facture</small>` : "";
+/* La carte de la compta : combien de paiements ont leur facture, et le bouton qui pose les questions une par une */
+function carteFactures(y) {
+  if (!SB) return "";
+  const E = listeFactures(y); if (!E.total) return "";
+  const n = E.manque.length, fini = !n;
+  return `<section class="card classement fact-carte ${fini ? "fini" : ""}" id="factures"><div class="cl-h"><span class="cl-ico" aria-hidden="true">${fini ? "✅" : "📎"}</span><div class="tx">
+      <h2>${fini ? `Toutes les factures de ${y} sont là` : `${n} facture${n > 1 ? "s" : ""} à retrouver`}</h2><p>${E.ok ? `${E.ok} paiement${E.ok > 1 ? "s" : ""} sur ${E.total} ${E.ok > 1 ? "ont" : "a"} sa facture.` : "Une photo par paiement suffit."}</p></div><b class="cl-pct">${E.pct} %</b></div>
+    <div class="cl-barre" role="progressbar" aria-valuenow="${E.pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Paiements avec facture"><i style="width:${E.pct}%"></i></div>
+    <div class="row">${!fini && !LECTURE ? `<button class="primary" onclick="assistantFactures(${y})">📎 Ajouter les factures</button>` : ""}<button class="${fini ? "primary" : "small"}" onclick="packComptable(${y})">📦 Pack pour le comptable</button>${estProprio() ? `<button class="small ghost" onclick="reglage('membres')">👤 Inviter mon comptable</button>` : ""}</div>
+    <details class="pq"><summary>Pourquoi ?</summary><p class="note small">Ton comptable doit avoir une facture pour chaque dépense. Une photo suffit : l'appli la relie au paiement de la banque et la range${DRIVEG.etat === "oui" && S.sci.facturesDrive !== false ? `, avec une copie dans ton Drive (dossier "Factures")` : ""}. Pas demandé pour les prêts ni les frais bancaires : le tableau du prêt ou le relevé suffit.${DRIVEG.etat === "oui" && estProprio() ? ` <a href="#" onclick="event.preventDefault();S.sci.facturesDrive=S.sci.facturesDrive===false;save();render()">${S.sci.facturesDrive === false ? "Copier aussi les factures dans mon Drive" : "Ne plus copier dans le Drive"}</a>` : ""}</p></details></section>`;
+}
+/* Nouveau paiement vu à la banque : "tu as la facture ?" (une fois, à l'ouverture) */
+function demanderFacturesNouvelles() {
+  if (!SB || LECTURE || !estProprio() || !BANQUE.ops.length || S.sci.sortiesMasquees) return;
+  const cle = "factVu-" + ESPACE, max = BANQUE.ops.reduce((m, o) => o.date > m ? o.date : m, ""); let vu = "";
+  try { vu = localStorage.getItem(cle) || ""; localStorage.setItem(cle, max); } catch (e) { return; }
+  if (!vu || max <= vu) return; // la première fois, on ne remonte pas tout l'historique
+  const y = TODAY.getFullYear(), L = listeFactures(y).manque.filter(x => x.op && x.date > vu); if (!L.length) return;
+  setTimeout(() => toastActions(L.length > 1 ? `🧾 ${L.length} nouveaux paiements : tu as les factures ?` : `🧾 ${eur(L[0].montant)} · ${libFacture(L[0])} : tu as la facture ?`, [["📎 Ajouter", L.length > 1 ? `assistantFactures(${y})` : `assistantFactures(${y},'${L[0].k}')`]]), 4500);
+}
+/* Le pack pour le comptable : un .zip avec toutes les factures de l'année, la liste (factures manquantes comprises) et le fichier des écritures */
+async function packComptable(y) {
+  y = +y || view.comptaAnnee || TODAY.getFullYear();
+  toast("📦 Préparation du pack… (quelques secondes)");
+  try {
+    const JSZip = await chargerLib("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js", "JSZip"), z = new JSZip();
+    const fec = contenuFEC(y); z.file(fec.nom, fec.texte);
+    const propre = s => String(s).replace(/[\\/:*?"<>|\n\r\t]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 90), pris = new Set(), n2 = v => r2(v).toFixed(2).replace(".", ",");
+    const lignes = [["Date", "Libellé", "Catégorie", "Logement", "Montant", "Facture", "Commentaires"]]; let nf = 0, rates = 0, manquent = 0;
+    const deps = S.depenses.filter(d => String(d.date || "").startsWith(String(y))).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    for (const d of deps) {
+      const f = factureDe(d); let fic;
+      if (f) {
+        try { const { bl, type } = await blobFichier(f), ext = /pdf/.test(type || "") ? "pdf" : /png/.test(type || "") ? "png" : /hei[cf]/.test(type || "") ? "heic" : /^image/.test(type || "") ? "jpg" : "pdf";
+          let nom = propre(`${d.date} ${libelleLisible(d.libelle) || d.categorie} ${n2(d.montant)}`), i = 2; while (pris.has(nom)) nom = propre(`${d.date} ${libelleLisible(d.libelle) || d.categorie} ${n2(d.montant)}`) + " (" + i++ + ")"; pris.add(nom);
+          z.file(`Factures/${nom}.${ext}`, bl); fic = `Factures/${nom}.${ext}`; nf++; }
+        catch (e) { fic = f.url ? "Lien : " + f.url : "Pas copiée (" + (e.message || "erreur") + ")"; rates++; }
+      } else if (!demandeFacture(d)) fic = "Pas nécessaire (relevé ou tableau du prêt)";
+      else if (d.sansFacture) fic = "Pas de facture : " + d.sansFacture;
+      else { fic = "MANQUANTE"; manquent++; }
+      lignes.push([fds(d.date), libelleLisible(d.libelle) || "", d.categorie, d.bienId ? bienLabel(bien(d.bienId)) : (estPerso() ? "Général" : "SCI"), n2(d.montant), fic, (d.notes || []).map(x => `${x.qui} : ${x.txt}`).join(" | ")]);
+    }
+    const pasRangees = SB && BANQUE.lien ? sortiesAClasser(y) : [];
+    pasRangees.forEach(o => lignes.push([fds(o.date), libelleLisible(o.libelle) || o.libelle || "", "Pas encore rangée dans l'appli", "", n2(-o.montant), "MANQUANTE (paiement vu à la banque)", ""]));
+    const csv = lignes.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+    z.file(`Dépenses et factures ${y}.csv`, "﻿" + csv);
+    z.file("Lisez-moi.txt", `Pack comptable ${S.sci.nom || ""} ${y}\r\n\r\n- ${fec.nom} : fichier des écritures (FEC), à importer dans le logiciel comptable.\r\n- Dépenses et factures ${y}.csv : chaque dépense avec sa facture (ou la raison de son absence) et les commentaires. S'ouvre avec Excel.\r\n- Factures : ${nf} facture${nf > 1 ? "s" : ""}, nommées "date libellé montant".\r\n${manquent + pasRangees.length ? `\r\nÀ noter : ${manquent + pasRangees.length} dépense${manquent + pasRangees.length > 1 ? "s" : ""} sans facture pour l'instant (marquées MANQUANTE).\r\n` : ""}\r\nPréparé par l'appli Gestion locative le ${fds(TODAY)}.\r\n`);
+    download(`Pack comptable ${propre(S.sci.nom || "")} ${y}.zip`.replace(/\s+/g, " "), await z.generateAsync({ type: "blob" }), "application/zip");
+    toast(`📦 Pack prêt : ${nf} facture${nf > 1 ? "s" : ""}${manquent + pasRangees.length ? ` · ${manquent + pasRangees.length} manquante${manquent + pasRangees.length > 1 ? "s" : ""}` : ""}${rates ? ` · ${rates} pas copiée${rates > 1 ? "s" : ""}` : ""}. Envoie-le à ton comptable.`);
+  } catch (e) { toast("Pack impossible : " + (e.message || e)); }
 }
 function editRappel() { modal("Nouveau rappel", `${fld("Quoi ?", "titre", "", "text", "full", "required")}${fld("Quand ?", "date", iso(addDays(TODAY, 7)), "date", "", "required")}${sel("Bien", "bienId", "", [["", "—"], ...S.biens.map(b => [b.id, b.nom])])}`, d => { S.rappels.push({ id: uid(), ...d, fait: false }); }); }
 function rappelFait(id) { avecAnnuler(() => { const r = S.rappels.find(x => x.id === id); if (r) r.fait = true; save(); render(); toast("Rappel fait"); }); }
@@ -6177,7 +6495,9 @@ function appliquerLectureDoc(d, ctx, credits) {
   }
   if (["facture", "assurance_proprietaire", "charges_copropriete"].includes(d.type)) {
     const cat = CATS.includes(d.categorie) ? d.categorie : d.type === "charges_copropriete" ? "Charges de copropriété" : d.type === "assurance_proprietaire" ? "Assurance propriétaire (PNO)" : CATS[4];
-    editDepense(null, { date: dateOk(d.date_document) || iso(TODAY), montant: +d.montant_total > 0 ? +d.montant_total : "", categorie: cat, bienId: bid, libelle: [d.fournisseur, d.objet].filter(Boolean).join(" – ").slice(0, 80), ia: `${d.resume}${rem}${reste}` });
+    const pre = { date: dateOk(d.date_document) || iso(TODAY), montant: +d.montant_total > 0 ? +d.montant_total : "", categorie: cat, bienId: bid, libelle: [d.fournisseur, d.objet].filter(Boolean).join(" – ").slice(0, 80), ia: `${d.resume}${rem}${reste}`, ...(ctx.fichierId ? { factureId: ctx.fichierId } : {}) };
+    if (ctx.fichierId && proposerPaiementFacture({ montant: +d.montant_total, date: dateOk(d.date_document), fichierId: ctx.fichierId, pre })) return;
+    editDepense(null, pre);
     const f = document.getElementById("mform"); if (f) ["date", "montant", "categorie", "libelle"].forEach(k => f.elements[k] && f.elements[k].value && f.elements[k].classList.add("auto"));
     return;
   }
@@ -8034,7 +8354,8 @@ function aideDeclaration(y, lignes, tot) {
 }
 /* ================= Fichier des écritures comptables (FEC) pour le comptable ================= */
 const COMPTE_CAT = { "Taxe foncière": ["63512", "Taxes foncières"], "Charges de copropriété": ["614", "Charges locatives et de copropriété"], "Assurance propriétaire (PNO)": ["616", "Primes d'assurance"], "Assurance loyers impayés": ["616", "Primes d'assurance"], "Travaux d'entretien / réparation": ["615", "Entretien et réparations"], "Travaux d'amélioration": ["2135", "Agencements et aménagements"], "Intérêts d'emprunt": ["6611", "Intérêts des emprunts"], "Assurance emprunteur": ["616", "Primes d'assurance"], "Remboursement capital emprunt": ["164", "Emprunts"], "Échéance de prêt (capital + intérêts, à ventiler)": ["164", "Emprunts (à ventiler)"], "Achat du bien / frais d'acquisition": ["213", "Constructions"], "Frais bancaires": ["627", "Services bancaires"], "Honoraires (comptable, notaire, avocat…)": ["6226", "Honoraires"], "Diagnostics": ["6226", "Honoraires"], "Eau / électricité / gaz": ["6061", "Fournitures non stockables"], "Frais de gestion / annonces": ["6231", "Annonces et insertions"], "Autre": ["658", "Charges diverses"] };
-function exportFEC(y) {
+function exportFEC(y) { const f = contenuFEC(y); download(f.nom, f.texte, "text/plain"); toast("Fichier prêt : envoie-le à ton comptable, il l'importe directement."); }
+function contenuFEC(y) {
   const E = [], d8 = d => String(d || "").replace(/-/g, ""), n = v => r2(v).toFixed(2).replace(".", ","); let num = 0;
   const ecr = (jr, jl, date, lib, piece, lignes) => { num++; lignes.forEach(([c, cl, deb, cre]) => E.push([jr, jl, String(num).padStart(6, "0"), d8(date), c, cl, "", "", piece, d8(date), lib, n(deb), n(cre), "", "", d8(date), "", ""])); };
   S.paiements.filter(p => (p.date || "").startsWith(String(y))).forEach(p => { const b = bail(p.bailId); if (!b) return; const e = echeance(b, p.mois), part = e && e.du > 0 ? Math.min(1, (e.ch + e.exT) / e.du) : 0, ch = r2(p.montant * part), lo = r2(p.montant - ch);
@@ -8043,8 +8364,7 @@ function exportFEC(y) {
   S.depenses.filter(d => (d.date || "").startsWith(String(y))).forEach(d => { const [c, cl] = COMPTE_CAT[d.categorie] || COMPTE_CAT.Autre; ecr("BQ", "Banque", d.date, `${d.libelle || d.categorie}${d.bienId ? " · " + bienLabel(bien(d.bienId)) : ""}`, "D" + d.id, [[c, cl, +d.montant, 0], ["512", "Banque", 0, +d.montant]]); });
   E.sort((a, b) => a[3].localeCompare(b[3]));
   const tete = ["JournalCode", "JournalLib", "EcritureNum", "EcritureDate", "CompteNum", "CompteLib", "CompAuxNum", "CompAuxLib", "PieceRef", "PieceDate", "EcritureLib", "Debit", "Credit", "EcritureLet", "DateLet", "ValidDate", "Montantdevise", "Idevise"];
-  download(`${(S.sci.siren || "000000000").replace(/\s/g, "")}FEC${y}1231.txt`, [tete, ...E].map(r => r.map(x => String(x).replace(/[\t\n]/g, " ")).join("\t")).join("\r\n"), "text/plain");
-  toast("Fichier prêt : envoie-le à ton comptable, il l'importe directement.");
+  return { nom: `${(S.sci.siren || "000000000").replace(/\s/g, "")}FEC${y}1231.txt`, texte: [tete, ...E].map(r => r.map(x => String(x).replace(/[\t\n]/g, " ")).join("\t")).join("\r\n") };
 }
 
 /* ================= Parcours d'arrivée et de départ ================= */
@@ -8775,9 +9095,11 @@ function lireFacture(txt) {
 async function photoFacture() {
   const file = await choisirFichier("image/*,application/pdf"); if (!file) return;
   toast("Lecture de la facture… (la première fois, jusqu'à 30 secondes)");
-  try { const txt = /pdf/.test(file.type) ? await lireTextePdf(file) : await lireTexteImage(file), r = lireFacture(txt);
-    editDepense(null, Object.assign({ date: iso(TODAY) }, r, { lue: Object.keys(r).length }));
-  } catch (e) { toast("Lecture impossible : " + e.message); editDepense(); }
+  let r = {}; try { const txt = /pdf/.test(file.type) ? await lireTextePdf(file) : await lireTexteImage(file); r = lireFacture(txt); } catch (e) { toast("Lecture impossible : " + e.message); }
+  const pre = Object.assign({ date: iso(TODAY) }, r, { lue: Object.keys(r).length }, SB ? { fichier: file } : {});
+  // c'est peut-être la facture d'un paiement déjà vu à la banque : on la relie au lieu de compter la dépense deux fois
+  if (SB && proposerPaiementFacture({ montant: r.montant, date: r.date, fichier: file, pre })) return;
+  editDepense(null, pre);
 }
 
 /* --- Démarrer avec un tableur (Excel, Numbers, Google Sheets, CSV) --- */

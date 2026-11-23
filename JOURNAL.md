@@ -11,6 +11,7 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **Factures (Théo, 5 min)** : Compta › Dépenses › "📎 Ajouter les factures" sur ton espace GTP, puis "📦 Pack pour le comptable" et l'envoyer au comptable ; dire si la copie dans le Drive marche (dossier "Factures (Gestion locative)").
 - [ ] **Max (SCI NIMAR)** : dans À faire, toucher "Oui, bail commercial" pour l'EURL Velours & Végétal ; fiche "Immeuble / parties communes" › Transformer ; "Compléter avec mes papiers" sur chaque logement.
 - [ ] **Budget IA (Théo)** : 3 $ par mois pour toute l'appli (réglage IA_BUDGET_MOIS absent) ; à monter si l'assistant et les lectures servent à d'autres utilisateurs.
 - [ ] **Dropbox (Théo, 1 min)** : clé posée et en ligne. Reste : vérifier que les domaines sci-gestion-locative.com et gestion-locative-sci.pages.dev sont dans "Chooser / Saver / Embedder domains", puis essayer Docs › + Ajouter un document › 📦 Depuis Dropbox.
@@ -80,6 +81,20 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 23/11/2026 — factures comme Pennylane : chaque paiement a sa facture, pack pour le comptable
+
+- Demande de Théo : "le comptable me demande des factures" ; scanner, proposition de rangement, commentaires, l'appli demande la facture de chaque frais, et comment l'obtenir.
+- Données : sur la dépense, `factureId` (→ S.fichiers), `sansFacture` (raison), `notes` [{ qui, le, txt }] ; sur le fichier, `depenseId`. Pas demandé pour les prêts ni les frais bancaires (`SANS_FACTURE_CAT`). Une taxe foncière dont l'avis est rangé dans le logement compte comme justifiée.
+- `listeFactures(y)` : dépenses sans facture + sorties de la banque pas encore rangées (joindre la facture ou dire "pas de facture" les range, catégorie devinée par la banque ou le libellé). Compta › Dépenses et › Comptable : carte "N factures à retrouver" (%), "📎 Ajouter les factures" (`assistantFactures` : une question à la fois, 📸 photo, 📄 fichier, 📁 déjà dans l'appli, ❓ comment l'obtenir, 🚫 pas de facture, "Plus tard ›"). Badge "📎 facture" / "❓ facture" sur chaque dépense ; fiche dépense : facture (voir, détacher, ajouter) + 💬 commentaires.
+- Rapprochement : une facture lue (photo de facture, lecture par l'IA, boîte à documents) avec le même montant qu'un paiement sans facture (à 75 jours) → "C'est la facture de ce paiement ?" et reliée au lieu de créer une 2e dépense (avant, une photo de facture d'un paiement déjà vu à la banque comptait la dépense deux fois). Le PDF joint est relu : montant différent → alerte.
+- "Comment l'obtenir ?" (`GUIDES_FACT`) : Amazon, Leroy Merlin, Castorama, magasins de bricolage, EDF, Engie, TotalEnergies, eau, opérateurs, impots.gouv, syndic, assurances, sites d'annonces, abonnements en ligne, PayPal, notaire, diagnostiqueur ; sinon "✉️ Demander la facture" : message tout prêt (montant, date, au nom de la SCI et son adresse), ouvert dans la messagerie, rien ne part tout seul.
+- Nouveau paiement vu à la banque : "🧾 47 € · Leroy Merlin : tu as la facture ?" (une fois, à l'ouverture ; la première fois on ne remonte pas l'historique). À faire : "📎 N factures à retrouver" (+ l'année d'avant jusqu'à fin mai).
+- 📦 Pack pour le comptable (`packComptable`) : .zip avec le FEC, toutes les factures nommées "date libellé montant", la liste Excel (facture, MANQUANTE, raison, commentaires, paiements pas encore rangés) et un lisez-moi. "👤 Inviter mon comptable" ouvre Réglages › Membres (lecture seule : il voit la carte et télécharge le pack, mais ne peut pas commenter).
+- Copie dans le Drive (dossier "Factures (Gestion locative)" › année) si le Drive est branché : bonus silencieux, désactivable sous "Pourquoi ?".
+- Corrigé au passage : "FRAIS TENUE DE COMPTE", frais de carte, de virement ou de rejet, intérêts débiteurs reconnus comme frais bancaires.
+- Test **115** (23/23, compte de test réel). Tests 5, 17, 23, 30, 35, 42, 51, 55, 58, 66, 67, 69, 70, 71, 72, 83, 96, 102, 113 : voir le résultat dans le commit.
+- **Pas vérifié** : copie dans un vrai Google Drive (droit drive.file, testée nulle part) ; photo d'un vrai ticket (lecture d'image) ; le comptable en lecture seule ne peut pas écrire de commentaire.
 
 ### 21/11/2026 (nuit) — meublé au régime réel (LMNP) : micro ou réel, amortissements, dossier pour le comptable
 

@@ -129,6 +129,7 @@ Publier une fonction serveur : `sh tests/deploy_fn.sh envoyer-gmail` (ou `drive`
 | `tests/test112.js` | Vraie base : plusieurs espaces et Drive partagé (un dossier = un espace, sous-dossier ailleurs, "pour quel espace ?", autre compte Google, papier d'immeuble) |
 | `tests/test113.js` | Mode local : contrôle visuel de toutes les pages (iPhone, Android, 320 px, clair et sombre) : débordements, textes coupés, boutons trop petits, erreurs |
 | `tests/test114.js` | Mode local : meublé au réel (LMNP) : amortissements, plafond et reports, duel micro/réel, réglages, dossier comptable |
+| `tests/test115.js` | Compte de test réel, banque simulée : factures (assistant une par une, photo jointe et stockée, "Pas de facture", "Comment l'obtenir ?", message tout prêt, commentaires, facture lue reliée au paiement sans doublon, boîte à documents, À faire, pack comptable .zip) |
 | `tests/test30.js` | Accueil, Annuler, lexique, tons des relances, 12 mois, régularisation, FEC, départ et retenues, annonce, candidats, travaux, lecture d'un bail, photo de facture (internet), import Excel, agenda, mentions légales, lecture seule |
 
 Les tests « vraie base » utilisent deux comptes de test (`test-a@gestion-test.fr`, `test-b@gestion-test.fr`) et suppriment leurs espaces à la fin.
