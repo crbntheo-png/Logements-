@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "", "dropbox": ""}; window.APP_VERSION = {"id": "63a6137", "date": "2026-11-23T19:30"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "", "dropbox": ""}; window.APP_VERSION = {"id": "ca08790", "date": "2026-11-23T19:37"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -737,11 +737,11 @@ ul.rel .row select { flex: 1; min-width: 140px; }
 #app .c-onglets button span { font-size: 1.15rem; line-height: 1; } #app .c-onglets button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 .c-pastille { position: absolute; top: 4px; right: 8px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--accent-ink); font-style: normal; font-size: 11px; line-height: 18px; }
 .c-note { margin: 0 2px; } .c-corps { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
-.classement .cl-h { display: flex; gap: 12px; align-items: center; } .classement h2 { margin: 0 0 2px; font-size: 1.05rem; } .classement .cl-h p { margin: 0; color: var(--muted); font-size: .9rem; }
-.classement .cl-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--accent-soft); }
-.classement .cl-pct { margin-left: auto; white-space: nowrap; flex: none; font-size: 1.3rem; color: var(--accent); } .classement .tx { min-width: 0; }
+:is(.classement, .fact-carte) .cl-h { display: flex; gap: 12px; align-items: center; } :is(.classement, .fact-carte) h2 { margin: 0 0 2px; font-size: 1.05rem; } :is(.classement, .fact-carte) .cl-h p { margin: 0; color: var(--muted); font-size: .9rem; }
+:is(.classement, .fact-carte) .cl-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--accent-soft); }
+:is(.classement, .fact-carte) .cl-pct { margin-left: auto; white-space: nowrap; flex: none; font-size: 1.3rem; color: var(--accent); } :is(.classement, .fact-carte) .tx { min-width: 0; }
 .cl-barre { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 12px 0 4px; } .cl-barre i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
-.classement .row { margin-top: 10px; } .classement.fini .cl-pct { color: var(--ok, var(--accent)); }
+:is(.classement, .fact-carte) .row { margin-top: 10px; } :is(.classement, .fact-carte).fini .cl-pct { color: var(--ok, var(--accent)); }
 .fact-q { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 14px 10px; border-radius: 14px; background: var(--surface-2); }
 .fact-q .fact-m { font-size: 1.8rem; font-variant-numeric: tabular-nums; } .fact-q .fact-l { font-weight: 600; overflow-wrap: anywhere; } .fact-q small { color: var(--muted); }
 .fact-btns { display: grid; gap: 10px; } .fact-btns .btn { justify-content: center; width: 100%; }
@@ -5945,7 +5945,7 @@ function carteFactures(y) {
   if (!SB) return "";
   const E = listeFactures(y); if (!E.total) return "";
   const n = E.manque.length, fini = !n;
-  return `<section class="card classement fact-carte ${fini ? "fini" : ""}" id="factures"><div class="cl-h"><span class="cl-ico" aria-hidden="true">${fini ? "✅" : "📎"}</span><div class="tx">
+  return `<section class="card fact-carte ${fini ? "fini" : ""}" id="factures"><div class="cl-h"><span class="cl-ico" aria-hidden="true">${fini ? "✅" : "📎"}</span><div class="tx">
       <h2>${fini ? `Toutes les factures de ${y} sont là` : `${n} facture${n > 1 ? "s" : ""} à retrouver`}</h2><p>${E.ok ? `${E.ok} paiement${E.ok > 1 ? "s" : ""} sur ${E.total} ${E.ok > 1 ? "ont" : "a"} sa facture.` : "Une photo par paiement suffit."}</p></div><b class="cl-pct">${E.pct} %</b></div>
     <div class="cl-barre" role="progressbar" aria-valuenow="${E.pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Paiements avec facture"><i style="width:${E.pct}%"></i></div>
     <div class="row">${!fini && !LECTURE ? `<button class="primary" onclick="assistantFactures(${y})">📎 Ajouter les factures</button>` : ""}<button class="${fini ? "primary" : "small"}" onclick="packComptable(${y})">📦 Pack pour le comptable</button>${estProprio() ? `<button class="small ghost" onclick="reglage('membres')">👤 Inviter mon comptable</button>` : ""}</div>

@@ -93,7 +93,7 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 - 📦 Pack pour le comptable (`packComptable`) : .zip avec le FEC, toutes les factures nommées "date libellé montant", la liste Excel (facture, MANQUANTE, raison, commentaires, paiements pas encore rangés) et un lisez-moi. "👤 Inviter mon comptable" ouvre Réglages › Membres (lecture seule : il voit la carte et télécharge le pack, mais ne peut pas commenter).
 - Copie dans le Drive (dossier "Factures (Gestion locative)" › année) si le Drive est branché : bonus silencieux, désactivable sous "Pourquoi ?".
 - Corrigé au passage : "FRAIS TENUE DE COMPTE", frais de carte, de virement ou de rejet, intérêts débiteurs reconnus comme frais bancaires.
-- Test **115** (23/23, compte de test réel). Tests 5, 17, 23, 30, 35, 42, 51, 55, 58, 66, 67, 69, 70, 71, 72, 83, 96, 102, 113 : voir le résultat dans le commit.
+- Test **115** (23/23, compte de test réel). Tests 5, 17, 23, 35, 42, 51, 55, 58, 66, 67, 69, 70, 71, 72, 83, 96, 102, 113 OK (test30 échouait déjà avant : il lit une image par internet, bloqué ici). En ligne (ca08790), nouveauté ajoutée sans notification.
 - **Pas vérifié** : copie dans un vrai Google Drive (droit drive.file, testée nulle part) ; photo d'un vrai ticket (lecture d'image) ; le comptable en lecture seule ne peut pas écrire de commentaire.
 
 ### 21/11/2026 (nuit) — meublé au régime réel (LMNP) : micro ou réel, amortissements, dossier pour le comptable
