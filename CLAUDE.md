@@ -7,6 +7,7 @@
 ## Avant de travailler
 - Lire `REPRISE.md` (comment marche l'appli) puis le haut de `JOURNAL.md` ("À faire").
 - Branche unique : `ccr-6df8be48-11wmro` (c'est l'appli en ligne). Pas de pull request.
+- Regarder les erreurs remontées par les utilisateurs (sans données perso) : `python3 tests/sql.py "select cree_le, page, version, message from erreurs order by id desc limit 30"` ; les corriger en premier.
 - `index.html` est gros (près de 7 000 lignes) : chercher avec grep, lire seulement le morceau utile.
 
 ## Les gens ne lisent pas (règle d'interface, Théo, 19/11)

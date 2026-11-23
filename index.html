@@ -968,7 +968,20 @@ function verrou() { const o = document.getElementById("overlay"), f = document.g
 const avatar = nom => { const ini = String(nom).replace(/\(.*?\)/g, "").trim().split(/[\s–—-]+/).filter(x => /\p{L}/u.test(x)).map(x => x.match(/\p{L}/u)[0]).join("").slice(0, 2).toUpperCase(); let h = 0; for (const c of String(nom)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `<span class="avatar av${h % 8}" aria-hidden="true">${esc(ini)}</span>`; };
 /* Une erreur imprévue ne doit jamais laisser l'écran figé */
 addEventListener("error", e => { if (/Script error/.test(e.message || "")) return; console.error(e.error || e.message); try { toast("Un souci est survenu. Réessaie, et dis-moi si ça recommence."); } catch (x) {} });
-addEventListener("unhandledrejection", e => { console.error(e.reason); try { toast("Un souci est survenu. Réessaie, et dis-moi si ça recommence."); } catch (x) {} });
+/* Les erreurs de l'appli remontent toutes seules au serveur pour être corrigées : message technique, page, version, navigateur.
+   Jamais d'e-mail, de nom ou de contenu saisi ; au plus 6 différentes par ouverture ; pas les coupures de réseau. */
+const ERR_VUES = new Set();
+function noterErreur(msg, pile) {
+  try {
+    const m = String(msg || "").replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "@…").replace(/\b\d{6,}\b/g, "…").slice(0, 380);
+    if (!m || ERR_VUES.has(m) || ERR_VUES.size >= 6 || /ResizeObserver|^Script error\.?$|Load failed|NetworkError|Failed to fetch|AbortError|The operation was aborted|Pas de connexion internet|déconnecté|offline/i.test(m)) return;
+    if (typeof SB === "undefined" || !SB) return; ERR_VUES.add(m);
+    const pg = (location.hash || "#").replace(/[=?].*/, "").slice(0, 50);
+    SB.rpc("noter_erreur", { version: String((window.APP_VERSION || {}).id || "dev"), page: pg, message: m, pile: String(pile || "").replace(/https?:\/\/[^\s)]*\//g, "").replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "@…").slice(0, 1100), navigateur: navigator.userAgent.slice(0, 190), espace: typeof ESPACE !== "undefined" && ESPACE ? ESPACE : null }).then(() => {}, () => {});
+  } catch (e) {}
+}
+addEventListener("error", e => { if (e && e.message) noterErreur(e.message, e.error && e.error.stack); });
+addEventListener("unhandledrejection", e => { console.error(e.reason); const r = e.reason; noterErreur(r && (r.message || r), r && r.stack); try { toast("Un souci est survenu. Réessaie, et dis-moi si ça recommence."); } catch (x) {} });
 
 /* ================= Données ================= */
 const KEY = "gestion-sci-v1";
@@ -2449,7 +2462,7 @@ function taches() {
     ["cfe", "CFE " + y + " (si la SCI y est soumise)", new Date(y, 11, 15), new Date(y, 10, 15), "Location vide : en général non concernée sauf recettes ≥ 100 000 €. Location meublée : concernée."]
   ];
   if (GMAIL && GMAIL.mode !== "google") add({ key: "gmail-google", prio: "soon", date: TODAY, t: "Rebrancher ton Gmail avec Google", d: "Ton Gmail est branché avec un mot de passe d'application, qui ouvre toute ta boîte mail. La connexion Google ne permet que l'envoi : plus sûr, 1 minute.", acts: [["Rebrancher", "reglage('gmail')", "primary"]] });
-  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (k === "tf" && S.biens.length && S.biens.every(bi => taxeDe(bi.id, y) || (bi.sansBesoin || []).includes("taxe") || (immeubleDe(bi) && (immeubleDe(bi).sansBesoin || []).includes("taxe")))) return; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: k === "tf" ? [["Saisir", "taxeFonciere()", "primary"]] : k === "2044" ? [["Voir mes montants", `view.comptaOnglet='comptable';view.comptaAnnee=${y - 1};go('compta');setTimeout(()=>{const e=document.getElementById('decl2044');if(e)e.scrollIntoView({block:'start'})},300)`, "primary"]] : [] }); });
+  fisc.forEach(([k, t, lim, from, d]) => { const key = "fisc-" + k + "-" + y; if (k === "tf" && S.biens.length && S.biens.every(bi => taxeDe(bi.id, y) || (bi.sansBesoin || []).includes("taxe") || (immeubleDe(bi) && (immeubleDe(bi).sansBesoin || []).includes("taxe")))) return; if (TODAY >= from && TODAY <= addDays(lim, 30) && !fait(key)) add({ key, prio: TODAY > lim ? "urgent" : daysBetween(TODAY, lim) <= 15 ? "soon" : "info", date: lim, done: true, t, d: `Avant le ${fd(lim)}. ${d}`, acts: k === "tf" ? [["Saisir", "taxeFonciere()", "primary"]] : k === "ag" ? [["📝 Préparer le procès-verbal", `pvAG(${y - 1})`, "primary"]] : k === "2044" ? [["Voir mes montants", `view.comptaOnglet='comptable';view.comptaAnnee=${y - 1};go('compta');setTimeout(()=>{const e=document.getElementById('decl2044');if(e)e.scrollIntoView({block:'start'})},300)`, "primary"]] : [] }); });
   // 10b. Part d'ordures ménagères à récupérer auprès des locataires
   (S.taxes || []).forEach(tx => tx.parts.filter(p => teomATraiter(tx, p)).forEach(p => { const b = bail(p.bailId); if (!b) return;
     add({ bailId: b.id, key: "teom-" + tx.id + p.bailId, prio: p.demandeLe ? "info" : "soon", date: TODAY, t: `Ordures ménagères ${tx.annee} : ${esc(b.nom)} doit ${eur(p.montant)}`,
@@ -4534,7 +4547,7 @@ function pageBientot() {
 /* ================= Connecteur Claude (MCP) : Claude lit les chiffres de l'espace, en lecture seule ================= */
 let CONNECTEUR_PUBLIE = "", CONNECTEUR_T = null;
 const lienConnecteur = j => `${LIEN_APPLI}/mcp/${j}`;
-const sansHtml = t => String(t || "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+const sansHtml = t => String(t || "").replace(/<button[^>]*class="cq"[^>]*>\?<\/button>\s*/g, "").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
 function donneesConnecteur() {
   MEMO = new Map();
   try {
@@ -4770,11 +4783,12 @@ ${estPerso() ? "" : (`  <section class="card"><h2>Part de chaque associé</h2>
     comptable: () => `<p class="note c-note">Pour préparer ta déclaration ou la donner à ton comptable. Rien d'obligatoire au quotidien.</p>
   ${aideDeclaration(y, lignes, tot)}${declaration2044(y)}
   ${sectionClassement(y)}${carteFactures(y)}${sectionEntrees(y)}${sectionCloture()}
+  ${estPerso() || y >= TODAY.getFullYear() ? "" : `<section class="card"><h2>📝 Assemblée générale : comptes ${y}</h2><p class="note">Obligatoire avant le 30 juin ${y + 1} : les associés approuvent les comptes. L'appli prépare le procès-verbal.</p><div class="row"><button class="primary" onclick="pvAG(${y})">📝 Préparer le procès-verbal</button></div></section>`}
   ${sectionPrets(y)}${sectionAvances()}`
   };
   return `<div class="head"><div><h1>Compta ${y}</h1><p>Ce qui est entré (loyers encaissés) et sorti (dépenses), bien par bien.</p></div>
   <div class="seg" role="group" aria-label="Année"><button onclick="view.comptaAnnee--;render()" aria-label="Année précédente">‹</button><b>${y}</b><button onclick="view.comptaAnnee++;render()" aria-label="Année suivante">›</button></div></div>
-  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["📦 Pack pour le comptable (factures + FEC)", `packComptable(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`], ["🏦 Ajouter un prêt", "editPret()"], estPerso() ? null : ["👤 Un associé a payé de sa poche", "avanceAssocie()"]], "Plus")}</div>
+  <div class="row"><button class="small primary" onclick="editDepense()">+ Dépense</button>${SB && BANQUE.lien ? "" : `<button class="small" onclick="importerReleve()">🏦 Importer le relevé</button>`}${menuPlus([SB && BANQUE.lien ? ["🏦 Importer un relevé", "importerReleve()"] : null, ["📊 Tableau Excel", `exportCSV(${y})`], ["📦 Pack pour le comptable (factures + FEC)", `packComptable(${y})`], ["🧮 Fichier pour le comptable (FEC)", `exportFEC(${y})`], estPerso() ? null : ["📝 Procès-verbal d'assemblée générale", `pvAG(${y})`], ["📄 Bilan PDF", `docBilanOpen(${y})`], ["🧾 Régulariser les charges", `regulTous(${y})`], ["🏦 Ajouter un prêt", "editPret()"], estPerso() ? null : ["👤 Un associé a payé de sa poche", "avanceAssocie()"]], "Plus")}</div>
   ${barre}
   <div class="c-corps">${corps[onglet] ? corps[onglet]() : corps.resume()}</div>`;
 }
@@ -7254,7 +7268,7 @@ const boutonQuestion = () => peutQuestion() ? `<button type="button" class="pose
 const EXEMPLES_Q = ["Qui me doit de l'argent ?", "Quand puis-je augmenter mes loyers ?", "Combien j'ai encaissé cette année ?", "Qu'est-ce que je dois faire ce mois-ci ?"];
 /* Ce que l'assistant reçoit : un résumé des données de l'espace (jamais de document, jamais de code) */
 function contexteQuestion() {
-  const y = TODAY.getFullYear(), txt = h => String(h || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  const y = TODAY.getFullYear(), txt = h => sansHtml(h).replace(/\s+/g, " ").trim();
   const actifs = S.baux.filter(b => isActive(b) || P(b.dateEntree) > TODAY);
   let du = 0, recu = 0; S.baux.forEach(b => { for (let m = y + "-01"; m <= CUR; m = addM(m, 1)) { const e = echeance(b, m); if (e) { du += e.du; recu += Math.min(e.du, e.paye); } } });
   const deps = {}; (S.depenses || []).filter(d => String(d.date).startsWith(String(y))).forEach(d => deps[d.categorie || "Autre"] = r2((deps[d.categorie || "Autre"] || 0) + (+d.montant || 0)));
@@ -8113,6 +8127,61 @@ function docBilanOpen(y) {
   <h2>Dépenses par catégorie</h2><table><tbody>${Object.entries(parCat).map(([c, v]) => `<tr><td>${esc(c)}</td><td class="right">${eur(v)}</td></tr>`).join("") || "<tr><td>Aucune dépense</td><td></td></tr>"}</tbody></table>
   ${parts && !perso ? `<h2>Répartition entre associés</h2><table><tbody>${S.sci.associes.map(a => `<tr><td>${esc(a.nom)} (${a.parts} parts)</td><td class="right">${eur(res * a.parts / parts)}</td></tr>`).join("")}</tbody></table>` : ""}
   <p class="small">Document de gestion indicatif établi à partir des encaissements et des dépenses saisis. Il ne remplace pas la déclaration fiscale (${perso ? "déclaration de revenus : 2044 ou micro-foncier" : "2072 ou liasse IS"}).</p>`, { titre: "Bilan " + y, fichier: `Bilan-${slug(S.sci.nom || "SCI")}-${y}` });
+}
+
+/* ================= Assemblée générale annuelle de la SCI : le procès-verbal tout prêt =================
+   Obligatoire chaque année dans les 6 mois après la clôture : approuver les comptes, affecter le résultat, quitus au gérant.
+   Pré-rempli avec les associés, leurs parts et le résultat calculé par l'appli (modifiable : celui du comptable s'il a fait les comptes). */
+function resultatAnnee(y) {
+  const rec = recettes(y), couv = depensesCouvertes();
+  const loyers = Object.values(rec).reduce((s, r) => s + (r.loyers || 0) + (r.charges || 0), 0);
+  const dep = S.depenses.filter(d => String(d.date || "").startsWith(String(y)) && !couv.has(d.id) && !HORS_RESULTAT.has(d.categorie)).reduce((s, d) => s + +d.montant, 0)
+    + [...S.biens.map(b => b.id), ""].reduce((s, id) => s + interetsTableaux(y, id), 0);
+  return r2(loyers - dep);
+}
+function pvAG(y) {
+  if (estPerso()) { toast("L'assemblée générale concerne les sociétés (SCI)."); return; }
+  y = +y || TODAY.getFullYear() - 1; const s = S.sci, A = (s.associes || []).filter(a => a.nom);
+  if (!A.length) { toastActions("Ajoute d'abord les associés de la SCI (noms et parts).", [["Ajouter", "reglage('sci')"]]); return; }
+  const res = resultatAnnee(y), is = s.regime === "IS", jour = TODAY.getFullYear() === y + 1 && TODAY.getMonth() < 6 ? iso(TODAY) : `${y + 1}-06-15`;
+  modal(`📝 Assemblée générale : comptes ${y}`, `<p class="full note">L'appli prépare le procès-verbal. Vérifie, puis signe-le et garde-le dans le registre de la SCI.</p>
+    ${fld("Date de l'assemblée", "date", jour, "date", "", "required")}${fld("Heure", "heure", "18:00", "time")}
+    ${fld("Lieu", "lieu", "au siège social", "text", "full")}
+    ${fld(`Résultat ${y} (€, négatif si perte)`, "resultat", res, "number", "", 'step="0.01" required')}
+    ${is ? sel("Que faire du résultat ?", "affectation", res < 0 ? "report" : "report", [["report", "Le garder dans la SCI (report à nouveau)"], ["reserve", "Le mettre en réserve"], ["dividendes", "Le distribuer aux associés (dividendes)"]]) : ""}
+    ${fld("Capital social (€, facultatif)", "capital", s.capital || "", "number")}
+    <fieldset class="full"><legend>Associés présents</legend>${A.map((a, i) => `<label class="fl chk"><input type="checkbox" name="p${i}" checked> ${esc(a.nom)} · ${a.parts} parts</label>`).join("")}</fieldset>
+    <details class="full pq"><summary>Pourquoi ?</summary><p class="note small">Chaque année, dans les 6 mois après le 31 décembre, les associés doivent approuver les comptes, décider quoi faire du résultat et donner "quitus" au gérant (approuver sa gestion). Le procès-verbal se garde dans le registre des décisions de la SCI. Le résultat proposé est celui de l'appli (loyers encaissés moins dépenses) : ${is ? "à l'impôt sur les sociétés, prends plutôt celui des comptes établis par ton comptable." : "si ton comptable a établi les comptes, prends le sien."}</p></details>`,
+    d => { const pres = A.filter((a, i) => d["p" + i]); if (!pres.length) { toast("Coche au moins un associé présent."); return false; }
+      if (d.capital !== undefined && String(d.capital).trim() !== "") s.capital = +d.capital;
+      S.faits = Object.assign({}, S.faits, { ["fisc-ag-" + (y + 1)]: iso(TODAY) });
+      setTimeout(() => docPvAG(y, { ...d, resultat: r2(+d.resultat || 0), presents: pres }), 60); },
+    { ok: "Préparer le procès-verbal" });
+}
+function docPvAG(y, o) {
+  const s = S.sci, A = (s.associes || []).filter(a => a.nom), tot = A.reduce((t, a) => t + (+a.parts || 0), 0), pres = o.presents, pp = pres.reduce((t, a) => t + (+a.parts || 0), 0);
+  const res = o.resultat, perte = res < 0, is = s.regime === "IS", d = P(o.date) || TODAY, gerant = s.gerant || "le gérant", uni = pp === tot;
+  const vote = uni ? "Cette résolution est adoptée à l'unanimité des associés." : `Cette résolution est adoptée par les associés présents, représentant ${pp} parts sur ${tot}.`;
+  const pct = a => tot ? Math.round(a.parts / tot * 10000) / 100 : 0;
+  const affect = perte ? `L'assemblée générale décide d'affecter la perte de l'exercice, soit ${eur(-res)}, au compte « report à nouveau ».`
+    : !is ? `La société étant soumise à l'impôt sur le revenu, le résultat de ${eur(res)} est réparti entre les associés à proportion de leurs parts, chacun l'intégrant à ses propres revenus :</p><table><tbody>${A.map(a => `<tr><td>${esc(a.nom)} (${a.parts} parts, ${pct(a)} %)</td><td class="right">${eur(tot ? res * a.parts / tot : 0)}</td></tr>`).join("")}</tbody></table><p>`
+    : o.affectation === "dividendes" ? `L'assemblée générale décide de distribuer le bénéfice de l'exercice, soit ${eur(res)}, aux associés à proportion de leurs parts :</p><table><tbody>${A.map(a => `<tr><td>${esc(a.nom)} (${a.parts} parts)</td><td class="right">${eur(tot ? res * a.parts / tot : 0)}</td></tr>`).join("")}</tbody></table><p>`
+    : `L'assemblée générale décide d'affecter le bénéfice de l'exercice, soit ${eur(res)}, au compte « ${o.affectation === "reserve" ? "réserves" : "report à nouveau"} ».`;
+  const heure = o.heure ? o.heure.replace(":", " h ") : "";
+  showDoc(`<h1 style="margin-top:0">${esc(s.nom || "SCI")}</h1><p class="center">Société civile immobilière${s.capital ? ` au capital de ${eur(+s.capital)}` : ""}<br>Siège social : ${esc(s.siege || "……")}${s.siren ? `<br>SIREN ${esc(s.siren)}` : ""}</p>
+  <h2 class="center">Procès-verbal de l'assemblée générale ordinaire annuelle du ${fd(d)}</h2>
+  <p>Le ${fd(d)}${heure ? `, à ${heure}` : ""}, les associés de la société ${esc(s.nom || "")} se sont réunis en assemblée générale ordinaire, ${esc(o.lieu || "au siège social")}, sur convocation de la gérance.</p>
+  <p>Sont présents :</p><table><thead><tr><th>Associé</th><th class="right">Parts</th></tr></thead><tbody>${pres.map(a => `<tr><td>${esc(a.nom)}</td><td class="right">${a.parts}</td></tr>`).join("")}<tr><td><b>Total présent</b></td><td class="right"><b>${pp} sur ${tot}</b></td></tr></tbody></table>
+  <p>L'assemblée est présidée par ${esc(gerant)}, gérant. Le président constate que les associés présents représentent ${pp} parts sur ${tot} et que l'assemblée peut valablement délibérer.</p>
+  <p>Ont été mis à la disposition des associés : les comptes de l'exercice clos le 31 décembre ${y} et le rapport de la gérance sur cet exercice.</p>
+  <p><b>Ordre du jour :</b></p><ol><li>Approbation des comptes de l'exercice clos le 31 décembre ${y}</li><li>Affectation du résultat</li><li>Quitus à la gérance</li><li>Pouvoirs pour les formalités</li></ol>
+  <h2>Première résolution : approbation des comptes</h2><p>Après avoir entendu le rapport de la gérance, l'assemblée générale approuve les comptes de l'exercice clos le 31 décembre ${y}, tels qu'ils lui ont été présentés, faisant apparaître ${perte ? "une perte" : "un bénéfice"} de ${eur(Math.abs(res))}. ${vote}</p>
+  <h2>Deuxième résolution : affectation du résultat</h2><p>${affect} ${vote}</p>
+  <h2>Troisième résolution : quitus à la gérance</h2><p>L'assemblée générale donne quitus entier et sans réserve à ${esc(gerant)}, gérant, pour sa gestion au cours de l'exercice clos le 31 décembre ${y}. ${vote}</p>
+  <h2>Quatrième résolution : pouvoirs</h2><p>L'assemblée générale donne tous pouvoirs au porteur d'une copie ou d'un extrait du présent procès-verbal pour accomplir les formalités nécessaires. ${vote}</p>
+  <p>L'ordre du jour étant épuisé, la séance est levée. De tout ce qui précède, il a été dressé le présent procès-verbal, signé par le président de séance et les associés, et transcrit sur le registre des décisions de la société.</p>
+  ${faitA(d)}<div class="sign"><div><b>Le président de séance</b><br>${esc(gerant)}<br><span class="small">Signature</span></div><div><b>Les associés</b><br>${pres.map(a => esc(a.nom)).join("<br>")}<br><span class="small">Signatures</span></div></div>`,
+    { titre: `Assemblée générale ${y}`, fichier: `PV-AG-${slug(s.nom || "SCI")}-${y}` });
 }
 
 /* ================= Régularisation des charges, pas à pas ================= */
@@ -9326,7 +9395,7 @@ function pageLegal() {
   const b = (t, x) => `<section class="card aide"><h2>${t}</h2>${x}</section>`;
   return `<div><a class="back" href="#reglages">← Réglages</a><div class="head"><div><h1>Mentions légales et confidentialité</h1><p>Ce qu'on fait de tes données, en clair.</p></div></div></div><div class="stack">
   ${b("📌 Qui fait l'appli", `<p>${EDITEUR.nom ? `Éditeur : ${esc(EDITEUR.nom)}${EDITEUR.contact ? " · " + esc(EDITEUR.contact) : ""}.` : "Appli de gestion locative indépendante."} Pour toute question : bouton <b>?</b> en bas à droite de l'écran (une fois connecté).</p><p>Hébergement de l'appli : Cloudflare, Inc. (Cloudflare Pages). Données : Supabase, serveurs situés en Irlande (Union européenne).</p>`)}
-  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si tu les branches : l'autorisation d'<b>envoyer</b> depuis ton Gmail (Google ne donne pas le droit de lire tes e-mails ; rangée dans un coffre chiffré) et les mouvements de ton compte bancaire, soit en direct depuis ta banque (lecture seule, par la règle européenne DSP2 et le prestataire agréé Enable Banking : tes codes restent chez ta banque, aucun virement possible, accord de 180 jours au plus, débranchable à tout moment), soit via Pennylane (clé en lecture seule, rangée dans un coffre chiffré : l'appli refuse une clé qui pourrait modifier ta compta).</li><li>Si tu connectes ton Google Drive : l'autorisation (rangée dans un coffre chiffré), ton adresse Google, et le nom et le lien des fichiers des seuls dossiers et fichiers que tu choisis dans le sélecteur de Google ou que tu partages avec l'adresse de l'appli (avec leurs sous-dossiers). L'appli ne lit pas le reste de ton Drive et n'y modifie rien. Les documents que tu ajoutes à un logement sont copiés dans l'appli pour tes associés.</li></ul>`)}
+  ${b("🗂 Les données que l'appli garde", `<ul class="note"><li>Ton adresse e-mail (pour te connecter avec un code).</li><li>Ce que tu saisis : logements, locataires, loyers, dépenses, documents, photos d'états des lieux.</li><li>Le journal des e-mails envoyés (date, destinataire, objet), pour que tu saches ce qui est parti.</li><li>Si l'appli plante : un rapport technique (message d'erreur, page, version, type de téléphone ou de navigateur), sans ton nom, ton e-mail ni ce que tu as saisi, pour corriger le bug.</li><li>Si tu les branches : l'autorisation d'<b>envoyer</b> depuis ton Gmail (Google ne donne pas le droit de lire tes e-mails ; rangée dans un coffre chiffré) et les mouvements de ton compte bancaire, soit en direct depuis ta banque (lecture seule, par la règle européenne DSP2 et le prestataire agréé Enable Banking : tes codes restent chez ta banque, aucun virement possible, accord de 180 jours au plus, débranchable à tout moment), soit via Pennylane (clé en lecture seule, rangée dans un coffre chiffré : l'appli refuse une clé qui pourrait modifier ta compta).</li><li>Si tu connectes ton Google Drive : l'autorisation (rangée dans un coffre chiffré), ton adresse Google, et le nom et le lien des fichiers des seuls dossiers et fichiers que tu choisis dans le sélecteur de Google ou que tu partages avec l'adresse de l'appli (avec leurs sous-dossiers). L'appli ne lit pas le reste de ton Drive et n'y modifie rien. Les documents que tu ajoutes à un logement sont copiés dans l'appli pour tes associés.</li></ul>`)}
   ${b("🎯 Pourquoi", `<p>Uniquement pour faire marcher l'appli pour toi et les personnes que tu invites dans ton espace : calculer ce qui est dû, préparer les documents, envoyer ce que tu as validé. Jamais de publicité, jamais de revente, aucun pistage.</p>`)}
   ${b("🤝 Qui d'autre les voit", `<p><b>Dans l'appli : seuls les membres de ton espace.</b> Un autre utilisateur ne peut ni voir ni modifier tes données (chaque espace est cloisonné par le serveur, et c'est testé).</p><p><b>L'hébergeur de l'appli</b> (${EDITEUR.nom ? esc(EDITEUR.nom) : "l'éditeur"}) a, comme pour toute appli en ligne, un accès technique au serveur pour le faire marcher. Il s'engage à <b>ne jamais consulter tes données</b>, sauf si tu le lui demandes pour t'aider (par exemple avec le bouton <b>?</b>), et à ne jamais s'en servir ni les transmettre. Ce qui est le plus sensible est protégé en plus : ton Gmail ne peut qu'envoyer (pas de lecture), ta banque est en lecture seule, et l'appli ne lit de ton Drive que les dossiers et fichiers que tu choisis (en lecture seule).</p><p> Les prestataires techniques ne font que les stocker ou les transmettre : Supabase (données), Cloudflare (appli), Brevo (envoi des e-mails et des codes de connexion), Google (si tu envoies depuis ton Gmail ou connectes ton Drive), Pennylane (si tu branches ta banque). L'appli lit aussi l'indice des loyers sur le site public de l'INSEE, sans rien y envoyer.</p>`)}
   ${b("🔗 Espace locataire", `<p>Si tu crées un lien pour un locataire, il voit seulement ce qui le concerne : son logement, ce qu'il doit, ses quittances des 12 derniers mois, son bail et ses états des lieux, et les problèmes qu'il a signalés. Rien sur les autres locataires, la compta ou la banque. Le lien est secret (le serveur n'en garde qu'une empreinte) ; tu peux le désactiver à tout moment depuis sa fiche. Les photos qu'il envoie sont rangées dans les documents de ton espace.</p>`)}

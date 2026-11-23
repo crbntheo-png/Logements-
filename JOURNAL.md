@@ -82,6 +82,14 @@ Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (
 
 ## Historique
 
+### 23/11/2026 (soir) — erreurs qui remontent toutes seules, procès-verbal d'assemblée générale
+
+- **Erreurs des utilisateurs** : `noterErreur` (événements "error" et "unhandledrejection") → fonction serveur `noter_erreur` → table `erreurs` (supabase/erreurs.sql : lisible seulement en SQL, 30 par personne et par heure). Message (e-mails et longs numéros effacés), page (sans ce qui suit "=" ou "?"), version, navigateur, espace. Pas les coupures de réseau ; 6 erreurs différentes au plus par ouverture. Ligne ajoutée dans la page confidentialité. À lire en début de session (règle ajoutée dans CLAUDE.md).
+- **Assemblée générale** (`pvAG`, `docPvAG`, `resultatAnnee`) : procès-verbal d'AGO annuelle pré-rempli (SCI, capital, siège, SIREN, présents et parts, 4 résolutions : comptes, affectation, quitus, pouvoirs). IR : répartition du résultat par associé ; IS : report à nouveau, réserves ou dividendes ; perte au report à nouveau ; vote à l'unanimité ou "par X parts sur Y". Signature à l'écran (président + associés). Depuis la tâche "Assemblée générale" (mai-juillet), Compta › Comptable (années passées) et le menu Plus de Compta. Capital social gardé dans la fiche SCI.
+- Connecteur Claude : le bouton d'aide "?" n'apparaît plus dans le texte des tâches ("? Obligatoire en copropriété…", vu dans les vraies données GTP).
+- Test **116** (13/13). Tests 5, 115 OK. En ligne (913bedb), nouveauté ajoutée sans notification.
+- **Pas vérifié** : le procès-verbal relu par un juriste (modèle standard d'AGO de SCI) ; la suite complète des tests tourne (résultat dans l'entrée suivante).
+
 ### 23/11/2026 — factures comme Pennylane : chaque paiement a sa facture, pack pour le comptable
 
 - Demande de Théo : "le comptable me demande des factures" ; scanner, proposition de rangement, commentaires, l'appli demande la facture de chaque frais, et comment l'obtenir.
