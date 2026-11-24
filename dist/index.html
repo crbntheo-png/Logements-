@@ -28,7 +28,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="demarrage-1620x2160.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script src="supabase.js"></script>
-<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "", "dropbox": ""}; window.APP_VERSION = {"id": "a8e46a9", "date": "2026-11-23T20:08"};</script>
+<script>window.APP_SUPABASE = {"url": "https://bcfcrqmpeyaoovluvhhn.supabase.co", "cle": "sb_publishable_23UtXl16W2EQ61M3In4R8A_wIEDNHDm", "vapid": "", "dropbox": ""}; window.APP_VERSION = {"id": "d0d3425", "date": "2026-11-24T07:44"};</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2717,7 +2717,7 @@ function cartePoint(s) {
   }
   const t = taches().find(x => x.key === s.key);
   return `<span class="pt-big">${t.prio === "urgent" ? "⚠️" : "📌"}</span><h2>${t.t}</h2><p class="pt-d">${t.d}</p>
-    <div class="pt-acts">${(t.acts || []).map(([l, f], k) => btn(l, f, k ? "" : "primary")).join("")}${t.done ? btn("✓ C'est fait", `marquerFait('${t.key}');pointSuivant(true)`) : ""}${passer}</div>`;
+    <div class="pt-acts">${actsTache(t).map(([l, f], k) => btn(l, f, k ? "" : "primary")).join("")}${t.done ? btn("✓ C'est fait", `marquerFait('${t.key}');pointSuivant(true)`) : ""}${passer}</div>`;
 }
 async function pointLoyer(b, m) { await encaisser(b, m); pointSuivant(true); }
 async function pointQuittances() { await envoyerToutesQuittances(); pointSuivant(true); }
@@ -2931,7 +2931,7 @@ function render0() {
 const ICO_TACHE = [["imp-", "💶"], ["proc-", "⚠"], ["q-", "📄"], ["av-", "⏳"], ["rev-", "📈"], ["ass-", "🛡"], ["edl-", "🔑"], ["fin-", "🗓"], ["dep-", "🔑"], ["regul-", "🧾"], ["vac-", "🏠"], ["dpe", "⚠"], ["pno", "🛡"], ["fisc-", "🏛"], ["teom-", "🗑"], ["rap-", "⏰"]];
 const icoTache = t => (ICO_TACHE.find(([p]) => t.key.startsWith(p)) || [0, "📌"])[1];
 function taskHtml(t) {
-  const acts = (t.acts || []).map(([l, f, c]) => `<button class="small ${c || ""}" onclick="${f}">${l}</button>`).join("") + (t.done ? `<button class="small ghost" onclick="marquerFait('${t.key}')">✓ C'est fait</button>` : "");
+  const acts = actsTache(t).map(([l, f, c]) => `<button class="small ${c || ""}" onclick="${f}">${l}</button>`).join("") + (t.done ? `<button class="small ghost" onclick="marquerFait('${t.key}')">✓ C'est fait</button>` : "");
   const pq = pourquoiTache(t);
   return `<div class="task ${t.prio}"><span class="ico" aria-hidden="true">${icoTache(t)}</span><div><div class="t">${t.t}</div><div class="d">${t.d}</div>${pq ? `<details class="pq"><summary>Pourquoi ?</summary><p><b>La règle :</b> ${pq[0]}</p><p><b>Si tu ne le fais pas :</b> ${pq[1]}</p><p><b>Ce que tu y gagnes :</b> ${pq[2]}</p></details>` : ""}</div>${acts ? `<div class="acts">${acts}</div>` : ""}</div>`;
 }
@@ -3268,7 +3268,9 @@ function aFaireCourt(T) {
   return out.sort((a, b) => o[a.prio] - o[b.prio]);
 }
 /* Les tâches du même genre (3 ou plus) sont regroupées sous une ligne repliée : la page reste courte sur téléphone */
-const LIB_TACHES = { q: ["quittances à envoyer", "Envoie-les toutes d'un geste avec le bouton en haut."], imp: ["loyers impayés", ""], regul: ["régularisations de charges à faire", ""], rev: ["loyers à augmenter (révision IRL)", ""], ass: ["attestations d'assurance à demander", ""], vac: ["logements vides", ""], teom: ["ordures ménagères à récupérer", ""], fisc: ["démarches fiscales", ""], rap: ["rappels", ""] };
+const LIB_TACHES = { q: ["quittances à envoyer", "Envoie-les toutes d'un geste avec le bouton en haut."], imp: ["loyers impayés", ""], regul: ["régularisations de charges à faire", ""], rev: ["loyers à augmenter (révision IRL)", ""], ass: ["attestations d'assurance à demander", ""], vac: ["logements vides", ""], teom: ["ordures ménagères à récupérer", ""], fisc: ["démarches fiscales", ""], rap: ["rappels", ""], leg: ["obligations à vérifier", "Détecteurs de fumée, assurance du propriétaire… Touche « C'est fait » quand c'est bon."], fact: ["années avec des factures à retrouver", ""] };
+// une tâche "done" a déjà son bouton "✓ C'est fait" : on n'en affiche pas un deuxième
+const actsTache = t => (t.acts || []).filter(([l]) => !(t.done && /^✓?\s*C'est fait$/.test(String(l).trim())));
 function corpsTaches(g) {
   const ty = t => t.key.split("-")[0], vus = new Set(), out = [];
   g.forEach(t => { const k = ty(t); if (vus.has(k)) return; const memes = g.filter(x => ty(x) === k);
