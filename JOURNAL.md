@@ -11,6 +11,7 @@ Règle pour chaque session :
 
 ## À faire (priorités)
 
+- [ ] **🚨 IA en pause pour tout le monde jusqu'au 1er décembre (Théo décide)** : budget de l'appli 3 $/mois dépassé (3,18 $ le 23/11), dont 2,29 $ par les tests. Proposition prête (supabase/ia_budget_tests.sql à écrire) : `ia_etat` compte à part les comptes …@gestion-test.fr (plafond 2/3 du budget), les vrais utilisateurs gardent leurs 3 $ → l'IA rouvre tout de suite. Refusé par la sécurité automatique tant que Théo n'a pas dit oui.
 - [ ] **Factures (Théo, 5 min)** : Compta › Dépenses › "📎 Ajouter les factures" sur ton espace GTP, puis "📦 Pack pour le comptable" et l'envoyer au comptable ; dire si la copie dans le Drive marche (dossier "Factures (Gestion locative)").
 - [ ] **Max (SCI NIMAR)** : dans À faire, toucher "Oui, bail commercial" pour l'EURL Velours & Végétal ; fiche "Immeuble / parties communes" › Transformer ; "Compléter avec mes papiers" sur chaque logement.
 - [ ] **Budget IA (Théo)** : 3 $ par mois pour toute l'appli (réglage IA_BUDGET_MOIS absent) ; à monter si l'assistant et les lectures servent à d'autres utilisateurs.
@@ -81,6 +82,14 @@ Repères : Indy SCI IS 24 à 32 € HT/mois, SCI AI 229 €/an (349 € avec val
 Payant, seulement si les demandes d'intégration le justifient : Bridge/Powens (devis), Youtrust (104 €/mois), GoCardless (~2 €/loyer), Stripe (vente de l'appli). Fiches détaillées : Historique du 14/11, Partie 2 B.
 
 ## Historique
+
+### 24/11/2026 — suite complète des 98 tests, À faire épuré, budget IA épuisé par les tests
+
+- **Suite complète** (98 tests, un par un) : 81 OK du premier coup. Relancés seuls : 4, 9, 64 OK ; 62 OK pour tout ce qui ne demande pas l'IA (pdf.js local ajouté). Pas des bugs de l'appli : 2 (vieux test, échouait déjà avant), 30 et 37 (internet bloqué ici), 50 (comptes jetables à créer à part : U_PROP, U_A1, U_A2, U_MDP), et les tests de vraie IA 48, 49, 52, 57, 62 (fin), 63, 85, 87, 99 : **IA en pause pour tout le monde** (voir À faire).
+- Tests corrigés : 4 (chemin de jsPDF), 46 (JSZip dans tests/vendor/jszip/package/dist, non versionné), 62 (pdf.js local), 64 (4 prochaines sorties). Les tests qui plantent laissent des espaces sur les comptes de test et font échouer les suivants : vider avant chaque test (`delete from espaces … where email like '%@gestion-test.fr'`).
+- À faire : plus de double bouton "C'est fait" (`actsTache`) ; détecteurs de fumée et assurance du propriétaire regroupés ("N obligations à vérifier", `LIB_TACHES.leg`).
+- Boîte à documents : la reconnaissance des factures (mots entiers) ne peut plus bloquer le rangement automatique.
+- En ligne (d0d3425). Aucune erreur remontée par de vrais utilisateurs pour l'instant.
 
 ### 23/11/2026 (soir) — erreurs qui remontent toutes seules, procès-verbal d'assemblée générale
 

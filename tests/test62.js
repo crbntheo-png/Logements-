@@ -13,6 +13,8 @@ const TAXE = `<html><body style="font-family:sans-serif"><h2>DIRECTION GÉNÉRAL
   const g = await b.newPage(); await g.setContent(TAXE); const pdf = (await g.pdf({ format: 'A4' })).toString('base64'); await g.close();
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, serviceWorkers: 'block' }); const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(e.message)); await p.route(/accounts\.google\.com\/gsi/, r => r.abort());
+  // sans internet (sessions Claude en ligne) : la lecture des PDF utilise la copie locale de pdf.js
+  if (fs.existsSync(__dirname + '/vendor/pdfjs/pdf.min.js')) { await p.route('**/pdf.js/3.11.174/pdf.min.js', r => r.fulfill({ path: __dirname + '/vendor/pdfjs/pdf.min.js', contentType: 'application/javascript' })); await p.route('**/pdf.js/3.11.174/pdf.worker.min.js', r => r.fulfill({ path: __dirname + '/vendor/pdfjs/pdf.worker.min.js', contentType: 'application/javascript' })); }
   await p.goto('http://localhost:8099/'); await p.waitForTimeout(1200);
   await p.evaluate(async () => { const r = await SB.auth.signInWithPassword({ email: 'test-a@gestion-test.fr', password: 'TestMotDePasse-2026!' }); await apresConnexion(r.data.user); });
   await p.waitForTimeout(1500); await p.evaluate(() => { MODE = 'nouvel-espace'; render(); }); await p.fill('#esp_nom', 'Test Boite'); await p.click('#esp_btn'); await p.waitForTimeout(2000);
